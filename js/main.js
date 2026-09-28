@@ -354,6 +354,7 @@ const Game = {
     if (document.activeElement && document.activeElement.tagName === 'INPUT') return;
     if (k === 'enter') { document.getElementById('chat-input').focus(); e.preventDefault(); return; }
     if (k === 'escape') { UI.close(); return; }
+    if (k === 'f2' || k === '`') { e.preventDefault(); UI.open('admin'); return; }
     if (MOVE[k]) { keys.add(k); e.preventDefault(); return; }
     if (e.repeat) return;
     const p = Game.player;

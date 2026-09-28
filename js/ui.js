@@ -256,6 +256,7 @@ const UI = (() => {
       <div class="menu-side">
         <button data-a="mail" title="우편">${ico('mail')}</button>
         <button data-a="map" title="지도">${ico('map')}</button>
+        <button data-a="admin" title="운영자 모드 (F2)">${ico('crown')}</button>
         <button data-a="settings" title="설정">${ico('settings')}</button>
         <button data-a="logout" title="종료">${ico('exit')}</button>
       </div>`;
@@ -522,6 +523,7 @@ const UI = (() => {
     const p = game.player;
     body.innerHTML = `<div class="list-row"><span>효과음</span><button class="dark-btn" data-do="snd">${game.muted ? '꺼짐' : '켜짐'}</button></div>
       <div class="list-row"><span>자동 물약 (HP 55% 이하)</span><button class="dark-btn" data-do="pot">${p.s.autoPotion ? '켜짐' : '꺼짐'}</button></div>
+      <div class="list-row"><span>운영자 모드 (F2)</span><button class="gold-btn" data-do="gm">열기</button></div>
       <div class="list-row"><span>게임 저장</span><button class="dark-btn" data-do="save">저장</button></div>
       <div class="list-row"><span>저장 삭제 후 처음부터</span><button class="red-btn" data-do="reset">초기화</button></div>
       <p class="sub" style="color:#888;font-size:12px;line-height:1.6">조작: 클릭 이동/공격 · WASD 이동 · 1~4 스킬 · 5~8 아이템 · Space 근처 적 공격 · G AI 모드 · Shift 질주 · I 인벤토리 · K 스킬 · U 상점 · C 캐릭터 · J 퀘스트 · Y 초월 · P 시즌 패스 · O 보스 정보 · T 순간이동 · B 귀환 · M 지도 · Enter 채팅 · 마우스 휠 줌</p>`;
@@ -530,6 +532,7 @@ const UI = (() => {
       const a = b.dataset.do;
       if (a === 'snd') { game.muted = !game.muted; U.setMuted(game.muted); }
       if (a === 'pot') p.s.autoPotion = !p.s.autoPotion;
+      if (a === 'gm') return open('admin');
       if (a === 'save') { game.save(); toast('저장되었습니다.'); }
       if (a === 'reset' && confirm('정말 모든 진행 상황을 삭제할까요?')) { game.wipe(); return; }
       OPENERS.settings();

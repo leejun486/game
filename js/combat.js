@@ -11,7 +11,8 @@ const Combat = (() => {
     let raw = st.atk * mult * U.rand(0.9, 1.1);
     const crit = Math.random() * 100 < (st.crit || 5) + (opts.critBonus || 0);
     if (crit) raw *= 1.6;
-    const dmg = Math.max(1, Math.round(Math.max(raw * 0.15, raw - mon.def_ * 0.6)));
+    let dmg = Math.max(1, Math.round(Math.max(raw * 0.15, raw - mon.def_ * 0.6)));
+    if (hero === game.player && hero.s.gm && hero.s.gm.oneHit) dmg = Math.max(dmg, Math.ceil(mon.hp));
     mon.hp -= dmg; mon.flash = 0.15;
     mon.aggroOn(hero);
     if (hero === game.player) {
@@ -38,6 +39,7 @@ const Combat = (() => {
     if (U.dist(mon, target) > mon.def.range + target.radius + 30) return;
     if (target === game.player) {
       const p = target, st = p.stats;
+      if (p.s.gm && p.s.gm.god) { floatText(game, p, 'IMMUNE', '#ffd76a'); return; }
       if (Math.random() < st.eva / (st.eva + 320)) { floatText(game, p, 'MISS', '#b0d8ff'); return; }
       let raw = mon.atk * U.rand(0.85, 1.15) * (heavy ? 1.8 : 1);
       const dmg = Math.max(1, Math.round(raw - st.def * 0.6 - st.dmgRed));

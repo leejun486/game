@@ -257,7 +257,7 @@ class Player extends Hero {
     }
     if (this.action) return;
 
-    const speed = 165 * (1 + this.stats.moveSpd / 100) * (this.sprintT > 0 ? 1.45 : 1) * this.speedMul;
+    const speed = 165 * (1 + this.stats.moveSpd / 100) * (this.sprintT > 0 ? 1.45 : 1) * this.speedMul * (this.s.gm && this.s.gm.speed ? 2 : 1);
     // keyboard movement overrides everything
     if (this.keys.x || this.keys.y) {
       const l = Math.hypot(this.keys.x, this.keys.y);
@@ -322,7 +322,8 @@ class Player extends Hero {
   }
   drawOverlay(ctx, cam) {
     const x = this.x - cam.x, y = this.headY - cam.y;
-    drawLabel(ctx, this.name, x, y - 8, '#ffffff', 'bold 12px sans-serif');
+    const cheat = this.s.gm && (this.s.gm.god || this.s.gm.oneHit || this.s.gm.speed);
+    drawLabel(ctx, (cheat ? '[GM] ' : '') + this.name, x, y - 8, cheat ? '#ffd76a' : '#ffffff', 'bold 12px sans-serif');
     if (this.s.guild) drawLabel(ctx, this.s.guild, x - ctx.measureText(this.name).width / 2 - 16, y - 8, '#ffe08a', '11px sans-serif');
     drawHpBar(ctx, x, y - 6, 46, this.hp / this.maxHp);
     if (this.s.card) {
