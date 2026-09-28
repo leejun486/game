@@ -75,6 +75,34 @@ class Player extends Hero {
     return null;
   }
   unequip(slot) { this.s.equip[slot] = null; this.recalc(); }
+  // rough power of a piece of gear, used to decide auto-equips
+  gearScore(it) {
+    if (!it) return -1;
+    const d = D.ITEMS[it.id], en = it.en || 0;
+    if (d.kind === 'weapon') return d.atk + en * 2 + Math.max(0, en - 6) * 2;
+    if (d.kind === 'armor') return d.def + en * 1.5 + (d.hp + en * 15) / 20;
+    return (d.atk || 0) * 2 + (d.def || 0) + (d.hp || 0) / 40 + (d.atkSpd || 0);
+  }
+  // equip anything in the bag that is usable and better than what is worn
+  autoEquipBest() {
+    const changed = [];
+    for (const slot of ['weapon', 'armor', 'ring']) {
+      let best = this.equipped(slot), bestScore = this.gearScore(best);
+      for (const it of this.s.inv) {
+        if (D.ITEMS[it.id].kind !== slot || this.canEquip(it)) continue;
+        const sc = this.gearScore(it);
+        if (sc > bestScore) { best = it; bestScore = sc; }
+      }
+      if (best && best.uid !== this.s.equip[slot]) { this.s.equip[slot] = best.uid; changed.push(best); }
+    }
+    if (!changed.length) return;
+    this.recalc();
+    for (const it of changed) {
+      const name = (it.en ? `+${it.en} ` : '') + D.ITEMS[it.id].name;
+      UI.toast(`${name} 자동 장착!`, '#7ee07e');
+      UI.chat(`더 좋은 장비 ${name}을(를) 자동으로 장착했습니다.`, 'sys');
+    }
+  }
 
   // ---------------------------------------------------------------- stats
   recalc() {
@@ -140,6 +168,7 @@ class Player extends Hero {
       U.sfx.level();
       UI.toast(`레벨 업! Lv.${this.s.lv}`, '#ffe38a');
       UI.chat(`축하합니다! 레벨 ${this.s.lv}이(가) 되었습니다.`, 'sys');
+      this.autoEquipBest();
       Quests.check(game);
     }
   }

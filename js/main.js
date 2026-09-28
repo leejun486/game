@@ -127,6 +127,11 @@ const Game = {
     const p = this.player, it = D.ITEMS[d.id];
     p.addItem(d.id, d.n);
     UI.chat(`${it.name}${d.n > 1 ? ` (${d.n})` : ''}을(를) 획득했습니다.`, 'drop');
+    if (D.isEquip(it)) {
+      const why = p.canEquip({ id: d.id });
+      if (why) UI.chat(`└ ${why}`, 'warn');
+      else p.autoEquipBest();
+    }
     this.fx.push(Combat.makeFx('loot', p.x, p.y, { color: D.GRADES[it.grade].color }));
     if (it.grade >= 3) UI.announce(`<b>${UI.esc(p.name)}</b>님이 <em class="${it.grade >= 4 ? 'legend' : ''}">${UI.esc(it.name)}</em>을(를) 획득했습니다.`);
     U.sfx.coin();

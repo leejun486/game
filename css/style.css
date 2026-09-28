@@ -538,3 +538,9 @@ body.touch #chat { bottom: 250px; }
 .gm-btns { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .gm-btns button { padding: 7px 12px; font-size: 13px; }
 .gm-btns input { width: 150px; padding: 7px 8px; background: rgba(0,0,0,.5); border: 1px solid var(--line); color: var(--text); font-family: inherit; }
+
+/* toasts must show above open panels */
+#toast { z-index: 100; }
+.cell.cant img { filter: grayscale(.7) brightness(.55); }
+.cell .req { position: absolute; left: 2px; bottom: 1px; font-size: 10px; font-weight: 700; color: #ff7a6e; text-shadow: 0 0 2px #000, 0 0 2px #000; }
+.req-msg { margin-top: 6px; color: #ff8a80; font-size: 13px; }

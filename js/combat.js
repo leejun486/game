@@ -75,8 +75,9 @@ const Combat = (() => {
     // drops (auto-loot)
     // items drop on the ground and fly to the player (see Game.updateDrops)
     const table = [...D.DROPS.common, ...(D.DROPS[d.id] || [])];
-    for (const [id, ch] of table) {
+    for (let [id, ch] of table) {
       if (Math.random() < ch) {
+        id = D.forClass(id, p.cls);
         const n = D.ITEMS[id].kind === 'potion' ? U.randi(1, 3) : 1;
         const a = Math.random() * Math.PI * 2, r = U.rand(20, 60);
         game.drops.push({ id, n, x: mon.x + Math.cos(a) * r, y: mon.y + Math.sin(a) * r * 0.6, sx: mon.x, sy: mon.y, t: 0 });

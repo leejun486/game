@@ -161,6 +161,13 @@ D.ITEMS = {
   r_3: { name: '순발의 목걸이', icon: 'ring3', kind: 'ring', atkSpd: 10, atk: 6, lv: 25, price: 0, grade: 3 },
 };
 for (const k in D.ITEMS) D.ITEMS[k].id = k;
+// same-tier weapon for another class, e.g. forClass('w_bow2', 'knight') -> 'w_sword2'
+D.forClass = (id, cls) => {
+  const it = D.ITEMS[id];
+  if (it.kind !== 'weapon' || it.cls === cls) return id;
+  const alt = id.replace(/^w_(sword|bow|staff)/, 'w_' + { knight: 'sword', elf: 'bow', mage: 'staff' }[cls]);
+  return D.ITEMS[alt] ? alt : id;
+};
 D.isEquip = (it) => it.kind === 'weapon' || it.kind === 'armor' || it.kind === 'ring';
 D.SAFE_ENCHANT = { weapon: 6, armor: 4 };
 D.enchantRate = (cur) => [0.5, 0.4, 0.33, 0.25, 0.18, 0.12, 0.08, 0.05, 0.03][Math.max(0, cur - 6)] || 0.02;

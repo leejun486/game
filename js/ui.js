@@ -297,7 +297,9 @@ const UI = (() => {
         <div><div class="bag">${p.s.inv.map((it) => {
           const def = D.ITEMS[it.id];
           const eq = Object.values(p.s.equip).includes(it.uid);
-          return `<div class="cell bg${def.grade} ${invSel === it.uid ? 'sel' : ''}" data-uid="${it.uid}" title="${esc(def.name)}">${ico(def.icon)}${it.en ? `<span class="e">+${it.en}</span>` : ''}${eq ? '<span class="eq">E</span>' : ''}${it.n > 1 ? `<span class="c">${U.fmt(it.n)}</span>` : ''}</div>`;
+          const why = D.isEquip(def) && p.canEquip(it);
+          const lock = why ? `<span class="req">${def.cls && def.cls !== p.cls ? D.CLASSES[def.cls].name : 'Lv' + def.lv}</span>` : '';
+          return `<div class="cell bg${def.grade} ${invSel === it.uid ? 'sel' : ''} ${why ? 'cant' : ''}" data-uid="${it.uid}" title="${esc(def.name)}${why ? ' - ' + esc(why) : ''}">${ico(def.icon)}${lock}${it.en ? `<span class="e">+${it.en}</span>` : ''}${eq ? '<span class="eq">E</span>' : ''}${it.n > 1 ? `<span class="c">${U.fmt(it.n)}</span>` : ''}</div>`;
         }).join('')}</div>
         <div class="item-detail" id="item-detail"></div></div></div>`;
       renderDetail();
@@ -316,11 +318,13 @@ const UI = (() => {
       if (def.atkSpd) lines.push(`공격 속도 +${def.atkSpd}%`);
       if (def.cls) lines.push(`${D.CLASSES[def.cls].name} 전용`);
       if (def.lv > 1) lines.push(`착용 레벨 ${def.lv}`);
+      const why = D.isEquip(def) && p.canEquip(it);
       const sell = Math.floor((def.price || 1000) * 0.3);
       box.innerHTML = `<h4 class="${D.GRADES[def.grade].cls}">${it.en ? '+' + it.en + ' ' : ''}${esc(def.name)} <small style="color:#888">[${D.GRADES[def.grade].name}]</small></h4>
         <div style="color:#bbb">${def.desc ? esc(def.desc) : ''}${lines.join(' · ')}</div>
+        ${why ? `<div class="req-msg">⚠ ${esc(why)} (현재 Lv.${p.s.lv} ${esc(p.classDef.name)})</div>` : ''}
         <div class="btns">
-          ${D.isEquip(def) ? (eq ? `<button class="dark-btn" data-do="unequip">해제</button>` : `<button class="gold-btn" data-do="use">장착</button>`) : ''}
+          ${D.isEquip(def) ? (eq ? `<button class="dark-btn" data-do="unequip">해제</button>` : `<button class="gold-btn" data-do="use" ${why ? 'disabled' : ''}>장착</button>`) : ''}
           ${!D.isEquip(def) && def.kind !== 'enchant' && def.kind !== 'ticket' ? `<button class="gold-btn" data-do="use">사용</button>` : ''}
           ${def.kind === 'ticket' ? `<button class="gold-btn" data-do="use">소환하기</button>` : ''}
           ${(def.kind === 'weapon' || def.kind === 'armor') ? `<button class="dark-btn" data-do="enchant">강화</button>` : ''}
