@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>이클립스: 어웨이크닝</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="game">
+  <canvas id="view"></canvas>
+
+  <!-- ===== HUD ===== -->
+  <div id="hud" class="hidden">
+    <!-- top-left: zone + minimap -->
+    <div id="zone-box">
+      <div id="zone-name"><span class="zone-flag"></span><span id="zone-text">라스카노 마을</span><span class="key">M</span></div>
+      <canvas id="minimap" width="150" height="150"></canvas>
+      <div id="clock"></div>
+    </div>
+    <div id="left-buttons">
+      <button class="round-btn" data-act="town" title="마을 귀환 (B)"><img src="assets/icons/portal.svg"><span class="key">B</span></button>
+      <button class="round-btn" data-act="teleport" title="순간이동 (T)"><img src="assets/icons/teleport.svg"><span class="key">T</span></button>
+    </div>
+
+    <!-- top center: currencies -->
+    <div id="currency">
+      <span class="cur"><img src="assets/icons/diamond.svg" class="dia"><b id="cur-dia">0</b></span>
+      <span class="cur"><img src="assets/icons/gold.svg" class="gold"><b id="cur-gold">0</b></span>
+    </div>
+
+    <!-- top-right menu -->
+    <div id="top-menu">
+      <button class="menu-ico" data-act="shop"><img src="assets/icons/shop.svg"><span>상점</span><span class="key">U</span></button>
+      <button class="menu-ico" data-act="summon"><img src="assets/icons/summon.svg"><span>소환</span></button>
+      <button class="menu-ico" data-act="event"><img src="assets/icons/event.svg"><span>이벤트</span></button>
+      <button class="menu-ico" data-act="pass"><img src="assets/icons/pass.svg"><span>패스</span></button>
+      <button class="menu-ico" data-act="skills"><img src="assets/icons/skill.svg"><span>스킬</span><span class="key">K</span></button>
+      <button class="menu-ico" data-act="inventory"><img src="assets/icons/inventory.svg"><span>인벤토리</span><span class="key">I</span><i class="dot hidden" id="inv-dot"></i></button>
+      <button class="menu-ico burger" data-act="menu"><div class="burger-lines"><i></i><i></i><i></i></div><span>메뉴</span><i class="dot"></i></button>
+    </div>
+
+    <!-- quest tracker -->
+    <div id="quest-tracker" title="클릭하면 자동 이동">
+      <div class="q-title" id="q-title"></div>
+      <div class="q-row"><span id="q-desc"></span><span id="q-prog"></span></div>
+    </div>
+
+    <!-- right side buttons -->
+    <div id="right-buttons">
+      <button class="round-btn" data-act="quests" title="퀘스트"><img src="assets/icons/quest.svg"></button>
+      <button class="round-btn" data-act="transcend" title="초월"><img src="assets/icons/transcend.svg"></button>
+    </div>
+
+    <!-- chat -->
+    <div id="chat">
+      <div id="chat-log"></div>
+      <input id="chat-input" maxlength="60" placeholder="Enter로 채팅" autocomplete="off">
+    </div>
+    <div id="announce"></div>
+
+    <!-- bottom bar -->
+    <div id="bottom">
+      <div id="buffs"></div>
+      <div id="bars">
+        <div class="bar hp"><i id="hp-fill"></i><span id="hp-text"></span></div>
+        <div id="level-orb"><b id="lvl">1</b><small>LEVEL</small></div>
+        <div class="bar mp"><i id="mp-fill"></i><span id="mp-text"></span></div>
+      </div>
+      <div id="slots"></div>
+    </div>
+
+    <div id="potion-auto">
+      <button id="auto-potion" class="potion-orb" title="자동 물약 (클릭하여 전환)"><img src="assets/icons/hp-potion.svg"><b id="auto-potion-count">0</b><i class="gear">⚙</i></button>
+    </div>
+
+    <div id="action-buttons">
+      <button class="act-btn" id="btn-target" title="가까운 적 공격 (Space)"><img src="assets/icons/pvp.svg"><span>공격</span></button>
+      <button class="act-btn" id="btn-auto" title="AI 모드: 자동 사냥 (G)"><img src="assets/icons/auto.svg"><span>AI 모드</span></button>
+      <button class="act-btn" id="btn-sprint" title="질주 (L.Shift)"><img src="assets/icons/sprint.svg"><span>L.Shift</span></button>
+    </div>
+
+    <div id="exp-bar"><i id="exp-fill"></i><span id="exp-text"></span></div>
+    <div id="target-frame" class="hidden"><div id="target-name"></div><div class="tbar"><i id="target-fill"></i></div></div>
+    <div id="toast"></div>
+  </div>
+
+  <!-- ===== Panels ===== -->
+  <div id="panel-layer"></div>
+
+  <!-- ===== Title / character select ===== -->
+  <div id="title-screen">
+    <div class="title-bg"></div>
+    <div class="title-inner">
+      <h1>ECLIPSE<small>이클립스 : 어웨이크닝</small></h1>
+      <div id="class-select"></div>
+      <div class="title-form">
+        <input id="nick-input" maxlength="10" placeholder="캐릭터 이름" autocomplete="off">
+        <button id="start-btn" class="gold-btn">게임 시작</button>
+      </div>
+      <div id="continue-box" class="hidden">
+        <button id="continue-btn" class="gold-btn">이어하기 <span id="continue-info"></span></button>
+        <button id="reset-btn" class="plain-btn">새로 시작 (저장 삭제)</button>
+      </div>
+      <p class="title-help">클릭: 이동/공격 · WASD/방향키: 이동 · 1~4 스킬 · 5~8 아이템 · Space 공격 · G AI모드 · Shift 질주 · 휠: 줌</p>
+    </div>
+  </div>
+
+  <div id="death-screen" class="hidden">
+    <h2>사망하였습니다</h2>
+    <p id="death-info"></p>
+    <button id="revive-btn" class="gold-btn">마을에서 부활</button>
+  </div>
+</div>
+
+<script src="assets/sprites/meta.js"></script>
+<script src="js/util.js"></script>
+<script src="js/data.js"></script>
+<script src="js/world.js"></script>
+<script src="js/entities.js"></script>
+<script src="js/player.js"></script>
+<script src="js/combat.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/transcend.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>

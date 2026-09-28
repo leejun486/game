@@ -1,0 +1,444 @@
+'use strict';
+// Boot, main loop, input, camera, rendering, save/load.
+const SAVE_KEY = 'eclipse_awakening_save_v1';
+
+const Game = {
+  player: null, monsters: [], npcs: [], bots: [], projectiles: [], fx: [], floaters: [], respawns: [],
+  cam: { x: 0, y: 0 }, zoom: 1, shake: 0, time: 0, started: false, muted: false, lastCardNotice: '',
+
+  fighters() { return this.player && !this.player.dead ? [this.player, ...this.bots] : this.bots; },
+  nearestMonster(from, maxD, pred) {
+    let best = null, bd = maxD;
+    for (const m of this.monsters) {
+      if (m.dead || (pred && !pred(m))) continue;
+      const d = U.dist(from, m);
+      if (d < bd) { bd = d; best = m; }
+    }
+    return best;
+  },
+  monstersNear(from, r) { return this.monsters.reduce((n, m) => n + (!m.dead && U.dist(from, m) < r ? 1 : 0), 0); },
+  bestSpawnNear(p) {
+    // pick the highest-level suitable spawn; prefer close ones
+    const lv = p.s.lv;
+    const ok = D.SPAWNS.filter((s) => !D.MONSTERS[s.m].boss && D.MONSTERS[s.m].lv <= lv + 2);
+    if (!ok.length) return D.SPAWNS[0];
+    const top = Math.max(...ok.map((s) => D.MONSTERS[s.m].lv));
+    const cands = ok.filter((s) => D.MONSTERS[s.m].lv >= top - 4);
+    cands.sort((a, b) => Math.hypot(a.x * 64 - p.x, a.y * 64 - p.y) - Math.hypot(b.x * 64 - p.x, b.y * 64 - p.y));
+    return cands[0];
+  },
+  say(ent, text) {
+    ent.bubble = { text, t: 5 };
+    if (ent === this.player) UI.chat(text, 'me', ent.name);
+    else UI.chat(text, '', ent.name);
+  },
+  interact(npc) {
+    Quests.onTalk(this, npc.def.id);
+    if (npc.def.transcend) return UI.open('npc', npc);
+    UI.open('npc', npc);
+  },
+  scheduleRespawn(mon) {
+    const s = mon.spawn;
+    this.respawns.push({ t: s.respawn || U.rand(5, 11), spawn: s });
+  },
+  teleportPlayer(x, y) {
+    const p = this.player;
+    this.fx.push(Combat.makeFx('teleport', p.x, p.y));
+    const f = World.findFree(x, y, 16);
+    p.x = f.x; p.y = f.y; p.stopAll(); p.action = null;
+    this.fx.push(Combat.makeFx('teleport', p.x, p.y, { follow: p }));
+    this.snapCamera();
+    U.sfx.magic();
+  },
+  returnToTown() {
+    this.teleportPlayer(D.TOWN.x + U.rand(-120, 120), D.TOWN.y + 160 + U.rand(-40, 40));
+    this.player.auto = false;
+    UI.toast('라스카노 마을로 귀환했습니다.', '#9fe0ff');
+  },
+  useTownScroll() {
+    const p = this.player;
+    if (p.dead) return;
+    const it = p.s.inv.find((i) => i.id === 'tp_town');
+    if (!it) return UI.toast('마을 귀환 주문서가 없습니다.');
+    p.useItem(it.uid, this);
+  },
+  attackNearest() {
+    const p = this.player;
+    const m = this.nearestMonster(p, 700);
+    if (m) { p.moveTo = null; p.waypoints = []; p.talkTo = null; p.target = m; }
+    else UI.toast('주변에 적이 없습니다.');
+  },
+  playerDie(killer) {
+    const p = this.player;
+    p.dead = true; p.deadT = 0; p.hp = 0; p.auto = false; p.stopAll(); p.action = null;
+    U.sfx.die();
+    const lost = Math.floor(D.expToNext(p.s.lv) * 0.05);
+    const real = Math.min(p.s.exp, lost);
+    p.s.exp -= real;
+    UI.chat(`${killer.name}에게 사망하였습니다. 경험치 ${U.fmt(real)} 손실.`, 'warn');
+    for (const m of this.monsters) if (m.target === p) m.target = null;
+    setTimeout(() => {
+      document.getElementById('death-info').textContent = `${killer.name}에게 사망했습니다. (경험치 -${U.fmt(real)})`;
+      document.getElementById('death-screen').classList.remove('hidden');
+    }, 1200);
+  },
+  revive() {
+    const p = this.player;
+    document.getElementById('death-screen').classList.add('hidden');
+    p.dead = false; p.deadT = 0; p.hp = p.maxHp; p.mp = p.maxMp;
+    this.teleportPlayer(D.TOWN.x, D.TOWN.y + 180);
+    UI.refreshAll();
+  },
+  snapCamera() {
+    const vw = innerWidth / this.zoom, vh = innerHeight / this.zoom;
+    this.cam.x = this.player.x - vw / 2; this.cam.y = this.player.y - 40 - vh / 2;
+  },
+  save() {
+    const p = this.player;
+    if (!p) return;
+    const s = p.s;
+    s.x = p.dead ? D.TOWN.x : p.x; s.y = p.dead ? D.TOWN.y + 160 : p.y;
+    s.hp = p.dead ? p.maxHp : p.hp; s.mp = p.mp;
+    try { localStorage.setItem(SAVE_KEY, JSON.stringify(s)); } catch (e) { /* storage unavailable */ }
+  },
+  wipe() {
+    try { localStorage.removeItem(SAVE_KEY); } catch (e) { /* ignore */ }
+    this.player = null;
+    location.reload();
+  },
+};
+
+// ---------------------------------------------------------------- boot
+(function boot() {
+  const canvas = document.getElementById('view');
+  const ctx = canvas.getContext('2d');
+  let dpr = 1;
+  function resize() {
+    dpr = Math.min(2, window.devicePixelRatio || 1);
+    canvas.width = Math.floor(innerWidth * dpr); canvas.height = Math.floor(innerHeight * dpr);
+    Game.zoom = Game.userZoom || (innerWidth < 700 ? 0.75 : innerWidth < 1100 ? 0.9 : 1.05);
+  }
+  addEventListener('resize', resize);
+  resize();
+
+  // load sprite sheets
+  const names = Object.keys(window.SPRITE_ROWS);
+  let loaded = 0;
+  names.forEach((n) => {
+    const img = new Image();
+    img.onload = () => { loaded++; if (loaded === names.length) ready(); };
+    img.onerror = () => { loaded++; console.warn('sprite failed', n); if (loaded === names.length) ready(); };
+    img.src = `assets/sprites/${n}.png`;
+    Sprites[n] = img;
+  });
+
+  let propGrid = null;
+  function buildPropGrid() {
+    propGrid = new Map();
+    for (const p of World.props) {
+      const k = Math.floor(p.y / 512) * 1000 + Math.floor(p.x / 512);
+      if (!propGrid.has(k)) propGrid.set(k, []);
+      propGrid.get(k).push(p);
+    }
+  }
+
+  function populate() {
+    for (const s of D.SPAWNS) for (let i = 0; i < s.n; i++) Game.monsters.push(new Monster(D.MONSTERS[s.m], s));
+    for (const n of D.NPCS) Game.npcs.push(new NPC(n));
+    for (let i = 0; i < 24; i++) Game.bots.push(new Bot(i));
+  }
+
+  function ready() {
+    World.init();
+    buildPropGrid();
+    populate();
+    Game.cam.x = D.TOWN.x - innerWidth / 2; Game.cam.y = D.TOWN.y - innerHeight / 2;
+    setupTitle();
+    requestAnimationFrame(frame);
+  }
+
+  // ---------------------------------------------------------------- title
+  let chosen = 'knight';
+  function setupTitle() {
+    const box = document.getElementById('class-select');
+    const cards = [];
+    for (const [id, c] of Object.entries(D.CLASSES)) {
+      const d = document.createElement('div');
+      d.className = 'class-card' + (id === chosen ? ' on' : '');
+      d.innerHTML = `<canvas width="128" height="128"></canvas><h4>${c.name}</h4><p>${c.desc.replace('\n', '<br>')}</p>`;
+      d.onclick = () => { chosen = id; cards.forEach((x) => x.el.classList.toggle('on', x.id === id)); U.sfx.ui(); };
+      box.appendChild(d);
+      cards.push({ id, el: d, cv: d.querySelector('canvas'), cls: c });
+    }
+    let t = 0;
+    (function anim() {
+      if (Game.started) return;
+      t += 1 / 60;
+      for (const c of cards) {
+        const on = c.id === chosen;
+        const a = on ? ANIMS[c.cls.attack] : ANIMS.walk;
+        const col = on ? Math.floor(t / a.ft) % a.frames : 1 + (Math.floor(t / 0.1) % 8);
+        UI.drawSprite(c.cv, c.cls.sheet, a.row + 2, col);
+      }
+      requestAnimationFrame(anim);
+    })();
+    let save = null;
+    try { save = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); } catch (e) { save = null; }
+    if (save && save.cls && D.CLASSES[save.cls]) {
+      document.getElementById('continue-box').classList.remove('hidden');
+      document.getElementById('continue-info').textContent = `(${save.name} · Lv.${save.lv} ${D.CLASSES[save.cls].name})`;
+      document.getElementById('continue-btn').onclick = () => start(save);
+      document.getElementById('reset-btn').onclick = () => { if (confirm('저장된 캐릭터를 삭제할까요?')) Game.wipe(); };
+    }
+    const nick = document.getElementById('nick-input');
+    nick.value = U.pick(['세라니스', '아크엔젤', '달빛기사', '용사', '제로원', '크로우']) + U.randi(1, 99);
+    document.getElementById('start-btn').onclick = () => {
+      const name = nick.value.trim() || '모험가';
+      start(Player.newSave(name.slice(0, 10), chosen));
+    };
+    nick.addEventListener('keydown', (e) => { if (e.key === 'Enter') document.getElementById('start-btn').click(); e.stopPropagation(); });
+  }
+
+  function start(save) {
+    U.audio();
+    Game.player = new Player(save);
+    const f = World.findFree(Game.player.x, Game.player.y, 16);
+    Game.player.x = f.x; Game.player.y = f.y;
+    Game.started = true;
+    Game.snapCamera();
+    document.getElementById('title-screen').classList.add('hidden');
+    document.getElementById('hud').classList.remove('hidden');
+    UI.init(Game);
+    Quests.check(Game);
+    UI.chat('이클립스: 어웨이크닝에 오신 것을 환영합니다!', 'sys');
+    UI.chat('퀘스트 창(오른쪽 위)을 클릭하면 자동으로 이동합니다. AI 모드로 자동 사냥!', 'sys');
+    if (!save.mailClaimed) UI.chat('[우편] 오픈 기념 선물이 도착했습니다. (메뉴 → 우편)', 'whisper');
+    setInterval(() => Game.save(), 10000);
+    addEventListener('beforeunload', () => Game.save());
+    setInterval(serverNews, 45000);
+  }
+
+  // fake server-wide announcements, like the reference ("AI콤보님이 ... 획득했습니다.")
+  function serverNews() {
+    if (!Game.started) return;
+    const b = U.pick(Game.bots);
+    const r = Math.random();
+    if (r < 0.45) {
+      const c = Transcend.randomCard(Math.random() < 0.2 ? 4 : 3);
+      UI.announce(`<b>${UI.esc(b.name)}</b>님이 <em class="${c.grade >= 4 ? 'legend' : ''}">${UI.esc(c.name)}</em> 초월을 획득했습니다.`);
+    } else if (r < 0.8) {
+      const it = D.ITEMS[U.pick(['w_sword4', 'w_bow4', 'w_staff4', 'a_4', 'r_3', 'w_sword5', 'w_staff5'])];
+      UI.announce(`<b>${UI.esc(b.name)}</b>님이 <em class="${it.grade >= 4 ? 'legend' : ''}">${UI.esc(it.name)}</em>을(를) 획득했습니다.`);
+    } else {
+      UI.announce(`<b>${UI.esc(b.name)}</b>님이 <em>+${U.randi(7, 10)} ${UI.esc(D.ITEMS[U.pick(['w_sword3', 'w_bow3', 'w_staff3'])].name)}</em> 강화에 성공했습니다!`);
+    }
+  }
+
+  // ---------------------------------------------------------------- input
+  const keys = new Set();
+  const mouse = { x: 0, y: 0, down: false, world: { x: 0, y: 0 } };
+  const toWorld = (sx, sy) => ({ x: sx / Game.zoom + Game.cam.x, y: sy / Game.zoom + Game.cam.y });
+
+  function entityAt(wx, wy) {
+    // prefer monsters, then NPCs; hit-test the sprite box
+    const hit = (e, pad = 0) => {
+      const s = e.scale || 1;
+      return wx > e.x - 20 * s - pad && wx < e.x + 20 * s + pad && wy > e.y - 56 * s - pad && wy < e.y + 8 + pad;
+    };
+    let best = null, bd = 1e9;
+    for (const m of Game.monsters) if (!m.dead && hit(m, 8)) { const d = Math.abs(m.y - wy); if (d < bd) { bd = d; best = m; } }
+    if (best) return best;
+    for (const n of Game.npcs) if (hit(n, 6)) return n;
+    return null;
+  }
+  function clickWorld(sx, sy) {
+    const p = Game.player;
+    if (!p || p.dead) return;
+    const w = toWorld(sx, sy);
+    const e = entityAt(w.x, w.y);
+    p.stopAll();
+    if (e instanceof Monster) { p.target = e; }
+    else if (e instanceof NPC) { p.talkTo = e; }
+    else {
+      p.moveTo = { x: w.x, y: w.y };
+      Game.fx.push({ type: 'click', x: w.x, y: w.y, t: 0, dur: 0.45 });
+    }
+  }
+  canvas.addEventListener('pointerdown', (e) => {
+    if (!Game.started) return;
+    mouse.down = true; mouse.x = e.clientX; mouse.y = e.clientY; mouse.heldT = 0;
+    document.getElementById('chat-input').blur();
+    clickWorld(e.clientX, e.clientY);
+  });
+  addEventListener('pointerup', () => { mouse.down = false; });
+  canvas.addEventListener('pointermove', (e) => {
+    mouse.x = e.clientX; mouse.y = e.clientY;
+    if (!Game.started) return;
+    const w = toWorld(e.clientX, e.clientY);
+    canvas.style.cursor = entityAt(w.x, w.y) ? 'pointer' : 'default';
+  });
+  canvas.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    Game.userZoom = U.clamp((Game.userZoom || Game.zoom) * (e.deltaY > 0 ? 0.9 : 1.1), 0.55, 1.8);
+    Game.zoom = Game.userZoom;
+  }, { passive: false });
+  canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+
+  const MOVE = { w: [0, -1], arrowup: [0, -1], s: [0, 1], arrowdown: [0, 1], a: [-1, 0], arrowleft: [-1, 0], d: [1, 0], arrowright: [1, 0] };
+  addEventListener('keydown', (e) => {
+    if (!Game.started) return;
+    const k = e.key.toLowerCase();
+    if (document.activeElement && document.activeElement.tagName === 'INPUT') return;
+    if (k === 'enter') { document.getElementById('chat-input').focus(); e.preventDefault(); return; }
+    if (k === 'escape') { UI.close(); return; }
+    if (MOVE[k]) { keys.add(k); e.preventDefault(); return; }
+    if (e.repeat) return;
+    const p = Game.player;
+    if (k >= '1' && k <= '4') p.castSkill(+k - 1, Game);
+    else if (k >= '5' && k <= '8') UI.useSlotItem(+k - 5);
+    else if (k === ' ') { e.preventDefault(); Game.attackNearest(); }
+    else if (k === 'g') UI.toggleAuto();
+    else if (k === 'shift') p.sprint();
+    else if (k === 'i') UI.open('inventory');
+    else if (k === 'k') UI.open('skills');
+    else if (k === 'u') UI.open('shop');
+    else if (k === 'c') UI.open('character');
+    else if (k === 'j') UI.open('quests');
+    else if (k === 't') UI.open('teleport');
+    else if (k === 'm') UI.open('map');
+    else if (k === 'b') Game.useTownScroll();
+    else if (k === 'y') UI.open('transcend');
+    else if (k === 'tab') { e.preventDefault(); UI.open('menu'); }
+  });
+  addEventListener('keyup', (e) => keys.delete(e.key.toLowerCase()));
+  addEventListener('blur', () => keys.clear());
+  document.getElementById('revive-btn').onclick = () => Game.revive();
+
+  // ---------------------------------------------------------------- update
+  let hudT = 0, miniT = 0;
+  function update(dt) {
+    Game.time += dt;
+    const p = Game.player;
+    if (p) {
+      let kx = 0, ky = 0;
+      for (const k of keys) { kx += MOVE[k][0]; ky += MOVE[k][1]; }
+      p.keys.x = kx; p.keys.y = ky;
+      // hold the mouse button to keep walking toward the cursor
+      if (mouse.down && !p.target && !p.talkTo && !p.dead) {
+        mouse.heldT += dt;
+        if (mouse.heldT > 0.25) { const w = toWorld(mouse.x, mouse.y); p.moveTo = w; p.waypoints = []; }
+      }
+      p.update(dt, Game);
+      if (p.talkAfterNav && !p.moveTo) { p.talkTo = p.talkAfterNav; p.talkAfterNav = null; }
+    }
+    for (const m of Game.monsters) m.update(dt, Game);
+    for (const n of Game.npcs) { n.lookAt = p; n.update(dt); }
+    for (const b of Game.bots) { b.update(dt, Game); if (b.bubble) b.bubble.t -= dt; }
+    if (p && p.bubble) p.bubble.t -= dt;
+    // remove corpses, respawn
+    Game.monsters = Game.monsters.filter((m) => !(m.dead && m.deadT > 2.2));
+    for (const r of Game.respawns) r.t -= dt;
+    const due = Game.respawns.filter((r) => r.t <= 0);
+    Game.respawns = Game.respawns.filter((r) => r.t > 0);
+    for (const r of due) {
+      const m = new Monster(D.MONSTERS[r.spawn.m], r.spawn);
+      Game.monsters.push(m);
+      Game.fx.push(Combat.makeFx('teleport', m.x, m.y));
+      if (m.def.boss && Game.started) {
+        UI.announce(`<em>${m.def.name}</em>이(가) ${World.zoneAt(m.x, m.y).name}에 출현했습니다!`);
+        UI.chat(`[알림] ${m.def.name}이(가) 출현했습니다!`, 'warn');
+      }
+    }
+    Combat.updateProjectiles(Game, dt);
+    Combat.updateFx(Game, dt);
+    if (Game.shake > 0) Game.shake = Math.max(0, Game.shake - dt * 30);
+
+    // camera
+    const vw = innerWidth / Game.zoom, vh = innerHeight / Game.zoom;
+    let tx, ty;
+    if (p) { tx = p.x - vw / 2; ty = p.y - 40 - vh / 2; }
+    else { tx = D.TOWN.x - vw / 2 + Math.sin(Game.time * 0.1) * 400; ty = D.TOWN.y - vh / 2 + Math.cos(Game.time * 0.08) * 250; }
+    const k = Math.min(1, dt * (p ? 8 : 1.5));
+    Game.cam.x += (tx - Game.cam.x) * k; Game.cam.y += (ty - Game.cam.y) * k;
+    Game.cam.x = U.clamp(Game.cam.x, 0, World.widthPx - vw); Game.cam.y = U.clamp(Game.cam.y, 0, World.heightPx - vh);
+
+    if (Game.started) {
+      hudT -= dt; miniT -= dt;
+      if (hudT <= 0) { hudT = 0.1; UI.refreshHud(); }
+      if (miniT <= 0) { miniT = 0.2; UI.drawMinimap(); }
+    }
+  }
+
+  // ---------------------------------------------------------------- render
+  function render() {
+    const z = Game.zoom;
+    const sh = Game.shake;
+    const cam = { x: Math.round(Game.cam.x + (sh ? U.rand(-sh, sh) : 0)), y: Math.round(Game.cam.y + (sh ? U.rand(-sh, sh) : 0)) };
+    const vw = innerWidth / z, vh = innerHeight / z;
+    ctx.setTransform(dpr * z, 0, 0, dpr * z, 0, 0);
+    ctx.imageSmoothingEnabled = false;
+    ctx.fillStyle = '#1a1a14'; ctx.fillRect(0, 0, vw, vh);
+    World.drawGround(ctx, cam, vw, vh, Game.started ? 2 : 4);
+
+    // gather visible props
+    const x0 = cam.x - 200, y0 = cam.y - 120, x1 = cam.x + vw + 200, y1 = cam.y + vh + 260;
+    const vis = [];
+    const ground = [];
+    for (let gy = Math.floor(y0 / 512); gy <= Math.floor(y1 / 512); gy++) for (let gx = Math.floor(x0 / 512); gx <= Math.floor(x1 / 512); gx++) {
+      const list = propGrid.get(gy * 1000 + gx); if (!list) continue;
+      for (const pr of list) {
+        if (pr.x < x0 || pr.x > x1 || pr.y < y0 || pr.y > y1) continue;
+        (pr.ground ? ground : vis).push({ y: pr.y, prop: pr });
+      }
+    }
+    const t = Game.time;
+    for (const g of ground) World.drawProp(ctx, g.prop, g.prop.x - cam.x, g.prop.y - cam.y, t);
+    // click markers under entities
+    for (const f of Game.fx) if (f.type === 'click') {
+      const k = f.t / f.dur;
+      ctx.strokeStyle = `rgba(255,240,180,${1 - k})`; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.ellipse(f.x - cam.x, f.y - cam.y, 14 * (1 - k * 0.5), 6 * (1 - k * 0.5), 0, 0, Math.PI * 2); ctx.stroke();
+    }
+    const inView = (e) => e.x > x0 && e.x < x1 && e.y > y0 && e.y < y1;
+    const ents = [];
+    for (const m of Game.monsters) if (inView(m)) ents.push(m);
+    for (const n of Game.npcs) if (inView(n)) ents.push(n);
+    for (const b of Game.bots) if (inView(b)) ents.push(b);
+    if (Game.player) ents.push(Game.player);
+    for (const e of ents) vis.push({ y: e.y, ent: e });
+    vis.sort((a, b) => a.y - b.y);
+    for (const v of vis) {
+      if (v.prop) World.drawProp(ctx, v.prop, v.prop.x - cam.x, v.prop.y - cam.y, t);
+      else v.ent.draw(ctx, cam);
+    }
+    for (const pr of Game.projectiles) Combat.drawProjectile(ctx, cam, pr);
+    for (const f of Game.fx) if (f.type !== 'click') Combat.drawFx(ctx, cam, f);
+    // overlays (names, bars)
+    const p = Game.player;
+    for (const e of ents) {
+      if (e instanceof Monster) e.drawOverlay(ctx, cam, p && p.target === e);
+      else e.drawOverlay(ctx, cam);
+    }
+    for (const f of Game.floaters) Combat.drawFloater(ctx, cam, f);
+
+    // zone atmosphere + vignette
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const W = innerWidth, H = innerHeight;
+    const zone = p ? World.zoneAt(p.x, p.y).id : 'town';
+    const tint = { grave: 'rgba(20,30,70,0.28)', orc: 'rgba(90,40,10,0.14)', forest: 'rgba(0,40,20,0.12)', field: 'rgba(255,220,150,0.04)', town: 'rgba(255,200,120,0.05)' }[zone];
+    if (tint) { ctx.fillStyle = tint; ctx.fillRect(0, 0, W, H); }
+    const vg = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.35, W / 2, H / 2, Math.max(W, H) * 0.75);
+    vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,0.55)');
+    ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
+    if (p && p.dead) { ctx.fillStyle = 'rgba(40,0,0,0.25)'; ctx.fillRect(0, 0, W, H); }
+  }
+
+  let last = performance.now();
+  function frame(now) {
+    const dt = Math.min(0.05, (now - last) / 1000);
+    last = now;
+    update(dt);
+    render();
+    requestAnimationFrame(frame);
+  }
+})();
