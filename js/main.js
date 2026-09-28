@@ -3,7 +3,7 @@
 const SAVE_KEY = 'eclipse_awakening_save_v1';
 
 const Game = {
-  player: null, monsters: [], npcs: [], bots: [], projectiles: [], fx: [], floaters: [], respawns: [],
+  player: null, monsters: [], npcs: [], bots: [], projectiles: [], fx: [], floaters: [], respawns: [], drops: [],
   cam: { x: 0, y: 0 }, zoom: 1, shake: 0, time: 0, started: false, muted: false, lastCardNotice: '',
 
   fighters() { return this.player && !this.player.dead ? [this.player, ...this.bots] : this.bots; },
@@ -39,6 +39,7 @@ const Game = {
   },
   scheduleRespawn(mon) {
     const s = mon.spawn;
+    if (s.noRespawn) return;
     this.respawns.push({ t: s.respawn || U.rand(5, 11), spawn: s });
   },
   teleportPlayer(x, y) {
@@ -89,6 +90,55 @@ const Game = {
     this.teleportPlayer(D.TOWN.x, D.TOWN.y + 180);
     UI.refreshAll();
   },
+  // 0 = bright day, ~0.6 = deep night. The dungeon is always dim.
+  darkness() {
+    if (this.player && World.zoneAt(this.player.x, this.player.y).dungeon) return 0.55;
+    const f = Math.sin(this.dayPhase() * Math.PI * 2);
+    return U.clamp((-f - 0.05) * 1.1, 0, 0.72);
+  },
+  dayPhase() { return ((this.time + 30) % 480) / 480; },
+  updateDrops(dt) {
+    const p = this.player;
+    for (const d of this.drops) {
+      d.t += dt;
+      if (!p || p.dead || d.t < 0.9) continue;
+      const dist = Math.hypot(p.x - d.x, p.y - d.y);
+      if (dist > 700) continue;
+      const sp = (420 + d.t * 400) * dt;
+      if (dist < 24 || sp >= dist) { d.picked = true; this.pickup(d); }
+      else { d.x += ((p.x - d.x) / dist) * sp; d.y += ((p.y - d.y) / dist) * sp; }
+    }
+    this.drops = this.drops.filter((d) => !d.picked && d.t < 90);
+  },
+  pickup(d) {
+    const p = this.player, it = D.ITEMS[d.id];
+    p.addItem(d.id, d.n);
+    UI.chat(`${it.name}${d.n > 1 ? ` (${d.n})` : ''}을(를) 획득했습니다.`, 'drop');
+    this.fx.push(Combat.makeFx('loot', p.x, p.y, { color: D.GRADES[it.grade].color }));
+    if (it.grade >= 3) UI.announce(`<b>${UI.esc(p.name)}</b>님이 <em class="${it.grade >= 4 ? 'legend' : ''}">${UI.esc(it.name)}</em>을(를) 획득했습니다.`);
+    U.sfx.coin();
+    UI.markInv();
+  },
+  drawDrops(ctx, cam) {
+    for (const d of this.drops) {
+      const it = D.ITEMS[d.id];
+      let x = d.x, y = d.y, h = 0;
+      if (d.t < 0.45) { const k = d.t / 0.45; x = U.lerp(d.sx, d.x, k); y = U.lerp(d.sy, d.y, k); h = Math.sin(k * Math.PI) * 50; }
+      else h = 4 + Math.sin(d.t * 5) * 3;
+      const sx = x - cam.x, sy = y - cam.y;
+      const col = D.GRADES[it.grade].color;
+      ctx.save();
+      ctx.globalAlpha = 0.5; ctx.fillStyle = col;
+      ctx.beginPath(); ctx.ellipse(sx, sy, 14, 5, 0, 0, Math.PI * 2); ctx.fill();
+      if (it.grade >= 2) {
+        ctx.globalAlpha = 0.35 + Math.sin(d.t * 6) * 0.15; ctx.globalCompositeOperation = 'lighter';
+        ctx.fillRect(sx - 2, sy - 70, 4, 70);
+      }
+      ctx.restore();
+      const img = UI.iconImg(it.icon);
+      if (img.complete) ctx.drawImage(img, sx - 13, sy - 26 - h, 26, 26);
+    }
+  },
   snapCamera() {
     const vw = innerWidth / this.zoom, vh = innerHeight / this.zoom;
     this.cam.x = this.player.x - vw / 2; this.cam.y = this.player.y - 40 - vh / 2;
@@ -132,7 +182,7 @@ const Game = {
     Sprites[n] = img;
   });
 
-  let propGrid = null;
+  let propGrid = null, lightCv = null;
   function buildPropGrid() {
     propGrid = new Map();
     for (const p of World.props) {
@@ -308,20 +358,42 @@ const Game = {
     else if (k === 'm') UI.open('map');
     else if (k === 'b') Game.useTownScroll();
     else if (k === 'y') UI.open('transcend');
+    else if (k === 'p') UI.open('pass');
+    else if (k === 'o') UI.open('bosstime');
     else if (k === 'tab') { e.preventDefault(); UI.open('menu'); }
   });
   addEventListener('keyup', (e) => keys.delete(e.key.toLowerCase()));
   addEventListener('blur', () => keys.clear());
   document.getElementById('revive-btn').onclick = () => Game.revive();
 
+  // on-screen joystick for touch devices
+  const joy = { x: 0, y: 0 };
+  const joyEl = document.getElementById('joy'), knob = document.getElementById('joy-knob');
+  if (matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window) document.body.classList.add('touch');
+  let joyId = null;
+  const joyMove = (e) => {
+    const r = joyEl.getBoundingClientRect();
+    let dx = e.clientX - (r.left + r.width / 2), dy = e.clientY - (r.top + r.height / 2);
+    const R = r.width / 2 - 10, l = Math.hypot(dx, dy);
+    if (l > R) { dx = (dx / l) * R; dy = (dy / l) * R; }
+    knob.style.transform = `translate(${dx}px, ${dy}px)`;
+    const m = Math.hypot(dx, dy) / R;
+    joy.x = m > 0.25 ? dx / R : 0; joy.y = m > 0.25 ? dy / R : 0;
+  };
+  joyEl.addEventListener('pointerdown', (e) => { joyId = e.pointerId; joyEl.setPointerCapture(e.pointerId); joyMove(e); e.preventDefault(); });
+  joyEl.addEventListener('pointermove', (e) => { if (e.pointerId === joyId) joyMove(e); });
+  const joyEnd = (e) => { if (e.pointerId !== joyId) return; joyId = null; joy.x = joy.y = 0; knob.style.transform = ''; };
+  joyEl.addEventListener('pointerup', joyEnd); joyEl.addEventListener('pointercancel', joyEnd);
+
   // ---------------------------------------------------------------- update
-  let hudT = 0, miniT = 0;
+  let hudT = 0, miniT = 0, badgeT = 0;
   function update(dt) {
     Game.time += dt;
     const p = Game.player;
     if (p) {
       let kx = 0, ky = 0;
       for (const k of keys) { kx += MOVE[k][0]; ky += MOVE[k][1]; }
+      kx += joy.x; ky += joy.y;
       p.keys.x = kx; p.keys.y = ky;
       // hold the mouse button to keep walking toward the cursor
       if (mouse.down && !p.target && !p.talkTo && !p.dead) {
@@ -331,6 +403,8 @@ const Game = {
       p.update(dt, Game);
       if (p.talkAfterNav && !p.moveTo) { p.talkTo = p.talkAfterNav; p.talkAfterNav = null; }
     }
+    Dungeon.update(Game, dt);
+    Game.updateDrops(dt);
     for (const m of Game.monsters) m.update(dt, Game);
     for (const n of Game.npcs) { n.lookAt = p; n.update(dt); }
     for (const b of Game.bots) { b.update(dt, Game); if (b.bubble) b.bubble.t -= dt; }
@@ -366,6 +440,8 @@ const Game = {
       hudT -= dt; miniT -= dt;
       if (hudT <= 0) { hudT = 0.1; UI.refreshHud(); }
       if (miniT <= 0) { miniT = 0.2; UI.drawMinimap(); }
+      badgeT -= dt;
+      if (badgeT <= 0) { badgeT = 1; Content.badges(Game); }
     }
   }
 
@@ -393,6 +469,7 @@ const Game = {
     }
     const t = Game.time;
     for (const g of ground) World.drawProp(ctx, g.prop, g.prop.x - cam.x, g.prop.y - cam.y, t);
+    Game.drawDrops(ctx, cam);
     // click markers under entities
     for (const f of Game.fx) if (f.type === 'click') {
       const k = f.t / f.dur;
@@ -413,6 +490,37 @@ const Game = {
     }
     for (const pr of Game.projectiles) Combat.drawProjectile(ctx, cam, pr);
     for (const f of Game.fx) if (f.type !== 'click') Combat.drawFx(ctx, cam, f);
+    // day / night lighting: darken everything, then cut out light around fires and the player
+    const dark = Game.darkness();
+    if (dark > 0.02) {
+      const lights = [];
+      for (const g of [...ground, ...vis]) {
+        const pr = g.prop; if (!pr) continue;
+        const r = { torch: 130, bonfire: 210, brazier: 200, portal: 190, rift: 260, altar: 200, house: 70 }[pr.type];
+        if (r) lights.push([pr.x, pr.y - (pr.type === 'house' ? 60 : 40), r]);
+      }
+      if (Game.player) lights.push([Game.player.x, Game.player.y - 30, 170]);
+      for (const pr of Game.projectiles) if (pr.kind === 'bolt') lights.push([pr.x, pr.y, 110]);
+      for (const f of Game.fx) if (['explode', 'meteor', 'levelup', 'teleport', 'heal', 'buff', 'doom'].includes(f.type)) lights.push([f.x, f.y - 30, 180]);
+      if (!lightCv || lightCv.width !== canvas.width || lightCv.height !== canvas.height) {
+        lightCv = document.createElement('canvas'); lightCv.width = canvas.width; lightCv.height = canvas.height;
+      }
+      const lg = lightCv.getContext('2d');
+      lg.globalCompositeOperation = 'source-over';
+      lg.clearRect(0, 0, lightCv.width, lightCv.height);
+      lg.fillStyle = `rgba(4,8,30,${dark})`; lg.fillRect(0, 0, lightCv.width, lightCv.height);
+      lg.globalCompositeOperation = 'destination-out';
+      const s = dpr * z;
+      for (const [lx, ly, lr] of lights) {
+        const x = (lx - cam.x) * s, y = (ly - cam.y) * s, r = lr * s;
+        const gr = lg.createRadialGradient(x, y, 0, x, y, r);
+        gr.addColorStop(0, 'rgba(0,0,0,0.88)'); gr.addColorStop(0.45, 'rgba(0,0,0,0.5)'); gr.addColorStop(1, 'rgba(0,0,0,0)');
+        lg.fillStyle = gr; lg.beginPath(); lg.arc(x, y, r, 0, Math.PI * 2); lg.fill();
+      }
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.drawImage(lightCv, 0, 0);
+      ctx.setTransform(dpr * z, 0, 0, dpr * z, 0, 0);
+    }
     // overlays (names, bars)
     const p = Game.player;
     for (const e of ents) {

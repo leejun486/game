@@ -49,7 +49,9 @@
     <!-- right side buttons -->
     <div id="right-buttons">
       <button class="round-btn" data-act="quests" title="퀘스트"><img src="assets/icons/quest.svg"></button>
-      <button class="round-btn" data-act="transcend" title="초월"><img src="assets/icons/transcend.svg"></button>
+      <button class="round-btn" data-act="transcend" title="초월 (Y)"><img src="assets/icons/transcend.svg"></button>
+      <button class="round-btn" data-act="dungeon" title="던전: 이클립스 균열"><img src="assets/icons/dungeon.svg"></button>
+      <button class="round-btn" data-act="bosstime" title="이클립스 타임 (O)"><img src="assets/icons/skull.svg"></button>
     </div>
 
     <!-- chat -->
@@ -83,6 +85,8 @@
     <div id="exp-bar"><i id="exp-fill"></i><span id="exp-text"></span></div>
     <div id="target-frame" class="hidden"><div id="target-name"></div><div class="tbar"><i id="target-fill"></i></div></div>
     <div id="toast"></div>
+    <div id="dungeon-hud" class="hidden"></div>
+    <div id="joy"><div id="joy-knob"></div></div>
   </div>
 
   <!-- ===== Panels ===== -->
@@ -122,6 +126,8 @@
 <script src="js/combat.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/transcend.js"></script>
+<script src="js/dungeon.js"></script>
+<script src="js/content.js"></script>
 <script src="js/main.js"></script>
 </body>
 </html>

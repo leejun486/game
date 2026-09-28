@@ -5,6 +5,8 @@ const D = {};
 D.TILE = 64;
 D.MAP_W = 180;
 D.MAP_H = 180;
+D.DUNGEON_RECT = { x0: 148, y0: 4, x1: 177, y1: 32 };
+D.DUNGEON_CENTER = { x: 162.5, y: 18 };
 D.TOWN = { x: 90 * 64, y: 90 * 64, r: 15 * 64 };
 
 D.GRADES = [
@@ -82,6 +84,7 @@ D.MAX_LV = 60;
 // Evaluated in order; the first match wins.
 D.ZONES = [
   { id: 'town', name: '라스카노 마을', safe: true, test: (tx, ty) => Math.abs(tx - 90) <= 15 && Math.abs(ty - 90) <= 15 },
+  { id: 'dungeon', name: '이클립스 균열', dungeon: true, test: (tx, ty) => tx >= 148 && tx <= 177 && ty >= 4 && ty <= 32 },
   { id: 'field', name: '바람의 초원', test: (tx, ty) => ty < 75 && tx >= 50 && tx <= 130 },
   { id: 'grave', name: '망자의 묘지', test: (tx, ty) => tx > 105 },
   { id: 'orc', name: '오크 요새', test: (tx, ty) => ty > 105 },
@@ -198,7 +201,7 @@ D.CARD_STAT_BY_GRADE = {
 };
 D.STAT_NAMES = {
   atkSpd: ['공격 속도', '%'], castSpd: ['시전 속도', '%'], atk: ['공격력', ''], def: ['방어력', ''], eva: ['회피', ''],
-  dmgRed: ['피해 감소', ''], moveSpd: ['이동 속도', '%'], hp: ['최대 HP', ''], mp: ['최대 MP', ''], crit: ['치명타', '%'],
+  dmgRed: ['피해 감소', ''], expPct: ['획득 경험치', '%'], moveSpd: ['이동 속도', '%'], hp: ['최대 HP', ''], mp: ['최대 MP', ''], crit: ['치명타', '%'],
 };
 D.CARDS = [
   { id: 'c_leonic', name: '황금 기사 레오닉', sheet: 'knight_gold', grade: 4, style: 'war' },

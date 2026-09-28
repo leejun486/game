@@ -2,7 +2,7 @@
 // World: tile map generation, terrain rendering (chunked), props, collision, minimap.
 const World = (() => {
   const T = D.TILE, W = D.MAP_W, H = D.MAP_H;
-  const GRASS = 0, DIRT = 1, STONE = 2, GRAVE = 3, SAND = 4, WATER = 5, FOREST = 6, ROAD = 7, CLIFF = 8;
+  const GRASS = 0, DIRT = 1, STONE = 2, GRAVE = 3, SAND = 4, WATER = 5, FOREST = 6, ROAD = 7, CLIFF = 8, DUNGEON = 9;
   const tiles = new Uint8Array(W * H);
   const solid = new Uint8Array(W * H);
   const props = [];
@@ -24,6 +24,7 @@ const World = (() => {
         const n = U.fbm(tx * 0.08, ty * 0.08, SEED, 3);
         let t = GRASS;
         if (z === 'town') t = STONE;
+        else if (z === 'dungeon') t = DUNGEON;
         else if (z === 'field') t = n > 0.62 ? DIRT : GRASS;
         else if (z === 'forest') t = n > 0.66 ? GRASS : FOREST;
         else if (z === 'grave') t = n > 0.6 ? FOREST : GRAVE;
@@ -65,6 +66,7 @@ const World = (() => {
     }
     for (let i = 0; i < W * H; i++) solid[i] = tiles[i] === WATER ? 1 : 0;
     placeProps();
+    buildDungeon();
   }
 
   function addProp(type, x, y, r = 0, extra = {}) {
@@ -128,7 +130,7 @@ const World = (() => {
     for (let ty = 1; ty < H - 1; ty++) {
       for (let tx = 1; tx < W - 1; tx++) {
         const z = zoneAt(tx * T, ty * T).id;
-        if (z === 'town') continue;
+        if (z === 'town' || z === 'dungeon') continue;
         const t = tileAt(tx, ty);
         if (!freeTile(tx, ty, 1)) continue;
         const spawnArea = nearSpawn(tx, ty);
@@ -171,6 +173,24 @@ const World = (() => {
     // boss arenas
     addProp('altar', 165 * T, 86 * T, 0, { ground: true });
     addProp('altar', 90 * T, 168 * T, 0, { ground: true });
+  }
+  // 이클립스 균열: a walled arena only reachable through the dungeon teleport
+  function buildDungeon() {
+    const { x0, y0, x1, y1 } = D.DUNGEON_RECT;
+    // clear anything the nature pass may have put right outside the walls
+    for (let i = props.length - 1; i >= 0; i--) {
+      const p = props[i], tx = p.x / T, ty = p.y / T;
+      if (tx > x0 - 2 && tx < x1 + 2 && ty > y0 - 2 && ty < y1 + 3) props.splice(i, 1);
+    }
+    for (const [k, list] of buckets) {
+      buckets.set(k, list.filter((p) => props.includes(p)));
+    }
+    for (let tx = x0; tx <= x1; tx++) { addWall(tx, y0); addWall(tx, y1); }
+    for (let ty = y0 + 1; ty < y1; ty++) { addWall(x0, ty); addWall(x1, ty); }
+    const cx = D.DUNGEON_CENTER.x * T, cy = D.DUNGEON_CENTER.y * T;
+    addProp('rift', cx, cy, 0, { ground: true });
+    for (const [dx, dy] of [[-8, -6], [8, -6], [-8, 6], [8, 6], [-12, 0], [12, 0]]) addProp('pillar', cx + dx * T, cy + dy * T, 22);
+    for (const [dx, dy] of [[-12, -10], [12, -10], [-12, 10], [12, 10]]) addProp('brazier', cx + dx * T, cy + dy * T, 16);
   }
   const NPC_SPOTS = D.NPCS.map((n) => [n.dx, n.dy]);
 
@@ -217,7 +237,7 @@ const World = (() => {
 
   const PAL = {
     [GRASS]: [78, 112, 54], [FOREST]: [50, 82, 42], [DIRT]: [124, 100, 70], [STONE]: [170, 154, 130],
-    [ROAD]: [140, 128, 110], [GRAVE]: [74, 70, 64], [SAND]: [178, 148, 100], [WATER]: [38, 78, 112], [CLIFF]: [30, 30, 30],
+    [ROAD]: [140, 128, 110], [DUNGEON]: [58, 52, 66], [GRAVE]: [74, 70, 64], [SAND]: [178, 148, 100], [WATER]: [38, 78, 112], [CLIFF]: [30, 30, 30],
   };
 
   function texel(wx, wy) {
@@ -250,6 +270,13 @@ const World = (() => {
         if (ring < 3) k *= 0.7;
         r += 6; g += 4;
       }
+    } else if (t === DUNGEON) {
+      const sz = 48, row = Math.floor(wy / sz), sx = Math.floor(wx / sz);
+      const lx = wx - sx * sz, ly = wy - row * sz;
+      k = 0.8 + U.hash(sx, row, 29) * 0.25 + (n - 0.5) * 0.2;
+      if (lx < 3 || ly < 3) k *= 0.55;
+      const crack = Math.abs(U.fbm(wx * 0.01, wy * 0.01, 41, 3) - 0.5);
+      if (crack < 0.005) { r = 120; g = 64; b = 180; k = 1; }
     } else if (t === ROAD) {
       const sz = 18, row = Math.floor(wy / sz), off = (row % 2) * 9;
       const sx = Math.floor((wx + off) / sz);
@@ -484,6 +511,14 @@ const World = (() => {
       g.fillStyle = '#2a1c10'; g.beginPath(); g.moveTo(w / 2 - 16, h - 12); g.lineTo(w / 2, h - 52); g.lineTo(w / 2 + 16, h - 12); g.fill();
       g.strokeStyle = '#3a2a1a'; g.lineWidth = 3; g.beginPath(); g.moveTo(w / 2 - 6, h - 104); g.lineTo(w / 2 + 6, h - 88); g.moveTo(w / 2 + 6, h - 104); g.lineTo(w / 2 - 6, h - 88); g.stroke();
     });
+    art.pillar = mk(60, 150, (g, w, h) => {
+      shadow(g, w / 2 + 6, h - 10, 26, 8, 0.45);
+      g.fillStyle = '#4a4450'; g.fillRect(12, h - 22, 36, 14);
+      g.fillStyle = '#6d6676'; g.fillRect(16, h - 130, 28, 110);
+      g.fillStyle = 'rgba(0,0,0,0.3)'; g.fillRect(34, h - 130, 10, 110);
+      g.fillStyle = '#7d7688'; g.fillRect(10, h - 140, 40, 12);
+      g.fillStyle = 'rgba(170,90,255,0.55)'; g.fillRect(27, h - 110, 4, 60);
+    });
     art.woodpile = mk(50, 30, (g) => { g.fillStyle = '#4a3020'; g.fillRect(8, 16, 34, 6); g.fillRect(12, 11, 26, 6); g.fillStyle = '#2b2b2b'; blob(g, 25, 16, 10, 'rgba(30,30,30,0.6)'); });
   }
 
@@ -496,19 +531,21 @@ const World = (() => {
     }
     if (p.type === 'portal') return drawPortal(ctx, sx, sy, t);
     if (p.type === 'altar') return drawAltar(ctx, sx, sy, t);
+    if (p.type === 'rift') return drawRift(ctx, sx, sy, t);
+    if (p.type === 'brazier') { ctx.fillStyle = '#3a3440'; ctx.fillRect(sx - 12, sy - 30, 24, 30); ctx.fillStyle = '#56505e'; ctx.fillRect(sx - 16, sy - 34, 32, 6); return flame(ctx, sx, sy - 36, 1.2, t, sx, true); }
     if (p.type === 'torch') return drawTorch(ctx, sx, sy, t, p);
     if (p.type === 'bonfire') return drawBonfire(ctx, sx, sy, t);
     if (!a) return;
     ctx.drawImage(a, Math.round(sx - a.width / 2), Math.round(sy - a.height + 8));
   }
-  function flame(ctx, x, y, s, t, seed) {
+  function flame(ctx, x, y, s, t, seed, purple) {
     const f = Math.sin(t * 14 + seed) * 0.15 + Math.sin(t * 23 + seed * 2) * 0.1;
     const grd = ctx.createRadialGradient(x, y, 0, x, y, 70 * s);
-    grd.addColorStop(0, 'rgba(255,170,60,0.35)'); grd.addColorStop(1, 'rgba(255,120,30,0)');
+    grd.addColorStop(0, purple ? 'rgba(180,90,255,0.4)' : 'rgba(255,170,60,0.35)'); grd.addColorStop(1, 'rgba(255,120,30,0)');
     ctx.fillStyle = grd; ctx.beginPath(); ctx.arc(x, y, 70 * s, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#ff7b22';
+    ctx.fillStyle = purple ? '#a05aff' : '#ff7b22';
     ctx.beginPath(); ctx.ellipse(x, y - 8 * s, 7 * s * (1 + f), 13 * s * (1 - f), 0, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#ffd35a';
+    ctx.fillStyle = purple ? '#e6c8ff' : '#ffd35a';
     ctx.beginPath(); ctx.ellipse(x, y - 5 * s, 4 * s, 8 * s * (1 + f), 0, 0, Math.PI * 2); ctx.fill();
   }
   function drawTorch(ctx, x, y, t, p) {
@@ -546,6 +583,17 @@ const World = (() => {
     bg.addColorStop(0, 'rgba(255,255,255,0)'); bg.addColorStop(1, `rgba(220,240,255,${0.18 + Math.sin(t * 3) * 0.06})`);
     ctx.fillStyle = bg; ctx.fillRect(x - 5, y - 160, 10, 160);
   }
+  function drawRift(ctx, x, y, t) {
+    ctx.save(); ctx.translate(x, y); ctx.scale(1, 0.55);
+    for (let i = 0; i < 3; i++) {
+      ctx.strokeStyle = `rgba(170,90,255,${0.5 - i * 0.12})`; ctx.lineWidth = 6 - i * 1.5;
+      ctx.beginPath(); ctx.arc(0, 0, 120 + i * 40, t * (0.4 + i * 0.2), t * (0.4 + i * 0.2) + Math.PI * 1.6); ctx.stroke();
+    }
+    const g = ctx.createRadialGradient(0, 0, 0, 0, 0, 110);
+    g.addColorStop(0, `rgba(20,0,40,0.95)`); g.addColorStop(0.7, `rgba(90,30,160,${0.5 + Math.sin(t * 2) * 0.15})`); g.addColorStop(1, 'rgba(90,30,160,0)');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, 110, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
   function drawAltar(ctx, x, y, t) {
     ctx.save(); ctx.translate(x, y); ctx.scale(1, 0.6);
     ctx.fillStyle = 'rgba(60,10,10,0.55)'; ctx.beginPath(); ctx.arc(0, 0, 170, 0, Math.PI * 2); ctx.fill();
@@ -575,7 +623,7 @@ const World = (() => {
   }
 
   return {
-    GRASS, DIRT, STONE, GRAVE, SAND, WATER, FOREST, ROAD,
+    GRASS, DIRT, STONE, GRAVE, SAND, WATER, FOREST, ROAD, DUNGEON,
     tiles, props, tileAt, zoneAt, blocked, findFree,
     init() { generate(); buildArt(); buildMini(); },
     drawGround, drawProp,

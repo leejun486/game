@@ -152,7 +152,7 @@ const UI = (() => {
       $('target-fill').style.width = (t.hp / t.maxHp) * 100 + '%';
     } else $('target-frame').classList.add('hidden');
     const d = new Date();
-    $('clock').textContent = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+    $('clock').textContent = `${game.darkness() > 0.15 ? '☾' : '☀'} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
     if (panel && panel.onUpdate) panel.onUpdate();
   }
   function refreshQuest() {
@@ -248,8 +248,8 @@ const UI = (() => {
       <div class="banner" id="menu-banner"><div><h4>개발자 노트</h4><small>자세히 보기</small></div></div>
       <div class="feature-grid">
         <button data-a="transcend" style="background:linear-gradient(90deg,rgba(0,0,0,.6),rgba(0,0,0,.1)),linear-gradient(120deg,#5a4630,#2a2016)">성소<small>초월 · 영혼의 성소</small></button>
-        <button data-a="teleport" style="background:linear-gradient(90deg,rgba(0,0,0,.5),rgba(0,0,0,.1)),radial-gradient(circle at 70% 60%,#d9a24a,#1a1206 60%)">이클립스 타임<small>보스 출현 정보</small></button>
-        <button data-a="dungeon" style="background:linear-gradient(90deg,rgba(0,0,0,.6),rgba(0,0,0,.1)),linear-gradient(120deg,#3b3a36,#161514)">던전<small>업데이트 예정</small></button>
+        <button data-a="bosstime" style="background:linear-gradient(90deg,rgba(0,0,0,.5),rgba(0,0,0,.1)),radial-gradient(circle at 70% 60%,#d9a24a,#1a1206 60%)">이클립스 타임<small>보스 출현 정보</small></button>
+        <button data-a="dungeon" style="background:linear-gradient(90deg,rgba(0,0,0,.6),rgba(0,0,0,.1)),radial-gradient(circle at 75% 50%,#7a3ad0,#150a24 65%)">던전<small>이클립스 균열 · 일일 3회</small></button>
         <button data-a="pvp" style="background:linear-gradient(90deg,rgba(0,0,0,.6),rgba(0,0,0,.1)),linear-gradient(120deg,#6a4a3a,#1d1410)">전장<small>업데이트 예정</small></button>
       </div>
       <div class="icon-grid">${grid.map(([a, i, t, dot]) => `<button data-a="${a}">${ico(i)}<span>${t}</span>${dot ? '<i class="dot"></i>' : ''}</button>`).join('')}</div>
@@ -486,7 +486,7 @@ const UI = (() => {
     const cv = spriteCanvas(d.sheet, 96, 10, 0, 0.8);
     body.innerHTML = `<div class="npc-talk"><div id="npc-cv"></div><p>${esc(d.talk)}</p></div><div class="dialog-btns">
       ${d.shop ? `<button class="gold-btn" data-do="shop">거래하기</button>` : ''}
-      ${d.teleport ? `<button class="gold-btn" data-do="tp">순간이동</button>` : ''}
+      ${d.teleport ? `<button class="gold-btn" data-do="tp">순간이동</button><button class="dark-btn" data-do="dg">이클립스 균열</button><button class="dark-btn" data-do="boss">보스 정보</button>` : ''}
       ${d.transcend ? `<button class="gold-btn" data-do="tr">초월</button><button class="dark-btn" data-do="summon">초월 소환</button>` : ''}
       <button class="dark-btn" data-do="bye">대화 종료</button></div>`;
     body.querySelector('#npc-cv').appendChild(cv);
@@ -495,6 +495,8 @@ const UI = (() => {
       const a = b.dataset.do;
       if (a === 'shop') open('shop', d.shop);
       else if (a === 'tp') open('teleport');
+      else if (a === 'dg') open('dungeon');
+      else if (a === 'boss') open('bosstime');
       else if (a === 'tr') open('transcend');
       else if (a === 'summon') open('summon');
       else close();
@@ -522,7 +524,7 @@ const UI = (() => {
       <div class="list-row"><span>자동 물약 (HP 55% 이하)</span><button class="dark-btn" data-do="pot">${p.s.autoPotion ? '켜짐' : '꺼짐'}</button></div>
       <div class="list-row"><span>게임 저장</span><button class="dark-btn" data-do="save">저장</button></div>
       <div class="list-row"><span>저장 삭제 후 처음부터</span><button class="red-btn" data-do="reset">초기화</button></div>
-      <p class="sub" style="color:#888;font-size:12px;line-height:1.6">조작: 클릭 이동/공격 · WASD 이동 · 1~4 스킬 · 5~8 아이템 · Space 근처 적 공격 · G AI 모드 · Shift 질주 · I 인벤토리 · K 스킬 · U 상점 · C 캐릭터 · J 퀘스트 · T 순간이동 · B 귀환 · M 지도 · Enter 채팅 · 마우스 휠 줌</p>`;
+      <p class="sub" style="color:#888;font-size:12px;line-height:1.6">조작: 클릭 이동/공격 · WASD 이동 · 1~4 스킬 · 5~8 아이템 · Space 근처 적 공격 · G AI 모드 · Shift 질주 · I 인벤토리 · K 스킬 · U 상점 · C 캐릭터 · J 퀘스트 · Y 초월 · P 시즌 패스 · O 보스 정보 · T 순간이동 · B 귀환 · M 지도 · Enter 채팅 · 마우스 휠 줌</p>`;
     body.onclick = (e) => {
       const b = e.target.closest('[data-do]'); if (!b) return;
       const a = b.dataset.do;

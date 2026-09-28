@@ -472,3 +472,57 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
 /* card grid rows need a fixed height; aspect-ratio collapses inside the flex column */
 .card-grid { grid-auto-rows: 138px; }
 .card-grid .card { aspect-ratio: auto; height: 138px; }
+
+/* ---------- v1.1: dungeon, pass, attendance, collection, joystick ---------- */
+#dungeon-hud {
+  position: absolute; top: 44px; left: 50%; transform: translateX(-50%); padding: 6px 18px; font-size: 14px;
+  background: linear-gradient(90deg, transparent, rgba(40,10,70,.85), transparent); color: #e6d4ff; text-shadow: 0 1px 2px #000; white-space: nowrap;
+}
+#dungeon-hud b { color: #c79cff; }
+#dungeon-hud:not(.hidden) ~ #target-frame, #hud:has(#dungeon-hud:not(.hidden)) #target-frame { top: 76px; }
+.dg-banner { height: 90px; margin-bottom: 12px; border: 1px solid #5a3a8a; display: flex; flex-direction: column; justify-content: center; padding-left: 18px;
+  background: radial-gradient(circle at 80% 50%, #8a4ae0, #1a0c2c 60%); }
+.dg-banner h4 { margin: 0; font-size: 22px; color: #f0e2ff; }
+.dg-banner small { color: #c9b0e8; }
+
+.attend-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+.attend { position: relative; border: 1px solid var(--line); background: rgba(255,255,255,.03); padding: 8px 4px; text-align: center; font-size: 11.5px; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.attend b { color: var(--gold); font-size: 12px; }
+.attend img { width: 34px; height: 34px; }
+.attend.cur { border-color: var(--gold); box-shadow: 0 0 12px rgba(233,215,168,.4); }
+.attend.done { opacity: .45; }
+.attend i { position: absolute; top: 2px; right: 5px; color: #7ee07e; font-style: normal; }
+
+.pass-top { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 12px; }
+.pass-top > div { flex: 1; min-width: 220px; }
+.pass-track { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 8px; }
+.pass-col { flex: 0 0 98px; display: flex; flex-direction: column; gap: 5px; opacity: .6; }
+.pass-col.open { opacity: 1; }
+.pass-lv { text-align: center; font-weight: 700; color: var(--gold); background: rgba(255,255,255,.05); padding: 3px; }
+.pass-cell { position: relative; height: 92px; border: 1px solid var(--line); background: rgba(255,255,255,.03); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-size: 11px; text-align: center; cursor: pointer; padding: 4px; }
+.pass-cell[data-k="prem"] { background: linear-gradient(#2a2036, #15101d); border-color: #5a4378; }
+.pass-cell img { width: 32px; height: 32px; }
+.pass-cell.ready { border-color: var(--gold); box-shadow: inset 0 0 14px rgba(233,215,168,.35); }
+.pass-cell.got { opacity: .45; }
+.pass-cell.lock img { filter: grayscale(1) brightness(.6); }
+.pass-cell i { position: absolute; top: 2px; right: 4px; font-style: normal; font-size: 11px; color: #7ee07e; }
+
+.coll { border: 1px solid var(--line); padding: 10px; margin-bottom: 8px; background: rgba(255,255,255,.02); }
+.coll.complete { border-color: #3d9a45; background: rgba(60,150,70,.08); }
+.coll-head { display: flex; justify-content: space-between; gap: 10px; margin-bottom: 8px; font-size: 14px; }
+.coll-items { display: flex; gap: 6px; flex-wrap: wrap; }
+.coll-items .cell { width: 56px; }
+.cell.dim img { filter: grayscale(1) brightness(.45); }
+.cell[data-reg] { box-shadow: 0 0 10px rgba(126,224,126,.5); }
+
+#joy { display: none; position: absolute; left: 22px; bottom: 120px; width: 116px; height: 116px; border-radius: 50%;
+  background: radial-gradient(rgba(255,255,255,.08), rgba(0,0,0,.35)); border: 2px solid rgba(233,215,168,.35); touch-action: none; }
+#joy-knob { position: absolute; left: 50%; top: 50%; width: 50px; height: 50px; margin: -25px 0 0 -25px; border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, rgba(233,215,168,.7), rgba(120,100,60,.6)); pointer-events: none; }
+body.touch #joy { display: block; }
+body.touch #potion-auto { left: auto; right: 84px; bottom: 112px; }
+body.touch #chat { bottom: 250px; }
+@media (max-width: 900px) {
+  .attend-grid { grid-template-columns: repeat(4, 1fr); }
+  #dungeon-hud { top: 78px; font-size: 11.5px; }
+}

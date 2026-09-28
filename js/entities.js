@@ -165,10 +165,11 @@ class Monster extends Entity {
     super.update(dt);
     if (this.dead) return;
     this.atkCd -= dt;
-    const leash = Math.hypot(this.x - this.home.x, this.y - this.home.y) > 950;
+    const leash = !this.inDungeon && Math.hypot(this.x - this.home.x, this.y - this.home.y) > 950;
     if (this.target && (this.target.dead || leash || this.target.inTown || U.dist(this, this.target) > 900)) {
       this.target = null; this.returning = leash;
     }
+    if (!this.target && this.inDungeon && game.player && !game.player.dead) this.target = game.player;
     if (!this.target && this.def.aggro && !this.returning) {
       let best = null, bd = this.def.boss ? 330 : 240;
       for (const e of game.fighters()) {

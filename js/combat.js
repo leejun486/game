@@ -71,18 +71,17 @@ const Combat = (() => {
     p.s.kills++;
     setTimeout(() => { floatText(game, mon, `+${U.fmt(gold)} 아데나`, '#ffd76a'); U.sfx.coin(); }, 180);
     // drops (auto-loot)
+    // items drop on the ground and fly to the player (see Game.updateDrops)
     const table = [...D.DROPS.common, ...(D.DROPS[d.id] || [])];
     for (const [id, ch] of table) {
-      if (Math.random() < ch * (d.boss ? 1 : 1)) {
+      if (Math.random() < ch) {
         const n = D.ITEMS[id].kind === 'potion' ? U.randi(1, 3) : 1;
-        p.addItem(id, n);
-        const it = D.ITEMS[id];
-        UI.chat(`${it.name}${n > 1 ? ` (${n})` : ''}을(를) 획득했습니다.`, 'drop');
-        game.fx.push(makeFx('loot', mon.x, mon.y, { color: D.GRADES[it.grade].color }));
-        if (it.grade >= 3) UI.announce(`<b>${p.name}</b>님이 <em class="${it.grade >= 4 ? 'legend' : ''}">${it.name}</em>을(를) 획득했습니다.`);
-        UI.markInv();
+        const a = Math.random() * Math.PI * 2, r = U.rand(20, 60);
+        game.drops.push({ id, n, x: mon.x + Math.cos(a) * r, y: mon.y + Math.sin(a) * r * 0.6, sx: mon.x, sy: mon.y, t: 0 });
       }
     }
+    if (d.boss && d.id !== 'dungeon') p.s.bossKills++;
+    Content.passXp(p, d.boss ? 30 : 1);
     if (Math.random() < (d.boss ? 1 : 0.004)) { const dia = d.boss ? U.randi(80, 200) : U.randi(1, 5); p.s.dia += dia; UI.chat(`다이아 ${dia}개를 획득했습니다.`, 'drop'); }
     if (d.boss) UI.announce(`<b>${p.name}</b>님이 <em>${d.name}</em>을(를) 처치했습니다!`);
     Quests.onKill(game, d.id);
@@ -453,6 +452,7 @@ const Quests = {
     if (r.items) for (const id in r.items) { p.addItem(id, r.items[id]); parts.push(`${D.ITEMS[id].name} ${r.items[id]}`); }
     UI.chat(`[퀘스트 보상] ${parts.join(', ')}`, 'sys');
     UI.toast('보상 획득: ' + parts.join(', '), '#ffe38a');
+    Content.passXp(p, 10);
     if (this.isDaily(p)) p.s.daily.done = true;
     else { p.s.quest++; p.s.qprog = 0; }
     this._done = false;

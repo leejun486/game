@@ -4,6 +4,7 @@ class Player extends Hero {
   constructor(save) {
     const cls = save.cls;
     super({ x: save.x || D.TOWN.x, y: save.y || D.TOWN.y + 120, sheet: D.CLASSES[cls].sheet, cls, name: save.name });
+    Content.migrate(save);
     this.s = save; // persistent data
     this.radius = 14;
     this.skillCd = {}; this.buffs = [];
@@ -81,7 +82,7 @@ class Player extends Hero {
     const st = {
       maxHp: c.base.hp + c.grow.hp * (lv - 1), maxMp: c.base.mp + c.grow.mp * (lv - 1),
       atk: c.base.atk + c.grow.atk * (lv - 1), def: c.base.def + c.grow.def * (lv - 1),
-      atkSpd: 0, castSpd: 0, eva: 0, dmgRed: 0, moveSpd: 0, crit: 5 + lv * 0.15,
+      atkSpd: 0, castSpd: 0, eva: 0, dmgRed: 0, moveSpd: 0, crit: 5 + lv * 0.15, expPct: 0,
     };
     const add = (o, mul = 1) => {
       for (const k in o) {
@@ -104,6 +105,8 @@ class Player extends Hero {
     if (card) add(D.cardStats(card, (this.s.cards[card.id] || { lv: 1 }).lv));
     // collection bonus
     for (const id in this.s.cards) add(D.COLLECT_BONUS[D.CARD_BY_ID[id].grade]);
+    // item collections + guild buff
+    for (const b of Content.bonuses(this)) add(b);
     // buffs
     let atkPct = 0;
     for (const b of this.buffs) { add({ atkSpd: b.atkSpd || 0, moveSpd: b.moveSpd || 0 }); atkPct += b.atkPct || 0; }
@@ -126,6 +129,7 @@ class Player extends Hero {
   // ---------------------------------------------------------------- progression
   gainExp(n, game) {
     if (this.s.lv >= D.MAX_LV) return;
+    n = Math.round(n * (1 + this.stats.expPct / 100));
     this.s.exp += n;
     let need = D.expToNext(this.s.lv);
     while (this.s.exp >= need && this.s.lv < D.MAX_LV) {
@@ -299,7 +303,7 @@ class Player extends Hero {
     if (this.inTown && !this.target && !this.moveTo) return;
     if (!this.target || this.target.dead) {
       this.target = game.nearestMonster(this, 650, (m) => (m.def.boss ? this.s.lv >= m.lv - 6 : m.lv <= this.s.lv + 5) || m.target === this);
-      if (!this.target && !this.moveTo) {
+      if (!this.target && !this.moveTo && !World.zoneAt(this.x, this.y).dungeon) {
         // drift toward the centre of the closest suitable spawn
         const sp = game.bestSpawnNear(this);
         if (sp) this.navigateTo(sp.x * D.TILE + U.rand(-150, 150), sp.y * D.TILE + U.rand(-150, 150));
@@ -319,6 +323,7 @@ class Player extends Hero {
   drawOverlay(ctx, cam) {
     const x = this.x - cam.x, y = this.headY - cam.y;
     drawLabel(ctx, this.name, x, y - 8, '#ffffff', 'bold 12px sans-serif');
+    if (this.s.guild) drawLabel(ctx, this.s.guild, x - ctx.measureText(this.name).width / 2 - 16, y - 8, '#ffe08a', '11px sans-serif');
     drawHpBar(ctx, x, y - 6, 46, this.hp / this.maxHp);
     if (this.s.card) {
       const g = D.CARD_BY_ID[this.s.card].grade;
