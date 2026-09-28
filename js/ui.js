@@ -582,6 +582,38 @@ const UI = (() => {
   OPENERS.weaponlook = () => OPENERS.transcend();
   OPENERS.skin = () => OPENERS.transcend();
 
+  // Quest tracker click: claim if done, otherwise teleport straight to where the quest happens.
+  // Works mid-hunt: the current target is dropped and AI mode resumes on arrival.
+  function questGo() {
+    const p = game.player;
+    if (!p || p.dead) return;
+    if (Quests.claim(game)) return;
+    if (p.teleporting) return;
+    if (Dungeon.active) return toast('던전에서는 퀘스트 이동을 할 수 없습니다.', '#ff8a80');
+    const q = Quests.current(p);
+    const dest = Quests.destination(p);
+    if (q.type === 'equipCard') return open('transcend');
+    if (q.type === 'enchant') return openEnchant('weapon');
+    if (dest && dest.npc) {
+      const n = game.npcs.find((x) => x.def.id === dest.npc);
+      p.auto = false;
+      const walk = () => { p.talkTo = n; };
+      if (U.dist(p, n) < 900) { p.stopAll(); walk(); }
+      else { toast(`${n.def.name}에게 이동합니다.`, '#9fe0ff'); game.teleportPlayer(n.x, n.y + 90, { then: walk }); }
+      return;
+    }
+    // kill quests go to that monster's spawn; level / daily quests go to the best hunting ground
+    const spawn = dest ? D.SPAWNS.find((s) => s.m === q.m) : game.bestSpawnNear(p);
+    if (!spawn) return open('quests');
+    const cx = spawn.x * D.TILE, cy = spawn.y * D.TILE;
+    const hunt = () => { if (!p.auto) { p.auto = true; refreshHud(); } };
+    if (Math.hypot(p.x - cx, p.y - cy) < spawn.r * D.TILE) {
+      hunt(); toast('이미 사냥터에 있습니다. AI 모드로 사냥합니다.', '#9fe0ff'); return;
+    }
+    toast(`${D.MONSTERS[spawn.m].name} 사냥터로 순간이동합니다.`, '#9fe0ff');
+    game.teleportPlayer(cx + U.rand(-80, 80), cy + U.rand(-80, 80), { then: hunt });
+  }
+
   function toggleAuto() {
     const p = game.player;
     p.auto = !p.auto;
@@ -609,20 +641,7 @@ const UI = (() => {
     $('btn-sprint').onclick = () => game.player.sprint();
     $('auto-potion').onclick = () => { game.player.s.autoPotion = !game.player.s.autoPotion; toast(`자동 물약 ${game.player.s.autoPotion ? '켜짐' : '꺼짐'}`); refreshHud(); };
     $('minimap').onclick = () => open('map');
-    $('quest-tracker').onclick = () => {
-      const p = game.player;
-      if (Quests.claim(game)) return;
-      const dest = Quests.destination(p);
-      if (!dest) return open('quests');
-      p.stopAll();
-      if (dest.npc) { const n = game.npcs.find((x) => x.def.id === dest.npc); p.navigateTo(n.x, n.y + 50); p.talkAfterNav = n; }
-      else {
-        const f = World.findFree(dest.x, dest.y, 16);
-        if (U.dist(p, f) > 2500) { const tp = D.TELEPORTS.slice().sort((a, b) => Math.hypot(a.x * 64 - f.x, a.y * 64 - f.y) - Math.hypot(b.x * 64 - f.x, b.y * 64 - f.y))[0]; toast(`자동 이동 중... (순간이동: ${tp.name})`, '#9fe0ff'); game.teleportPlayer(tp.x * D.TILE, tp.y * D.TILE); }
-        else p.navigateTo(f.x, f.y);
-        if (dest.hunt && !p.auto) toggleAuto();
-      }
-    };
+    $('quest-tracker').onclick = questGo;
     const input = $('chat-input');
     input.addEventListener('keydown', (e) => {
       e.stopPropagation();

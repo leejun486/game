@@ -239,7 +239,7 @@ const Combat = (() => {
   // ---------------------------------------------------------------- effects
   function makeFx(type, x, y, o = {}) {
     const dur = { spark: 0.25, slash: 0.22, bigslash: 0.35, doom: 0.5, whirl: 0.45, explode: 0.55, ice: 0.6, meteor: 1.25, rain: 0.9,
-      heal: 1.0, buff: 0.9, levelup: 1.8, teleport: 0.8, burst: 0.3, loot: 0.9 }[type] || 0.5;
+      heal: 1.0, buff: 0.9, levelup: 1.8, teleport: 0.8, tpcast: 1.0, tparrive: 0.75, burst: 0.3, loot: 0.9 }[type] || 0.5;
     return Object.assign({ type, x, y, t: 0, dur }, o);
   }
   function updateFx(game, dt) {
@@ -352,6 +352,50 @@ const Combat = (() => {
           const a = i * 2.4, rr = 20;
           ctx.fillRect(x + Math.cos(a) * rr * Math.sin(i + k * 3), y - 10 - ((k * 70 + i * 9) % 70), 3, 3);
         }
+        break;
+      }
+      case 'tpcast': {
+        // magic circle opening under the caster while blue motes rise
+        const q = Math.min(1, 0.4 + k * 1.2);
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.save(); ctx.translate(x, y); ctx.scale(1, 0.45);
+        ctx.rotate(f.t * 3);
+        ctx.strokeStyle = `rgba(120,200,255,${q})`; ctx.lineWidth = 4;
+        ctx.beginPath(); ctx.arc(0, 0, 58 * q, 0, Math.PI * 2); ctx.stroke();
+        ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, 0, 34 * q, 0, Math.PI * 2); ctx.stroke();
+        ctx.beginPath();
+        for (let i = 0; i <= 6; i++) { const a = (i * 2 * Math.PI * 2) / 6; const px = Math.cos(a) * 34 * q, py = Math.sin(a) * 34 * q; i ? ctx.lineTo(px, py) : ctx.moveTo(px, py); }
+        ctx.stroke();
+        for (let i = 0; i < 8; i++) { const a = (i / 8) * Math.PI * 2; ctx.fillStyle = `rgba(200,240,255,${q})`; ctx.fillRect(Math.cos(a) * 46 * q - 2, Math.sin(a) * 46 * q - 2, 4, 4); }
+        ctx.restore();
+        const g = ctx.createRadialGradient(x, y - 30, 0, x, y - 30, 60);
+        g.addColorStop(0, `rgba(140,210,255,${0.45 * q})`); g.addColorStop(1, 'rgba(80,160,255,0)');
+        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y - 30, 60, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#bfe8ff';
+        for (let i = 0; i < 14; i++) {
+          const a = i * 2.39, r = 14 + (i % 4) * 8;
+          const py = y - ((f.t * 90 + i * 17) % 90);
+          ctx.globalAlpha = q * (1 - ((f.t * 90 + i * 17) % 90) / 90);
+          ctx.fillRect(x + Math.cos(a + f.t * 4) * r, py, 3, 3);
+        }
+        if (k > 0.6) { // flash just before vanishing
+          ctx.globalAlpha = (k - 0.6) / 0.4;
+          const bg = ctx.createLinearGradient(x, y - 240, x, y);
+          bg.addColorStop(0, 'rgba(160,220,255,0)'); bg.addColorStop(1, 'rgba(210,240,255,0.9)');
+          ctx.fillStyle = bg; ctx.fillRect(x - 18, y - 240, 36, 240);
+        }
+        break;
+      }
+      case 'tparrive': {
+        ctx.globalCompositeOperation = 'lighter';
+        const a = 1 - k;
+        const bg = ctx.createLinearGradient(x, y - 260, x, y);
+        bg.addColorStop(0, 'rgba(160,220,255,0)'); bg.addColorStop(1, `rgba(210,240,255,${0.85 * a})`);
+        ctx.fillStyle = bg; ctx.fillRect(x - 22 * a, y - 260, 44 * a, 260);
+        ctx.strokeStyle = `rgba(150,215,255,${a})`; ctx.lineWidth = 4 * a + 1;
+        ctx.beginPath(); ctx.ellipse(x, y, 20 + k * 90, (20 + k * 90) * 0.4, 0, 0, Math.PI * 2); ctx.stroke();
+        ctx.fillStyle = `rgba(220,245,255,${a})`;
+        for (let i = 0; i < 12; i++) { const an = (i / 12) * Math.PI * 2; const r = 10 + k * 70; ctx.fillRect(x + Math.cos(an) * r - 2, y - 20 + Math.sin(an) * r * 0.5 - 2, 4, 4); }
         break;
       }
       case 'levelup': case 'teleport': {

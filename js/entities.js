@@ -59,11 +59,11 @@ class Entity {
   }
   face(o) { this.dir = dirFromVec(o.x - this.x, o.y - this.y); }
   // start an action animation; onHit fires at the anim's hit frame
-  act(anim, dur, onHit) {
+  act(anim, dur, onHit, stretch = false) {
     anim = animFor(this.sheet, anim);
     const a = ANIMS[anim];
     const full = a.frames * a.ft;
-    this.action = { anim, t: 0, dur: Math.min(full, dur), hitAt: (a.hit || a.frames - 1) / a.frames, onHit, fired: false };
+    this.action = { anim, t: 0, dur: stretch ? dur : Math.min(full, dur), hitAt: (a.hit || a.frames - 1) / a.frames, onHit, fired: false };
     this.moving = false;
   }
   updateAction(dt) {
@@ -90,6 +90,7 @@ class Entity {
   update(dt) {
     if (this.moving) this.walkT += dt * this.speedMul;
     if (this.flash > 0) this.flash -= dt;
+    if (this.fadeIn > 0) this.fadeIn -= dt;
     if (this.slowT > 0) this.slowT -= dt;
     if (this.dead) this.deadT += dt;
     this.updateAction(dt);
@@ -101,7 +102,8 @@ class Entity {
     const s = this.scale;
     const size = 64 * s;
     const sx = Math.round(this.x - cam.x - size / 2), sy = Math.round(this.y - cam.y - size + 8 * s);
-    const alpha = this.dead ? Math.max(0, 1 - Math.max(0, this.deadT - 0.8) / 1.2) : 1;
+    let alpha = this.dead ? Math.max(0, 1 - Math.max(0, this.deadT - 0.8) / 1.2) : 1;
+    if (this.fadeIn > 0) alpha *= 1 - this.fadeIn / 0.45;
     if (alpha <= 0) return;
     ctx.globalAlpha = alpha;
     if (this.aura) this.aura(ctx, this.x - cam.x, this.y - cam.y);
@@ -295,11 +297,18 @@ class Bot extends Hero {
     const ok = D.SPAWNS.filter((s) => !D.MONSTERS[s.m].boss && D.MONSTERS[s.m].lv <= this.lv + 3);
     return U.pick(ok.length ? ok : D.SPAWNS.slice(0, 2));
   }
+  // cast the teleport spell, then vanish and reappear at the destination
   teleport(x, y, game) {
-    game.fx.push(Combat.makeFx('teleport', this.x, this.y));
-    const p = World.findFree(x, y, 16);
-    this.x = p.x; this.y = p.y; this.target = null; this.wanderTo = null;
-    game.fx.push(Combat.makeFx('teleport', this.x, this.y));
+    if (this.teleporting) return;
+    this.teleporting = true; this.target = null; this.wanderTo = null;
+    game.fx.push(Combat.makeFx('tpcast', this.x, this.y, { follow: this }));
+    this.act('spellcast', 0.9, () => {
+      game.fx.push(Combat.makeFx('teleport', this.x, this.y));
+      const p = World.findFree(x, y, 16);
+      this.x = p.x; this.y = p.y; this.target = null; this.wanderTo = null;
+      this.teleporting = false; this.fadeIn = 0.45;
+      game.fx.push(Combat.makeFx('tparrive', this.x, this.y));
+    }, true);
   }
   update(dt, game) {
     super.update(dt);

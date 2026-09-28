@@ -79,6 +79,7 @@ const U = (() => {
     hit: () => { noiseBurst(0.08, 0.08, 400); tone(140, 0.08, 'square', 0.03, -60); },
     crit: () => { noiseBurst(0.14, 0.1, 300); tone(90, 0.18, 'sawtooth', 0.05, -40); },
     bow: () => tone(600, 0.1, 'triangle', 0.04, -350),
+    charge: () => { tone(300, 0.7, 'sine', 0.04, 900); tone(450, 0.6, 'triangle', 0.02, 1200); },
     magic: () => { tone(500, 0.25, 'sine', 0.05, 700); tone(760, 0.2, 'triangle', 0.02, 300); },
     boom: () => { noiseBurst(0.4, 0.12, 120); tone(70, 0.4, 'sawtooth', 0.06, -40); },
     coin: () => { tone(1200, 0.06, 'square', 0.03); setTimeout(() => tone(1600, 0.1, 'square', 0.03), 60); },

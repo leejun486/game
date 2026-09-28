@@ -85,6 +85,7 @@ const Dungeon = (() => {
   function update(game, dt) {
     if (!st || st.done) return;
     const p = game.player;
+    if (p.teleporting) return;
     const inside = World.zoneAt(p.x, p.y).dungeon;
     if (p.dead || !inside) return finish(game, false);
     st.t -= dt;

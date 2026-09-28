@@ -42,14 +42,27 @@ const Game = {
     if (s.noRespawn) return;
     this.respawns.push({ t: s.respawn || U.rand(5, 11), spawn: s });
   },
-  teleportPlayer(x, y) {
+  // Teleport with a cast motion: charge (spellcast + magic circle) -> vanish -> arrive.
+  // opts.instant skips the cast (used when reviving); opts.then runs after arrival.
+  teleportPlayer(x, y, opts = {}) {
     const p = this.player;
-    this.fx.push(Combat.makeFx('teleport', p.x, p.y));
-    const f = World.findFree(x, y, 16);
-    p.x = f.x; p.y = f.y; p.stopAll(); p.action = null;
-    this.fx.push(Combat.makeFx('teleport', p.x, p.y, { follow: p }));
-    this.snapCamera();
-    U.sfx.magic();
+    const arrive = () => {
+      this.fx.push(Combat.makeFx('teleport', p.x, p.y));
+      const f = World.findFree(x, y, 16);
+      p.x = f.x; p.y = f.y; p.stopAll();
+      p.teleporting = false; p.fadeIn = 0.45;
+      this.fx.push(Combat.makeFx('tparrive', p.x, p.y, { follow: p }));
+      this.snapCamera();
+      U.sfx.magic();
+      if (opts.then) opts.then();
+    };
+    if (opts.instant || p.dead) { p.action = null; return arrive(); }
+    if (p.teleporting) return false;
+    p.stopAll(); p.action = null; p.teleporting = true;
+    this.fx.push(Combat.makeFx('tpcast', p.x, p.y, { follow: p }));
+    U.sfx.charge();
+    p.act('spellcast', 1.0, arrive, true);
+    return true;
   },
   returnToTown() {
     this.teleportPlayer(D.TOWN.x + U.rand(-120, 120), D.TOWN.y + 160 + U.rand(-40, 40));
@@ -71,7 +84,7 @@ const Game = {
   },
   playerDie(killer) {
     const p = this.player;
-    p.dead = true; p.deadT = 0; p.hp = 0; p.auto = false; p.stopAll(); p.action = null;
+    p.dead = true; p.deadT = 0; p.hp = 0; p.auto = false; p.stopAll(); p.action = null; p.teleporting = false;
     U.sfx.die();
     const lost = Math.floor(D.expToNext(p.s.lv) * 0.05);
     const real = Math.min(p.s.exp, lost);
@@ -87,7 +100,7 @@ const Game = {
     const p = this.player;
     document.getElementById('death-screen').classList.add('hidden');
     p.dead = false; p.deadT = 0; p.hp = p.maxHp; p.mp = p.maxMp;
-    this.teleportPlayer(D.TOWN.x, D.TOWN.y + 180);
+    this.teleportPlayer(D.TOWN.x, D.TOWN.y + 180, { instant: true });
     UI.refreshAll();
   },
   // 0 = bright day, ~0.6 = deep night. The dungeon is always dim.
