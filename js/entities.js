@@ -14,6 +14,18 @@ function dirFromVec(dx, dy) {
   if (Math.abs(dx) > Math.abs(dy)) return dx < 0 ? 1 : 3;
   return dy < 0 ? 0 : 2;
 }
+// diagonal facing for sheets that carry diagonal rows (21-40): 0 up-left, 1 down-left, 2 down-right, 3 up-right, -1 none
+function diagFromVec(dx, dy) {
+  const ax = Math.abs(dx), ay = Math.abs(dy);
+  if (ax < 0.45 * ay || ay < 0.45 * ax) return -1;
+  return dx < 0 ? (dy < 0 ? 0 : 1) : (dy < 0 ? 3 : 2);
+}
+// LPC row -> diagonal row when the entity faces diagonally and its sheet has them
+function diagRow(ent, row) {
+  if (ent.diag == null || ent.diag < 0 || row >= 20) return row;
+  const rows = window.SPRITE_ROWS[ent.sheet];
+  return rows && rows.length > 21 ? 21 + Math.floor(row / 4) * 4 + ent.diag : row;
+}
 function animFor(sheet, anim) {
   const rows = window.SPRITE_ROWS[sheet];
   const a = ANIMS[anim];
@@ -39,7 +51,7 @@ class Entity {
     if (d <= stopDist) { this.moving = false; return true; }
     const step = Math.min(d - stopDist + 0.01, speed * dt);
     this.tryMove((dx / d) * step, (dy / d) * step);
-    this.dir = dirFromVec(dx, dy);
+    this.dir = dirFromVec(dx, dy); this.diag = diagFromVec(dx, dy);
     this.moving = true;
     return false;
   }
@@ -57,7 +69,7 @@ class Entity {
     }
     return false;
   }
-  face(o) { this.dir = dirFromVec(o.x - this.x, o.y - this.y); }
+  face(o) { this.dir = dirFromVec(o.x - this.x, o.y - this.y); this.diag = diagFromVec(o.x - this.x, o.y - this.y); }
   // move toward a (possibly moving) goal; follow an A* route when the straight line is blocked
   goTo(tx, ty, speed, dt, stop, maxNodes) {
     const d = Math.hypot(tx - this.x, ty - this.y);
@@ -137,7 +149,8 @@ class Entity {
   draw(ctx, cam) {
     const img = Sprites[this.sheet];
     if (!img) return;
-    const { row, col } = this.frame();
+    const { row: row0, col } = this.frame();
+    const row = diagRow(this, row0);
     const s = this.scale;
     const size = 64 * s;
     const sx = Math.round(this.x - cam.x - size / 2), sy = Math.round(this.y - cam.y - size + 8 * s);

@@ -272,7 +272,7 @@ D.cardStats = (card, lv = 1) => {
 D.COLLECT_BONUS = [{ hp: 5 }, { atk: 1 }, { def: 1, hp: 10 }, { atk: 2, dmgRed: 1 }, { atk: 3, def: 2, dmgRed: 2 }];
 D.SUMMON_RATES = [0.60, 0.28, 0.095, 0.022, 0.003];
 // PixelLab elf: LPC-layout sheet with the bow drawn into the art (tools/build_elf_px.py)
-window.SPRITE_ROWS.elf_px = window.SPRITE_ROWS.elf;
+window.SPRITE_ROWS.elf_px = window.SPRITE_ROWS.elf.concat(window.SPRITE_ROWS.elf.slice(0, 20)); // + diagonal rows 21-40
 D.BAKED_WEAPON = { elf_px: 'elf_nw' }; // sheet -> LPC body used to show weapon looks in menus
 D.SYNTH_RATES = [0.30, 0.25, 0.20, 0.12];
 D.cardGrowCost = (card, lv) => 1500 * lv * (card.grade + 1);

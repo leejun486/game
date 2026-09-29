@@ -347,7 +347,7 @@ class Player extends Hero {
     if (this.keys.x || this.keys.y) {
       const l = Math.hypot(this.keys.x, this.keys.y);
       this.tryMove((this.keys.x / l) * speed * dt, (this.keys.y / l) * speed * dt);
-      this.dir = dirFromVec(this.keys.x, this.keys.y); this.moving = true;
+      this.dir = dirFromVec(this.keys.x, this.keys.y); this.diag = diagFromVec(this.keys.x, this.keys.y); this.moving = true;
       this.moveTo = null; this.waypoints = []; this.talkTo = null; this.questTravel = null;
       if (!this.auto) this.target = null;
       return;
@@ -441,7 +441,8 @@ class Player extends Hero {
     }
   }
   draw(ctx, cam) {
-    const { row, col } = this.frame();
+    const { row: row0, col } = this.frame();
+    const row = diagRow(this, row0);
     let alpha = this.dead ? Math.max(0, 1 - Math.max(0, this.deadT - 0.8) / 1.2) : 1;
     if (this.fadeIn > 0) alpha *= 1 - this.fadeIn / 0.45;
     if (alpha <= 0) return;
