@@ -124,13 +124,14 @@ const Forge = (() => {
   }
 
   // ---------------------------------------------------------------- the show
-  // pre-rendered clips per result tier; a tier without a clip (or a clip that fails to load) uses the canvas show
-  const VIDEOS = { 1: 'assets/forge/g1.mp4', 2: 'assets/forge/g2.mp4', 3: 'assets/forge/g3.mp4' };
-  const tier = (grade) => Math.max(1, grade); // 일반 and 고급 share one clip
+  // pre-rendered clips (8s) for 희귀+; a missing clip or a load failure falls back to the canvas show
+  const VIDEOS = { 2: 'assets/forge/g2.mp4', 3: 'assets/forge/g3.mp4', 4: 'assets/forge/g4.mp4' };
+  // the cinematic is reserved for a single pull that lands 희귀 or better; everything else goes straight to the cards
+  const wants = (results) => results.length === 1 && results[0].grade >= 2;
 
   // host: element to cover (the summon stage); grade: best grade in the pull; onDone after it ends
   function play(host, grade, onDone) {
-    const src = VIDEOS[tier(grade)];
+    const src = VIDEOS[grade];
     if (!src) return playCanvas(host, grade, onDone);
     const wrap = document.createElement('div');
     wrap.className = 'forge-fx forge-video';
@@ -150,13 +151,14 @@ const Forge = (() => {
     };
     wrap.onclick = (e) => { e.stopPropagation(); finish(); };
     v.onplaying = () => { started = true; };
-    v.onended = () => setTimeout(finish, grade >= 2 ? 1300 : 0); // hold the final frame so the title reads
+    v.onended = () => setTimeout(finish, grade >= 4 ? 1000 : 600); // hold the final frame so the title reads
     v.onerror = fallback;
     v.ontimeupdate = () => {
-      if (grade >= 2 && v.duration && v.currentTime > v.duration - 1.2 && !wrap.querySelector('.forge-title.show')) {
+      if (grade >= 2 && v.duration && v.currentTime > v.duration - (grade >= 4 ? 0.35 : 1.2) && !wrap.querySelector('.forge-title.show')) {
         const title = wrap.querySelector('.forge-title');
         title.textContent = D.GRADES[grade].name + '!'.repeat(grade - 1);
         title.style.color = D.GRADES[grade].color; title.className = 'forge-title show g' + grade;
+        if (grade >= 4) wrap.classList.add('flash'); // divine whiteout as the sword vanishes upward
       }
     };
     v.muted = !!(window.Game && Game.muted);
@@ -330,5 +332,5 @@ const Forge = (() => {
     };
     raf = requestAnimationFrame(frame);
   }
-  return { play };
+  return { play, wants };
 })();
