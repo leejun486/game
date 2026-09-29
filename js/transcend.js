@@ -54,7 +54,7 @@ const Transcend = (() => {
         // animated sprite: idle-walk / slash / spellcast cycle
         const cyc = t % 6;
         let row = 10, col2 = 0;
-        if (cyc < 2.5) { row = 10; col2 = 1 + Math.floor(t * 9) % 8; }
+        if (cyc < 2.5) { row = 10; col2 = walkCol(card.sheet, t * 9); }
         else if (cyc < 3.5) { row = 14; col2 = Math.min(5, Math.floor((cyc - 2.5) * 7)); }
         else if (cyc < 4.3) { row = 2; col2 = Math.min(6, Math.floor((cyc - 3.5) * 9)); }
         else { row = 10; col2 = 0; }

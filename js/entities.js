@@ -134,7 +134,7 @@ class Entity {
       return { row: a.row + this.dir, col };
     }
     const w = ANIMS.walk;
-    if (this.moving) return { row: w.row + this.dir, col: 1 + (Math.floor(this.walkT / w.ft) % 8) };
+    if (this.moving) return { row: w.row + this.dir, col: walkCol(this.sheet, this.walkT / w.ft) };
     return { row: w.row + this.dir, col: 0 };
   }
   update(dt) {

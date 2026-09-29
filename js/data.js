@@ -276,6 +276,9 @@ window.SPRITE_ROWS.elf_px = window.SPRITE_ROWS.elf.concat(window.SPRITE_ROWS.elf
 // 8-direction knight from an attack sheet, 96px cells for the wide slash arcs (tools/build_knight_px.py)
 window.SPRITE_ROWS.knight_px = window.SPRITE_ROWS.elf_px;
 window.SPRITE_FRAME = { knight_px: 96 }; // frame size per sheet; everything else is 64
+window.WALK_FRAMES = { knight_px: 6 }; // walk cycle length per sheet (cols 1..n); everything else is 8
+// walk column for a step count measured in 8-frame-cycle frames, so every sheet walks at the same pace
+window.walkCol = (sheet, step) => { const n = window.WALK_FRAMES[sheet] || 8; return 1 + (Math.floor(step * n / 8) % n); };
 D.BAKED_WEAPON = { elf_px: 'elf_nw', knight_px: 'knight_nw' }; // sheet -> LPC body used to show weapon looks in menus
 D.SYNTH_RATES = [0.30, 0.25, 0.20, 0.12];
 D.cardGrowCost = (card, lv) => 1500 * lv * (card.grade + 1);

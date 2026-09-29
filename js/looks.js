@@ -199,7 +199,7 @@ const Looks = (() => {
       else if (cyc < 2.4 + fl.seq.length * fl.ft) {
         const i = Math.min(fl.seq.length - 1, Math.floor((cyc - 2.4) / fl.ft));
         row = ANIMS[fl.anim].row + 2; col = fl.seq[i];
-      } else { row = 10; col = 1 + Math.floor(t * 10) % 8; }
+      } else { row = 10; col = walkCol(getSheet(), t * 10); }
       const s = H / 88;
       const pt = drawComposite(g, getSheet(), id, row, col, W / 2, H * 0.86, s, { t });
       if (pt && look.grade >= 3) {

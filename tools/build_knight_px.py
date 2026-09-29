@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 """Build assets/sprites/knight_px.png: LPC-layout sheet with 96px cells (13 cols x 41 rows) for the knight
-from the 8-direction attack frames in assets/src/knight_px/attack_<dir>_<k>.png (made by extract_knight_px.py).
+from the 8-direction attack frames in assets/src/knight_px/attack_<dir>_<k>.png (made by extract_knight_px.py)
+and walk frames walk_<dir>_<k>.png (made by extract_knight_walk.py).
 Rows 0-20 follow LPC (up/left/down/right), rows 21-40 hold the diagonals (up_left, down_left, down_right,
 up_right) in the same animation order. Slash rows use the six real attack frames (the fire arc on frame 3,
-the game's hit frame); the other animations move the first attack frame, a guard stance, procedurally."""
+the game's hit frame); walk rows use the six real walk frames in cols 1-6 (the game reads the cycle length
+from WALK_FRAMES in js/data.js); standing (walk col 0) and the other animations move the first walk frame,
+the sword held low, procedurally."""
 from PIL import Image
 import os
 
@@ -14,6 +17,7 @@ F = 96
 DIRS = ['up', 'left', 'down', 'right']
 DIAGS = ['up_left', 'down_left', 'down_right', 'up_right']
 atk = {d: [Image.open(os.path.join(SRC, f'attack_{d}_{k}.png')).convert('RGBA') for k in range(6)] for d in DIRS + DIAGS}
+walk = {d: [Image.open(os.path.join(SRC, f'walk_{d}_{k}.png')).convert('RGBA') for k in range(6)] for d in DIRS + DIAGS}
 sheet = Image.new('RGBA', (13 * F, 41 * F), (0, 0, 0, 0))
 
 
@@ -28,19 +32,14 @@ def fwd(d):
             'up_left': (-1, -1), 'down_left': (-1, 1), 'down_right': (1, 1), 'up_right': (1, -1)}[d]
 
 
-# guard stance per direction; the up diagonals open their swing with the sword already raised overhead,
-# so standing and walking use the back-view stance there (their attack rows keep the real swing)
-STANCE = {'up_left': 'up', 'up_right': 'up'}
-
-
 def block(base, i, d):
-    stand, (fx, fy) = atk[STANCE.get(d, d)][0], fwd(d)
+    stand, (fx, fy) = walk[d][0], fwd(d)
     for c, dy in enumerate([0, -1, -2, -2, -1, 0, 0]):  # spellcast: rise and settle
         put(base + 0 + i, c, stand, dy=dy)
     for c, k in enumerate([0, 0, 1, 2, 2, 1, 0, 0]):  # thrust: lunge
         put(base + 4 + i, c, stand, dx=fx * k, dy=fy * k)
-    for c, dy in enumerate([0, -1, -2, -1, 0, -1, -2, -1, 0]):  # walk: marching bob
-        put(base + 8 + i, c, stand, dy=dy)
+    for c, img in enumerate([stand] + walk[d]):  # walk: standing, then the real cycle
+        put(base + 8 + i, c, img)
     for c in range(6):  # slash: the real swing
         put(base + 12 + i, c, atk[d][c])
     for c, k in enumerate([0, 0, -1, -1, -2, -2, -2, -2, 2, 1, 0, 0, 0]):  # shoot (unused by knights): lean
@@ -51,7 +50,7 @@ for i, d in enumerate(DIRS):
     block(0, i, d)
 for i, d in enumerate(DIAGS):
     block(21, i, d)
-down = atk['down'][0]
+down = walk['down'][0]
 for c, (ang, dy) in enumerate([(0, 0), (8, 0), (25, 1), (50, 3), (75, 6), (90, 9)]):  # hurt / death: topple
     r = down.rotate(-ang, resample=Image.NEAREST, center=(F / 2, F - 8))
     put(20, c, r, dx=c * 2, dy=dy)
