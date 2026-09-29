@@ -20,7 +20,7 @@ D.GRADES = [
 // ---------------- classes & skills ----------------
 D.CLASSES = {
   knight: {
-    name: '기사', sheet: 'knight', desc: '강인한 체력과 근접 전투의 달인.\n높은 방어력으로 전장을 지배한다.',
+    name: '기사', sheet: 'knight_px', desc: '강인한 체력과 근접 전투의 달인.\n높은 방어력으로 전장을 지배한다.',
     base: { hp: 190, mp: 40, atk: 14, def: 6 }, grow: { hp: 24, mp: 3, atk: 2.3, def: 0.9 },
     range: 62, attack: 'slash', atkDelay: 0.95, weapon: 'sword',
     skills: ['k_smash', 'k_whirl', 'k_rage', 'k_doom', 'k_charge', 'k_quake'],
@@ -273,7 +273,10 @@ D.COLLECT_BONUS = [{ hp: 5 }, { atk: 1 }, { def: 1, hp: 10 }, { atk: 2, dmgRed: 
 D.SUMMON_RATES = [0.60, 0.28, 0.095, 0.022, 0.003];
 // PixelLab elf: LPC-layout sheet with the bow drawn into the art (tools/build_elf_px.py)
 window.SPRITE_ROWS.elf_px = window.SPRITE_ROWS.elf.concat(window.SPRITE_ROWS.elf.slice(0, 20)); // + diagonal rows 21-40
-D.BAKED_WEAPON = { elf_px: 'elf_nw' }; // sheet -> LPC body used to show weapon looks in menus
+// 8-direction knight from an attack sheet, 96px cells for the wide slash arcs (tools/build_knight_px.py)
+window.SPRITE_ROWS.knight_px = window.SPRITE_ROWS.elf_px;
+window.SPRITE_FRAME = { knight_px: 96 }; // frame size per sheet; everything else is 64
+D.BAKED_WEAPON = { elf_px: 'elf_nw', knight_px: 'knight_nw' }; // sheet -> LPC body used to show weapon looks in menus
 D.SYNTH_RATES = [0.30, 0.25, 0.20, 0.12];
 D.cardGrowCost = (card, lv) => 1500 * lv * (card.grade + 1);
 D.CARD_MAX_LV = 10;

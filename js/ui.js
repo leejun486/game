@@ -25,7 +25,8 @@ const UI = (() => {
     const img = Sprites[sheet];
     if (!img) return;
     // crop < 1 zooms on the upper body
-    const sw = 64 * crop, sx = col * 64 + (64 - sw) / 2, sy = row * 64 + (64 - sw) * 0.25;
+    const F = window.SPRITE_FRAME[sheet] || 64, fc = F === 64 ? crop : crop * 0.62; // big cells: frame the body
+    const sw = F * fc, sx = col * F + (F - sw) / 2, sy = row * F + (F - sw) * (F === 64 ? 0.25 : 0.55);
     g.drawImage(img, sx, sy, sw, sw, 0, 0, c.width, c.height);
   }
 

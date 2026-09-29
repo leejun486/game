@@ -93,16 +93,17 @@ const Looks = (() => {
     const look = BY_ID[id], cls = look.cls;
     const baked = D.BAKED_WEAPON[sheet]; // the weapon is part of this art: no look layers over it
     const arow = baked ? -1 : atlasRow(cls, row);
-    const bx = Math.round(x - 32 * s), by = Math.round(y - 56 * s);
+    const F = window.SPRITE_FRAME[sheet] || 64; // feet sit 8px above the cell bottom, centred
+    const bx = Math.round(x - (F / 2) * s), by = Math.round(y - (F - 8) * s);
     const wx = bx - 64 * s, wy = by - 64 * s;
     const bg = IMG[id + '_bg'], fg = IMG[id + '_fg'];
     const ok = arow >= 0 && bg && bg.complete && fg && fg.complete;
     if (ok) ctx.drawImage(bg, col * 192, arow * 192, 192, 192, wx, wy, 192 * s, 192 * s);
-    ctx.drawImage(body, col * 64, row * 64, 64, 64, bx, by, 64 * s, 64 * s);
+    ctx.drawImage(body, col * F, row * F, F, F, bx, by, F * s, F * s);
     if (opt.flash > 0) {
       const a = ctx.globalAlpha;
       ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = a * Math.min(1, opt.flash * 5) * 0.6;
-      ctx.drawImage(body, col * 64, row * 64, 64, 64, bx, by, 64 * s, 64 * s);
+      ctx.drawImage(body, col * F, row * F, F, F, bx, by, F * s, F * s);
       ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = a;
     }
     if (!ok) return null;

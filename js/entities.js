@@ -151,19 +151,19 @@ class Entity {
     if (!img) return;
     const { row: row0, col } = this.frame();
     const row = diagRow(this, row0);
-    const s = this.scale;
-    const size = 64 * s;
+    const s = this.scale, F = window.SPRITE_FRAME[this.sheet] || 64;
+    const size = F * s;
     const sx = Math.round(this.x - cam.x - size / 2), sy = Math.round(this.y - cam.y - size + 8 * s);
     let alpha = this.dead ? Math.max(0, 1 - Math.max(0, this.deadT - 0.8) / 1.2) : 1;
     if (this.fadeIn > 0) alpha *= 1 - this.fadeIn / 0.45;
     if (alpha <= 0) return;
     ctx.globalAlpha = alpha;
     if (this.aura) this.aura(ctx, this.x - cam.x, this.y - cam.y);
-    ctx.drawImage(img, col * 64, row * 64, 64, 64, sx, sy, size, size);
+    ctx.drawImage(img, col * F, row * F, F, F, sx, sy, size, size);
     if (this.flash > 0) {
       ctx.globalCompositeOperation = 'lighter';
       ctx.globalAlpha = alpha * Math.min(1, this.flash * 5) * 0.6;
-      ctx.drawImage(img, col * 64, row * 64, 64, 64, sx, sy, size, size);
+      ctx.drawImage(img, col * F, row * F, F, F, sx, sy, size, size);
       ctx.globalCompositeOperation = 'source-over';
     }
     if (this.slowT > 0) {
@@ -478,7 +478,7 @@ class Bot extends Hero {
     if (!this.mounted || this.dead) return super.draw(ctx, cam);
     const img = Sprites[this.sheet], row = this.rideFace > 0 ? 11 : 9;
     if (this.fadeIn > 0) ctx.globalAlpha = 1 - this.fadeIn / 0.45;
-    Mounts.drawEntity(ctx, cam, this, (g, fx, fy) => { g.imageSmoothingEnabled = false; if (img) g.drawImage(img, 0, row * 64, 64, 64, fx - 32, fy - 56, 64, 64); });
+    Mounts.drawEntity(ctx, cam, this, (g, fx, fy) => { g.imageSmoothingEnabled = false; if (img) { const F = window.SPRITE_FRAME[this.sheet] || 64; g.drawImage(img, 0, row * F, F, F, fx - F / 2, fy - F + 8, F, F); } });
     ctx.globalAlpha = 1;
   }
   get headY() { return this.mounted ? this.y - (this.rideTop || 90) : this.y - 58 * this.scale; }
