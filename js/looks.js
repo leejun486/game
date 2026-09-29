@@ -85,11 +85,14 @@ const Looks = (() => {
     return r && r[col] ? r[col] : null;
   }
   // draw body + weapon layers; (x, y) = feet position, s = scale
+  // menus show looks on a body that can wear them
+  const menuSheet = (p) => D.BAKED_WEAPON[p.sheet] || p.sheet;
   function drawComposite(ctx, sheet, id, row, col, x, y, s, opt = {}) {
     const body = Sprites[sheet];
     if (!body) return;
     const look = BY_ID[id], cls = look.cls;
-    const arow = atlasRow(cls, row);
+    const baked = D.BAKED_WEAPON[sheet]; // the weapon is part of this art: no look layers over it
+    const arow = baked ? -1 : atlasRow(cls, row);
     const bx = Math.round(x - 32 * s), by = Math.round(y - 56 * s);
     const wx = bx - 64 * s, wy = by - 64 * s;
     const bg = IMG[id + '_bg'], fg = IMG[id + '_fg'];
@@ -267,8 +270,8 @@ const Looks = (() => {
           </div>
         </div></div>`;
       el.querySelectorAll('.tr-head button img').forEach((i) => { i.style.width = '16px'; i.style.verticalAlign = '-3px'; });
-      el.querySelectorAll('[data-look] canvas').forEach((cv) => thumb(cv, p.sheet, cv.parentElement.dataset.look));
-      previewLoop(el.querySelector('#wl-cv'), () => sel, () => p.sheet);
+      el.querySelectorAll('[data-look] canvas').forEach((cv) => thumb(cv, menuSheet(p), cv.parentElement.dataset.look));
+      previewLoop(el.querySelector('#wl-cv'), () => sel, () => menuSheet(p));
     };
     el.onclick = (e) => {
       const t = e.target;
@@ -292,7 +295,7 @@ const Looks = (() => {
     title: '무기 외형', noun: '무기 외형', icon: 'sword', desc: '내 클래스의 무기 외형을 소환합니다.', price: PRICE,
     pool: (p) => LIST.filter((l) => l.cls === p.cls),
     grant: (p, items) => { for (const l of items) p.s.wlooks[l.id] = (p.s.wlooks[l.id] || 0) + 1; p.recalc(); },
-    thumb: (cv, l) => thumb(cv, Game.player.sheet, l.id),
+    thumb: (cv, l) => thumb(cv, menuSheet(Game.player), l.id),
     count: (p, l) => p.s.wlooks[l.id] || 0,
     take: (p, l) => { p.s.wlooks[l.id]--; },
     view: (best) => { sel = best.id; UI.open('weaponlook'); },

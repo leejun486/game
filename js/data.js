@@ -26,7 +26,7 @@ D.CLASSES = {
     skills: ['k_smash', 'k_whirl', 'k_rage', 'k_doom', 'k_charge', 'k_quake'],
   },
   elf: {
-    name: '요정', sheet: 'elf', desc: '숲의 축복을 받은 궁수.\n먼 거리에서 적을 꿰뚫는다.',
+    name: '요정', sheet: 'elf_px', desc: '숲의 축복을 받은 궁수.\n먼 거리에서 적을 꿰뚫는다.',
     base: { hp: 135, mp: 80, atk: 12, def: 3 }, grow: { hp: 15, mp: 6, atk: 2.1, def: 0.5 },
     range: 330, attack: 'shoot', atkDelay: 1.0, weapon: 'bow', projectile: 'arrow',
     skills: ['e_triple', 'e_rain', 'e_wind', 'e_energy', 'e_frost', 'e_storm'],
@@ -271,6 +271,9 @@ D.cardStats = (card, lv = 1) => {
 };
 D.COLLECT_BONUS = [{ hp: 5 }, { atk: 1 }, { def: 1, hp: 10 }, { atk: 2, dmgRed: 1 }, { atk: 3, def: 2, dmgRed: 2 }];
 D.SUMMON_RATES = [0.60, 0.28, 0.095, 0.022, 0.003];
+// PixelLab elf: LPC-layout sheet with the bow drawn into the art (tools/build_elf_px.py)
+window.SPRITE_ROWS.elf_px = window.SPRITE_ROWS.elf;
+D.BAKED_WEAPON = { elf_px: 'elf_nw' }; // sheet -> LPC body used to show weapon looks in menus
 D.SYNTH_RATES = [0.30, 0.25, 0.20, 0.12];
 D.cardGrowCost = (card, lv) => 1500 * lv * (card.grade + 1);
 D.CARD_MAX_LV = 10;

@@ -265,7 +265,7 @@ const Game = {
         const col = on ? Math.floor(t / a.ft) % a.frames : 1 + (Math.floor(t / 0.1) % 8);
         const g = c.cv.getContext('2d');
         g.clearRect(0, 0, c.cv.width, c.cv.height); g.imageSmoothingEnabled = false;
-        Looks.drawComposite(g, c.cls.sheet + '_nw', Looks.DEFAULT[c.id], a.row + 2, col, 64, 120, 2, { t });
+        Looks.drawComposite(g, (window.SPRITE_ROWS[c.cls.sheet + '_nw'] ? c.cls.sheet + '_nw' : c.cls.sheet), Looks.DEFAULT[c.id], a.row + 2, col, 64, 120, 2, { t });
       }
       requestAnimationFrame(anim);
     })();
