@@ -20,19 +20,19 @@ D.GRADES = [
 // ---------------- classes & skills ----------------
 D.CLASSES = {
   knight: {
-    name: '기사', sheet: 'knight', desc: '강인한 체력과 근접 전투의 달인.\n높은 방어력으로 전장을 지배한다.',
+    name: '기사', sheet: 'knight', art: 'assets/art/knight.webp', desc: '강인한 체력과 근접 전투의 달인.\n높은 방어력으로 전장을 지배한다.',
     base: { hp: 190, mp: 40, atk: 14, def: 6 }, grow: { hp: 24, mp: 3, atk: 2.3, def: 0.9 },
     range: 62, attack: 'slash', atkDelay: 0.95, weapon: 'sword',
     skills: ['k_smash', 'k_whirl', 'k_rage', 'k_doom', 'k_charge', 'k_quake'],
   },
   elf: {
-    name: '요정', sheet: 'elf', desc: '숲의 축복을 받은 궁수.\n먼 거리에서 적을 꿰뚫는다.',
+    name: '요정', sheet: 'elf', art: 'assets/art/elf.webp', desc: '숲의 축복을 받은 궁수.\n먼 거리에서 적을 꿰뚫는다.',
     base: { hp: 135, mp: 80, atk: 12, def: 3 }, grow: { hp: 15, mp: 6, atk: 2.1, def: 0.5 },
     range: 330, attack: 'shoot', atkDelay: 1.0, weapon: 'bow', projectile: 'arrow',
     skills: ['e_triple', 'e_rain', 'e_wind', 'e_energy', 'e_frost', 'e_storm'],
   },
   mage: {
-    name: '마법사', sheet: 'mage', desc: '원소를 다루는 현자.\n강력한 광역 마법으로 적을 쓸어버린다.',
+    name: '마법사', sheet: 'mage', art: 'assets/art/mage.webp', desc: '원소를 다루는 현자.\n강력한 광역 마법으로 적을 쓸어버린다.',
     base: { hp: 115, mp: 140, atk: 15, def: 2 }, grow: { hp: 11, mp: 11, atk: 2.5, def: 0.4 },
     range: 300, attack: 'thrust', atkDelay: 1.05, weapon: 'staff', projectile: 'bolt',
     skills: ['m_fire', 'm_ice', 'm_heal', 'm_meteor', 'm_chain', 'm_blizzard'],
@@ -220,11 +220,11 @@ D.CARDS = [
   { id: 'c_leonic', name: '황금 기사 레오닉', sheet: 'knight_gold', grade: 4, style: 'war' },
   { id: 'c_dracul', name: '뱀파이어 군주 드라큘', sheet: 'vampire', grade: 4, style: 'hybrid' },
   { id: 'c_minos', name: '미궁의 왕 미노스', sheet: 'minotaur', grade: 4, style: 'tank' },
-  { id: 'c_seranis', name: '냉철한 전술가 세라니스', sheet: 'mage', grade: 3, style: 'hybrid' },
-  { id: 'c_kain', name: '암흑 기사 카인', sheet: 'knight_dark', grade: 3, style: 'war' },
+  { id: 'c_seranis', name: '냉철한 전술가 세라니스', sheet: 'mage', art: 'assets/art/mage.webp', grade: 3, style: 'hybrid' },
+  { id: 'c_kain', name: '암흑 기사 카인', sheet: 'knight_dark', art: 'assets/art/knight.webp', grade: 3, style: 'war' },
   { id: 'c_elena', name: '빛의 성녀 엘레나', sheet: 'mage_white', grade: 3, style: 'cast' },
   { id: 'c_rien', name: '붉은 궁수 리엔', sheet: 'elf_red', grade: 2, style: 'swift' },
-  { id: 'c_silva', name: '숲의 수호자 실바', sheet: 'elf', grade: 2, style: 'swift' },
+  { id: 'c_silva', name: '숲의 수호자 실바', sheet: 'elf', art: 'assets/art/elf.webp', grade: 2, style: 'swift' },
   { id: 'c_arcane', name: '대현자 아르케인', sheet: 'npc_sage', grade: 2, style: 'cast' },
   { id: 'c_troll', name: '동굴 트롤', sheet: 'troll', grade: 2, style: 'tank' },
   { id: 'c_lizard', name: '리자드맨 투사', sheet: 'lizardman', grade: 2, style: 'war' },

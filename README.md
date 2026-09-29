@@ -85,6 +85,7 @@ js/pets.js          펫: 코드로 그리는 펫 아트, 따라다니기·공격
 레퍼런스 게임의 이미지는 저작권이 있어 사용하지 않았습니다. 대신 웹에서 자유 라이선스 에셋을 받아 사용했습니다.
 
 - **캐릭터·몬스터·무기 외형 (2.5D 도트)**: `tools/build_chibi.py`가 코드로 직접 찍어 만듭니다. 큰 머리의 치비 비율, 3단 음영과 외곽선, 갓·패랭이·전립·전모·투구 같은 한국풍 의상을 씁니다. `python3 tools/build_chibi.py`로 다시 생성하고, `--preview out.png`로 미리보기를 볼 수 있습니다.
+- **스탠딩 일러스트** (`assets/art/`): 기사·요정·마법사 일러스트는 프로젝트 소유자가 AI 이미지 도구로 생성해 제공했습니다. 배경은 rembg(isnet-anime)로 제거했습니다. 캐릭터 선택, 캐릭터 창, 초월 카드(카인·실바·세라니스)에 쓰입니다.
 - **도트 렌더링**: 월드는 절반 해상도로 그린 뒤 픽셀이 뭉개지지 않게 확대합니다. 줌은 픽셀이 정수 배가 되도록 맞춥니다. 이름과 숫자는 원래 해상도로 따로 그려 선명하게 유지합니다.
 - **아이콘**: [game-icons.net](https://game-icons.net) (CC BY 3.0). 작가는 Lorc, Delapouite, Skoll, Faithtoken, Zeromancer, Willdabeast, Carl Olsen, Caro Asercion, sbed, Darkzaitzev입니다. 색상만 바꿨습니다. 자세한 내용은 [`assets/icons/LICENSE-game-icons.txt`](assets/icons/LICENSE-game-icons.txt)를 참고하세요.
 - 지형, 나무, 건물, 이펙트, 펫은 코드로 직접 그립니다.

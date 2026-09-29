@@ -241,16 +241,18 @@ const Game = {
     for (const [id, c] of Object.entries(D.CLASSES)) {
       const d = document.createElement('div');
       d.className = 'class-card' + (id === chosen ? ' on' : '');
-      d.innerHTML = `<canvas width="128" height="128"></canvas><h4>${c.name}</h4><p>${c.desc.replace('\n', '<br>')}</p>`;
+      d.innerHTML = `<div class="class-art"><img src="${c.art}" alt=""></div><h4>${c.name}</h4><p>${c.desc.replace('\n', '<br>')}</p>`;
       d.onclick = () => { chosen = id; cards.forEach((x) => x.el.classList.toggle('on', x.id === id)); U.sfx.ui(); };
       box.appendChild(d);
       cards.push({ id, el: d, cv: d.querySelector('canvas'), cls: c });
+      if (!d.querySelector('canvas')) continue;
     }
     let t = 0;
     (function anim() {
       if (Game.started) return;
       t += 1 / 60;
       for (const c of cards) {
+        if (!c.cv) continue;
         const on = c.id === chosen;
         const a = on ? ANIMS[c.cls.attack] : ANIMS.walk;
         const col = on ? Math.floor(t / a.ft) % a.frames : 1 + (Math.floor(t / 0.1) % 8);

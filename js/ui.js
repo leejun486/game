@@ -11,6 +11,25 @@ const UI = (() => {
   const ico = (n, cls = '') => `<img src="assets/icons/${n}.svg" class="${cls}" alt="">`;
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
+  // standing illustrations (anime art), loaded once and shared
+  const ART = {};
+  function artImg(src, onload) {
+    let im = ART[src];
+    if (!im) { im = ART[src] = new Image(); im.src = src; }
+    if (onload) { if (im.complete && im.naturalWidth) onload(im); else im.addEventListener('load', () => onload(im), { once: true }); }
+    return im;
+  }
+  // card face: the illustration's upper body if the card has art, otherwise the sprite
+  function drawCardArt(c, card) {
+    if (!card.art) return drawSprite(c, card.sheet, 10, 0, 0.75);
+    artImg(card.art, (im) => {
+      const g = c.getContext('2d');
+      g.clearRect(0, 0, c.width, c.height); g.imageSmoothingEnabled = true;
+      const sw = im.width * 0.62, sh = sw * c.height / c.width;
+      g.drawImage(im, (im.width - sw) / 2, im.height * 0.02, sw, sh, 0, 0, c.width, c.height);
+    });
+  }
+
   // draw one sprite frame into a canvas
   function spriteCanvas(sheet, size, row = 10, col = 0, crop = 1) {
     const c = document.createElement('canvas');
@@ -472,7 +491,9 @@ const UI = (() => {
         <div>공격력 <b>${st.atk}</b></div><div>방어력 <b>${st.def}</b></div><div>HP <b>${U.fmt(st.maxHp)}</b></div><div>MP <b>${U.fmt(st.maxMp)}</b></div>
         <div>공격 속도 <b>+${st.atkSpd}%</b></div><div>시전 속도 <b>+${st.castSpd}%</b></div><div>치명타 <b>${st.crit.toFixed(1)}%</b></div><div>회피 <b>${st.eva}</b></div>
         <div>피해 감소 <b>${st.dmgRed}</b></div><div>이동 속도 <b>+${st.moveSpd}%</b></div></div></div></div>`;
-    body.querySelector('#char-cv').appendChild(cv);
+    const art = card ? card.art : p.classDef.art;
+    if (art) { const im = artImg(art).cloneNode(); im.className = 'char-art'; body.querySelector('#char-cv').appendChild(im); }
+    else body.querySelector('#char-cv').appendChild(cv);
     return {};
   };
 
@@ -685,7 +706,7 @@ const UI = (() => {
   }
 
   return {
-    toggleRide, init, iconImg, spriteCanvas, drawSprite, chat, announce, toast, skillName, refreshHud, refreshQuest, refreshAll, markInv,
+    toggleRide, init, iconImg, spriteCanvas, drawSprite, artImg, drawCardArt, chat, announce, toast, skillName, refreshHud, refreshQuest, refreshAll, markInv,
     flashSlot, drawMinimap, open, close, isOpen, openEnchant, toggleAuto, useSlotItem, esc, ico, makePanel, OPENERS,
     get panelName() { return panel && panel.name; },
     setPanel(p) { panel = p; },

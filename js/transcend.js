@@ -58,8 +58,14 @@ const Transcend = (() => {
         else if (cyc < 3.5) { row = 14; col2 = Math.min(5, Math.floor((cyc - 2.5) * 7)); }
         else if (cyc < 4.3) { row = 2; col2 = Math.min(6, Math.floor((cyc - 3.5) * 9)); }
         else { row = 10; col2 = 0; }
+        const art = card.art && UI.artImg(card.art);
         const img = Sprites[card.sheet];
-        if (img) {
+        if (art && art.complete && art.naturalWidth) {
+          // illustration: full body, gently floating
+          const S = H * 0.98, w = S * art.width / art.height;
+          g.imageSmoothingEnabled = true;
+          g.drawImage(art, W / 2 - w / 2, H * 0.97 - S + Math.sin(t * 1.6) * 4, w, S);
+        } else if (img) {
           g.imageSmoothingEnabled = false;
           const S = H * 0.8;
           g.drawImage(img, col2 * 64, row * 64, 64, 64, W / 2 - S / 2, H * 0.9 - S, S, S);
@@ -129,6 +135,8 @@ const Transcend = (() => {
       // card thumbnails
       el.querySelectorAll('canvas[data-sheet]').forEach((cv) => {
         const g = cv.getContext('2d'); g.imageSmoothingEnabled = false;
+        const cd = cv.parentElement.dataset.card && D.CARD_BY_ID[cv.parentElement.dataset.card];
+        if (cd && cd.art) return UI.drawCardArt(cv, cd);
         const img = Sprites[cv.dataset.sheet];
         if (img) g.drawImage(img, 8, 10 * 64 + 2, 48, 64, 0, 0, 96, 128);
       });
@@ -261,7 +269,8 @@ const Transcend = (() => {
     stage.querySelectorAll('.s-card').forEach((sc, i) => {
       const cv = sc.querySelector('canvas'), g = cv.getContext('2d');
       g.imageSmoothingEnabled = false;
-      g.drawImage(Sprites[results[i].sheet], 8, 10 * 64 + 2, 48, 64, 0, 0, 96, 128);
+      if (results[i].art) UI.drawCardArt(cv, results[i]);
+      else g.drawImage(Sprites[results[i].sheet], 8, 10 * 64 + 2, 48, 64, 0, 0, 96, 128);
     });
     const flip = (sc) => {
       if (sc.classList.contains('flip')) return;
