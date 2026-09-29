@@ -178,7 +178,7 @@ const Transcend = (() => {
   function synthHtml(p) {
     const g = synthGrade;
     const sp = spare(p, g);
-    return `<div style="margin-top:10px;font-size:13px;line-height:1.7">같은 등급의 <b>중복 카드 4장</b>을 소모하여 상위 등급 카드를 획득합니다.<br>
+    return `<div style="margin-top:10px;font-size:13px;line-height:1.7">같은 등급의 <b>중복 카드 4장</b>을 소모하여 상위 등급 카드를 획득합니다. (소환 화면의 합성 탭에서 한 번에 여러 번 합성할 수 있습니다)<br>
       <div class="grade-filter" style="margin:8px 0">${[0, 1, 2, 3].map((x) => `<button data-sgrade="${x}" class="${x === g ? 'on' : ''}" style="color:${D.GRADES[x].color};border-color:${D.GRADES[x].color}">${D.GRADES[x].name[0]}</button>`).join('')}</div>
       ${D.GRADES[g].name} → <b class="${D.GRADES[g + 1].cls}">${D.GRADES[g + 1].name}</b> 성공 확률 ${(D.SYNTH_RATES[g] * 100).toFixed(0)}%<br>
       사용 가능한 중복 카드: <b>${sp}</b>장</div>
@@ -193,24 +193,9 @@ const Transcend = (() => {
       <p style="font-size:12px;color:#888">카드를 한 장이라도 보유하면 장착하지 않아도 보유 효과가 적용됩니다.</p>`;
   }
   function synth(p, render) {
-    const g = synthGrade;
-    if (spare(p, g) < 4) return;
-    let need = 4;
-    const pool = D.CARDS.filter((c) => c.grade === g && (p.s.cards[c.id]?.n || 0) > 1).sort((a, b) => p.s.cards[b.id].n - p.s.cards[a.id].n);
-    for (const c of pool) {
-      while (need > 0 && p.s.cards[c.id].n > 1) { p.s.cards[c.id].n--; need--; }
-    }
-    const ok = Math.random() < D.SYNTH_RATES[g];
-    const card = randomCard(ok ? g + 1 : g);
-    addCard(p, card.id);
-    sel = card.id;
-    if (ok) {
-      U.sfx.legend();
-      UI.toast(`합성 성공! [${D.GRADES[card.grade].name}] ${card.name}`, D.GRADES[card.grade].color);
-      if (card.grade >= 3) UI.announce(`<b>${esc(p.name)}</b>님이 합성으로 <em class="${card.grade >= 4 ? 'legend' : ''}">${esc(card.name)}</em>을(를) 획득했습니다.`);
-    } else { U.sfx.fail(); UI.toast(`합성 실패... [${D.GRADES[card.grade].name}] ${card.name} 획득`, '#ff8a80'); }
-    render();
+    Gacha.synth('transcend', synthGrade, 1, document.getElementById('panel-layer'), render);
   }
+
 
   // ---------------------------------------------------------------- summon (reveal lives in gacha.js)
   const gacha = {
@@ -225,6 +210,8 @@ const Transcend = (() => {
     },
     grant: (p, items) => { items.forEach((c) => addCard(p, c.id)); Quests.check(Game); },
     thumb: (cv, c) => { const g = cv.getContext('2d'); g.imageSmoothingEnabled = false; g.drawImage(Sprites[c.sheet], 8, 10 * 64 + 2, 48, 64, 0, 0, cv.width, cv.height); },
+    count: (p, c) => p.s.cards[c.id]?.n || 0,
+    take: (p, c) => { p.s.cards[c.id].n--; },
     view: (best) => { sel = best.id; tab = 'list'; UI.open('transcend'); },
   };
 

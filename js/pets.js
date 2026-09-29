@@ -363,7 +363,7 @@ const Pets = (() => {
         <div class="tr-main">
           <div class="tr-head"><h3>펫</h3>
             <div style="display:flex;gap:18px;align-items:center"><span class="cur">${ico('diamond', 'dia')}<b>${U.fmt(p.s.dia)}</b></span>
-            <button class="dark-btn" data-pull="1">${ico('diamond', 'dia')} ${PRICE.one} 소환</button><button class="gold-btn" data-pull="11">${ico('diamond', 'dia')} ${U.fmt(PRICE.eleven)} 11회 소환</button>
+            <button class="dark-btn" data-pull="1">${ico('diamond', 'dia')} ${PRICE.one} 소환</button><button class="gold-btn" data-pull="11">${ico('diamond', 'dia')} ${U.fmt(PRICE.eleven)} 11회 소환</button><button class="dark-btn" data-go="summon" data-arg="pet:synth">합성</button>
             <button class="close-x" data-close style="font-size:30px">⇥</button></div></div>
           <div class="tr-content">
             <div class="tr-info">
@@ -396,7 +396,7 @@ const Pets = (() => {
       const c = t.closest('[data-pet]'); if (c) { sel = c.dataset.pet; U.sfx.ui(); return render(); }
       const f = t.closest('[data-filter]'); if (f) { filter = +f.dataset.filter; return render(); }
       if (t.closest('[data-close]')) { cancelAnimationFrame(raf); UI.close(); return; }
-      const go = t.closest('[data-go]'); if (go) { cancelAnimationFrame(raf); return UI.open(go.dataset.go); }
+      const go = t.closest('[data-go]'); if (go) { cancelAnimationFrame(raf); return UI.open(go.dataset.go, go.dataset.arg); }
       if (t.closest('[data-equip]')) {
         p.s.pet = sel; p.recalc(); spawn(game); U.sfx.success();
         game.pet.say(U.pick(BY_ID[sel].voice));
@@ -435,6 +435,8 @@ const Pets = (() => {
     pool: () => LIST,
     grant: (p, items) => { for (const x of items) p.s.pets[x.id] = (p.s.pets[x.id] || 0) + 1; p.recalc(); },
     thumb: (cv, x) => thumb(cv, x.id, 1),
+    count: (p, x) => p.s.pets[x.id] || 0,
+    take: (p, x) => { p.s.pets[x.id]--; },
     view: (best) => { sel = best.id; UI.open('pet'); },
   };
 

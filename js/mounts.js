@@ -998,7 +998,7 @@ const Mounts = (() => {
         <div class="tr-main">
           <div class="tr-head"><h3>탈것</h3>
             <div style="display:flex;gap:18px;align-items:center"><span class="cur">${ico('diamond', 'dia')}<b>${U.fmt(p.s.dia)}</b></span>
-            <button class="dark-btn" data-pull="1">${ico('diamond', 'dia')} ${PRICE.one} 소환</button><button class="gold-btn" data-pull="11">${ico('diamond', 'dia')} ${U.fmt(PRICE.eleven)} 11회 소환</button>
+            <button class="dark-btn" data-pull="1">${ico('diamond', 'dia')} ${PRICE.one} 소환</button><button class="gold-btn" data-pull="11">${ico('diamond', 'dia')} ${U.fmt(PRICE.eleven)} 11회 소환</button><button class="dark-btn" data-go="summon" data-arg="mount:synth">합성</button>
             <button class="close-x" data-close style="font-size:30px">⇥</button></div></div>
           <div class="tr-content">
             <div class="tr-info">
@@ -1031,7 +1031,7 @@ const Mounts = (() => {
       const c = t.closest('[data-mount]'); if (c) { sel = c.dataset.mount; U.sfx.ui(); return render(); }
       const f = t.closest('[data-filter]'); if (f) { filter = +f.dataset.filter; return render(); }
       if (t.closest('[data-close]')) { cancelAnimationFrame(raf); UI.close(); return; }
-      const go = t.closest('[data-go]'); if (go) { cancelAnimationFrame(raf); return UI.open(go.dataset.go); }
+      const go = t.closest('[data-go]'); if (go) { cancelAnimationFrame(raf); return UI.open(go.dataset.go, go.dataset.arg); }
       if (t.closest('[data-auto]')) { p.s.autoRide = t.checked; return; }
       if (t.closest('[data-equip]')) {
         const was = p.mounted; if (was) dismount(p, game);
@@ -1073,6 +1073,8 @@ const Mounts = (() => {
     pool: () => LIST,
     grant: (p, items) => { for (const x of items) p.s.mounts[x.id] = (p.s.mounts[x.id] || 0) + 1; p.recalc(); },
     thumb: (cv, x) => thumb(cv, x.id),
+    count: (p, x) => p.s.mounts[x.id] || 0,
+    take: (p, x) => { p.s.mounts[x.id]--; },
     view: (best) => { sel = best.id; UI.open('mount'); },
   };
 

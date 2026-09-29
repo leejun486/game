@@ -244,7 +244,7 @@ const Looks = (() => {
         <div class="tr-main">
           <div class="tr-head"><h3>무기 외형</h3>
             <div style="display:flex;gap:18px;align-items:center"><span class="cur">${ico('diamond', 'dia')}<b>${U.fmt(p.s.dia)}</b></span>
-            <button class="dark-btn" data-pull="1">${ico('diamond', 'dia')} ${PRICE.one} 소환</button><button class="gold-btn" data-pull="11">${ico('diamond', 'dia')} ${U.fmt(PRICE.eleven)} 11회 소환</button>
+            <button class="dark-btn" data-pull="1">${ico('diamond', 'dia')} ${PRICE.one} 소환</button><button class="gold-btn" data-pull="11">${ico('diamond', 'dia')} ${U.fmt(PRICE.eleven)} 11회 소환</button><button class="dark-btn" data-go="summon" data-arg="weaponlook:synth">합성</button>
             <button class="close-x" data-close style="font-size:30px">⇥</button></div></div>
           <div class="tr-content">
             <div class="tr-info">
@@ -276,7 +276,7 @@ const Looks = (() => {
       const f = t.closest('[data-filter]'); if (f) { filter = +f.dataset.filter; return render(); }
       if (t.closest('[data-close]')) { cancelAnimationFrame(raf); UI.close(); return; }
       if (t.closest('[data-soon]')) return UI.toast('업데이트 예정입니다.');
-      const go = t.closest('[data-go]'); if (go) { cancelAnimationFrame(raf); return UI.open(go.dataset.go); }
+      const go = t.closest('[data-go]'); if (go) { cancelAnimationFrame(raf); return UI.open(go.dataset.go, go.dataset.arg); }
       if (t.closest('[data-equip]')) {
         p.s.wlook = sel; p.recalc(); U.sfx.success();
         UI.toast(`${BY_ID[sel].name} 외형을 장착했습니다.`, D.GRADES[BY_ID[sel].grade].color);
@@ -293,6 +293,8 @@ const Looks = (() => {
     pool: (p) => LIST.filter((l) => l.cls === p.cls),
     grant: (p, items) => { for (const l of items) p.s.wlooks[l.id] = (p.s.wlooks[l.id] || 0) + 1; p.recalc(); },
     thumb: (cv, l) => thumb(cv, Game.player.sheet, l.id),
+    count: (p, l) => p.s.wlooks[l.id] || 0,
+    take: (p, l) => { p.s.wlooks[l.id]--; },
     view: (best) => { sel = best.id; UI.open('weaponlook'); },
   };
 

@@ -2,8 +2,10 @@
 // 소환 (gacha): one summon screen for 초월 / 무기 외형 / 펫 / 탈것, and the slot-machine reveal every
 // pull goes through. Reels spin through the pool and stop one by one; a 희귀+ reel keeps spinning,
 // charges up, and a bolt of lightning in its grade colour (blue / red / gold) slams it onto the card.
+// Duplicates can be fused: 4 spare copies of one grade roll D.SYNTH_RATES for a card one grade up,
+// otherwise a random card of the same grade; the results land through the same reels.
 // Each collection module exposes a `gacha` spec: { title, noun, icon, desc, pool(p), grant(p, items),
-// thumb(canvas96x128, item), view(best), price | pay(p, n) + costLabel(p, n) }.
+// count(p, item), take(p, item), thumb(canvas96x128, item), view(best), price | pay(p, n) + costLabel(p, n) }.
 const Gacha = (() => {
   const { esc, ico } = UI;
   const KINDS = ['transcend', 'weaponlook', 'pet', 'mount'];
@@ -73,6 +75,32 @@ const Gacha = (() => {
     return true;
   }
 
+  // ---------------------------------------------------------------- synthesis
+  // spare = copies beyond the first, so an equipped or last copy is never consumed
+  const spares = (sp, p, g) => sp.pool(p).filter((x) => x.grade === g && sp.count(p, x) > 1);
+  const spare = (sp, p, g) => spares(sp, p, g).reduce((a, x) => a + sp.count(p, x) - 1, 0);
+  function synth(kind, g, times, panelEl, back) {
+    const sp = spec(kind), p = Game.player;
+    times = Math.min(times, 11, Math.floor(spare(sp, p, g) / 4));
+    if (g > 3 || times < 1) { UI.toast('같은 등급의 중복 카드가 4장 필요합니다.', '#ff8a80'); return false; }
+    const pool = sp.pool(p);
+    const byGrade = (gr) => { const c = pool.filter((x) => x.grade === gr); return c.length ? c : pool; };
+    const res = [], ok = [];
+    for (let i = 0; i < times; i++) {
+      for (let need = 4; need > 0; need--) {
+        const x = spares(sp, p, g).sort((a, b) => sp.count(p, b) - sp.count(p, a))[0]; // burn the most duplicated first
+        sp.take(p, x);
+      }
+      const up = Math.random() < D.SYNTH_RATES[g];
+      res.push(U.pick(byGrade(up ? g + 1 : g))); ok.push(up);
+    }
+    sp.grant(p, res);
+    UI.refreshHud();
+    const host = panelEl.closest('#panel-layer') || panelEl;
+    reveal(kind, times, res, host, back, { synth: ok, again: () => synth(kind, g, times, host, back) });
+    return true;
+  }
+
   // ---------------------------------------------------------------- lightning
   function bolt(x0, y0, x1, y1, rough) {
     let pts = [[x0, y0], [x1, y1]];
@@ -109,7 +137,8 @@ const Gacha = (() => {
   }
 
   // ---------------------------------------------------------------- reveal
-  function reveal(kind, n, res, host, back) {
+  // opts.synth: per-result success flags (only a successful fusion earns lightning); opts.again: repeat action
+  function reveal(kind, n, res, host, back, opts = {}) {
     const sp = spec(kind), p = Game.player;
     const big = res.length === 1, k = big ? 2 : 1, CW = 96 * k, CH = 128 * k;
     const stage = document.createElement('div');
@@ -141,7 +170,8 @@ const Gacha = (() => {
 
     // timeline: plain reels stop left to right, then each 희귀+ reel gets its own charge + strike
     const VMAX = 16;
-    const commons = reels.filter((r) => r.x.grade < 2), rares = reels.filter((r) => r.x.grade >= 2).sort((a, b) => a.x.grade - b.x.grade || a.i - b.i);
+    const ok = opts.synth, hot = (r) => r.x.grade >= 2 && (!ok || ok[r.i]);
+    const commons = reels.filter((r) => !hot(r)), rares = reels.filter(hot).sort((a, b) => a.x.grade - b.x.grade || a.i - b.i);
     const first = big ? 1.3 : 0.9;
     commons.forEach((r, o) => { r.stopAt = first + o * 0.14; });
     let cursor = Math.max(first + 0.35, commons.length ? commons[commons.length - 1].stopAt + 0.75 : 0);
@@ -154,9 +184,9 @@ const Gacha = (() => {
       const sr = stage.getBoundingClientRect(), rr = r.cv.getBoundingClientRect();
       return { x: rr.left - sr.left, y: rr.top - sr.top, w: rr.width, h: rr.height, cx: rr.left - sr.left + rr.width / 2, cy: rr.top - sr.top + rr.height / 2 };
     };
-    const announce = (x) => {
-      if (x.grade < 3) return;
-      const html = `<b>${esc(p.name)}</b>님이 <em class="${x.grade >= 4 ? 'legend' : ''}">${esc(x.name)}</em> ${sp.noun}을(를) 획득했습니다.`;
+    const announce = (x, i) => {
+      if (x.grade < 3 || (ok && !ok[i])) return;
+      const html = `<b>${esc(p.name)}</b>님이 ${ok ? '합성으로 ' : ''}<em class="${x.grade >= 4 ? 'legend' : ''}">${esc(x.name)}</em> ${sp.noun}을(를) 획득했습니다.`;
       UI.announce(html);
       if (kind === 'transcend') Game.lastCardNotice = html;
     };
@@ -166,11 +196,13 @@ const Gacha = (() => {
       r.el.classList.add('done', 'g' + r.x.grade);
       const nm = r.el.querySelector('.nm');
       nm.textContent = r.x.name; nm.className = 'nm ' + D.GRADES[r.x.grade].cls;
+      if (ok) { nm.insertAdjacentHTML('afterbegin', ok[r.i] ? '<b class="syn ok">성공</b>' : '<b class="syn no">실패</b>'); r.el.classList.add(ok[r.i] ? 'up' : 'fail'); }
       if (!quiet) {
-        if (r.x.grade < 2) SND.stop();
+        if (ok && ok[r.i] && r.x.grade < 2) SND.rare();
+        else if (!hot(r)) SND.stop();
         else if (r.x.grade >= 4) U.sfx.legend(); else if (r.x.grade >= 3) U.sfx.success(); else SND.rare();
       }
-      announce(r.x);
+      announce(r.x, r.i);
     };
     const showTitle = (g) => {
       titleEl.textContent = TITLE[g]; titleEl.style.color = D.GRADES[g].color;
@@ -200,11 +232,12 @@ const Gacha = (() => {
     const finish = () => {
       if (finished) return; finished = true;
       const best = res.slice().sort((a, b) => b.grade - a.grade)[0];
-      stage.querySelector('.summon-btns').innerHTML = `<button class="gold-btn" data-ok>확인</button><button class="dark-btn" data-again>${ico('diamond', 'dia')} 다시 ${n}회</button><button class="dark-btn" data-view>${esc(sp.title)} 보기</button>`;
+      const againLabel = ok ? `다시 합성 ${n}회` : `${ico('diamond', 'dia')} 다시 ${n}회`;
+      stage.querySelector('.summon-btns').innerHTML = `<button class="gold-btn" data-ok>확인</button><button class="dark-btn" data-again>${againLabel}</button><button class="dark-btn" data-view>${esc(sp.title)} 보기</button>`;
       stage.querySelectorAll('.summon-btns img').forEach((i) => { i.style.width = '16px'; i.style.verticalAlign = '-3px'; });
       stage.onclick = (e) => {
         if (e.target.closest('[data-ok]')) { close(); back && back(); }
-        else if (e.target.closest('[data-again]')) { close(); back && back(); run(kind, n, host, back); }
+        else if (e.target.closest('[data-again]')) { close(); back && back(); if (opts.again) opts.again(); else run(kind, n, host, back); }
         else if (e.target.closest('[data-view]')) { close(); sp.view(best); }
       };
     };
@@ -212,9 +245,9 @@ const Gacha = (() => {
     const skip = () => {
       if (skipped || finished) return; skipped = true;
       let best = null;
-      for (const r of reels) if (r.state !== 'done') { r.F = Math.ceil(r.pos) + 1; land(r, true); if (!best || r.x.grade > best.x.grade) best = r; }
+      for (const r of reels) if (r.state !== 'done') { r.F = Math.ceil(r.pos) + 1; land(r, true); if (hot(r) && (!best || r.x.grade > best.x.grade)) best = r; }
       stage.classList.remove('tension'); charging = null;
-      if (best && best.x.grade >= 2) { if (best.x.grade >= 4) U.sfx.legend(); else if (best.x.grade >= 3) U.sfx.success(); else SND.rare(); showTitle(best.x.grade); }
+      if (best) { if (best.x.grade >= 4) U.sfx.legend(); else if (best.x.grade >= 3) U.sfx.success(); else SND.rare(); showTitle(best.x.grade); }
       else SND.stop();
       finish();
     };
@@ -332,9 +365,12 @@ const Gacha = (() => {
   }
 
   // ---------------------------------------------------------------- summon screen
-  let curTab = 'transcend';
+  let curTab = 'transcend', mode = 'pull', sGrade = 0;
+  // arg: a kind ('mount') or kind:mode ('mount:synth')
   function open(arg) {
-    if (KINDS.includes(arg)) curTab = arg;
+    const [ak, am] = String(arg || '').split(':');
+    if (KINDS.includes(ak)) curTab = ak;
+    if (am === 'synth' || am === 'pull') mode = am;
     const p = Game.player;
     const { el, body } = UI.makePanel('소환');
     el.style.width = 'min(700px, 96vw)';
@@ -343,7 +379,10 @@ const Gacha = (() => {
       const sp = spec(curTab);
       const pool = sp.pool(p);
       const show = pool.filter((x) => x.grade >= 4).concat(pool.filter((x) => x.grade === 3));
-      body.innerHTML = `<div class="gacha-tabs">${KINDS.map((k) => `<button data-tab="${k}" class="${k === curTab ? 'on' : ''}">${ico(spec(k).icon)}<span>${spec(k).title}</span></button>`).join('')}</div>
+      const tabs = `<div class="gacha-tabs">${KINDS.map((k) => `<button data-tab="${k}" class="${k === curTab ? 'on' : ''}">${ico(spec(k).icon)}<span>${spec(k).title}</span></button>`).join('')}</div>
+        <div class="gacha-modes"><button data-mode="pull" class="${mode === 'pull' ? 'on' : ''}">소환</button><button data-mode="synth" class="${mode === 'synth' ? 'on' : ''}">합성</button></div>`;
+      if (mode === 'synth') { body.innerHTML = tabs + synthHtml(sp, p); return drawSynth(sp, p); }
+      body.innerHTML = tabs + `
         <div class="summon-shop">
           <div class="summon-box"><h4>${esc(sp.title)} 소환 1회</h4><canvas width="96" height="128"></canvas><p>${esc(sp.desc)}</p>
             <button class="gold-btn" data-pull="1">${costLabel(sp, p, 1)}</button></div>
@@ -355,14 +394,33 @@ const Gacha = (() => {
       body.querySelectorAll('.summon-box canvas').forEach((cv, i) => { const x = show[i % Math.max(1, show.length)] || pool[0]; if (x) try { sp.thumb(cv, x); } catch (e) { /* preview only */ } });
       body.querySelectorAll('button img').forEach((i) => { i.style.width = '16px'; i.style.verticalAlign = '-3px'; });
     };
+    const drawSynth = (sp, p) => {
+      body.querySelectorAll('.syn-grid canvas').forEach((cv) => { const x = sp.pool(p).find((y) => String(y.id) === cv.dataset.id); if (x) try { sp.thumb(cv, x); } catch (e) { /* thumbnail only */ } });
+    };
     body.onclick = (e) => {
       const tb = e.target.closest('[data-tab]'); if (tb) { curTab = tb.dataset.tab; U.sfx.ui(); return render(); }
+      const md = e.target.closest('[data-mode]'); if (md) { mode = md.dataset.mode; U.sfx.ui(); return render(); }
+      const sg = e.target.closest('[data-sgrade]'); if (sg) { sGrade = +sg.dataset.sgrade; U.sfx.ui(); return render(); }
+      const sy = e.target.closest('[data-synth]'); if (sy) return synth(curTab, sGrade, +sy.dataset.synth, el, render);
       const b = e.target.closest('[data-pull]'); if (b) run(curTab, +b.dataset.pull, el, render);
     };
     render();
     return { name: 'summon', rerender: render };
   }
 
+  function synthHtml(sp, p) {
+    const g = sGrade, n = spare(sp, p, g), times = Math.min(11, Math.floor(n / 4));
+    const dups = spares(sp, p, g).sort((a, b) => sp.count(p, b) - sp.count(p, a));
+    return `<div class="syn-box">
+      <p class="syn-help">같은 등급의 <b>중복 ${esc(sp.noun)} 4개</b>를 합성하면 확률적으로 <b>한 단계 위 등급</b>을 얻습니다. 실패하면 같은 등급 중 하나를 얻습니다. 마지막 1개와 사용 중인 것은 합성에 쓰이지 않습니다.</p>
+      <div class="syn-grades">${[0, 1, 2, 3].map((x) => { const c = spare(sp, p, x); return `<button data-sgrade="${x}" class="${x === g ? 'on' : ''}" style="--gc:${D.GRADES[x].color}"><b>${D.GRADES[x].name}</b><span>중복 ${c}</span></button>`; }).join('')}</div>
+      <div class="syn-rule"><span class="${D.GRADES[g].cls}">${D.GRADES[g].name}</span> ×4 → <span class="${D.GRADES[g + 1].cls}">${D.GRADES[g + 1].name}</span> 성공 확률 <b>${(D.SYNTH_RATES[g] * 100).toFixed(0)}%</b></div>
+      <div class="syn-grid">${dups.length ? dups.map((x) => `<div class="card gr${x.grade}"><canvas width="96" height="128" data-id="${esc(String(x.id))}"></canvas><span class="cnt">×${sp.count(p, x) - 1}</span><div class="nm ${D.GRADES[x.grade].cls}">${esc(x.name)}</div></div>`).join('') : '<p class="syn-empty">이 등급의 중복이 없습니다. 소환으로 모아 보세요.</p>'}</div>
+      <div class="syn-btns"><button class="dark-btn" data-synth="1" ${n >= 4 ? '' : 'disabled'}>합성 1회 (4개)</button>
+        <button class="gold-btn" data-synth="11" ${times >= 1 ? '' : 'disabled'}>모두 합성${times ? ` ${times}회 (${times * 4}개)` : ''}</button></div>
+    </div>`;
+  }
+
   UI.OPENERS.summon = open;
-  return { run, open, KINDS };
+  return { run, open, synth, spare: (kind, p, g) => spare(spec(kind), p, g), KINDS };
 })();
