@@ -23,19 +23,19 @@ D.CLASSES = {
     name: '기사', sheet: 'knight', desc: '강인한 체력과 근접 전투의 달인.\n높은 방어력으로 전장을 지배한다.',
     base: { hp: 190, mp: 40, atk: 14, def: 6 }, grow: { hp: 24, mp: 3, atk: 2.3, def: 0.9 },
     range: 62, attack: 'slash', atkDelay: 0.95, weapon: 'sword',
-    skills: ['k_smash', 'k_whirl', 'k_rage', 'k_doom'],
+    skills: ['k_smash', 'k_whirl', 'k_rage', 'k_doom', 'k_charge', 'k_quake'],
   },
   elf: {
     name: '요정', sheet: 'elf', desc: '숲의 축복을 받은 궁수.\n먼 거리에서 적을 꿰뚫는다.',
     base: { hp: 135, mp: 80, atk: 12, def: 3 }, grow: { hp: 15, mp: 6, atk: 2.1, def: 0.5 },
     range: 330, attack: 'shoot', atkDelay: 1.0, weapon: 'bow', projectile: 'arrow',
-    skills: ['e_triple', 'e_rain', 'e_wind', 'e_energy'],
+    skills: ['e_triple', 'e_rain', 'e_wind', 'e_energy', 'e_frost', 'e_storm'],
   },
   mage: {
     name: '마법사', sheet: 'mage', desc: '원소를 다루는 현자.\n강력한 광역 마법으로 적을 쓸어버린다.',
     base: { hp: 115, mp: 140, atk: 15, def: 2 }, grow: { hp: 11, mp: 11, atk: 2.5, def: 0.4 },
     range: 300, attack: 'thrust', atkDelay: 1.05, weapon: 'staff', projectile: 'bolt',
-    skills: ['m_fire', 'm_ice', 'm_heal', 'm_meteor'],
+    skills: ['m_fire', 'm_ice', 'm_heal', 'm_meteor', 'm_chain', 'm_blizzard'],
   },
 };
 
@@ -54,6 +54,12 @@ D.SKILLS = {
   m_fire: { name: '파이어 볼', icon: 'fireball', mp: 10, cd: 2.5, mult: 1.9, type: 'aoe_target', radius: 90, anim: 'thrust', fx: 'fire', desc: '폭발하는 화염구 (190% 광역)' },
   m_ice: { name: '아이스 스피어', icon: 'icebolt', mp: 16, cd: 6, mult: 2.6, type: 'single', anim: 'thrust', fx: 'ice', slow: 3, desc: '260% 피해 + 3초간 둔화' },
   m_heal: { name: '힐', icon: 'heal', mp: 22, cd: 10, type: 'heal', pct: 0.35, anim: 'thrust', desc: '최대 HP의 35% 회복' },
+  k_charge: { name: '돌진 베기', icon: 'blade', mp: 18, cd: 8, mult: 1.8, type: 'single', range: 360, anim: 'slash', unlock: 15, desc: '대상에게 순식간에 돌진하여 180% 피해' },
+  k_quake: { name: '대지 분쇄', icon: 'craft', mp: 30, cd: 12, mult: 2.2, type: 'aoe_self', radius: 190, anim: 'slash', unlock: 30, desc: '땅을 내리쳐 주변 적에게 220% 피해 + 2초 둔화' },
+  e_frost: { name: '빙결 화살', icon: 'frozen-orb', mp: 16, cd: 6, mult: 2.0, type: 'single', anim: 'shoot', unlock: 15, desc: '200% 피해 + 3초간 둔화' },
+  e_storm: { name: '폭풍의 화살', icon: 'heavy-arrow', mp: 32, cd: 12, mult: 0.8, type: 'aoe_self', radius: 350, count: 8, anim: 'shoot', unlock: 30, desc: '주변 적들에게 화살 8발을 난사 (각 80%)' },
+  m_chain: { name: '체인 라이트닝', icon: 'lightning', mp: 20, cd: 5, mult: 1.7, type: 'single', anim: 'thrust', unlock: 15, desc: '170% 번개가 주변 적 3명에게 연쇄 (연쇄마다 20% 감소)' },
+  m_blizzard: { name: '블리자드', icon: 'lightning2', mp: 38, cd: 14, mult: 0.45, type: 'aoe_target', radius: 170, anim: 'thrust', unlock: 30, desc: '4초간 눈보라 지대 생성 (0.5초마다 45% + 둔화)' },
   m_meteor: { name: '메테오 스트라이크', icon: 'meteor', mp: 40, cd: 16, mult: 3.8, type: 'aoe_target', radius: 190, anim: 'thrust', fx: 'meteor', desc: '거대한 운석 낙하 (380% 광역)' },
 };
 

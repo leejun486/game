@@ -8,6 +8,7 @@ class Player extends Hero {
     this.s = save; // persistent data
     Looks.migrate(this);
     Pets.migrate(this);
+    Skills.migrate(this);
     this.idleT = 0; this.nextFlourish = 3; this.trail = []; this.moteT = 0;
     this.radius = 14;
     this.skillCd = {}; this.buffs = [];
@@ -143,7 +144,7 @@ class Player extends Hero {
     for (const b of Pets.bonuses(this)) add(b);
     // buffs
     let atkPct = 0;
-    for (const b of this.buffs) { add({ atkSpd: b.atkSpd || 0, moveSpd: b.moveSpd || 0 }); atkPct += b.atkPct || 0; }
+    for (const b of this.buffs) { add({ atkSpd: b.atkSpd || 0, moveSpd: b.moveSpd || 0, crit: b.crit || 0, dmgRed: b.dmgRed || 0 }); atkPct += b.atkPct || 0; }
     st.atk *= 1 + atkPct / 100;
     st.maxHp = Math.round(st.maxHp); st.maxMp = Math.round(st.maxMp);
     st.atk = Math.round(st.atk); st.def = Math.round(st.def);
@@ -175,7 +176,8 @@ class Player extends Hero {
       game.fx.push(Combat.makeFx('levelup', this.x, this.y, { follow: this }));
       U.sfx.level();
       UI.toast(`레벨 업! Lv.${this.s.lv}`, '#ffe38a');
-      UI.chat(`축하합니다! 레벨 ${this.s.lv}이(가) 되었습니다.`, 'sys');
+      UI.chat(`축하합니다! 레벨 ${this.s.lv}이(가) 되었습니다. 스킬 포인트 +1 (K)`, 'sys');
+      for (const id of this.classDef.skills) if (D.SKILLS[id].unlock === this.s.lv) UI.toast(`새 스킬 해금: ${D.SKILLS[id].name}`, '#ffe38a');
       this.autoEquipBest();
       Quests.check(game);
     }
@@ -211,8 +213,11 @@ class Player extends Hero {
   }
   castSkill(i, game) {
     const id = this.classDef.skills[i];
-    const sk = D.SKILLS[id];
-    if (this.dead || this.action) return false;
+    if (!id) return false;
+    if (!Skills.unlocked(this, id)) { UI.toast(`${D.SKILLS[id].name}: Lv.${D.SKILLS[id].unlock}에 해금됩니다.`); return false; }
+    const sk = Skills.eff(this, id);
+    if (this.dead || (this.action && !this.action.idle)) return false;
+    if (this.action && this.action.idle) this.action = null;
     if ((this.skillCd[id] || 0) > 0) return false;
     if (this.mp < sk.mp) { UI.toast('MP가 부족합니다.'); return false; }
     let target = this.target && !this.target.dead ? this.target : null;
@@ -229,11 +234,11 @@ class Player extends Hero {
     this.mp -= sk.mp;
     this.skillCd[id] = sk.cd;
     this.pendingSkill = null;
-    Combat.castSkill(this, sk, target, game);
+    Skills.cast(this, id, sk, target, game);
     UI.flashSlot(i);
     return true;
   }
-  skillRange(sk) { return sk.type === 'aoe_target' ? Math.max(this.classDef.range, 300) : this.classDef.range; }
+  skillRange(sk) { return sk.range || (sk.type === 'aoe_target' ? Math.max(this.classDef.range, 300) : this.classDef.range); }
   sprint() {
     if (this.sprintCd > 0) return;
     this.sprintT = 3; this.sprintCd = 12;
@@ -319,7 +324,7 @@ class Player extends Hero {
     // attack target
     if (this.target) {
       if (this.target.dead) { this.target = null; this.moving = false; return; }
-      const psk = this.pendingSkill != null ? D.SKILLS[this.classDef.skills[this.pendingSkill]] : null;
+      const psk = this.pendingSkill != null ? Skills.eff(this, this.classDef.skills[this.pendingSkill]) : null;
       const range = (psk ? this.skillRange(psk) : this.classDef.range) + this.target.radius;
       if (U.dist(this, this.target) > range) { this.moveToward(this.target.x, this.target.y, speed, dt, range - 8); return; }
       this.moving = false;
@@ -350,7 +355,8 @@ class Player extends Hero {
     if (this.target && !this.action && U.dist(this, this.target) < this.classDef.range + 200) {
       const skills = this.classDef.skills;
       for (let i = skills.length - 1; i >= 0; i--) {
-        const sk = D.SKILLS[skills[i]];
+        if (!Skills.unlocked(this, skills[i])) continue;
+        const sk = Skills.eff(this, skills[i]);
         if ((this.skillCd[skills[i]] || 0) > 0 || this.mp < sk.mp + this.maxMp * 0.15) continue;
         if (sk.type === 'heal' && this.hp > this.maxHp * 0.6) continue;
         if (sk.type === 'aoe_self' && game.monstersNear(this, sk.radius) < 2) continue;

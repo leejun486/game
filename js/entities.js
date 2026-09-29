@@ -170,6 +170,7 @@ class Monster extends Entity {
   update(dt, game) {
     super.update(dt);
     if (this.dead) return;
+    if (this.stunT > 0) { this.stunT -= dt; this.moving = false; this.action = null; return; }
     this.atkCd -= dt;
     const leash = !this.inDungeon && Math.hypot(this.x - this.home.x, this.y - this.home.y) > 950;
     if (this.target && (this.target.dead || leash || this.target.inTown || U.dist(this, this.target) > 900)) {
@@ -219,6 +220,10 @@ class Monster extends Entity {
   drawOverlay(ctx, cam, isTarget) {
     if (this.dead) return;
     const x = this.x - cam.x, y = this.headY - cam.y;
+    if (this.stunT > 0) { // dizzy stars
+      const t = performance.now() / 1000;
+      for (let i = 0; i < 3; i++) { const a = t * 5 + (i / 3) * Math.PI * 2; drawLabel(ctx, '★', x + Math.cos(a) * 14, y - 14 + Math.sin(a) * 4, '#ffe28a', '11px sans-serif'); }
+    }
     const col = this.def.boss ? '#ff6b5e' : this.def.aggro ? '#ffb3a8' : '#f0f0f0';
     drawLabel(ctx, (this.def.boss ? '[보스] ' : '') + this.name, x, y - 4, col, this.def.boss ? 'bold 13px sans-serif' : '12px sans-serif');
     if (isTarget || this.hp < this.maxHp) drawHpBar(ctx, x, y, this.def.boss ? 90 : 44, this.hp / this.maxHp);

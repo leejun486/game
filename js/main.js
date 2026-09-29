@@ -370,6 +370,8 @@ const Game = {
     if (e.repeat) return;
     const p = Game.player;
     if (k >= '1' && k <= '4') p.castSkill(+k - 1, Game);
+    else if (k === 'q') p.castSkill(4, Game);
+    else if (k === 'e') p.castSkill(5, Game);
     else if (k >= '5' && k <= '8') UI.useSlotItem(+k - 5);
     else if (k === ' ') { e.preventDefault(); Game.attackNearest(); }
     else if (k === 'g') UI.toggleAuto();
@@ -431,6 +433,7 @@ const Game = {
       if (p.talkAfterNav && !p.moveTo) { p.talkTo = p.talkAfterNav; p.talkAfterNav = null; }
     }
     Dungeon.update(Game, dt);
+    Skills.update(Game, dt);
     if (Game.pet) Game.pet.update(dt, Game);
     Game.updateDrops(dt);
     for (const m of Game.monsters) m.update(dt, Game);
@@ -497,6 +500,7 @@ const Game = {
     }
     const t = Game.time;
     for (const g of ground) World.drawProp(ctx, g.prop, g.prop.x - cam.x, g.prop.y - cam.y, t);
+    Skills.drawGround(ctx, cam, t);
     Game.drawDrops(ctx, cam);
     // click markers under entities
     for (const f of Game.fx) if (f.type === 'click') {

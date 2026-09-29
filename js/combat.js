@@ -114,9 +114,10 @@ const Combat = (() => {
         p.x += p.vx * p.speed * dt; p.y += p.vy * p.speed * dt; p.life -= dt;
         for (const m of game.monsters) {
           if (m.dead || p.hit.has(m)) continue;
-          if (Math.hypot(m.x - p.x, m.y - 30 - p.y) < 40 * m.scale) { p.hit.add(m); damageMonster(game, p.owner, m, p.mult, { critBonus: 20 }); }
+          if (Math.hypot(m.x - p.x, m.y - 30 - p.y) < 40 * m.scale) { p.hit.add(m); damageMonster(game, p.owner, m, p.mult, { critBonus: p.critBonus ?? 20, slow: p.slow }); if (p.onPierce) p.onPierce(m); }
         }
         if (p.life > 0) out.push(p);
+        else if (p.onEnd) p.onEnd(p.x, p.y + 30);
         continue;
       }
       const t = p.target;
@@ -242,7 +243,7 @@ const Combat = (() => {
   // ---------------------------------------------------------------- effects
   function makeFx(type, x, y, o = {}) {
     const dur = { spark: 0.25, slash: 0.22, bigslash: 0.35, doom: 0.5, whirl: 0.45, explode: 0.55, ice: 0.6, meteor: 1.25, rain: 0.9,
-      heal: 1.0, buff: 0.9, levelup: 1.8, teleport: 0.8, tpcast: 1.0, tparrive: 0.75, mote: 0.7, glint: 0.45, rune: 1.2, breath: 0.5, petbolt: 0.35, burst: 0.3, loot: 0.9 }[type] || 0.5;
+      heal: 1.0, buff: 0.9, levelup: 1.8, teleport: 0.8, tpcast: 1.0, tparrive: 0.75, mote: 0.7, glint: 0.45, rune: 1.2, breath: 0.5, petbolt: 0.35, dash: 0.3, zap: 0.25, burst: 0.3, loot: 0.9 }[type] || 0.5;
     return Object.assign({ type, x, y, t: 0, dur }, o);
   }
   function updateFx(game, dt) {
@@ -354,6 +355,25 @@ const Combat = (() => {
         for (let i = 0; i < n; i++) {
           const a = i * 2.4, rr = 20;
           ctx.fillRect(x + Math.cos(a) * rr * Math.sin(i + k * 3), y - 10 - ((k * 70 + i * 9) % 70), 3, 3);
+        }
+        break;
+      }
+      case 'dash': {
+        const tx = f.to[0] - cam.x, ty = f.to[1] - cam.y;
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.strokeStyle = hexA(f.color, 0.8 * (1 - k)); ctx.lineWidth = 18 * (1 - k) + 2; ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(x, y - 30); ctx.lineTo(tx, ty - 30); ctx.stroke();
+        for (let i = 1; i < 4; i++) { ctx.fillStyle = hexA(f.color, 0.35 * (1 - k)); ctx.beginPath(); ctx.ellipse(U.lerp(x, tx, i / 4), U.lerp(y, ty, i / 4) - 30, 12, 24, 0, 0, Math.PI * 2); ctx.fill(); }
+        break;
+      }
+      case 'zap': {
+        const tx = f.to[0] - cam.x, ty = f.to[1] - cam.y;
+        ctx.globalCompositeOperation = 'lighter';
+        for (const [w, a] of [[6, 0.35], [2, 1]]) {
+          ctx.strokeStyle = hexA(f.color, a * (1 - k)); ctx.lineWidth = w;
+          ctx.beginPath(); ctx.moveTo(x, y);
+          for (let i = 1; i < 8; i++) { const q = i / 8; ctx.lineTo(U.lerp(x, tx, q) + Math.sin(i * 13.7 + f.t * 60) * 10, U.lerp(y, ty, q) + Math.cos(i * 7.3 + f.t * 50) * 10); }
+          ctx.lineTo(tx, ty); ctx.stroke();
         }
         break;
       }

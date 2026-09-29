@@ -66,11 +66,12 @@ const UI = (() => {
     const p = game.player;
     const el = $('slots');
     el.innerHTML = '';
+    const KEYS = ['1', '2', '3', '4', 'Q', 'E'];
     p.classDef.skills.forEach((id, i) => {
       const sk = D.SKILLS[id];
       const s = document.createElement('div');
-      s.className = 'slot skill'; s.title = `${sk.name} (MP ${sk.mp}, 쿨타임 ${sk.cd}초)\n${sk.desc}`;
-      s.innerHTML = `${ico(sk.icon)}<span class="n">${i + 1}</span><span class="mp-cost">${sk.mp}</span><div class="cd" style="transform:scaleY(0)"></div><div class="cdt"></div>`;
+      s.className = 'slot skill'; s.title = `${sk.name}\n${sk.desc}`;
+      s.innerHTML = `${ico(sk.icon)}<span class="n">${KEYS[i]}</span><span class="mp-cost">${sk.mp}</span><div class="cd" style="transform:scaleY(0)"></div><div class="cdt"></div><span class="lockv"></span>`;
       s.onclick = () => p.castSkill(i, game);
       el.appendChild(s);
     });
@@ -88,7 +89,7 @@ const UI = (() => {
     const it = p.s.inv.find((x) => x.id === SLOT_ITEMS[i]);
     if (!it) return toast(`${D.ITEMS[SLOT_ITEMS[i]].name}이(가) 없습니다.`);
     p.useItem(it.uid, game);
-    flashSlot(4 + i);
+    flashSlot(game.player.classDef.skills.length + i);
   }
   function flashSlot(i) {
     const s = $('slots').children[i];
@@ -112,15 +113,19 @@ const UI = (() => {
     $('exp-text').textContent = `Exp ${pct.toFixed(4)}%   ⚔ 전투력 ${U.fmt(p.power)}   ☠ ${U.fmt(st.kills)}`;
     // slots
     const slots = $('slots').children;
+    const nSk = p.classDef.skills.length;
     p.classDef.skills.forEach((id, i) => {
       const s = slots[i]; if (!s) return;
-      const cd = p.skillCd[id] || 0, sk = D.SKILLS[id];
-      s.querySelector('.cd').style.transform = `scaleY(${cd > 0 ? cd / sk.cd : 0})`;
-      s.querySelector('.cdt').textContent = cd > 0 ? Math.ceil(cd) : '';
-      s.classList.toggle('nomp', p.mp < sk.mp);
+      const cd = p.skillCd[id] || 0, sk = Skills.eff(p, id), lock = !Skills.unlocked(p, id);
+      s.querySelector('.cd').style.transform = `scaleY(${lock ? 1 : cd > 0 ? Math.min(1, cd / sk.cd) : 0})`;
+      s.querySelector('.cdt').textContent = lock ? '' : cd > 0 ? Math.ceil(cd) : '';
+      s.querySelector('.lockv').textContent = lock ? `Lv${sk.unlock}` : '';
+      s.querySelector('.mp-cost').textContent = sk.mp;
+      s.classList.toggle('nomp', !lock && p.mp < sk.mp);
+      s.title = `${Skills.displayName(p, id)} (MP ${sk.mp}, 쿨타임 ${sk.cd}초)\n${sk.desc}${lock ? `\nLv.${sk.unlock} 해금` : ''}`;
     });
     SLOT_ITEMS.forEach((id, i) => {
-      const s = slots[4 + i]; if (!s) return;
+      const s = slots[nSk + i]; if (!s) return;
       const n = p.count(id);
       s.querySelector('.c').textContent = n;
       s.classList.toggle('empty', n === 0);
@@ -531,7 +536,7 @@ const UI = (() => {
       <div class="list-row"><span>운영자 모드 (F2)</span><button class="gold-btn" data-do="gm">열기</button></div>
       <div class="list-row"><span>게임 저장</span><button class="dark-btn" data-do="save">저장</button></div>
       <div class="list-row"><span>저장 삭제 후 처음부터</span><button class="red-btn" data-do="reset">초기화</button></div>
-      <p class="sub" style="color:#888;font-size:12px;line-height:1.6">조작: 클릭 이동/공격 · WASD 이동 · 1~4 스킬 · 5~8 아이템 · Space 근처 적 공격 · G AI 모드 · Shift 질주 · I 인벤토리 · K 스킬 · U 상점 · C 캐릭터 · J 퀘스트 · Y 초월 · V 무기 외형 · N 펫 · P 시즌 패스 · O 보스 정보 · T 순간이동 · B 귀환 · M 지도 · Enter 채팅 · 마우스 휠 줌</p>`;
+      <p class="sub" style="color:#888;font-size:12px;line-height:1.6">조작: 클릭 이동/공격 · WASD 이동 · 1~4 스킬 · 5~8 아이템 · Space 근처 적 공격 · G AI 모드 · Shift 질주 · I 인벤토리 · K 스킬 · U 상점 · 1~4·Q·E 스킬 · K 스킬 트리 · C 캐릭터 · J 퀘스트 · Y 초월 · V 무기 외형 · N 펫 · P 시즌 패스 · O 보스 정보 · T 순간이동 · B 귀환 · M 지도 · Enter 채팅 · 마우스 휠 줌</p>`;
     body.onclick = (e) => {
       const b = e.target.closest('[data-do]'); if (!b) return;
       const a = b.dataset.do;

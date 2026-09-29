@@ -128,7 +128,7 @@ const Content = (() => {
       if (on && !d) { d = document.createElement('i'); d.className = 'dot'; b.appendChild(d); }
       if (!on && d) d.remove();
     };
-    set('event', attendReady(p)); set('pass', passReady(p));
+    set('event', attendReady(p)); set('pass', passReady(p)); set('skills', Skills.anyChoice(p));
     set('menu', achReady(p) || attendReady(p));
   }
 
