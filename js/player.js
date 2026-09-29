@@ -491,7 +491,7 @@ class Player extends Hero {
     }
     ctx.globalAlpha = 1;
   }
-  get headY() { return this.mounted ? this.y - (this.rideTop || 90) : this.y - (sheetInfo(this.sheet).rig ? 82 : 58) * this.scale; }
+  get headY() { return this.mounted ? this.y - (this.rideTop || 90) : this.y - sheetInfo(this.sheet).head * this.scale; }
   aura(ctx, x, y) {
     if (!this.s.card) return;
     const g = D.CARD_BY_ID[this.s.card].grade;

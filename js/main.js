@@ -199,6 +199,7 @@ const Game = {
   // load sprite sheets
   // SD rig sheets share the row layout, so they register like any other sheet
   for (const k in window.RIG_META || {}) { window.SPRITE_ROWS[k] = window.RIG_META[k].rows; window.SPRITE_ROWS[k + '_fist'] = window.RIG_META[k].rows; }
+  for (const k in window.MOB_META || {}) window.SPRITE_ROWS[k] = window.MOB_META[k].rows;
   const names = Object.keys(window.SPRITE_ROWS);
   let loaded = 0;
   const total = names.length + 1; // + weapon looks
@@ -208,7 +209,7 @@ const Game = {
     const img = new Image();
     img.onload = tick;
     img.onerror = () => { console.warn('sprite failed', n); tick(); };
-    img.src = `assets/sprites/${n}.png`;
+    img.src = (window.MOB_META && window.MOB_META[n] && window.MOB_META[n].src) || `assets/sprites/${n}.png`;
     Sprites[n] = img;
   });
 

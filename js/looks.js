@@ -129,7 +129,8 @@ const Looks = (() => {
   // SD rig body + a weapon look drawn in code at the frame's hand position
   function drawRig(ctx, body, si, id, row, col, x, y, s, opt, sheet) {
     const k = s * si.k, fs = si.fs;
-    const hm = si.rig.hands[row] && si.rig.hands[row][col];
+    const hm = si.rig.hands && si.rig.hands[row] && si.rig.hands[row][col];
+    const ry = si.ry(row) * fs;
     const look = BY_ID[id];
     const bx = x - si.fx * k, by = y - si.fy * k;
     const t = opt.t ?? performance.now() / 1000;
@@ -141,11 +142,11 @@ const Looks = (() => {
     const smooth = ctx.imageSmoothingEnabled;
     ctx.imageSmoothingEnabled = true;
     if (hm && hm[3] === 0) weapon();
-    ctx.drawImage(body, col * fs, row * fs, fs, fs, bx, by, fs * k, fs * k);
+    ctx.drawImage(body, col * fs, ry, fs, fs, bx, by, fs * k, fs * k);
     if (opt.flash > 0) {
       const a = ctx.globalAlpha;
       ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = a * Math.min(1, opt.flash * 5) * 0.6;
-      ctx.drawImage(body, col * fs, row * fs, fs, fs, bx, by, fs * k, fs * k);
+      ctx.drawImage(body, col * fs, ry, fs, fs, bx, by, fs * k, fs * k);
       ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = a;
     }
     if (hm && hm[3] === 1) {

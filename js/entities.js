@@ -147,11 +147,17 @@ class Entity {
     if (alpha <= 0) return;
     ctx.globalAlpha = alpha;
     if (this.aura) this.aura(ctx, this.x - cam.x, this.y - cam.y);
-    ctx.drawImage(img, col * fs, row * fs, fs, fs, sx, sy, size, size);
+    if (si.rig && si.rig.mob) { // painted monsters get a soft ground shadow
+      const a0 = ctx.globalAlpha; ctx.globalAlpha = a0 * 0.3; ctx.fillStyle = '#000';
+      ctx.beginPath(); ctx.ellipse(this.x - cam.x, this.y - cam.y, Math.min(fs * 0.3, 22 + si.head * 0.12) * s, 6 * s + 2, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.globalAlpha = a0;
+    }
+    const ry = si.ry(row) * fs;
+    ctx.drawImage(img, col * fs, ry, fs, fs, sx, sy, size, size);
     if (this.flash > 0) {
       ctx.globalCompositeOperation = 'lighter';
       ctx.globalAlpha = alpha * Math.min(1, this.flash * 5) * 0.6;
-      ctx.drawImage(img, col * fs, row * fs, fs, fs, sx, sy, size, size);
+      ctx.drawImage(img, col * fs, ry, fs, fs, sx, sy, size, size);
       ctx.globalCompositeOperation = 'source-over';
     }
     if (this.slowT > 0) {
@@ -161,16 +167,19 @@ class Entity {
     ctx.globalAlpha = 1;
     ctx.imageSmoothingEnabled = false;
   }
-  get headY() { return this.y - (sheetInfo(this.sheet).rig ? 82 : 58) * this.scale; }
+  get headY() { return this.y - sheetInfo(this.sheet).head * this.scale; }
 }
 Entity.nextId = 1;
 
 // sheet frame geometry: pixel sheets use 64px frames (feet at 32,56) drawn 1:1; SD rig sheets use
 // 128px frames (feet from rig_meta) drawn at RIG_K so the painted characters sit a little smaller
 const RIG_K = 0.8;
+// monster sheets (MOB_META) share the format; they only store the rows monsters use (rowOf)
+const ID_ROW = (r) => r;
 function sheetInfo(sheet) {
-  const r = window.RIG_META && window.RIG_META[sheet];
-  return r ? { fs: r.fs, fx: r.feet[0], fy: r.feet[1], k: RIG_K, rig: r } : { fs: 64, fx: 32, fy: 56, k: 1, rig: null };
+  const r = (window.RIG_META && window.RIG_META[sheet]) || (window.MOB_META && window.MOB_META[sheet]);
+  if (!r) return { fs: 64, fx: 32, fy: 56, k: 1, rig: null, ry: ID_ROW, head: 58 };
+  return { fs: r.fs, fx: r.feet[0], fy: r.feet[1], k: r.k ?? RIG_K, rig: r, ry: r.rowOf ? (row) => r.rowOf[row] ?? r.rowOf[10] : ID_ROW, head: r.head ? r.head * (r.k ?? RIG_K) : 82 };
 }
 // the body sheet for a class: SD rig art when the option is on, the pixel sheet otherwise
 // rigs are taller than pixel sprites: drop them into the saddle so the hips meet it
@@ -478,7 +487,7 @@ class Bot extends Hero {
     Mounts.drawEntity(ctx, cam, this, (g, fx, fy) => { g.imageSmoothingEnabled = false; if (img) g.drawImage(img, 0, row * 64, 64, 64, fx - 32, fy - 56, 64, 64); });
     ctx.globalAlpha = 1;
   }
-  get headY() { return this.mounted ? this.y - (this.rideTop || 90) : this.y - (sheetInfo(this.sheet).rig ? 82 : 58) * this.scale; }
+  get headY() { return this.mounted ? this.y - (this.rideTop || 90) : this.y - sheetInfo(this.sheet).head * this.scale; }
   drawOverlay(ctx, cam) {
     const x = this.x - cam.x, y = this.headY - cam.y;
     drawLabel(ctx, this.name, x, y - 4, '#8fc1ff');

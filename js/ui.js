@@ -37,16 +37,37 @@ const UI = (() => {
     drawSprite(c, sheet, row, col, crop);
     return c;
   }
+  // 3:4 card face from a sheet's front-facing frame
+  function cardSprite(c, sheet) {
+    const g = c.getContext('2d'), img = Sprites[sheet];
+    if (!img) return;
+    const si = sheetInfo(sheet), fs = si.fs;
+    g.clearRect(0, 0, c.width, c.height);
+    if (si.rig && si.rig.mob) {
+      const h = Math.min(fs, si.rig.head * 1.2), w = h * c.width / c.height;
+      g.imageSmoothingEnabled = true;
+      g.drawImage(img, si.fx - w / 2, si.ry(10) * fs + si.fy + 4 - h, w, h, 0, 0, c.width, c.height);
+    } else {
+      g.imageSmoothingEnabled = fs > 64;
+      const k = fs / 64;
+      g.drawImage(img, 8 * k, si.ry(10) * fs + 2 * k, 48 * k, 64 * k, 0, 0, c.width, c.height);
+    }
+  }
   function drawSprite(c, sheet, row = 10, col = 0, crop = 1) {
     const g = c.getContext('2d');
     g.imageSmoothingEnabled = false;
     g.clearRect(0, 0, c.width, c.height);
     const img = Sprites[sheet];
     if (!img) return;
-    const fs = sheetInfo(sheet).fs;
+    const si = sheetInfo(sheet), fs = si.fs;
     g.imageSmoothingEnabled = fs > 64;
+    if (si.rig && si.rig.mob) { // painted monsters: frame the creature itself, feet at the bottom
+      const sw = Math.min(fs, si.rig.head * 1.25 * Math.max(crop, 0.8));
+      g.drawImage(img, col * fs + si.fx - sw / 2, si.ry(row) * fs + si.fy + 4 - sw, sw, sw, 0, 0, c.width, c.height);
+      return;
+    }
     // crop < 1 zooms on the upper body
-    const sw = fs * crop, sx = col * fs + (fs - sw) / 2, sy = row * fs + (fs - sw) * 0.25;
+    const sw = fs * crop, sx = col * fs + (fs - sw) / 2, sy = si.ry(row) * fs + (fs - sw) * 0.25;
     g.drawImage(img, sx, sy, sw, sw, 0, 0, c.width, c.height);
   }
 
@@ -587,7 +608,7 @@ const UI = (() => {
       const lbl = (t, x, y, col = '#fff') => { g.strokeText(t, x * S, y * S); g.fillStyle = col; g.fillText(t, x * S, y * S); };
       lbl('라스카노 마을', 90, 86, '#9fe0ff'); lbl('바람의 초원', 90, 40); lbl('망자의 묘지', 145, 70); lbl('오크 요새', 90, 128); lbl('고요한 숲', 30, 120);
       g.font = 'bold 16px sans-serif';
-      lbl('☠ 뱀파이어 군주', 165, 80, '#ff6b5e'); lbl('☠ 미노타우르스 킹', 90, 162, '#ff6b5e');
+      lbl('☠ 데스나이트', 165, 80, '#ff6b5e'); lbl('☠ 빙룡', 30, 28, '#ff6b5e'); lbl('☠ 화염룡', 140, 160, '#ff6b5e'); lbl('☠ 미노타우르스 킹', 90, 162, '#ff6b5e');
       const p = game.player;
       g.fillStyle = '#fff'; g.beginPath(); g.arc(p.x / D.TILE * S, p.y / D.TILE * S, 7, 0, Math.PI * 2); g.fill();
       g.strokeStyle = '#e33'; g.lineWidth = 3; g.stroke();
@@ -708,7 +729,7 @@ const UI = (() => {
   }
 
   return {
-    toggleRide, init, iconImg, spriteCanvas, drawSprite, artImg, drawCardArt, chat, announce, toast, skillName, refreshHud, refreshQuest, refreshAll, markInv,
+    toggleRide, init, iconImg, spriteCanvas, drawSprite, cardSprite, artImg, drawCardArt, chat, announce, toast, skillName, refreshHud, refreshQuest, refreshAll, markInv,
     flashSlot, drawMinimap, open, close, isOpen, openEnchant, toggleAuto, useSlotItem, esc, ico, makePanel, OPENERS,
     get panelName() { return panel && panel.name; },
     setPanel(p) { panel = p; },
