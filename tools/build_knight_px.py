@@ -28,8 +28,13 @@ def fwd(d):
             'up_left': (-1, -1), 'down_left': (-1, 1), 'down_right': (1, 1), 'up_right': (1, -1)}[d]
 
 
+# guard stance per direction; the up diagonals open their swing with the sword already raised overhead,
+# so standing and walking use the back-view stance there (their attack rows keep the real swing)
+STANCE = {'up_left': 'up', 'up_right': 'up'}
+
+
 def block(base, i, d):
-    stand, (fx, fy) = atk[d][0], fwd(d)
+    stand, (fx, fy) = atk[STANCE.get(d, d)][0], fwd(d)
     for c, dy in enumerate([0, -1, -2, -2, -1, 0, 0]):  # spellcast: rise and settle
         put(base + 0 + i, c, stand, dy=dy)
     for c, k in enumerate([0, 0, 1, 2, 2, 1, 0, 0]):  # thrust: lunge
