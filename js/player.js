@@ -157,7 +157,7 @@ class Player extends Hero {
     if (this.hp > this.maxHp) this.hp = this.maxHp;
     if (this.mp > this.maxMp) this.mp = this.maxMp;
     // bodies are drawn without their baked weapon; the weapon look is a separate layer
-    const base = card ? card.sheet : classSheet(this.cls);
+    const base = card ? card.sheet : c.sheet;
     this.sheet = window.SPRITE_ROWS[base + '_nw'] ? base + '_nw' : base;
     this.power = Math.round(st.atk * 10 + st.def * 8 + st.maxHp + st.atkSpd * 15 + st.eva * 2 + lv * 50);
   }
@@ -454,11 +454,11 @@ class Player extends Hero {
     const id = Looks.current(this), look = Looks.BY_ID[id];
     if (this.mounted) {
       const rrow = this.rideFace > 0 ? 11 : 9;
-      Mounts.drawEntity(ctx, cam, this, (g, fx, fy) => { g.imageSmoothingEnabled = false; Looks.drawComposite(g, this.sheet, id, rrow, 0, fx, fy + riderDrop(this.sheet), 1, { flash: this.flash, t: now }); });
+      Mounts.drawEntity(ctx, cam, this, (g, fx, fy) => { g.imageSmoothingEnabled = false; Looks.drawComposite(g, this.sheet, id, rrow, 0, fx, fy, 1, { flash: this.flash, t: now }); });
       this.weaponPt = null; ctx.globalAlpha = 1;
       return;
     }
-    const pt = Looks.drawComposite(ctx, this.sheet, id, row, col, x, y, sheetInfo(this.sheet).rig ? this.scale : pixScale(this.scale), { flash: this.flash, t: now });
+    const pt = Looks.drawComposite(ctx, this.sheet, id, row, col, x, y, this.scale, { flash: this.flash, t: now });
     this.weaponPt = pt ? { cx: pt.cx + cam.x, cy: pt.cy + cam.y, tx: pt.tx + cam.x, ty: pt.ty + cam.y } : null;
     // weapon trail during swings and flourishes
     const swinging = this.action && !this.dead && (this.action.anim === 'slash' || this.action.flourish || look.grade >= 3);
@@ -491,7 +491,7 @@ class Player extends Hero {
     }
     ctx.globalAlpha = 1;
   }
-  get headY() { return this.mounted ? this.y - (this.rideTop || 90) : this.y - sheetInfo(this.sheet).head * this.scale; }
+  get headY() { return this.mounted ? this.y - (this.rideTop || 90) : this.y - 58 * this.scale; }
   aura(ctx, x, y) {
     if (!this.s.card) return;
     const g = D.CARD_BY_ID[this.s.card].grade;

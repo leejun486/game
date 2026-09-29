@@ -5,9 +5,6 @@ const SAVE_KEY = 'eclipse_awakening_save_v1';
 const Game = {
   player: null, monsters: [], npcs: [], bots: [], projectiles: [], fx: [], floaters: [], respawns: [], drops: [],
   cam: { x: 0, y: 0 }, zoom: 1, shake: 0, time: 0, started: false, muted: false, lastCardNotice: '',
-  // graphics options: illustration field characters, retro pixel filter
-  gfx: (() => { try { return { art: true, pixel: false, ...JSON.parse(localStorage.getItem('eclipse_gfx') || '{}') }; } catch (e) { return { art: true, pixel: false }; } })(),
-  saveGfx() { try { localStorage.setItem('eclipse_gfx', JSON.stringify(this.gfx)); } catch (e) { /* private mode */ } },
 
   fighters() { return this.player && !this.player.dead ? [this.player, ...this.bots] : this.bots; },
   nearestMonster(from, maxD, pred) {
@@ -187,19 +184,12 @@ const Game = {
   function resize() {
     dpr = Math.min(2, window.devicePixelRatio || 1);
     canvas.width = Math.floor(innerWidth * dpr); canvas.height = Math.floor(innerHeight * dpr);
-    Game.zoom = snapZoom(Game.userZoom || (innerWidth < 700 ? 0.75 : innerWidth < 1100 ? 0.9 : 1.05));
+    Game.zoom = Game.userZoom || (innerWidth < 700 ? 0.75 : innerWidth < 1100 ? 0.9 : 1.05);
   }
-  // 2.5D pixel look: the world is rendered at one pixel per PX world units and scaled up with hard
-  // edges, so the zoom is snapped to keep every art pixel a whole number of device pixels
-  const PX = 2;
-  function snapZoom(z) { return Game.gfx.pixel ? Math.max(1, Math.round(PX * z * dpr)) / (PX * dpr) : z; }
   addEventListener('resize', resize);
   resize();
 
   // load sprite sheets
-  // SD rig sheets share the row layout, so they register like any other sheet
-  for (const k in window.RIG_META || {}) { window.SPRITE_ROWS[k] = window.RIG_META[k].rows; window.SPRITE_ROWS[k + '_fist'] = window.RIG_META[k].rows; }
-  for (const k in window.MOB_META || {}) window.SPRITE_ROWS[k] = window.MOB_META[k].rows;
   const names = Object.keys(window.SPRITE_ROWS);
   let loaded = 0;
   const total = names.length + 1; // + weapon looks
@@ -209,7 +199,7 @@ const Game = {
     const img = new Image();
     img.onload = tick;
     img.onerror = () => { console.warn('sprite failed', n); tick(); };
-    img.src = (window.MOB_META && window.MOB_META[n] && window.MOB_META[n].src) || `assets/sprites/${n}.png`;
+    img.src = `assets/sprites/${n}.png`;
     Sprites[n] = img;
   });
 
@@ -247,18 +237,16 @@ const Game = {
     for (const [id, c] of Object.entries(D.CLASSES)) {
       const d = document.createElement('div');
       d.className = 'class-card' + (id === chosen ? ' on' : '');
-      d.innerHTML = `<div class="class-art"><img src="${c.art}" alt=""></div><h4>${c.name}</h4><p>${c.desc.replace('\n', '<br>')}</p>`;
+      d.innerHTML = `<canvas width="128" height="128"></canvas><h4>${c.name}</h4><p>${c.desc.replace('\n', '<br>')}</p>`;
       d.onclick = () => { chosen = id; cards.forEach((x) => x.el.classList.toggle('on', x.id === id)); U.sfx.ui(); };
       box.appendChild(d);
       cards.push({ id, el: d, cv: d.querySelector('canvas'), cls: c });
-      if (!d.querySelector('canvas')) continue;
     }
     let t = 0;
     (function anim() {
       if (Game.started) return;
       t += 1 / 60;
       for (const c of cards) {
-        if (!c.cv) continue;
         const on = c.id === chosen;
         const a = on ? ANIMS[c.cls.attack] : ANIMS.walk;
         const col = on ? Math.floor(t / a.ft) % a.frames : 1 + (Math.floor(t / 0.1) % 8);
@@ -367,7 +355,7 @@ const Game = {
   canvas.addEventListener('wheel', (e) => {
     e.preventDefault();
     Game.userZoom = U.clamp((Game.userZoom || Game.zoom) * (e.deltaY > 0 ? 0.9 : 1.1), 0.55, 1.8);
-    Game.zoom = snapZoom(Game.userZoom);
+    Game.zoom = Game.userZoom;
   }, { passive: false });
   canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
@@ -493,27 +481,16 @@ const Game = {
   }
 
   // ---------------------------------------------------------------- render
-  let lowCv = null, lowCtx = null;
   function render() {
-    const z = Game.zoom, pix = Game.gfx.pixel;
-    // pixel filter: one canvas pixel per PX world units, blown up with hard edges; otherwise full resolution
-    const devPx = pix ? Math.round(PX * z * dpr) : 1, PXe = pix ? PX : 1 / (z * dpr);
+    const z = Game.zoom;
     const sh = Game.shake;
-    const snap = pix ? PX : 1;
-    const cam = { x: Math.round((Game.cam.x + (sh ? U.rand(-sh, sh) : 0)) / snap) * snap, y: Math.round((Game.cam.y + (sh ? U.rand(-sh, sh) : 0)) / snap) * snap };
-    const lw = Math.ceil(canvas.width / devPx), lh = Math.ceil(canvas.height / devPx);
-    if (!lowCv || lowCv.width !== lw || lowCv.height !== lh) {
-      lowCv = document.createElement('canvas'); lowCv.width = lw; lowCv.height = lh;
-      lowCtx = lowCv.getContext('2d');
-    }
-    const vw = lw * PXe, vh = lh * PXe;
-    const out = ctx;
-    const ctxW = lowCtx; // world pass draws in world units onto the low-res canvas
-    ctxW.setTransform(1 / PXe, 0, 0, 1 / PXe, 0, 0);
-    ctxW.imageSmoothingEnabled = false;
-    ctxW.fillStyle = '#1a1a14'; ctxW.fillRect(0, 0, vw, vh);
-    World.drawGround(ctxW, cam, vw, vh, Game.started ? 2 : 4);
-    VFX.drawGround(ctxW, cam);
+    const cam = { x: Math.round(Game.cam.x + (sh ? U.rand(-sh, sh) : 0)), y: Math.round(Game.cam.y + (sh ? U.rand(-sh, sh) : 0)) };
+    const vw = innerWidth / z, vh = innerHeight / z;
+    ctx.setTransform(dpr * z, 0, 0, dpr * z, 0, 0);
+    ctx.imageSmoothingEnabled = false;
+    ctx.fillStyle = '#1a1a14'; ctx.fillRect(0, 0, vw, vh);
+    World.drawGround(ctx, cam, vw, vh, Game.started ? 2 : 4);
+    VFX.drawGround(ctx, cam);
 
     // gather visible props
     const x0 = cam.x - 200, y0 = cam.y - 120, x1 = cam.x + vw + 200, y1 = cam.y + vh + 260;
@@ -527,14 +504,14 @@ const Game = {
       }
     }
     const t = Game.time;
-    for (const g of ground) World.drawProp(ctxW, g.prop, g.prop.x - cam.x, g.prop.y - cam.y, t);
-    Skills.drawGround(ctxW, cam, t);
-    Game.drawDrops(ctxW, cam);
+    for (const g of ground) World.drawProp(ctx, g.prop, g.prop.x - cam.x, g.prop.y - cam.y, t);
+    Skills.drawGround(ctx, cam, t);
+    Game.drawDrops(ctx, cam);
     // click markers under entities
     for (const f of Game.fx) if (f.type === 'click') {
       const k = f.t / f.dur;
-      ctxW.strokeStyle = `rgba(255,240,180,${1 - k})`; ctxW.lineWidth = 2;
-      ctxW.beginPath(); ctxW.ellipse(f.x - cam.x, f.y - cam.y, 14 * (1 - k * 0.5), 6 * (1 - k * 0.5), 0, 0, Math.PI * 2); ctxW.stroke();
+      ctx.strokeStyle = `rgba(255,240,180,${1 - k})`; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.ellipse(f.x - cam.x, f.y - cam.y, 14 * (1 - k * 0.5), 6 * (1 - k * 0.5), 0, 0, Math.PI * 2); ctx.stroke();
     }
     const inView = (e) => e.x > x0 && e.x < x1 && e.y > y0 && e.y < y1;
     const ents = [];
@@ -546,11 +523,11 @@ const Game = {
     for (const e of ents) vis.push({ y: e.y, ent: e });
     vis.sort((a, b) => a.y - b.y);
     for (const v of vis) {
-      if (v.prop) World.drawProp(ctxW, v.prop, v.prop.x - cam.x, v.prop.y - cam.y, t);
-      else v.ent.draw(ctxW, cam);
+      if (v.prop) World.drawProp(ctx, v.prop, v.prop.x - cam.x, v.prop.y - cam.y, t);
+      else v.ent.draw(ctx, cam);
     }
-    for (const pr of Game.projectiles) Combat.drawProjectile(ctxW, cam, pr);
-    for (const f of Game.fx) if (f.type !== 'click') Combat.drawFx(ctxW, cam, f);
+    for (const pr of Game.projectiles) Combat.drawProjectile(ctx, cam, pr);
+    for (const f of Game.fx) if (f.type !== 'click') Combat.drawFx(ctx, cam, f);
     // day / night lighting: darken everything, then cut out light around fires and the player
     const dark = Game.darkness();
     if (dark > 0.02) {
@@ -565,33 +542,27 @@ const Game = {
       for (const l of VFX.lights()) lights.push(l);
       for (const h of Skills.hazards) if (h.kind === 'fire' || h.kind === 'blizzard') lights.push([h.x, h.y - 20, h.r * 1.4]);
       for (const f of Game.fx) if (['explode', 'meteor', 'levelup', 'teleport', 'heal', 'buff', 'doom'].includes(f.type)) lights.push([f.x, f.y - 30, 180]);
-      if (!lightCv || lightCv.width !== lw || lightCv.height !== lh) {
-        lightCv = document.createElement('canvas'); lightCv.width = lw; lightCv.height = lh;
+      if (!lightCv || lightCv.width !== canvas.width || lightCv.height !== canvas.height) {
+        lightCv = document.createElement('canvas'); lightCv.width = canvas.width; lightCv.height = canvas.height;
       }
       const lg = lightCv.getContext('2d');
       lg.globalCompositeOperation = 'source-over';
       lg.clearRect(0, 0, lightCv.width, lightCv.height);
       lg.fillStyle = `rgba(4,8,30,${dark})`; lg.fillRect(0, 0, lightCv.width, lightCv.height);
       lg.globalCompositeOperation = 'destination-out';
-      const s = 1 / PXe;
+      const s = dpr * z;
       for (const [lx, ly, lr] of lights) {
         const x = (lx - cam.x) * s, y = (ly - cam.y) * s, r = lr * s;
         const gr = lg.createRadialGradient(x, y, 0, x, y, r);
         gr.addColorStop(0, 'rgba(0,0,0,0.88)'); gr.addColorStop(0.45, 'rgba(0,0,0,0.5)'); gr.addColorStop(1, 'rgba(0,0,0,0)');
         lg.fillStyle = gr; lg.beginPath(); lg.arc(x, y, r, 0, Math.PI * 2); lg.fill();
       }
-      ctxW.setTransform(1, 0, 0, 1, 0, 0);
-      ctxW.drawImage(lightCv, 0, 0);
-      ctxW.setTransform(1 / PXe, 0, 0, 1 / PXe, 0, 0);
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.drawImage(lightCv, 0, 0);
+      ctx.setTransform(dpr * z, 0, 0, dpr * z, 0, 0);
     }
     // elemental particles on top of the lighting so fire and frost glow at night
-    VFX.draw(ctxW, cam);
-    // blow the low-res world up to the screen with hard pixel edges
-    out.setTransform(1, 0, 0, 1, 0, 0);
-    out.imageSmoothingEnabled = false;
-    out.drawImage(lowCv, 0, 0, lw * devPx, lh * devPx);
-    // overlays stay at full resolution so names and numbers remain crisp
-    out.setTransform(dpr * z, 0, 0, dpr * z, 0, 0);
+    VFX.draw(ctx, cam);
     // overlays (names, bars)
     const p = Game.player;
     for (const e of ents) {

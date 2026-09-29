@@ -11,25 +11,6 @@ const UI = (() => {
   const ico = (n, cls = '') => `<img src="assets/icons/${n}.svg" class="${cls}" alt="">`;
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
-  // standing illustrations (anime art), loaded once and shared
-  const ART = {};
-  function artImg(src, onload) {
-    let im = ART[src];
-    if (!im) { im = ART[src] = new Image(); im.src = src; }
-    if (onload) { if (im.complete && im.naturalWidth) onload(im); else im.addEventListener('load', () => onload(im), { once: true }); }
-    return im;
-  }
-  // card face: the illustration's upper body if the card has art, otherwise the sprite
-  function drawCardArt(c, card) {
-    if (!card.art) return drawSprite(c, card.sheet, 10, 0, 0.75);
-    artImg(card.art, (im) => {
-      const g = c.getContext('2d');
-      g.clearRect(0, 0, c.width, c.height); g.imageSmoothingEnabled = true;
-      const sw = im.width * 0.62, sh = sw * c.height / c.width;
-      g.drawImage(im, (im.width - sw) / 2, im.height * 0.02, sw, sh, 0, 0, c.width, c.height);
-    });
-  }
-
   // draw one sprite frame into a canvas
   function spriteCanvas(sheet, size, row = 10, col = 0, crop = 1) {
     const c = document.createElement('canvas');
@@ -37,37 +18,14 @@ const UI = (() => {
     drawSprite(c, sheet, row, col, crop);
     return c;
   }
-  // 3:4 card face from a sheet's front-facing frame
-  function cardSprite(c, sheet) {
-    const g = c.getContext('2d'), img = Sprites[sheet];
-    if (!img) return;
-    const si = sheetInfo(sheet), fs = si.fs;
-    g.clearRect(0, 0, c.width, c.height);
-    if (si.rig && si.rig.mob) {
-      const h = Math.min(fs, si.rig.head * 1.2), w = h * c.width / c.height;
-      g.imageSmoothingEnabled = true;
-      g.drawImage(img, si.fx - w / 2, si.ry(10) * fs + si.fy + 4 - h, w, h, 0, 0, c.width, c.height);
-    } else {
-      g.imageSmoothingEnabled = fs > 64;
-      const k = fs / 64;
-      g.drawImage(img, 8 * k, si.ry(10) * fs + 2 * k, 48 * k, 64 * k, 0, 0, c.width, c.height);
-    }
-  }
   function drawSprite(c, sheet, row = 10, col = 0, crop = 1) {
     const g = c.getContext('2d');
     g.imageSmoothingEnabled = false;
     g.clearRect(0, 0, c.width, c.height);
     const img = Sprites[sheet];
     if (!img) return;
-    const si = sheetInfo(sheet), fs = si.fs;
-    g.imageSmoothingEnabled = fs > 64;
-    if (si.rig && si.rig.mob) { // painted monsters: frame the creature itself, feet at the bottom
-      const sw = Math.min(fs, si.rig.head * 1.25 * Math.max(crop, 0.8));
-      g.drawImage(img, col * fs + si.fx - sw / 2, si.ry(row) * fs + si.fy + 4 - sw, sw, sw, 0, 0, c.width, c.height);
-      return;
-    }
     // crop < 1 zooms on the upper body
-    const sw = fs * crop, sx = col * fs + (fs - sw) / 2, sy = si.ry(row) * fs + (fs - sw) * 0.25;
+    const sw = 64 * crop, sx = col * 64 + (64 - sw) / 2, sy = row * 64 + (64 - sw) * 0.25;
     g.drawImage(img, sx, sy, sw, sw, 0, 0, c.width, c.height);
   }
 
@@ -514,9 +472,7 @@ const UI = (() => {
         <div>공격력 <b>${st.atk}</b></div><div>방어력 <b>${st.def}</b></div><div>HP <b>${U.fmt(st.maxHp)}</b></div><div>MP <b>${U.fmt(st.maxMp)}</b></div>
         <div>공격 속도 <b>+${st.atkSpd}%</b></div><div>시전 속도 <b>+${st.castSpd}%</b></div><div>치명타 <b>${st.crit.toFixed(1)}%</b></div><div>회피 <b>${st.eva}</b></div>
         <div>피해 감소 <b>${st.dmgRed}</b></div><div>이동 속도 <b>+${st.moveSpd}%</b></div></div></div></div>`;
-    const art = card ? card.art : p.classDef.art;
-    if (art) { const im = artImg(art).cloneNode(); im.className = 'char-art'; body.querySelector('#char-cv').appendChild(im); }
-    else body.querySelector('#char-cv').appendChild(cv);
+    body.querySelector('#char-cv').appendChild(cv);
     return {};
   };
 
@@ -608,7 +564,7 @@ const UI = (() => {
       const lbl = (t, x, y, col = '#fff') => { g.strokeText(t, x * S, y * S); g.fillStyle = col; g.fillText(t, x * S, y * S); };
       lbl('라스카노 마을', 90, 86, '#9fe0ff'); lbl('바람의 초원', 90, 40); lbl('망자의 묘지', 145, 70); lbl('오크 요새', 90, 128); lbl('고요한 숲', 30, 120);
       g.font = 'bold 16px sans-serif';
-      lbl('☠ 데스나이트', 165, 80, '#ff6b5e'); lbl('☠ 빙룡', 30, 28, '#ff6b5e'); lbl('☠ 화염룡', 140, 160, '#ff6b5e'); lbl('☠ 미노타우르스 킹', 90, 162, '#ff6b5e');
+      lbl('☠ 뱀파이어 군주', 165, 80, '#ff6b5e'); lbl('☠ 미노타우르스 킹', 90, 162, '#ff6b5e');
       const p = game.player;
       g.fillStyle = '#fff'; g.beginPath(); g.arc(p.x / D.TILE * S, p.y / D.TILE * S, 7, 0, Math.PI * 2); g.fill();
       g.strokeStyle = '#e33'; g.lineWidth = 3; g.stroke();
@@ -729,7 +685,7 @@ const UI = (() => {
   }
 
   return {
-    toggleRide, init, iconImg, spriteCanvas, drawSprite, cardSprite, artImg, drawCardArt, chat, announce, toast, skillName, refreshHud, refreshQuest, refreshAll, markInv,
+    toggleRide, init, iconImg, spriteCanvas, drawSprite, chat, announce, toast, skillName, refreshHud, refreshQuest, refreshAll, markInv,
     flashSlot, drawMinimap, open, close, isOpen, openEnchant, toggleAuto, useSlotItem, esc, ico, makePanel, OPENERS,
     get panelName() { return panel && panel.name; },
     setPanel(p) { panel = p; },

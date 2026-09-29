@@ -871,7 +871,7 @@ const Mounts = (() => {
   // ---------------------------------------------------------------- drawing
   const rc = document.createElement('canvas'); rc.width = 192; rc.height = 200;
   const rg = rc.getContext('2d');
-  const RIDER_FEET = 170, RIDER_HIP = 160; // in the rider buffer (chibi hip line)
+  const RIDER_FEET = 170, RIDER_HIP = 153; // in the rider buffer
 
   // Frames are cached at display resolution, facing right only (flipped on blit). The gallop phase
   // is quantised to 16 steps and idle time to 1/4s (4s loop), so every rider of a mount shares frames.
@@ -967,7 +967,7 @@ const Mounts = (() => {
   // ---------------------------------------------------------------- UI
   let sel = null, raf = 0, filter = -1;
   function riderPreviewFn(p) {
-    return (g, fx, fy) => { g.imageSmoothingEnabled = false; Looks.drawComposite(g, p.sheet, Looks.current(p), 11, 0, fx, fy + riderDrop(p.sheet), 1, { t: 0 }); };
+    return (g, fx, fy) => { g.imageSmoothingEnabled = false; Looks.drawComposite(g, p.sheet, Looks.current(p), 11, 0, fx, fy, 1, { t: 0 }); };
   }
   function thumb(cv, id) {
     const g = cv.getContext('2d'); g.clearRect(0, 0, cv.width, cv.height);

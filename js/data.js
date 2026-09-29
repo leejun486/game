@@ -20,19 +20,19 @@ D.GRADES = [
 // ---------------- classes & skills ----------------
 D.CLASSES = {
   knight: {
-    name: '기사', sheet: 'knight', art: 'assets/art/knight.webp', desc: '강인한 체력과 근접 전투의 달인.\n높은 방어력으로 전장을 지배한다.',
+    name: '기사', sheet: 'knight', desc: '강인한 체력과 근접 전투의 달인.\n높은 방어력으로 전장을 지배한다.',
     base: { hp: 190, mp: 40, atk: 14, def: 6 }, grow: { hp: 24, mp: 3, atk: 2.3, def: 0.9 },
     range: 62, attack: 'slash', atkDelay: 0.95, weapon: 'sword',
     skills: ['k_smash', 'k_whirl', 'k_rage', 'k_doom', 'k_charge', 'k_quake'],
   },
   elf: {
-    name: '요정', sheet: 'elf', art: 'assets/art/elf.webp', desc: '숲의 축복을 받은 궁수.\n먼 거리에서 적을 꿰뚫는다.',
+    name: '요정', sheet: 'elf', desc: '숲의 축복을 받은 궁수.\n먼 거리에서 적을 꿰뚫는다.',
     base: { hp: 135, mp: 80, atk: 12, def: 3 }, grow: { hp: 15, mp: 6, atk: 2.1, def: 0.5 },
     range: 330, attack: 'shoot', atkDelay: 1.0, weapon: 'bow', projectile: 'arrow',
     skills: ['e_triple', 'e_rain', 'e_wind', 'e_energy', 'e_frost', 'e_storm'],
   },
   mage: {
-    name: '마법사', sheet: 'mage', art: 'assets/art/mage.webp', desc: '원소를 다루는 현자.\n강력한 광역 마법으로 적을 쓸어버린다.',
+    name: '마법사', sheet: 'mage', desc: '원소를 다루는 현자.\n강력한 광역 마법으로 적을 쓸어버린다.',
     base: { hp: 115, mp: 140, atk: 15, def: 2 }, grow: { hp: 11, mp: 11, atk: 2.5, def: 0.4 },
     range: 300, attack: 'thrust', atkDelay: 1.05, weapon: 'staff', projectile: 'bolt',
     skills: ['m_fire', 'm_ice', 'm_heal', 'm_meteor', 'm_chain', 'm_blizzard'],
@@ -65,45 +65,17 @@ D.SKILLS = {
 
 // ---------------- monsters ----------------
 D.MONSTERS = {
-  // painted monster sheets (tools/build_mobs.py); ids kept from the original roster
-  goblin: { name: '고블린', sheet: 'mob_goblin', lv: 2, hp: 55, atk: 7, def: 1, spd: 70, scale: 0.85, aggro: false, range: 50 },
-  wolfman: { name: '설원 늑대', sheet: 'mob_wolfman', lv: 5, hp: 110, atk: 12, def: 3, spd: 90, scale: 1.0, aggro: true, range: 52 },
-  boarman: { name: '거대 멧돼지', sheet: 'mob_boarman', lv: 8, hp: 190, atk: 17, def: 5, spd: 80, scale: 1.05, aggro: false, range: 52 },
-  zombie: { name: '굶주린 구울', sheet: 'mob_zombie', lv: 12, hp: 300, atk: 24, def: 8, spd: 50, scale: 1.0, aggro: true, range: 50 },
-  skeleton: { name: '푸른 망령', sheet: 'mob_skeleton', lv: 15, hp: 380, atk: 30, def: 11, spd: 85, scale: 1.0, aggro: true, range: 56 },
-  vampire: { name: '데스나이트', sheet: 'mob_vampire', lv: 24, hp: 5200, atk: 55, def: 20, spd: 95, scale: 1.45, aggro: true, range: 64, boss: true },
-  orc: { name: '오크 전사', sheet: 'mob_orc', lv: 20, hp: 560, atk: 40, def: 15, spd: 80, scale: 1.05, aggro: true, range: 56 },
-  lizardman: { name: '늪지 트렌트', sheet: 'mob_lizardman', lv: 25, hp: 760, atk: 50, def: 19, spd: 88, scale: 1.05, aggro: true, range: 56 },
-  troll: { name: '흉포한 오우거', sheet: 'mob_troll', lv: 30, hp: 1200, atk: 64, def: 24, spd: 70, scale: 1.25, aggro: true, range: 60 },
-  minotaur: { name: '미노타우르스 킹', sheet: 'mob_minotaur', lv: 38, hp: 16000, atk: 105, def: 34, spd: 90, scale: 1.8, aggro: true, range: 76, boss: true },
+  goblin: { name: '고블린', sheet: 'goblin', lv: 2, hp: 55, atk: 7, def: 1, spd: 70, scale: 0.85, aggro: false, range: 50 },
+  wolfman: { name: '늑대인간', sheet: 'wolfman', lv: 5, hp: 110, atk: 12, def: 3, spd: 90, scale: 1.0, aggro: true, range: 52 },
+  boarman: { name: '멧돼지 전사', sheet: 'boarman', lv: 8, hp: 190, atk: 17, def: 5, spd: 80, scale: 1.05, aggro: false, range: 52 },
+  zombie: { name: '굶주린 좀비', sheet: 'zombie', lv: 12, hp: 300, atk: 24, def: 8, spd: 50, scale: 1.0, aggro: true, range: 50 },
+  skeleton: { name: '해골 전사', sheet: 'skeleton', lv: 15, hp: 380, atk: 30, def: 11, spd: 85, scale: 1.0, aggro: true, range: 56 },
+  vampire: { name: '뱀파이어 군주', sheet: 'vampire', lv: 24, hp: 5200, atk: 55, def: 20, spd: 95, scale: 1.45, aggro: true, range: 64, boss: true },
+  orc: { name: '오크 전사', sheet: 'orc', lv: 20, hp: 560, atk: 40, def: 15, spd: 80, scale: 1.05, aggro: true, range: 56 },
+  lizardman: { name: '리자드맨', sheet: 'lizardman', lv: 25, hp: 760, atk: 50, def: 19, spd: 88, scale: 1.05, aggro: true, range: 56 },
+  troll: { name: '흉포한 트롤', sheet: 'troll', lv: 30, hp: 1200, atk: 64, def: 24, spd: 70, scale: 1.25, aggro: true, range: 60 },
+  minotaur: { name: '미노타우르스 킹', sheet: 'minotaur', lv: 38, hp: 16000, atk: 105, def: 34, spd: 90, scale: 1.7, aggro: true, range: 76, boss: true },
 };
-// new monsters: stats follow the same level curve as the originals
-{
-  const mk = (name, lv, o = {}) => {
-    const boss = !!o.boss, mul = boss ? 14 : 1;
-    return { name, lv, hp: Math.round((18 * Math.pow(lv, 1.35) + 30) * mul * (o.hpMul || 1)), atk: Math.round((2 * lv + 4) * (boss ? 1.6 : 1)), def: Math.round(lv * 0.65),
-      spd: o.spd || 80, scale: o.scale || 1, aggro: o.aggro ?? true, range: o.range || 54, boss, ...o };
-  };
-  Object.assign(D.MONSTERS, {
-    slime: mk('초록 슬라임', 1, { sheet: 'mob_slime', spd: 55, aggro: false, range: 44 }),
-    king_slime: mk('킹 슬라임', 7, { sheet: 'mob_king_slime', scale: 1.6, boss: true, hpMul: 0.5, spd: 60, range: 60 }),
-    goblin_shaman: mk('고블린 주술사', 4, { sheet: 'mob_goblin_shaman', aggro: false }),
-    mushroom: mk('독버섯', 6, { sheet: 'mob_mushroom', spd: 50, aggro: false, range: 46 }),
-    wasp: mk('거대 말벌', 9, { sheet: 'mob_wasp', spd: 105 }),
-    ghost: mk('처녀귀신', 13, { sheet: 'mob_ghost', spd: 75 }),
-    hellhound: mk('헬하운드', 16, { sheet: 'mob_hellhound', spd: 110 }),
-    mimic: mk('미믹', 18, { sheet: 'mob_mimic', spd: 60, aggro: false, hpMul: 1.6 }),
-    orc_chief: mk('오크 대장', 23, { sheet: 'mob_orc_chief', scale: 1.1, hpMul: 1.5, range: 60 }),
-    spider: mk('독거미', 22, { sheet: 'mob_spider', spd: 100 }),
-    scorpion: mk('독전갈', 27, { sheet: 'mob_scorpion', spd: 85 }),
-    ice_golem: mk('얼음 골렘', 29, { sheet: 'mob_ice_golem', scale: 1.1, spd: 60, hpMul: 1.4, range: 62 }),
-    succubus: mk('서큐버스', 32, { sheet: 'mob_succubus', spd: 95 }),
-    lava_golem: mk('용암 골렘', 34, { sheet: 'mob_lava_golem', scale: 1.1, spd: 60, hpMul: 1.4, range: 62 }),
-    lilith: mk('릴리스', 36, { sheet: 'mob_lilith', spd: 100 }),
-    ice_dragon: mk('빙룡 프로스트', 42, { sheet: 'mob_ice_dragon', scale: 2.0, boss: true, spd: 85, range: 96 }),
-    red_dragon: mk('화염룡 이그니스', 48, { sheet: 'mob_red_dragon', scale: 2.0, boss: true, spd: 90, range: 100 }),
-  });
-}
 for (const k in D.MONSTERS) {
   const m = D.MONSTERS[k];
   m.id = k;
@@ -140,37 +112,19 @@ D.SPAWNS = [
   { m: 'lizardman', x: 62, y: 140, r: 10, n: 12 },
   { m: 'troll', x: 100, y: 150, r: 11, n: 12 },
   { m: 'minotaur', x: 90, y: 168, r: 3, n: 1, respawn: 300 },
-  // newer monsters mixed into the hunting grounds by level
-  { m: 'slime', x: 72, y: 66, r: 6, n: 10 },
-  { m: 'goblin_shaman', x: 100, y: 62, r: 6, n: 6 },
-  { m: 'king_slime', x: 66, y: 56, r: 2, n: 1, respawn: 150 },
-  { m: 'mushroom', x: 44, y: 84, r: 7, n: 9 },
-  { m: 'wasp', x: 110, y: 30, r: 8, n: 9 },
-  { m: 'ghost', x: 134, y: 98, r: 7, n: 9 },
-  { m: 'hellhound', x: 152, y: 102, r: 7, n: 9 },
-  { m: 'mimic', x: 112, y: 120, r: 4, n: 3 },
-  { m: 'orc_chief', x: 96, y: 132, r: 5, n: 4 },
-  { m: 'spider', x: 48, y: 128, r: 7, n: 9 },
-  { m: 'scorpion', x: 74, y: 154, r: 7, n: 9 },
-  { m: 'ice_golem', x: 118, y: 140, r: 7, n: 6 },
-  { m: 'succubus', x: 114, y: 158, r: 6, n: 6 },
-  { m: 'lava_golem', x: 76, y: 168, r: 6, n: 6 },
-  { m: 'lilith', x: 126, y: 150, r: 5, n: 5 },
-  { m: 'ice_dragon', x: 30, y: 34, r: 3, n: 1, respawn: 600 },
-  { m: 'red_dragon', x: 140, y: 166, r: 3, n: 1, respawn: 600 },
 ];
 
 // teleport destinations (tile coords)
 D.TELEPORTS = [
   { name: '라스카노 마을', x: 90, y: 93, cost: 0, lv: '안전' },
   { name: '바람의 초원 (고블린)', x: 90, y: 70, cost: 100, lv: 'Lv.1~' },
-  { name: '바람의 초원 (설원 늑대)', x: 88, y: 50, cost: 200, lv: 'Lv.5~' },
+  { name: '바람의 초원 (늑대인간)', x: 88, y: 50, cost: 200, lv: 'Lv.5~' },
   { name: '바람의 초원 북부 (멧돼지)', x: 95, y: 27, cost: 300, lv: 'Lv.8~' },
   { name: '망자의 묘지 입구', x: 118, y: 90, cost: 500, lv: 'Lv.12~' },
   { name: '망자의 묘지 깊은 곳', x: 140, y: 84, cost: 700, lv: 'Lv.15~' },
   { name: '오크 요새 입구', x: 90, y: 116, cost: 900, lv: 'Lv.20~' },
-  { name: '트렌트 늪지', x: 66, y: 136, cost: 1200, lv: 'Lv.25~' },
-  { name: '오우거 서식지', x: 100, y: 144, cost: 1500, lv: 'Lv.30~' },
+  { name: '리자드맨 늪지', x: 66, y: 136, cost: 1200, lv: 'Lv.25~' },
+  { name: '트롤 서식지', x: 100, y: 144, cost: 1500, lv: 'Lv.30~' },
 ];
 
 // ---------------- items ----------------
@@ -236,11 +190,6 @@ D.DROPS = {
   lizardman: [['hp_l', 0.05], ['w_sword3', 0.002], ['w_bow3', 0.002], ['w_staff3', 0.002], ['sc_armor', 0.01]],
   troll: [['hp_l', 0.08], ['a_3', 0.003], ['sc_weapon', 0.012], ['ticket', 0.004]],
   vampire: [['ticket', 1], ['sc_weapon', 0.8], ['sc_armor', 0.8], ['w_sword4', 0.2], ['w_bow4', 0.2], ['w_staff4', 0.2], ['r_3', 0.15], ['a_4', 0.15]],
-  king_slime: [['ticket', 1], ['hp_m', 1], ['sc_armor', 0.5], ['r_1', 0.2]],
-  mimic: [['sc_weapon', 0.2], ['sc_armor', 0.2], ['ticket', 0.05]],
-  orc_chief: [['hp_l', 0.08], ['sc_weapon', 0.015], ['ticket', 0.004]],
-  ice_dragon: [['ticket', 1], ['ticket', 1], ['sc_weapon', 1], ['sc_armor', 1], ['w_sword5', 0.2], ['w_bow5', 0.2], ['w_staff5', 0.2], ['r_3', 0.3]],
-  red_dragon: [['ticket', 1], ['ticket', 1], ['ticket', 1], ['sc_weapon', 1], ['sc_armor', 1], ['w_sword5', 0.25], ['w_bow5', 0.25], ['w_staff5', 0.25], ['a_4', 0.4]],
   minotaur: [['ticket', 1], ['ticket', 1], ['sc_weapon', 1], ['w_sword5', 0.15], ['w_bow5', 0.15], ['w_staff5', 0.15], ['a_4', 0.3], ['r_3', 0.3]],
 };
 
@@ -269,23 +218,23 @@ D.STAT_NAMES = {
 };
 D.CARDS = [
   { id: 'c_leonic', name: '황금 기사 레오닉', sheet: 'knight_gold', grade: 4, style: 'war' },
-  { id: 'c_dracul', name: '망령 군주 데스나이트', sheet: 'mob_vampire', grade: 4, style: 'hybrid' },
-  { id: 'c_minos', name: '미궁의 왕 미노스', sheet: 'mob_minotaur', grade: 4, style: 'tank' },
-  { id: 'c_seranis', name: '냉철한 전술가 세라니스', sheet: 'mage', art: 'assets/art/mage.webp', grade: 3, style: 'hybrid' },
-  { id: 'c_kain', name: '암흑 기사 카인', sheet: 'knight_dark', art: 'assets/art/knight.webp', grade: 3, style: 'war' },
+  { id: 'c_dracul', name: '뱀파이어 군주 드라큘', sheet: 'vampire', grade: 4, style: 'hybrid' },
+  { id: 'c_minos', name: '미궁의 왕 미노스', sheet: 'minotaur', grade: 4, style: 'tank' },
+  { id: 'c_seranis', name: '냉철한 전술가 세라니스', sheet: 'mage', grade: 3, style: 'hybrid' },
+  { id: 'c_kain', name: '암흑 기사 카인', sheet: 'knight_dark', grade: 3, style: 'war' },
   { id: 'c_elena', name: '빛의 성녀 엘레나', sheet: 'mage_white', grade: 3, style: 'cast' },
   { id: 'c_rien', name: '붉은 궁수 리엔', sheet: 'elf_red', grade: 2, style: 'swift' },
-  { id: 'c_silva', name: '숲의 수호자 실바', sheet: 'elf', art: 'assets/art/elf.webp', grade: 2, style: 'swift' },
+  { id: 'c_silva', name: '숲의 수호자 실바', sheet: 'elf', grade: 2, style: 'swift' },
   { id: 'c_arcane', name: '대현자 아르케인', sheet: 'npc_sage', grade: 2, style: 'cast' },
-  { id: 'c_troll', name: '동굴 오우거', sheet: 'mob_troll', grade: 2, style: 'tank' },
-  { id: 'c_lizard', name: '고목의 트렌트', sheet: 'mob_lizardman', grade: 2, style: 'war' },
+  { id: 'c_troll', name: '동굴 트롤', sheet: 'troll', grade: 2, style: 'tank' },
+  { id: 'c_lizard', name: '리자드맨 투사', sheet: 'lizardman', grade: 2, style: 'war' },
   { id: 'c_guard', name: '왕실 근위병', sheet: 'npc_guard', grade: 1, style: 'tank' },
-  { id: 'c_orc', name: '오크 전사', sheet: 'mob_orc', grade: 1, style: 'war' },
-  { id: 'c_skel', name: '푸른 망령', sheet: 'mob_skeleton', grade: 1, style: 'war' },
-  { id: 'c_boar', name: '거대 멧돼지', sheet: 'mob_boarman', grade: 1, style: 'tank' },
-  { id: 'c_wolf', name: '설원 늑대', sheet: 'mob_wolfman', grade: 1, style: 'swift' },
-  { id: 'c_goblin', name: '고블린', sheet: 'mob_goblin', grade: 0, style: 'swift' },
-  { id: 'c_zombie', name: '구울', sheet: 'mob_zombie', grade: 0, style: 'tank' },
+  { id: 'c_orc', name: '오크 전사', sheet: 'orc', grade: 1, style: 'war' },
+  { id: 'c_skel', name: '해골 전사', sheet: 'skeleton', grade: 1, style: 'war' },
+  { id: 'c_boar', name: '멧돼지 전사', sheet: 'boarman', grade: 1, style: 'tank' },
+  { id: 'c_wolf', name: '늑대인간', sheet: 'wolfman', grade: 1, style: 'swift' },
+  { id: 'c_goblin', name: '고블린', sheet: 'goblin', grade: 0, style: 'swift' },
+  { id: 'c_zombie', name: '좀비', sheet: 'zombie', grade: 0, style: 'tank' },
   { id: 'c_trader', name: '떠돌이 상인', sheet: 'npc_merchant', grade: 0, style: 'cast' },
   { id: 'c_maid', name: '마을 처녀', sheet: 'npc_woman', grade: 0, style: 'swift' },
   { id: 'c_squire', name: '견습 기사', sheet: 'knight', grade: 0, style: 'war' },
@@ -309,17 +258,17 @@ D.CARD_MAX_LV = 10;
 D.QUESTS = [
   { title: '1. 모험의 시작', desc: '잡화 상인 노바와 대화', type: 'talk', npc: 'nova', reward: { gold: 500, items: { hp_s: 20 } } },
   { title: '2. 초원의 위협', desc: '고블린 처치', type: 'kill', m: 'goblin', n: 10, reward: { gold: 1000, dia: 100, items: { hp_s: 20, tp_town: 3, ticket: 3 } } },
-  { title: '3. 늑대 사냥', desc: '설원 늑대 처치', type: 'kill', m: 'wolfman', n: 15, reward: { gold: 2000, items: { sc_weapon: 2 } } },
+  { title: '3. 늑대 사냥', desc: '늑대인간 처치', type: 'kill', m: 'wolfman', n: 15, reward: { gold: 2000, items: { sc_weapon: 2 } } },
   { title: '4. 강화의 길', desc: '무기를 +1 이상 강화', type: 'enchant', n: 1, reward: { gold: 3000, items: { sc_armor: 1 } } },
-  { title: '5. 북부의 멧돼지', desc: '거대 멧돼지 처치', type: 'kill', m: 'boarman', n: 20, reward: { gold: 4000, items: { hp_m: 20, sc_armor: 2 } } },
+  { title: '5. 북부의 멧돼지', desc: '멧돼지 전사 처치', type: 'kill', m: 'boarman', n: 20, reward: { gold: 4000, items: { hp_m: 20, sc_armor: 2 } } },
   { title: '6. 성장하는 영웅', desc: '레벨 10 달성', type: 'level', n: 10, reward: { dia: 300, items: { ticket: 2 } } },
-  { title: '7. 망자의 묘지', desc: '굶주린 구울 처치', type: 'kill', m: 'zombie', n: 20, reward: { gold: 6000, items: { hp_m: 30 } } },
-  { title: '8. 망령의 군대', desc: '푸른 망령 처치', type: 'kill', m: 'skeleton', n: 25, reward: { gold: 8000, items: { sc_weapon: 2 } } },
-  { title: '9. 망령의 군주', desc: '데스나이트 처치', type: 'kill', m: 'vampire', n: 1, reward: { dia: 500, items: { ticket: 5 } } },
+  { title: '7. 망자의 묘지', desc: '굶주린 좀비 처치', type: 'kill', m: 'zombie', n: 20, reward: { gold: 6000, items: { hp_m: 30 } } },
+  { title: '8. 뼈의 군대', desc: '해골 전사 처치', type: 'kill', m: 'skeleton', n: 25, reward: { gold: 8000, items: { sc_weapon: 2 } } },
+  { title: '9. 피의 군주', desc: '뱀파이어 군주 처치', type: 'kill', m: 'vampire', n: 1, reward: { dia: 500, items: { ticket: 5 } } },
   { title: '10. 숙련된 모험가', desc: '레벨 20 달성', type: 'level', n: 20, reward: { dia: 300, gold: 10000 } },
   { title: '11. 오크 요새 공략', desc: '오크 전사 처치', type: 'kill', m: 'orc', n: 30, reward: { gold: 12000, items: { hp_l: 20 } } },
-  { title: '12. 늪지의 사냥꾼', desc: '늪지 트렌트 처치', type: 'kill', m: 'lizardman', n: 30, reward: { gold: 15000, items: { sc_weapon: 3 } } },
-  { title: '13. 뒤틀린 기운', desc: '흉포한 오우거 처치', type: 'kill', m: 'troll', n: 140, reward: { dia: 800, items: { ticket: 5 } } },
+  { title: '12. 늪지의 사냥꾼', desc: '리자드맨 처치', type: 'kill', m: 'lizardman', n: 30, reward: { gold: 15000, items: { sc_weapon: 3 } } },
+  { title: '13. 뒤틀린 기운', desc: '흉포한 트롤 처치', type: 'kill', m: 'troll', n: 140, reward: { dia: 800, items: { ticket: 5 } } },
   { title: '14. 미궁의 왕', desc: '미노타우르스 킹 처치', type: 'kill', m: 'minotaur', n: 1, reward: { dia: 1500, items: { ticket: 10 } } },
 ];
 D.DAILY_QUEST = { title: '일일 토벌', desc: '아무 몬스터 처치', type: 'killAny', n: 100, reward: { dia: 100, gold: 5000 } };
@@ -332,7 +281,7 @@ D.NPCS = [
   { id: 'kasim', name: '순간이동사 카심', title: '순간이동', sheet: 'npc_sage', dx: -2, dy: -6, dir: 2, teleport: true, talk: '어디로 보내줄까? 비용은 거리에 따라 다르다네.' },
   { id: 'damon', name: '초월 관리인 테이먼', title: '초월', sheet: 'npc_woman', dx: -9, dy: -3, dir: 3, transcend: true, talk: '영웅들의 영혼이 깃든 카드... 그 힘을 빌려 초월해 보세요.' },
   { id: 'guard1', name: '경비병', sheet: 'npc_guard', dx: -1.5, dy: -15.5, dir: 2, talk: '북쪽은 바람의 초원이다. 고블린부터 상대하도록.' },
-  { id: 'guard2', name: '경비병', sheet: 'npc_guard', dx: 15.5, dy: -1.5, dir: 1, talk: '동쪽은 망자의 묘지... 밤이 되면 데스나이트가 나타난다더군.' },
+  { id: 'guard2', name: '경비병', sheet: 'npc_guard', dx: 15.5, dy: -1.5, dir: 1, talk: '동쪽은 망자의 묘지... 밤이 되면 뱀파이어가 나타난다더군.' },
   { id: 'guard3', name: '경비병', sheet: 'npc_guard', dx: 1.5, dy: 15.5, dir: 2, talk: '남쪽 오크 요새는 레벨 20 이상만 가도록.' },
   { id: 'guard4', name: '경비병', sheet: 'npc_guard', dx: -15.5, dy: 1.5, dir: 3, talk: '서쪽은 고요한 숲이다. 호수가 아름답지.' },
 ];
@@ -346,7 +295,7 @@ D.BOT_SHEETS = [
   { sheet: 'knight', cls: 'knight' }, { sheet: 'knight_gold', cls: 'knight' }, { sheet: 'knight_dark', cls: 'knight' },
   { sheet: 'elf', cls: 'elf' }, { sheet: 'elf_red', cls: 'elf' }, { sheet: 'mage', cls: 'mage' }, { sheet: 'mage_white', cls: 'mage' },
 ];
-D.BOT_CHAT = ['파티 구해요~ 묘지 가실분', '오크 요새 오우거 자리 있나요?', '강화 +7 떴다!!', 'ㅊㅋㅊㅋ', '미노 몇시 젠이에요?',
+D.BOT_CHAT = ['파티 구해요~ 묘지 가실분', '오크 요새 트롤 자리 있나요?', '강화 +7 떴다!!', 'ㅊㅋㅊㅋ', '미노 몇시 젠이에요?',
   '세라니스 뽑았다 ㄷㄷ', '물약 싸게 팝니다 귓주세요', '혈맹원 모집합니다 (매일 보스레이드)', '렉 왜이럼', 'ㅋㅋㅋㅋㅋ',
   '뱀파 잡으러 가실분?', '초월 11연차 망했어요ㅠㅠ', '무기 +9 증발... 접습니다', '안녕하세요~', '자동사냥 최고', '전설 카드 어떻게 뽑음?',
   '고블린 자리 비었나요', '레벨 30 달성!', '오늘 드랍 운 좋네', 'ㄱㄱ'];
