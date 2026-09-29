@@ -283,7 +283,8 @@ class Monster extends Entity {
     const R = 190, x = this.x, y = this.y;
     game.fx.push(Combat.makeFx('stompwarn', x, y, { r: R, dur: 1.3 }));
     this.act('thrust', 1.3, () => {
-      game.shake = 12; U.sfx.hit && U.sfx.hit();
+      const near = game.player && Math.hypot(game.player.x - x, game.player.y - y) < 700;
+      if (near) { game.shake = 12; U.sfx.boom(); }
       VFX.iceBurst(x, y, R, 1.8);
       game.fx.push(Combat.makeFx('explode', x, y, { color: '#9fe0ff', r: R }));
       for (const e of game.fighters()) {
@@ -362,6 +363,8 @@ class Hero extends Entity {
       if (c.projectile) Combat.shoot(this, target, { kind: c.projectile, mult: 1 });
       else Combat.heroHit(this, target, 1);
     });
+    // only your own swings make noise; other players fight silently
+    if (this !== game.player) return;
     if (c.attack === 'slash') U.sfx.swing();
     else if (c.attack === 'shoot') setTimeout(() => U.sfx.bow(), delay * 400);
   }
