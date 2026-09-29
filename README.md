@@ -36,6 +36,8 @@ python3 -m http.server 8000
 | 혈맹 (v1.1) | 혈맹 5곳 중 하나에 가입하면 혈맹 버프를 받습니다 (공격력, 경험치, HP, 공격 속도, 이동 속도) |
 | 이클립스 타임 (v1.1) | 필드 보스 출현 여부와 재출현 시간을 보여주고, 보스 지역으로 바로 이동할 수 있습니다 |
 | 모바일 (v1.1) | 터치 기기에서는 화면에 가상 조이스틱이 나옵니다 |
+| 무기 외형 | **V** 키 또는 메뉴 → 무기 외형. 클래스별 8~10종(일반~전설)이 있으며 다이아로 1회/11회 소환합니다. 장착하면 캐릭터의 무기 모양이 바뀌고 공격력과 치명타가 오르며, 보유만 해도 최대 HP 보너스가 있습니다. 희귀 이상은 무기 광채, 영웅 이상은 속성 오라와 공격 궤적 효과가 있습니다 |
+| 대기 모션 | 가만히 서 있으면 숨쉬는 움직임과 함께, 몇 초마다 무기를 이용한 대기 동작을 합니다 (기사: 검무·검 겨누기, 요정: 시위 당기기, 마법사: 마력 집중·마법구 돌리기) |
 | 운영자 모드 | **F2** 또는 **`** 키, 메뉴의 왕관 아이콘, 설정 → 운영자 모드로 엽니다. 다이아·아데나·소환권 지급(직접 입력 가능), 강화 주문서, 물약, 장비, +9 전설 무기, 레벨 조정, 초월 카드 전부 획득과 최대 성장, 무적·원킬·이동속도 2배, 보스 즉시 소환, 던전·출석 초기화, 낮/밤 전환, 시즌 패스 만렙, 현재 퀘스트 완료 |
 | UI | 레퍼런스 게임과 비슷한 HUD: 미니맵, 재화, 상단 메뉴, 퀘스트 트래커, HP/MP 바, 스킬·아이템 슬롯 1~8, 경험치 바, 전체 메뉴(캐릭터/초월/퀘스트/순위/지도/우편/설정) |
 
@@ -65,13 +67,16 @@ js/dungeon.js       이클립스 균열 던전 (웨이브, 타이머, 보상)
 js/content.js       출석, 시즌 패스, 업적, 수집, 혈맹, 보스 타이머
 js/admin.js         운영자 모드 (GM 패널)
 js/main.js          게임 루프, 입력, 카메라, 렌더링, 저장
-tools/build_sprites.py  LPC 레이어를 합성해 캐릭터 시트를 만드는 스크립트
+tools/build_sprites.py  LPC 레이어를 합성해 캐릭터 시트를 만드는 스크립트 (무기 없는 _nw 버전 포함)
+tools/build_weapons.py  LPC 무기 레이어를 192px 격자 아틀라스로 정규화하는 스크립트 (무기 외형)
+js/looks.js         무기 외형: 레이어 렌더링, 대기 모션, 수집 화면, 소환
 ```
 
 ## 그래픽 출처 / 라이선스
 
 레퍼런스 게임의 이미지는 저작권이 있어 사용하지 않았습니다. 대신 웹에서 자유 라이선스 에셋을 받아 사용했습니다.
 
+- **무기 외형**: 같은 LPC 저장소의 weapon 레이어를 `tools/build_weapons.py`로 정규화했습니다 (라이선스 동일).
 - **캐릭터·몬스터 스프라이트**: [Universal LPC Spritesheet Character Generator](https://github.com/sanderfrenken/Universal-LPC-Spritesheet-Character-Generator)의 레이어(CC-BY-SA 3.0 / GPL 3.0 / OGA-BY 3.0)를 `tools/build_sprites.py`로 합성했습니다. 작가별 크레딧은 [`assets/sprites/CREDITS.md`](assets/sprites/CREDITS.md)에 있습니다.
 - **아이콘**: [game-icons.net](https://game-icons.net) (CC BY 3.0). 작가는 Lorc, Delapouite, Skoll, Faithtoken, Zeromancer, Willdabeast, Carl Olsen, Caro Asercion, sbed, Darkzaitzev입니다. 색상만 바꿨습니다. 자세한 내용은 [`assets/icons/LICENSE-game-icons.txt`](assets/icons/LICENSE-game-icons.txt)를 참고하세요.
 - 지형, 나무, 건물, 이펙트는 코드로 직접 그립니다.

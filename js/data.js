@@ -34,7 +34,7 @@ D.CLASSES = {
   mage: {
     name: '마법사', sheet: 'mage', desc: '원소를 다루는 현자.\n강력한 광역 마법으로 적을 쓸어버린다.',
     base: { hp: 115, mp: 140, atk: 15, def: 2 }, grow: { hp: 11, mp: 11, atk: 2.5, def: 0.4 },
-    range: 300, attack: 'spellcast', atkDelay: 1.05, weapon: 'staff', projectile: 'bolt',
+    range: 300, attack: 'thrust', atkDelay: 1.05, weapon: 'staff', projectile: 'bolt',
     skills: ['m_fire', 'm_ice', 'm_heal', 'm_meteor'],
   },
 };
@@ -43,18 +43,18 @@ D.CLASSES = {
 D.SKILLS = {
   k_smash: { name: '강타', icon: 'slash', mp: 6, cd: 3, mult: 2.3, type: 'single', anim: 'slash', desc: '대상에게 공격력의 230% 피해' },
   k_whirl: { name: '회오리 베기', icon: 'whirl', mp: 14, cd: 7, mult: 1.6, type: 'aoe_self', radius: 150, anim: 'slash', desc: '주변 모든 적에게 160% 피해' },
-  k_rage: { name: '버서커', icon: 'aura', mp: 20, cd: 40, type: 'buff', buff: { id: 'rage', name: '버서커', atkPct: 35, atkSpd: 20, dur: 20 }, anim: 'spellcast', desc: '20초간 공격력 +35%, 공격속도 +20%' },
-  k_doom: { name: '파멸의 일격', icon: 'meteor', mp: 25, cd: 14, mult: 5.0, type: 'single', anim: 'thrust', fx: 'doom', desc: '대상에게 공격력의 500% 치명적 피해' },
+  k_rage: { name: '버서커', icon: 'aura', mp: 20, cd: 40, type: 'buff', buff: { id: 'rage', name: '버서커', atkPct: 35, atkSpd: 20, dur: 20 }, anim: 'slash', desc: '20초간 공격력 +35%, 공격속도 +20%' },
+  k_doom: { name: '파멸의 일격', icon: 'meteor', mp: 25, cd: 14, mult: 5.0, type: 'single', anim: 'slash', fx: 'doom', desc: '대상에게 공격력의 500% 치명적 피해' },
 
   e_triple: { name: '트리플 애로우', icon: 'arrow', mp: 8, cd: 3, mult: 1.1, type: 'multi', count: 3, anim: 'shoot', desc: '화살 3발을 연속으로 발사 (각 110%)' },
   e_rain: { name: '화살비', icon: 'arrow-rain', mp: 18, cd: 8, mult: 1.5, type: 'aoe_target', radius: 140, anim: 'shoot', fx: 'rain', desc: '대상 주변에 화살비 (150% 광역)' },
-  e_wind: { name: '윈드 샷', icon: 'sprint', mp: 20, cd: 40, type: 'buff', buff: { id: 'wind', name: '윈드 샷', atkSpd: 40, moveSpd: 15, dur: 20 }, anim: 'spellcast', desc: '20초간 공격속도 +40%, 이동속도 +15%' },
+  e_wind: { name: '윈드 샷', icon: 'sprint', mp: 20, cd: 40, type: 'buff', buff: { id: 'wind', name: '윈드 샷', atkSpd: 40, moveSpd: 15, dur: 20 }, anim: 'shoot', desc: '20초간 공격속도 +40%, 이동속도 +15%' },
   e_energy: { name: '에너지 볼트', icon: 'energy-arrow', mp: 26, cd: 12, mult: 4.2, type: 'pierce', anim: 'shoot', desc: '관통하는 거대한 화살 (420%)' },
 
-  m_fire: { name: '파이어 볼', icon: 'fireball', mp: 10, cd: 2.5, mult: 1.9, type: 'aoe_target', radius: 90, anim: 'spellcast', fx: 'fire', desc: '폭발하는 화염구 (190% 광역)' },
-  m_ice: { name: '아이스 스피어', icon: 'icebolt', mp: 16, cd: 6, mult: 2.6, type: 'single', anim: 'spellcast', fx: 'ice', slow: 3, desc: '260% 피해 + 3초간 둔화' },
-  m_heal: { name: '힐', icon: 'heal', mp: 22, cd: 10, type: 'heal', pct: 0.35, anim: 'spellcast', desc: '최대 HP의 35% 회복' },
-  m_meteor: { name: '메테오 스트라이크', icon: 'meteor', mp: 40, cd: 16, mult: 3.8, type: 'aoe_target', radius: 190, anim: 'spellcast', fx: 'meteor', desc: '거대한 운석 낙하 (380% 광역)' },
+  m_fire: { name: '파이어 볼', icon: 'fireball', mp: 10, cd: 2.5, mult: 1.9, type: 'aoe_target', radius: 90, anim: 'thrust', fx: 'fire', desc: '폭발하는 화염구 (190% 광역)' },
+  m_ice: { name: '아이스 스피어', icon: 'icebolt', mp: 16, cd: 6, mult: 2.6, type: 'single', anim: 'thrust', fx: 'ice', slow: 3, desc: '260% 피해 + 3초간 둔화' },
+  m_heal: { name: '힐', icon: 'heal', mp: 22, cd: 10, type: 'heal', pct: 0.35, anim: 'thrust', desc: '최대 HP의 35% 회복' },
+  m_meteor: { name: '메테오 스트라이크', icon: 'meteor', mp: 40, cd: 16, mult: 3.8, type: 'aoe_target', radius: 190, anim: 'thrust', fx: 'meteor', desc: '거대한 운석 낙하 (380% 광역)' },
 };
 
 // ---------------- monsters ----------------

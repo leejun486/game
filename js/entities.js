@@ -78,6 +78,10 @@ class Entity {
       const a = ANIMS.hurt;
       return { row: a.row, col: Math.min(a.frames - 1, Math.floor(this.deadT / a.ft)) };
     }
+    if (this.action && this.action.seq) {
+      const ac = this.action;
+      return { row: ANIMS[ac.anim].row + this.dir, col: ac.seq[Math.min(ac.seq.length - 1, Math.floor(ac.t / ac.ft))] };
+    }
     if (this.action) {
       const a = ANIMS[this.action.anim];
       const col = Math.min(a.frames - 1, Math.floor((this.action.t / this.action.dur) * a.frames));
@@ -266,7 +270,7 @@ class Hero extends Entity {
   basicAttack(target, game) {
     const c = this.classDef;
     const st = this.stats;
-    const spd = c.attack === 'spellcast' ? st.castSpd : st.atkSpd;
+    const spd = this.cls === 'mage' ? st.castSpd : st.atkSpd;
     const delay = c.atkDelay / (1 + spd / 100);
     this.atkCd = delay;
     this.face(target);

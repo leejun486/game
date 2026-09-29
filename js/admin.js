@@ -44,6 +44,7 @@ const Admin = (() => {
       for (const id in p.s.cards) p.s.cards[id].lv = D.CARD_MAX_LV;
       return '보유 초월 카드 최대 성장';
     },
+    looksAll: (p) => { for (const l of Looks.LIST) if (l.cls === p.cls) p.s.wlooks[l.id] = (p.s.wlooks[l.id] || 0) + 1; return '무기 외형 전부 지급'; },
     cardLegend: (p) => { const c = Transcend.randomCard(4); Transcend.addCard(p, c.id); return `[전설] ${c.name} 지급`; },
     god: (p) => { gm(p).god = !gm(p).god; return `무적 ${gm(p).god ? 'ON' : 'OFF'}`; },
     oneHit: (p) => { gm(p).oneHit = !gm(p).oneHit; return `원킬 ${gm(p).oneHit ? 'ON' : 'OFF'}`; },
@@ -78,7 +79,7 @@ const Admin = (() => {
     ['재화', [['dia1k', '다이아 +1,000'], ['dia10k', '다이아 +10,000'], ['dia100k', '다이아 +100,000'], ['gold1m', '아데나 +100만'], ['gold100m', '아데나 +1억'], ['ticket10', '소환권 +10'], ['ticket100', '소환권 +100']]],
     ['아이템', [['scrolls', '강화 주문서 x10'], ['potions', '물약 세트'], ['gearAll', '모든 장비'], ['legendWpn', '+9 전설 무기']]],
     ['캐릭터', [['lv1', '레벨 +1'], ['lv10', '레벨 +10'], ['lvMax', '최대 레벨'], ['heal', '회복 · 쿨 초기화'], ['questSkip', '현재 퀘스트 완료']]],
-    ['초월', [['cardsAll', '모든 카드 획득'], ['cardsMax', '카드 최대 성장'], ['cardLegend', '전설 카드 1장']]],
+    ['초월', [['cardsAll', '모든 카드 획득'], ['cardsMax', '카드 최대 성장'], ['cardLegend', '전설 카드 1장'], ['looksAll', '무기 외형 전부']]],
     ['치트', [['god', '무적', 'god'], ['oneHit', '원킬', 'oneHit'], ['speed', '이동속도 2배', 'speed'], ['gmOff', '치트 모두 해제']]],
     ['월드', [['bosses', '보스 즉시 소환'], ['dungeon', '던전 횟수 초기화'], ['dayNight', '낮/밤 전환'], ['passMax', '시즌 패스 만렙'], ['attend', '출석 초기화']]],
   ];

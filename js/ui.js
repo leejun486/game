@@ -455,7 +455,8 @@ const UI = (() => {
   OPENERS.character = () => {
     const { body } = makePanel('캐릭터');
     const p = game.player, st = p.stats;
-    const cv = spriteCanvas(p.sheet, 160, 10, 0);
+    const cv = document.createElement('canvas'); cv.width = cv.height = 160;
+    { const g = cv.getContext('2d'); g.imageSmoothingEnabled = false; Looks.drawComposite(g, p.sheet, Looks.current(p), 10, 0, 80, 150, 2.4, { t: 0 }); }
     const card = p.s.card && D.CARD_BY_ID[p.s.card];
     body.innerHTML = `<div style="display:flex;gap:18px;flex-wrap:wrap"><div id="char-cv" style="background:radial-gradient(#3a2a20,#0e0b09);border:1px solid var(--line)"></div>
       <div style="flex:1;min-width:220px"><h2 style="margin:0;color:#e9d7a8">${esc(p.name)} <small style="font-size:14px;color:#a39a88">Lv.${p.s.lv} ${p.classDef.name}</small></h2>
@@ -530,7 +531,7 @@ const UI = (() => {
       <div class="list-row"><span>운영자 모드 (F2)</span><button class="gold-btn" data-do="gm">열기</button></div>
       <div class="list-row"><span>게임 저장</span><button class="dark-btn" data-do="save">저장</button></div>
       <div class="list-row"><span>저장 삭제 후 처음부터</span><button class="red-btn" data-do="reset">초기화</button></div>
-      <p class="sub" style="color:#888;font-size:12px;line-height:1.6">조작: 클릭 이동/공격 · WASD 이동 · 1~4 스킬 · 5~8 아이템 · Space 근처 적 공격 · G AI 모드 · Shift 질주 · I 인벤토리 · K 스킬 · U 상점 · C 캐릭터 · J 퀘스트 · Y 초월 · P 시즌 패스 · O 보스 정보 · T 순간이동 · B 귀환 · M 지도 · Enter 채팅 · 마우스 휠 줌</p>`;
+      <p class="sub" style="color:#888;font-size:12px;line-height:1.6">조작: 클릭 이동/공격 · WASD 이동 · 1~4 스킬 · 5~8 아이템 · Space 근처 적 공격 · G AI 모드 · Shift 질주 · I 인벤토리 · K 스킬 · U 상점 · C 캐릭터 · J 퀘스트 · Y 초월 · V 무기 외형 · P 시즌 패스 · O 보스 정보 · T 순간이동 · B 귀환 · M 지도 · Enter 채팅 · 마우스 휠 줌</p>`;
     body.onclick = (e) => {
       const b = e.target.closest('[data-do]'); if (!b) return;
       const a = b.dataset.do;

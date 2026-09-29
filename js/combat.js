@@ -173,7 +173,7 @@ const Combat = (() => {
   }
   function castSkill(p, sk, target, game) {
     const anim = sk.anim;
-    const dur = 0.55 / (1 + (anim === 'spellcast' ? p.stats.castSpd : p.stats.atkSpd) / 200);
+    const dur = 0.55 / (1 + (p.cls === 'mage' ? p.stats.castSpd : p.stats.atkSpd) / 200);
     if (target) p.face(target);
     p.combatT = 5;
     UI.skillName(sk.name);
@@ -242,7 +242,7 @@ const Combat = (() => {
   // ---------------------------------------------------------------- effects
   function makeFx(type, x, y, o = {}) {
     const dur = { spark: 0.25, slash: 0.22, bigslash: 0.35, doom: 0.5, whirl: 0.45, explode: 0.55, ice: 0.6, meteor: 1.25, rain: 0.9,
-      heal: 1.0, buff: 0.9, levelup: 1.8, teleport: 0.8, tpcast: 1.0, tparrive: 0.75, burst: 0.3, loot: 0.9 }[type] || 0.5;
+      heal: 1.0, buff: 0.9, levelup: 1.8, teleport: 0.8, tpcast: 1.0, tparrive: 0.75, mote: 0.7, glint: 0.45, rune: 1.2, burst: 0.3, loot: 0.9 }[type] || 0.5;
     return Object.assign({ type, x, y, t: 0, dur }, o);
   }
   function updateFx(game, dt) {
@@ -355,6 +355,36 @@ const Combat = (() => {
           const a = i * 2.4, rr = 20;
           ctx.fillRect(x + Math.cos(a) * rr * Math.sin(i + k * 3), y - 10 - ((k * 70 + i * 9) % 70), 3, 3);
         }
+        break;
+      }
+      case 'rune': {
+        const q = Math.min(1, k * 4) * Math.min(1, (1 - k) * 4);
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.save(); ctx.translate(x, y); ctx.scale(1, 0.45); ctx.rotate(f.t * 1.6);
+        ctx.strokeStyle = hexA(f.color, 0.85 * q); ctx.lineWidth = 2.5;
+        ctx.beginPath(); ctx.arc(0, 0, 44, 0, Math.PI * 2); ctx.stroke();
+        ctx.beginPath(); ctx.arc(0, 0, 30, 0, Math.PI * 2); ctx.stroke();
+        ctx.beginPath();
+        for (let i = 0; i <= 5; i++) { const a = (i * 2 * Math.PI * 2) / 5; i ? ctx.lineTo(Math.cos(a) * 30, Math.sin(a) * 30) : ctx.moveTo(Math.cos(a) * 30, Math.sin(a) * 30); }
+        ctx.stroke();
+        for (let i = 0; i < 12; i++) { const a = (i / 12) * Math.PI * 2; ctx.fillStyle = hexA(f.color, q); ctx.fillRect(Math.cos(a) * 44 - 2, Math.sin(a) * 44 - 2, 4, 4); }
+        ctx.restore();
+        break;
+      }
+      case 'mote': {
+        ctx.globalCompositeOperation = 'lighter';
+        let mx = x, my = y - k * 26;
+        if (f.to) { mx = U.lerp(f.x, f.to[0], k) - cam.x; my = U.lerp(f.y, f.to[1], k) - cam.y; }
+        ctx.fillStyle = hexA(f.color, 1 - k);
+        ctx.beginPath(); ctx.arc(mx, my, 2.4 * (1 - k * 0.5), 0, Math.PI * 2); ctx.fill();
+        break;
+      }
+      case 'glint': {
+        ctx.globalCompositeOperation = 'lighter';
+        const L = 18 * Math.sin(k * Math.PI);
+        ctx.strokeStyle = hexA(f.color, 1 - k); ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(x - L, y); ctx.lineTo(x + L, y); ctx.moveTo(x, y - L); ctx.lineTo(x, y + L); ctx.stroke();
+        ctx.fillStyle = `rgba(255,255,255,${1 - k})`; ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI * 2); ctx.fill();
         break;
       }
       case 'tpcast': {

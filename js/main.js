@@ -192,10 +192,13 @@ const Game = {
   // load sprite sheets
   const names = Object.keys(window.SPRITE_ROWS);
   let loaded = 0;
+  const total = names.length + 1; // + weapon looks
+  const tick = () => { loaded++; if (loaded === total) ready(); };
+  Looks.load(tick);
   names.forEach((n) => {
     const img = new Image();
-    img.onload = () => { loaded++; if (loaded === names.length) ready(); };
-    img.onerror = () => { loaded++; console.warn('sprite failed', n); if (loaded === names.length) ready(); };
+    img.onload = tick;
+    img.onerror = () => { console.warn('sprite failed', n); tick(); };
     img.src = `assets/sprites/${n}.png`;
     Sprites[n] = img;
   });
@@ -246,7 +249,9 @@ const Game = {
         const on = c.id === chosen;
         const a = on ? ANIMS[c.cls.attack] : ANIMS.walk;
         const col = on ? Math.floor(t / a.ft) % a.frames : 1 + (Math.floor(t / 0.1) % 8);
-        UI.drawSprite(c.cv, c.cls.sheet, a.row + 2, col);
+        const g = c.cv.getContext('2d');
+        g.clearRect(0, 0, c.cv.width, c.cv.height); g.imageSmoothingEnabled = false;
+        Looks.drawComposite(g, c.cls.sheet + '_nw', Looks.DEFAULT[c.id], a.row + 2, col, 64, 120, 2, { t });
       }
       requestAnimationFrame(anim);
     })();
@@ -378,6 +383,7 @@ const Game = {
     else if (k === 'b') Game.useTownScroll();
     else if (k === 'y') UI.open('transcend');
     else if (k === 'p') UI.open('pass');
+    else if (k === 'v') UI.open('weaponlook');
     else if (k === 'o') UI.open('bosstime');
     else if (k === 'tab') { e.preventDefault(); UI.open('menu'); }
   });

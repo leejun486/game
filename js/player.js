@@ -6,6 +6,8 @@ class Player extends Hero {
     super({ x: save.x || D.TOWN.x, y: save.y || D.TOWN.y + 120, sheet: D.CLASSES[cls].sheet, cls, name: save.name });
     Content.migrate(save);
     this.s = save; // persistent data
+    Looks.migrate(this);
+    this.idleT = 0; this.nextFlourish = 3; this.trail = []; this.moteT = 0;
     this.radius = 14;
     this.skillCd = {}; this.buffs = [];
     this.mp = save.mp ?? 0;
@@ -135,6 +137,8 @@ class Player extends Hero {
     for (const id in this.s.cards) add(D.COLLECT_BONUS[D.CARD_BY_ID[id].grade]);
     // item collections + guild buff
     for (const b of Content.bonuses(this)) add(b);
+    // weapon look: equip + collection bonus
+    for (const b of Looks.bonuses(this)) add(b);
     // buffs
     let atkPct = 0;
     for (const b of this.buffs) { add({ atkSpd: b.atkSpd || 0, moveSpd: b.moveSpd || 0 }); atkPct += b.atkPct || 0; }
@@ -145,7 +149,9 @@ class Player extends Hero {
     this.maxHp = st.maxHp; this.maxMp = st.maxMp;
     if (this.hp > this.maxHp) this.hp = this.maxHp;
     if (this.mp > this.maxMp) this.mp = this.maxMp;
-    this.sheet = card ? card.sheet : c.sheet;
+    // bodies are drawn without their baked weapon; the weapon look is a separate layer
+    const base = card ? card.sheet : c.sheet;
+    this.sheet = window.SPRITE_ROWS[base + '_nw'] ? base + '_nw' : base;
     this.power = Math.round(st.atk * 10 + st.def * 8 + st.maxHp + st.atkSpd * 15 + st.eva * 2 + lv * 50);
   }
   addBuff(b) {
@@ -258,6 +264,7 @@ class Player extends Hero {
   update(dt, game) {
     super.update(dt);
     if (this.dead) return;
+    this.updateIdle(dt, game);
     this.s.playTime += dt;
     this.inTown = World.zoneAt(this.x, this.y).safe;
     this.atkCd -= dt; this.potionCd -= dt; this.combatT -= dt; this.sprintCd -= dt;
@@ -360,6 +367,70 @@ class Player extends Hero {
       drawLabel(ctx, '초월', x, y - 22, D.GRADES[g].color, 'bold 11px sans-serif');
     }
     if (this.bubble && this.bubble.t > 0) drawBubble(ctx, this.bubble.text, x, y - 36);
+  }
+  // standing still: breathe, and every few seconds show off the weapon look
+  updateIdle(dt, game) {
+    const busy = this.keys.x || this.keys.y || this.target || this.moveTo || this.talkTo || this.auto || this.teleporting;
+    if (this.action && this.action.idle && busy) { this.action = null; this.orbitFx = null; }
+    if (this.orbitFx) { this.orbitFx.t += dt; if (this.orbitFx.t > this.orbitFx.dur) this.orbitFx = null; }
+    if (this.action && this.action.flourish) Looks.tickFlourish(this, game, dt, this.weaponPt);
+    if (!busy && !this.moving && !this.action) {
+      this.idleT += dt;
+      if (this.idleT > this.nextFlourish) { Looks.startFlourish(this, game); this.idleT = 0; this.nextFlourish = U.rand(5, 8); }
+    } else if (!this.action || !this.action.idle) this.idleT = 0;
+    // ambient motes around rare+ weapons
+    const look = Looks.BY_ID[Looks.current(this)];
+    this.moteT -= dt;
+    if (look.grade >= 3 && this.weaponPt && this.moteT <= 0) {
+      this.moteT = look.grade >= 4 ? 0.07 : 0.14;
+      game.fx.push(Combat.makeFx('mote', this.weaponPt.cx + U.rand(-10, 10), this.weaponPt.cy + U.rand(-10, 10), { color: Looks.ELEM[look.el].color }));
+    }
+  }
+  draw(ctx, cam) {
+    const { row, col } = this.frame();
+    let alpha = this.dead ? Math.max(0, 1 - Math.max(0, this.deadT - 0.8) / 1.2) : 1;
+    if (this.fadeIn > 0) alpha *= 1 - this.fadeIn / 0.45;
+    if (alpha <= 0) return;
+    const now = performance.now() / 1000;
+    const x = this.x - cam.x;
+    // breathing bob while idle
+    const bob = !this.action && !this.moving && this.idleT > 0.6 ? Math.round(Math.sin(now * 2.4) * 1.2) : 0;
+    const y = this.y - cam.y + bob;
+    ctx.globalAlpha = alpha;
+    this.aura(ctx, x, y);
+    const id = Looks.current(this), look = Looks.BY_ID[id];
+    const pt = Looks.drawComposite(ctx, this.sheet, id, row, col, x, y, this.scale, { flash: this.flash, t: now });
+    this.weaponPt = pt ? { cx: pt.cx + cam.x, cy: pt.cy + cam.y, tx: pt.tx + cam.x, ty: pt.ty + cam.y } : null;
+    // weapon trail during swings and flourishes
+    const swinging = this.action && !this.dead && (this.action.anim === 'slash' || this.action.flourish || look.grade >= 3);
+    if (swinging && this.weaponPt) this.trail.push({ x: this.weaponPt.tx, y: this.weaponPt.ty, t: now });
+    this.trail = this.trail.filter((p) => now - p.t < 0.16);
+    if (this.trail.length > 1) {
+      const col2 = Looks.ELEM[look.el].color;
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
+      for (let i = 1; i < this.trail.length; i++) {
+        const a = this.trail[i - 1], b = this.trail[i], k = 1 - (now - b.t) / 0.16;
+        ctx.strokeStyle = Looks.hexA(col2, 0.55 * k * alpha); ctx.lineWidth = 2 + 7 * k;
+        ctx.beginPath(); ctx.moveTo(a.x - cam.x, a.y - cam.y); ctx.lineTo(b.x - cam.x, b.y - cam.y); ctx.stroke();
+      }
+      ctx.restore();
+    }
+    // orbiting motes (mage orb twirl / elf draw)
+    if (this.orbitFx && pt) {
+      const o = this.orbitFx, k = Math.min(1, o.t / 0.3) * Math.min(1, (o.dur - o.t) / 0.3);
+      ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      for (let i = 0; i < 6; i++) {
+        const a = now * 5 + (i / 6) * Math.PI * 2, r = 20 + Math.sin(now * 4 + i) * 4;
+        ctx.fillStyle = Looks.hexA(o.color, 0.9 * k);
+        ctx.beginPath(); ctx.arc(pt.cx + Math.cos(a) * r, pt.cy + Math.sin(a) * r * 0.55, 2.6, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.restore();
+    }
+    if (this.slowT > 0) {
+      ctx.globalAlpha = 0.35; ctx.fillStyle = '#7fd4ff';
+      ctx.beginPath(); ctx.ellipse(x, y, 18, 7, 0, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
   }
   aura(ctx, x, y) {
     if (!this.s.card) return;
