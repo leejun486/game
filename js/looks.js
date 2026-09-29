@@ -282,50 +282,20 @@ const Looks = (() => {
         UI.toast(`${BY_ID[sel].name} 외형을 장착했습니다.`, D.GRADES[BY_ID[sel].grade].color);
         UI.refreshHud(); return render();
       }
-      const pull = t.closest('[data-pull]'); if (pull) summon(+pull.dataset.pull, el, render);
+      const pull = t.closest('[data-pull]'); if (pull) Gacha.run('weaponlook', +pull.dataset.pull, el, render);
     };
     render();
     return { name: 'weaponlook', rerender: render, onClose: () => cancelAnimationFrame(raf) };
   }
 
-  function summon(n, panelEl, back) {
-    const p = Game.player;
-    const cost = n === 1 ? PRICE.one : PRICE.eleven;
-    if (p.s.dia < cost) return UI.toast('다이아가 부족합니다.', '#ff8a80');
-    p.s.dia -= cost;
-    const pool = LIST.filter((l) => l.cls === p.cls);
-    const res = [];
-    for (let i = 0; i < n; i++) {
-      const g = Transcend.rollGrade();
-      const cands = pool.filter((l) => l.grade === g);
-      res.push(U.pick(cands.length ? cands : pool));
-    }
-    if (n === 11 && !res.some((l) => l.grade >= 2)) res[U.randi(0, 10)] = U.pick(pool.filter((l) => l.grade === 2));
-    for (const l of res) p.s.wlooks[l.id] = (p.s.wlooks[l.id] || 0) + 1;
-    p.recalc(); UI.refreshHud();
-    const stage = document.createElement('div');
-    stage.className = 'summon-stage';
-    stage.innerHTML = `<div class="summon-cards">${res.map((l, i) => `<div class="s-card glow${l.grade}" data-i="${i}"><div class="back">${ico('sword')}</div>
-      <div class="front card gr${l.grade}"><canvas width="96" height="128"></canvas><div class="nm ${D.GRADES[l.grade].cls}">${esc(l.name)}</div></div></div>`).join('')}</div>
-      <div class="summon-btns"><button class="dark-btn" data-all>모두 열기</button><button class="gold-btn" data-ok>확인</button></div>`;
-    panelEl.appendChild(stage);
-    if (Forge.wants(res)) Forge.play(stage, res[0].grade);
-    stage.querySelectorAll('.s-card').forEach((sc, i) => thumb(sc.querySelector('canvas'), p.sheet, res[i].id));
-    const flip = (sc) => {
-      if (sc.classList.contains('flip')) return;
-      const l = res[+sc.dataset.i];
-      if (Forge.gate(res, l, sc, stage, () => flip(sc))) return; // 희귀+ in a multi-pull: clip first, then the card turns
-      sc.classList.add('flip');
-      if (l.grade >= 4) U.sfx.legend(); else if (l.grade >= 3) U.sfx.success(); else U.sfx.ui();
-      if (l.grade >= 3) UI.announce(`<b>${esc(p.name)}</b>님이 <em class="${l.grade >= 4 ? 'legend' : ''}">${esc(l.name)}</em> 무기 외형을 획득했습니다.`);
-    };
-    stage.onclick = (e) => {
-      const sc = e.target.closest('.s-card'); if (sc) return flip(sc);
-      if (e.target.closest('[data-all]')) stage.querySelectorAll('.s-card').forEach((s, i) => setTimeout(() => flip(s), i * 110));
-      if (e.target.closest('[data-ok]')) { Forge.skipAll(stage); stage.querySelectorAll('.s-card').forEach(flip); stage.remove(); sel = res.slice().sort((a, b) => b.grade - a.grade)[0].id; back(); }
-    };
-  }
+  const gacha = {
+    title: '무기 외형', noun: '무기 외형', icon: 'sword', desc: '내 클래스의 무기 외형을 소환합니다.', price: PRICE,
+    pool: (p) => LIST.filter((l) => l.cls === p.cls),
+    grant: (p, items) => { for (const l of items) p.s.wlooks[l.id] = (p.s.wlooks[l.id] || 0) + 1; p.recalc(); },
+    thumb: (cv, l) => thumb(cv, Game.player.sheet, l.id),
+    view: (best) => { sel = best.id; UI.open('weaponlook'); },
+  };
 
   UI.OPENERS.weaponlook = open;
-  return { LIST, BY_ID, ELEM, DEFAULT, load, migrate, current, bonuses, drawComposite, atlasRow, point, startFlourish, tickFlourish, FLOURISH, hexA };
+  return { LIST, BY_ID, ELEM, DEFAULT, load, migrate, current, bonuses, drawComposite, atlasRow, point, startFlourish, tickFlourish, FLOURISH, hexA, gacha };
 })();

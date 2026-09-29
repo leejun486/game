@@ -588,18 +588,30 @@ body.touch #chat { bottom: 250px; }
 .ride-opt { display: flex; gap: 6px; align-items: center; font-size: 13px; margin: 8px 0; color: var(--text); cursor: pointer; }
 @media (max-width: 900px) { #right-buttons { gap: 6px; } }
 
-/* summon forge cinematic */
-.forge-fx { position: absolute; inset: 0; z-index: 20; background: #050408; cursor: pointer; transition: opacity .35s; }
-.forge-fx canvas { width: 100%; height: 100%; display: block; }
-.forge-skip { position: absolute; right: 16px; bottom: 12px; font-size: 12px; color: #8a8298; opacity: .7; pointer-events: none; }
-.forge-title { position: absolute; left: 0; right: 0; top: 18%; text-align: center; font: 900 54px/1 serif; letter-spacing: 6px; opacity: 0; transform: scale(1.6); transition: opacity .4s, transform .5s cubic-bezier(.2,1.6,.4,1); pointer-events: none; -webkit-text-stroke: 2px #1a0f05; paint-order: stroke fill; text-shadow: 0 2px 0 #000, 0 0 18px currentColor, 0 0 40px currentColor; }
-.forge-title.show { opacity: 1; transform: scale(1); }
-.forge-fx.out { opacity: 0; }
-@media (max-width: 600px) { .forge-title { font-size: 38px; } }
-.forge-fx.forge-video { background: #000; }
-.forge-fx video { width: 100%; height: 100%; object-fit: cover; display: block; }
-.forge-fx.forge-video::after { content: ''; position: absolute; inset: 0; pointer-events: none; opacity: 0; background: radial-gradient(circle at 50% 40%, #fff 0%, #ffe7a0 45%, rgba(243,181,58,.6) 100%); }
-.forge-fx.flash::after { animation: forgeFlash 1.6s ease-out forwards; }
-@keyframes forgeFlash { 0% { opacity: 0; } 18% { opacity: .95; } 100% { opacity: .25; } }
-.forge-fx .forge-title { z-index: 2; }
-.forge-skipall { position: absolute; right: 16px; top: 14px; z-index: 3; font-size: 12px; padding: 6px 12px; }
+/* summon: slot-machine reels + lightning */
+.gacha-tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 12px; }
+.gacha-tabs button { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 4px; background: #1a1424; border: 1px solid var(--line); color: #bdb3a0; cursor: pointer; font-size: 13px; }
+.gacha-tabs button img { width: 18px; height: 18px; }
+.gacha-tabs button.on { background: linear-gradient(#4a3616, #2a1e0c); color: var(--gold); border-color: var(--gold); }
+.summon-box canvas { width: 96px; height: 128px; image-rendering: pixelated; }
+.summon-stage.gacha { background: radial-gradient(#1c1430, #050408 70%); overflow: hidden; }
+.gacha .reels { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; max-width: 820px; transition: filter .3s; }
+.gacha .reel { width: 110px; display: flex; flex-direction: column; align-items: center; transition: opacity .3s, filter .3s; }
+.gacha.big .reel { width: 220px; }
+.gacha .reel canvas { width: 100%; aspect-ratio: 3/4; border: 3px solid #8a6b30; border-radius: 6px; background: #120e1a; image-rendering: pixelated; box-shadow: inset 0 0 12px #000; }
+.gacha .reel .nm { margin-top: 5px; font-size: 11px; text-align: center; min-height: 15px; }
+.gacha.big .reel .nm { font-size: 16px; }
+.gacha.tension .reel:not(.charging) { opacity: .35; filter: grayscale(.6); }
+.gacha .reel.charging canvas { border-color: #e8f0ff; box-shadow: 0 0 18px 4px rgba(220,235,255,.7), inset 0 0 12px #000; }
+.gacha .reel.done canvas { animation: reelPop .35s ease-out; }
+.gacha .reel.g1 canvas { border-color: #54c45e; }
+.gacha .reel.g2 canvas { border-color: #3f8cff; box-shadow: 0 0 16px 4px rgba(63,140,255,.75); }
+.gacha .reel.g3 canvas { border-color: #e8423a; box-shadow: 0 0 22px 6px rgba(232,66,58,.85); }
+.gacha .reel.g4 canvas { border-color: #f3b53a; box-shadow: 0 0 30px 10px rgba(243,181,58,.95); animation: reelPop .35s ease-out, pulse 1s .4s infinite; }
+@keyframes reelPop { 0% { transform: scale(1.25); filter: brightness(2.2); } 100% { transform: scale(1); filter: none; } }
+.gacha .bolt-fx { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2; }
+.gacha .summon-btns { position: relative; z-index: 3; }
+.gacha-title { position: absolute; left: 0; right: 0; top: 7%; text-align: center; font: 900 54px/1 serif; letter-spacing: 6px; opacity: 0; pointer-events: none; z-index: 3; -webkit-text-stroke: 2px #1a0f05; paint-order: stroke fill; text-shadow: 0 2px 0 #000, 0 0 18px currentColor, 0 0 40px currentColor; }
+.gacha-title.show { animation: gTitle 1.8s ease-out forwards; }
+@keyframes gTitle { 0% { opacity: 0; transform: scale(1.8); } 15% { opacity: 1; transform: scale(1); } 75% { opacity: 1; } 100% { opacity: 0; transform: translateY(-10px); } }
+@media (max-width: 600px) { .gacha .reel { width: 76px; } .gacha.big .reel { width: 170px; } .gacha-title { font-size: 38px; } .gacha-tabs button span { font-size: 11px; } }

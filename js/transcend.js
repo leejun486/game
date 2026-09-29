@@ -212,78 +212,22 @@ const Transcend = (() => {
     render();
   }
 
-  // ---------------------------------------------------------------- summon
-  function openSummon() {
-    const game = Game, p = game.player;
-    const { el, body } = UI.makePanel('초월 소환');
-    el.style.width = 'min(640px, 96vw)';
-    const render = () => {
-      const tk = p.count('ticket');
-      body.innerHTML = `<div class="summon-shop">
-        <div class="summon-box"><h4>초월 소환 1회</h4><canvas width="120" height="120" data-sheet="mage"></canvas><p>영웅들의 영혼을 소환합니다.</p>
-          <button class="gold-btn" data-pull="1" data-cost="${tk >= 1 ? 'ticket' : 'dia'}">${tk >= 1 ? `${ico('ticket')} 소환권 1` : `${ico('diamond', 'dia')} 100`}</button></div>
-        <div class="summon-box" style="background:linear-gradient(#3a1c16,#140a08)"><h4>초월 소환 11회</h4><canvas width="120" height="120" data-sheet="knight_gold"></canvas><p>11회 소환 시 <b style="color:#3f8cff">희귀</b> 이상 1장 확정!</p>
-          <button class="gold-btn" data-pull="11" data-cost="${tk >= 10 ? 'ticket' : 'dia'}">${tk >= 10 ? `${ico('ticket')} 소환권 10` : `${ico('diamond', 'dia')} 1,000`}</button></div>
-      </div>
-      <div class="rates">보유: 다이아 <b style="color:#9fe0ff">${U.fmt(p.s.dia)}</b> · 소환권 <b style="color:#c79cff">${tk}</b><br>
-      확률 — ${D.GRADES.map((g, i) => `<span class="${g.cls}">${g.name} ${(D.SUMMON_RATES[i] * 100).toFixed(1)}%</span>`).join(' · ')}</div>`;
-      body.querySelectorAll('canvas[data-sheet]').forEach((cv) => UI.drawSprite(cv, cv.dataset.sheet, 10, 0, 0.75));
-      body.querySelectorAll('button img').forEach((i) => { i.style.width = '16px'; i.style.verticalAlign = '-3px'; });
-    };
-    body.onclick = (e) => {
-      const b = e.target.closest('[data-pull]'); if (!b) return;
-      const n = +b.dataset.pull;
-      if (b.dataset.cost === 'ticket') p.removeById('ticket', n === 1 ? 1 : 10);
-      else {
-        const cost = n === 1 ? 100 : 1000;
-        if (p.s.dia < cost) return UI.toast('다이아가 부족합니다.', '#ff8a80');
-        p.s.dia -= cost;
-      }
-      const results = [];
-      for (let i = 0; i < n; i++) results.push(randomCard(rollGrade()));
-      if (n === 11 && !results.some((c) => c.grade >= 2)) results[U.randi(0, 10)] = randomCard(2);
-      results.forEach((c) => addCard(p, c.id));
-      UI.refreshHud();
-      Quests.check(game);
-      showResults(el, results, render);
-    };
-    render();
-    return { name: 'summon' };
-  }
-  function showResults(panelEl, results, back) {
-    const game = Game, p = game.player;
-    const stage = document.createElement('div');
-    stage.className = 'summon-stage';
-    stage.innerHTML = `<div class="summon-cards">${results.map((c, i) => `<div class="s-card glow${c.grade}" data-i="${i}"><div class="back">${ico('summon')}</div>
-      <div class="front card gr${c.grade}"><canvas width="96" height="128"></canvas><div class="nm ${D.GRADES[c.grade].cls}">${esc(c.name)}</div></div></div>`).join('')}</div>
-      <div class="summon-btns"><button class="dark-btn" data-all>모두 열기</button><button class="gold-btn" data-ok>확인</button><button class="dark-btn" data-go>초월 화면</button></div>`;
-    panelEl.closest('#panel-layer').appendChild(stage);
-    if (Forge.wants(results)) Forge.play(stage, results[0].grade);
-    stage.querySelectorAll('.s-card').forEach((sc, i) => {
-      const cv = sc.querySelector('canvas'), g = cv.getContext('2d');
-      g.imageSmoothingEnabled = false;
-      g.drawImage(Sprites[results[i].sheet], 8, 10 * 64 + 2, 48, 64, 0, 0, 96, 128);
-    });
-    const flip = (sc) => {
-      if (sc.classList.contains('flip')) return;
-      const c = results[+sc.dataset.i];
-      if (Forge.gate(results, c, sc, stage, () => flip(sc))) return; // 희귀+ in a multi-pull: clip first, then the card turns
-      sc.classList.add('flip');
-      if (c.grade >= 4) U.sfx.legend(); else if (c.grade >= 3) U.sfx.success(); else U.sfx.ui();
-      if (c.grade >= 3) {
-        const html = `<b>${esc(p.name)}</b>님이 <em class="${c.grade >= 4 ? 'legend' : ''}">${esc(c.name)}</em> 초월을 획득했습니다.`;
-        UI.announce(html); game.lastCardNotice = html;
-      }
-    };
-    stage.onclick = (e) => {
-      const sc = e.target.closest('.s-card'); if (sc) return flip(sc);
-      if (e.target.closest('[data-all]')) stage.querySelectorAll('.s-card').forEach((s, i) => setTimeout(() => flip(s), i * 120));
-      if (e.target.closest('[data-ok]')) { Forge.skipAll(stage); stage.querySelectorAll('.s-card').forEach(flip); stage.remove(); back(); }
-      if (e.target.closest('[data-go]')) { stage.remove(); sel = results.slice().sort((a, b) => b.grade - a.grade)[0].id; tab = 'list'; UI.open('transcend'); }
-    };
-  }
+  // ---------------------------------------------------------------- summon (reveal lives in gacha.js)
+  const gacha = {
+    title: '초월', noun: '초월', icon: 'transcend', desc: '영웅들의 영혼을 소환합니다.',
+    pool: () => D.CARDS,
+    costLabel: (p, n) => { const tk = p.count('ticket'), need = n === 1 ? 1 : 10; return tk >= need ? `${ico('ticket')} 소환권 ${need}` : `${ico('diamond', 'dia')} ${U.fmt(n === 1 ? 100 : 1000)}`; },
+    pay: (p, n) => {
+      const need = n === 1 ? 1 : 10, dia = n === 1 ? 100 : 1000;
+      if (p.count('ticket') >= need) { p.removeById('ticket', need); return true; }
+      if (p.s.dia < dia) { UI.toast('다이아가 부족합니다.', '#ff8a80'); return false; }
+      p.s.dia -= dia; return true;
+    },
+    grant: (p, items) => { items.forEach((c) => addCard(p, c.id)); Quests.check(Game); },
+    thumb: (cv, c) => { const g = cv.getContext('2d'); g.imageSmoothingEnabled = false; g.drawImage(Sprites[c.sheet], 8, 10 * 64 + 2, 48, 64, 0, 0, cv.width, cv.height); },
+    view: (best) => { sel = best.id; tab = 'list'; UI.open('transcend'); },
+  };
 
   UI.OPENERS.transcend = openTranscend;
-  UI.OPENERS.summon = openSummon;
-  return { addCard, rollGrade, randomCard };
+  return { addCard, rollGrade, randomCard, gacha };
 })();
