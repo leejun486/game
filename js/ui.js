@@ -43,8 +43,10 @@ const UI = (() => {
     g.clearRect(0, 0, c.width, c.height);
     const img = Sprites[sheet];
     if (!img) return;
+    const fs = sheetInfo(sheet).fs;
+    g.imageSmoothingEnabled = fs > 64;
     // crop < 1 zooms on the upper body
-    const sw = 64 * crop, sx = col * 64 + (64 - sw) / 2, sy = row * 64 + (64 - sw) * 0.25;
+    const sw = fs * crop, sx = col * fs + (fs - sw) / 2, sy = row * fs + (fs - sw) * 0.25;
     g.drawImage(img, sx, sy, sw, sw, 0, 0, c.width, c.height);
   }
 

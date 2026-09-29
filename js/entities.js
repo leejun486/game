@@ -138,19 +138,20 @@ class Entity {
     const img = Sprites[this.sheet];
     if (!img) return;
     const { row, col } = this.frame();
-    const s = pixScale(this.scale);
-    const size = 64 * s;
-    const sx = Math.round(this.x - cam.x - size / 2), sy = Math.round(this.y - cam.y - size + 8 * s);
+    const si = sheetInfo(this.sheet), s = si.rig ? this.scale * si.k : pixScale(this.scale);
+    const fs = si.fs, size = fs * s;
+    const sx = Math.round(this.x - cam.x - si.fx * s), sy = Math.round(this.y - cam.y - si.fy * s);
+    ctx.imageSmoothingEnabled = !!si.rig;
     let alpha = this.dead ? Math.max(0, 1 - Math.max(0, this.deadT - 0.8) / 1.2) : 1;
     if (this.fadeIn > 0) alpha *= 1 - this.fadeIn / 0.45;
     if (alpha <= 0) return;
     ctx.globalAlpha = alpha;
     if (this.aura) this.aura(ctx, this.x - cam.x, this.y - cam.y);
-    ctx.drawImage(img, col * 64, row * 64, 64, 64, sx, sy, size, size);
+    ctx.drawImage(img, col * fs, row * fs, fs, fs, sx, sy, size, size);
     if (this.flash > 0) {
       ctx.globalCompositeOperation = 'lighter';
       ctx.globalAlpha = alpha * Math.min(1, this.flash * 5) * 0.6;
-      ctx.drawImage(img, col * 64, row * 64, 64, 64, sx, sy, size, size);
+      ctx.drawImage(img, col * fs, row * fs, fs, fs, sx, sy, size, size);
       ctx.globalCompositeOperation = 'source-over';
     }
     if (this.slowT > 0) {
@@ -158,11 +159,26 @@ class Entity {
       ctx.beginPath(); ctx.ellipse(this.x - cam.x, this.y - cam.y, 18 * s, 7 * s, 0, 0, Math.PI * 2); ctx.fill();
     }
     ctx.globalAlpha = 1;
+    ctx.imageSmoothingEnabled = false;
   }
-  get headY() { return this.y - 58 * this.scale; }
+  get headY() { return this.y - (sheetInfo(this.sheet).rig ? 82 : 58) * this.scale; }
 }
 Entity.nextId = 1;
 
+// sheet frame geometry: pixel sheets use 64px frames (feet at 32,56) drawn 1:1; SD rig sheets use
+// 128px frames (feet from rig_meta) drawn at RIG_K so the painted characters sit a little smaller
+const RIG_K = 0.8;
+function sheetInfo(sheet) {
+  const r = window.RIG_META && window.RIG_META[sheet];
+  return r ? { fs: r.fs, fx: r.feet[0], fy: r.feet[1], k: RIG_K, rig: r } : { fs: 64, fx: 32, fy: 56, k: 1, rig: null };
+}
+// the body sheet for a class: SD rig art when the option is on, the pixel sheet otherwise
+// rigs are taller than pixel sprites: drop them into the saddle so the hips meet it
+function riderDrop(sheet) { return sheetInfo(sheet).rig ? 26 : 0; }
+function classSheet(cls) {
+  const r = 'r_' + cls;
+  return Game.gfx.art && window.RIG_META && window.RIG_META[r] ? r : D.CLASSES[cls].sheet;
+}
 // pixel art sprites only scale by whole half-steps so their pixels stay square and even
 function pixScale(s) { return Math.max(0.5, Math.round(s * 2) / 2); }
 
@@ -345,6 +361,8 @@ class Bot extends Hero {
     const look = U.pick(D.BOT_SHEETS);
     const p = World.findFree(D.TOWN.x + U.rand(-500, 500), D.TOWN.y + U.rand(-500, 500), 16);
     super({ x: p.x, y: p.y, sheet: look.sheet, cls: look.cls, name: D.BOT_NAMES[i % D.BOT_NAMES.length] });
+    this.pixelSheet = look.sheet;
+    this.refreshSheet();
     this.guild = U.pick(D.GUILDS);
     this.lv = U.randi(3, 45);
     const c = this.classDef;
@@ -435,13 +453,23 @@ class Bot extends Hero {
       }
     }
   }
+  // SD rig bodies carry no weapon, so they go through the layered draw with the class's default look
+  refreshSheet() { this.sheet = Game.gfx.art ? classSheet(this.cls) : this.pixelSheet; }
   draw(ctx, cam) {
-    if (ArtChar.on(this)) {
+    if (sheetInfo(this.sheet).rig) {
       let alpha = this.dead ? Math.max(0, 1 - Math.max(0, this.deadT - 0.8) / 1.2) : 1;
       if (this.fadeIn > 0) alpha *= 1 - this.fadeIn / 0.45;
       if (alpha <= 0) return;
-      if (this.mounted && !this.dead) { ctx.globalAlpha = alpha; Mounts.drawEntity(ctx, cam, this, ArtChar.riderFn(this, this.rideFace)); ctx.globalAlpha = 1; return; }
-      ArtChar.draw(ctx, cam, this, alpha);
+      ctx.globalAlpha = alpha;
+      const look = Looks.DEFAULT[this.cls];
+      if (this.mounted && !this.dead) {
+        const row = this.rideFace > 0 ? 11 : 9;
+        Mounts.drawEntity(ctx, cam, this, (g, fx, fy) => Looks.drawComposite(g, this.sheet, look, row, 0, fx, fy + riderDrop(this.sheet), 1, {}));
+      } else {
+        const { row, col } = this.frame();
+        Looks.drawComposite(ctx, this.sheet, look, row, col, this.x - cam.x, this.y - cam.y, this.scale, { flash: this.flash });
+      }
+      ctx.globalAlpha = 1;
       return;
     }
     if (!this.mounted || this.dead) return super.draw(ctx, cam);
@@ -450,7 +478,7 @@ class Bot extends Hero {
     Mounts.drawEntity(ctx, cam, this, (g, fx, fy) => { g.imageSmoothingEnabled = false; if (img) g.drawImage(img, 0, row * 64, 64, 64, fx - 32, fy - 56, 64, 64); });
     ctx.globalAlpha = 1;
   }
-  get headY() { return this.mounted ? this.y - (this.rideTop || 90) : ArtChar.on(this) ? this.y - ArtChar.H - 2 : this.y - 58 * this.scale; }
+  get headY() { return this.mounted ? this.y - (this.rideTop || 90) : this.y - (sheetInfo(this.sheet).rig ? 82 : 58) * this.scale; }
   drawOverlay(ctx, cam) {
     const x = this.x - cam.x, y = this.headY - cam.y;
     drawLabel(ctx, this.name, x, y - 4, '#8fc1ff');

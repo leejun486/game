@@ -967,7 +967,7 @@ const Mounts = (() => {
   // ---------------------------------------------------------------- UI
   let sel = null, raf = 0, filter = -1;
   function riderPreviewFn(p) {
-    return (g, fx, fy) => { g.imageSmoothingEnabled = false; Looks.drawComposite(g, p.sheet, Looks.current(p), 11, 0, fx, fy, 1, { t: 0 }); };
+    return (g, fx, fy) => { g.imageSmoothingEnabled = false; Looks.drawComposite(g, p.sheet, Looks.current(p), 11, 0, fx, fy + riderDrop(p.sheet), 1, { t: 0 }); };
   }
   function thumb(cv, id) {
     const g = cv.getContext('2d'); g.clearRect(0, 0, cv.width, cv.height);
