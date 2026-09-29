@@ -1,0 +1,183 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 768" width="512" height="768">
+  <defs>
+    <linearGradient id="iris" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0f3b2a"/>
+      <stop offset="0.45" stop-color="#1f7a4e"/>
+      <stop offset="1" stop-color="#8ee8a8"/>
+    </linearGradient>
+    <linearGradient id="hair" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#b86f3c"/>
+      <stop offset="0.55" stop-color="#d9955a"/>
+      <stop offset="1" stop-color="#e8b27a"/>
+    </linearGradient>
+    <linearGradient id="hairBack" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#8a4f2a"/>
+      <stop offset="1" stop-color="#b87844"/>
+    </linearGradient>
+    <linearGradient id="skin" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffe6d2"/>
+      <stop offset="1" stop-color="#ffd9c0"/>
+    </linearGradient>
+    <linearGradient id="jacket" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#7cd08a"/>
+      <stop offset="1" stop-color="#4fa864"/>
+    </linearGradient>
+    <linearGradient id="skirt" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fffaf0"/>
+      <stop offset="1" stop-color="#efe4d2"/>
+    </linearGradient>
+    <linearGradient id="bowWood" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#6b3c1e"/>
+      <stop offset="1" stop-color="#a8683a"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#fff6c8" stop-opacity="0.9"/>
+      <stop offset="1" stop-color="#fff6c8" stop-opacity="0"/>
+    </radialGradient>
+    <clipPath id="faceClip">
+      <path d="M168,205 C168,118 344,118 344,205 C344,266 312,306 256,323 C200,306 168,266 168,205Z"/>
+    </clipPath>
+    <clipPath id="eyeL"><path d="M184,226 C196,212 228,212 240,226 C242,250 236,272 212,276 C190,272 182,250 184,226Z"/></clipPath>
+    <clipPath id="eyeR"><path d="M272,226 C284,212 316,212 328,226 C330,250 322,272 300,276 C276,272 270,250 272,226Z"/></clipPath>
+  </defs>
+
+  <g stroke="#3b2220" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round">
+
+    <!-- ground shadow -->
+    <ellipse cx="256" cy="722" rx="120" ry="18" fill="#000" opacity="0.18" stroke="none"/>
+
+    <!-- back hair -->
+    <path fill="url(#hairBack)" d="M160,190 C140,260 150,360 136,450 C128,500 150,530 170,540 L186,500 L200,548 L222,470
+             L290,470 L312,548 L326,500 L342,540 C362,530 384,500 376,450 C362,360 372,260 352,190 Z"/>
+
+    <path fill="#6e3a1e" stroke="none" opacity="0.6" d="M200,300 C196,380 206,450 222,470 L290,470 C306,450 316,380 312,300 Z"/>
+    <!-- quiver behind right shoulder -->
+    <g>
+      <path fill="#8a5230" d="M330,300 L378,262 L392,280 L346,322 Z"/>
+      <path fill="#f4efe4" d="M372,258 L398,236 L402,250 L382,270 Z"/>
+      <path fill="#ff8ab0" d="M378,252 L392,232 L400,242 Z"/>
+      <path fill="#f4efe4" d="M364,262 L378,238 L388,246 Z"/>
+    </g>
+
+    <!-- legs -->
+    <path fill="#fffaf2" d="M222,560 L220,660 L244,660 L246,560 Z"/>
+    <path fill="#fffaf2" d="M268,560 L268,660 L292,660 L290,560 Z"/>
+    <!-- boots -->
+    <path fill="#7a4a2c" d="M214,640 L248,640 L250,700 C250,712 240,716 226,716 L204,716 C196,716 196,704 206,700 Z"/>
+    <path fill="#7a4a2c" d="M266,640 L300,640 L308,700 C318,704 318,716 310,716 L286,716 C272,716 264,712 264,700 Z"/>
+    <path fill="none" stroke="#c89060" stroke-width="3" d="M216,652 L248,652 M266,652 L300,652"/>
+
+    <!-- skirt (치마) -->
+    <path fill="url(#skirt)" d="M196,440 C186,500 176,540 166,580 C214,596 298,596 346,580 C336,540 326,500 316,440 Z"/>
+    <path fill="#e2d4bc" stroke="none" d="M290,450 L316,442 C326,500 336,540 346,580 C330,586 318,588 306,589 Z"/>
+    <path fill="none" stroke="#c9b89a" stroke-width="2.5" d="M226,452 L214,586 M256,452 L256,590 M286,452 L298,586"/>
+    <path fill="#e86a90" d="M166,580 C214,596 298,596 346,580 L350,592 C300,610 212,610 162,592 Z"/>
+
+    <!-- torso / 저고리 -->
+    <path fill="url(#jacket)" d="M206,338 C194,360 190,410 194,452 C230,466 282,466 318,452 C322,410 318,360 306,338 C286,330 226,330 206,338Z"/>
+    <!-- cel shadow on jacket -->
+    <path fill="#3f8a50" stroke="none" opacity="0.55" d="M292,344 C308,372 312,420 316,452 C300,458 290,460 284,460 C290,420 290,380 280,340 Z"/>
+    <!-- 동정 collar -->
+    <path fill="#ffffff" d="M226,336 L256,392 L286,336 L276,334 L256,374 L236,334 Z"/>
+    <!-- 고름 ribbon -->
+    <path fill="#ff7aa8" d="M262,396 C290,392 300,404 290,414 C280,420 268,410 262,400 Z"/>
+    <path fill="#ff7aa8" d="M258,400 C262,440 270,470 282,494 L266,498 C254,470 250,440 252,402 Z"/>
+    <path fill="#ff5a8e" d="M262,400 C276,436 294,462 312,480 L300,490 C282,470 266,440 256,404 Z"/>
+    <circle cx="258" cy="400" r="7" fill="#ff5a8e"/>
+
+    <!-- left arm (holding bow) with 색동 sleeve -->
+    <path fill="url(#jacket)" d="M206,344 C184,352 168,396 160,436 L196,446 C200,414 206,388 214,372 Z"/>
+    <path fill="#ff6a6a" d="M160,436 L196,446 L193,454 L157,444 Z"/>
+    <path fill="#ffd24a" d="M157,444 L193,454 L190,462 L154,452 Z"/>
+    <path fill="#5aa0ff" d="M154,452 L190,462 L188,470 L152,460 Z"/>
+    <!-- right arm on hip -->
+    <path fill="url(#jacket)" d="M306,344 C330,352 350,392 356,428 L322,442 C318,412 310,390 300,374 Z"/>
+    <path fill="#ff6a6a" d="M356,428 L322,442 L325,450 L359,436 Z"/>
+    <path fill="#ffd24a" d="M359,436 L325,450 L328,458 L362,444 Z"/>
+    <path fill="#5aa0ff" d="M362,444 L328,458 L331,466 L365,452 Z"/>
+    <!-- right hand -->
+    <path fill="url(#skin)" d="M332,464 C330,480 340,494 352,492 C364,490 368,474 362,458 Z"/>
+
+    <!-- bow -->
+    <path fill="none" stroke="#3b2220" stroke-width="12" d="M192,250 C132,330 132,590 192,670"/>
+    <path fill="none" stroke="url(#bowWood)" stroke-width="7" d="M192,250 C132,330 132,590 192,670"/>
+    <path fill="none" stroke="#f3e6c6" stroke-width="2" d="M192,250 L192,670"/>
+    <circle cx="192" cy="250" r="5" fill="#ffd24a"/>
+    <circle cx="192" cy="670" r="5" fill="#ffd24a"/>
+    <!-- left hand gripping the bow -->
+    <path fill="url(#skin)" d="M150,462 C136,468 132,488 142,498 C152,506 172,500 176,486 C178,472 166,460 150,462Z"/>
+    <path fill="none" stroke-width="2.5" d="M146,478 C154,476 162,478 168,482"/>
+
+    <!-- neck -->
+    <path fill="#f7cdb2" d="M240,300 L240,344 C250,352 262,352 272,344 L272,300 Z"/>
+
+    <!-- chin shadow on neck -->
+    <path fill="#e8b49a" stroke="none" d="M241,302 L271,302 L271,322 C262,330 250,330 241,322 Z"/>
+    <!-- elf ears (behind side locks) -->
+    <path fill="url(#skin)" d="M176,226 C150,214 126,196 110,178 C120,214 140,250 176,262 Z"/>
+    <path fill="#ffb8a8" stroke="none" d="M170,234 C150,224 136,210 126,198 C136,222 150,242 170,252 Z"/>
+    <path fill="url(#skin)" d="M336,226 C362,214 386,196 402,178 C392,214 372,250 336,262 Z"/>
+    <path fill="#ffb8a8" stroke="none" d="M342,234 C362,224 376,210 386,198 C376,222 362,242 342,252 Z"/>
+
+    <!-- face -->
+    <path fill="url(#skin)" d="M168,205 C168,118 344,118 344,205 C344,266 312,306 256,323 C200,306 168,266 168,205Z"/>
+    <!-- hair shadow on forehead -->
+    <path fill="#f3bfa4" stroke="none" clip-path="url(#faceClip)" d="M160,190 C200,226 230,210 256,228 C282,210 312,226 352,190 L352,150 L160,150Z"/>
+
+    <!-- blush -->
+    <ellipse cx="200" cy="282" rx="20" ry="9" fill="#ff8aa0" opacity="0.45" stroke="none"/>
+    <ellipse cx="312" cy="282" rx="20" ry="9" fill="#ff8aa0" opacity="0.45" stroke="none"/>
+    <path fill="none" stroke="#ff6a88" stroke-width="2" opacity="0.7" d="M190,286 L196,278 M200,286 L206,278 M210,286 L216,278 M302,286 L308,278 M312,286 L318,278 M322,286 L328,278"/>
+
+    <!-- eyes -->
+    <g stroke="none">
+      <path fill="#ffffff" d="M184,226 C196,212 228,212 240,226 C242,250 236,272 212,276 C190,272 182,250 184,226Z"/>
+      <g clip-path="url(#eyeL)">
+        <ellipse cx="213" cy="246" rx="24" ry="31" fill="url(#iris)"/>
+        <ellipse cx="213" cy="250" rx="11" ry="16" fill="#08241a"/>
+        <path fill="#0b2e20" opacity="0.6" d="M180,210 L248,210 L248,236 C230,226 200,226 180,236Z"/>
+      </g>
+      <circle cx="203" cy="238" r="8" fill="#fff"/>
+      <circle cx="224" cy="262" r="4" fill="#fff"/>
+      <path fill="#ffffff" d="M272,226 C284,212 316,212 328,226 C330,250 322,272 300,276 C276,272 270,250 272,226Z"/>
+      <g clip-path="url(#eyeR)">
+        <ellipse cx="299" cy="246" rx="24" ry="31" fill="url(#iris)"/>
+        <ellipse cx="299" cy="250" rx="11" ry="16" fill="#08241a"/>
+        <path fill="#0b2e20" opacity="0.6" d="M264,210 L332,210 L332,236 C314,226 284,226 264,236Z"/>
+      </g>
+      <circle cx="287" cy="238" r="8" fill="#fff"/>
+      <circle cx="308" cy="262" r="4" fill="#fff"/>
+    </g>
+    <!-- lashes -->
+    <path fill="#2a1414" stroke="none" d="M176,232 C190,206 234,202 248,226 L252,220 L246,234 C232,214 198,214 182,240 Z"/>
+    <path fill="#2a1414" stroke="none" d="M336,232 C322,206 278,202 264,226 L260,220 L266,234 C280,214 314,214 330,240 Z"/>
+    <path fill="none" stroke="#2a1414" stroke-width="3" d="M178,230 L170,224 M334,230 L342,224"/>
+    <path fill="none" stroke="#5a2a24" stroke-width="2.5" d="M204,275 C210,277 218,277 224,275 M288,275 C294,277 302,277 308,275"/>
+    <!-- brows -->
+    <path fill="none" stroke="#8a4a2a" stroke-width="3" d="M192,196 C204,190 220,190 232,194 M280,194 C292,190 308,190 320,196"/>
+
+    <!-- nose + mouth -->
+    <path fill="none" stroke="#d8907a" stroke-width="2.5" d="M258,268 L255,274"/>
+    <path fill="#ff8a98" d="M244,292 C250,300 262,300 268,292 C262,296 250,296 244,292Z"/>
+
+    <!-- bangs & side locks -->
+    <path fill="url(#hair)" d="M160,208 C150,120 210,84 262,86 C324,88 368,130 352,212 Q346,200 340,190 Q344,206 338,216 Q340,190.0 326,176 Q330,204.0 314,232 Q316,199.0 300,178 Q304,200.0 286,222 Q288,193.0 272,176 Q276,206.0 258,236 Q260,202.0 244,180 Q248,202.0 230,224 Q232,194.0 216,176 Q220,205.0 204,234 Q206,204.0 192,186 Q196,204.0 180,222 Q182,205.0 166,200 Q168,200 160,208 Z"/>
+    <!-- side locks framing the face -->
+    <path fill="url(#hair)" d="M168,190 C156,250 158,320 174,372 C184,340 192,300 192,260 C190,236 184,212 176,196Z"/>
+    <path fill="url(#hair)" d="M344,190 C356,250 354,320 338,372 C328,340 320,300 320,260 C322,236 328,212 336,196Z"/>
+    <!-- hair shine (angel ring) -->
+    <path fill="#fff1d6" stroke="none" opacity="0.85" d="M196,124 C228,108 290,108 320,124 L316,132 C290,120 228,120 200,134 Z"/>
+    <path fill="none" stroke="#9a5630" stroke-width="2" opacity="0.8" d="M226,110 C236,140 240,160 240,166 M288,110 C280,140 274,160 270,166"/>
+    <path fill="none" stroke="#9a5630" stroke-width="2" opacity="0.7" d="M300,120 C310,150 314,170 312,196 M214,122 C204,150 204,172 206,196 M256,100 C258,130 258,160 258,200"/>
+    <path fill="url(#hair)" d="M258,88 C250,60 262,40 286,34 C272,48 268,66 272,88 Z"/>
+    <!-- flower hair pin -->
+    <g>
+      <circle cx="334" cy="140" r="11" fill="#ffb0cc"/>
+      <circle cx="350" cy="132" r="11" fill="#ffb0cc"/>
+      <circle cx="354" cy="150" r="11" fill="#ffb0cc"/>
+      <circle cx="338" cy="158" r="11" fill="#ffb0cc"/>
+      <circle cx="344" cy="145" r="7" fill="#ffd24a"/>
+      <path fill="#6ac06a" d="M322,160 C312,172 316,184 326,178 C330,172 328,166 322,160Z"/>
+    </g>
+  </g>
+</svg>
