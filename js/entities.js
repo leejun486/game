@@ -138,7 +138,7 @@ class Entity {
     const img = Sprites[this.sheet];
     if (!img) return;
     const { row, col } = this.frame();
-    const s = this.scale;
+    const s = pixScale(this.scale);
     const size = 64 * s;
     const sx = Math.round(this.x - cam.x - size / 2), sy = Math.round(this.y - cam.y - size + 8 * s);
     let alpha = this.dead ? Math.max(0, 1 - Math.max(0, this.deadT - 0.8) / 1.2) : 1;
@@ -162,6 +162,9 @@ class Entity {
   get headY() { return this.y - 58 * this.scale; }
 }
 Entity.nextId = 1;
+
+// pixel art sprites only scale by whole half-steps so their pixels stay square and even
+function pixScale(s) { return Math.max(0.5, Math.round(s * 2) / 2); }
 
 function drawLabel(ctx, text, x, y, color, font = '12px sans-serif') {
   ctx.font = font; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';

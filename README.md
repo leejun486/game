@@ -72,8 +72,7 @@ js/dungeon.js       이클립스 균열 던전 (웨이브, 타이머, 보상)
 js/content.js       출석, 시즌 패스, 업적, 수집, 혈맹, 보스 타이머
 js/admin.js         운영자 모드 (GM 패널)
 js/main.js          게임 루프, 입력, 카메라, 렌더링, 저장
-tools/build_sprites.py  LPC 레이어를 합성해 캐릭터 시트를 만드는 스크립트 (무기 없는 _nw 버전 포함)
-tools/build_weapons.py  LPC 무기 레이어를 192px 격자 아틀라스로 정규화하는 스크립트 (무기 외형)
+tools/build_chibi.py    2.5D 도트 캐릭터·몬스터 시트와 무기 외형 아틀라스를 코드로 생성하는 스크립트
 js/looks.js         무기 외형: 레이어 렌더링, 대기 모션, 수집 화면, 소환
 js/vfx.js           원소 이펙트 파티클 시스템 (화염/냉기/번개/독, 바닥 자국, 얼음 결정, 상태 이상 표시)
 js/skills.js        스킬 트리: 갈래 데이터, 수정자 합성, 18개 스킬 시전 로직, 지대/지속 피해, 스킬 트리 화면
@@ -85,7 +84,7 @@ js/pets.js          펫: 코드로 그리는 펫 아트, 따라다니기·공격
 
 레퍼런스 게임의 이미지는 저작권이 있어 사용하지 않았습니다. 대신 웹에서 자유 라이선스 에셋을 받아 사용했습니다.
 
-- **무기 외형**: 같은 LPC 저장소의 weapon 레이어를 `tools/build_weapons.py`로 정규화했습니다 (라이선스 동일).
-- **캐릭터·몬스터 스프라이트**: [Universal LPC Spritesheet Character Generator](https://github.com/sanderfrenken/Universal-LPC-Spritesheet-Character-Generator)의 레이어(CC-BY-SA 3.0 / GPL 3.0 / OGA-BY 3.0)를 `tools/build_sprites.py`로 합성했습니다. 작가별 크레딧은 [`assets/sprites/CREDITS.md`](assets/sprites/CREDITS.md)에 있습니다.
+- **캐릭터·몬스터·무기 외형 (2.5D 도트)**: `tools/build_chibi.py`가 코드로 직접 찍어 만듭니다. 큰 머리의 치비 비율, 3단 음영과 외곽선, 갓·패랭이·전립·전모·투구 같은 한국풍 의상을 씁니다. `python3 tools/build_chibi.py`로 다시 생성하고, `--preview out.png`로 미리보기를 볼 수 있습니다.
+- **도트 렌더링**: 월드는 절반 해상도로 그린 뒤 픽셀이 뭉개지지 않게 확대합니다. 줌은 픽셀이 정수 배가 되도록 맞춥니다. 이름과 숫자는 원래 해상도로 따로 그려 선명하게 유지합니다.
 - **아이콘**: [game-icons.net](https://game-icons.net) (CC BY 3.0). 작가는 Lorc, Delapouite, Skoll, Faithtoken, Zeromancer, Willdabeast, Carl Olsen, Caro Asercion, sbed, Darkzaitzev입니다. 색상만 바꿨습니다. 자세한 내용은 [`assets/icons/LICENSE-game-icons.txt`](assets/icons/LICENSE-game-icons.txt)를 참고하세요.
 - 지형, 나무, 건물, 이펙트, 펫은 코드로 직접 그립니다.

@@ -458,7 +458,7 @@ class Player extends Hero {
       this.weaponPt = null; ctx.globalAlpha = 1;
       return;
     }
-    const pt = Looks.drawComposite(ctx, this.sheet, id, row, col, x, y, this.scale, { flash: this.flash, t: now });
+    const pt = Looks.drawComposite(ctx, this.sheet, id, row, col, x, y, pixScale(this.scale), { flash: this.flash, t: now });
     this.weaponPt = pt ? { cx: pt.cx + cam.x, cy: pt.cy + cam.y, tx: pt.tx + cam.x, ty: pt.ty + cam.y } : null;
     // weapon trail during swings and flourishes
     const swinging = this.action && !this.dead && (this.action.anim === 'slash' || this.action.flourish || look.grade >= 3);

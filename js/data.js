@@ -74,7 +74,7 @@ D.MONSTERS = {
   orc: { name: '오크 전사', sheet: 'orc', lv: 20, hp: 560, atk: 40, def: 15, spd: 80, scale: 1.05, aggro: true, range: 56 },
   lizardman: { name: '리자드맨', sheet: 'lizardman', lv: 25, hp: 760, atk: 50, def: 19, spd: 88, scale: 1.05, aggro: true, range: 56 },
   troll: { name: '흉포한 트롤', sheet: 'troll', lv: 30, hp: 1200, atk: 64, def: 24, spd: 70, scale: 1.25, aggro: true, range: 60 },
-  minotaur: { name: '미노타우르스 킹', sheet: 'minotaur', lv: 38, hp: 16000, atk: 105, def: 34, spd: 90, scale: 1.7, aggro: true, range: 76, boss: true },
+  minotaur: { name: '미노타우르스 킹', sheet: 'minotaur', lv: 38, hp: 16000, atk: 105, def: 34, spd: 90, scale: 1.8, aggro: true, range: 76, boss: true },
 };
 for (const k in D.MONSTERS) {
   const m = D.MONSTERS[k];
