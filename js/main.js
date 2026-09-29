@@ -221,6 +221,7 @@ const Game = {
 
   function ready() {
     World.init();
+    Nav.build();
     buildPropGrid();
     populate();
     Game.cam.x = D.TOWN.x - innerWidth / 2; Game.cam.y = D.TOWN.y - innerHeight / 2;

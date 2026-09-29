@@ -16,6 +16,7 @@ class Player extends Hero {
     this.moveTo = null; this.waypoints = []; this.talkTo = null;
     this.auto = false; this.combatT = 0; this.potionCd = 0; this.sprintT = 0; this.sprintCd = 0;
     this.keys = { x: 0, y: 0 };
+    this.clock = 0; this.ignore = {}; this.lastX = this.x; this.lastY = this.y; this.stuckT = 0;
     this.recalc();
     this.hp = save.hp ? Math.min(save.hp, this.maxHp) : this.maxHp;
     this.mp = save.mp ? Math.min(save.mp, this.maxMp) : this.maxMp;
@@ -245,8 +246,11 @@ class Player extends Hero {
     UI.toast('질주!', '#9fe0ff');
   }
   // go to a far point, routing via the nearest town gate if needed
+  // go to a far point; A* routes around walls, water and buildings (gate logic kept as a fallback)
   navigateTo(x, y) {
     this.waypoints = [];
+    const path = Nav.ready ? Nav.find(this.x, this.y, x, y) : null;
+    if (path && path.length) { this.waypoints = path; this.moveTo = this.waypoints.shift(); return; }
     const inTown = World.zoneAt(this.x, this.y).id === 'town';
     const destTown = World.zoneAt(x, y).id === 'town';
     const T = D.TILE, gates = [[90, 73], [107, 90], [90, 107], [73, 90]];
@@ -266,12 +270,60 @@ class Player extends Hero {
     this.waypoints.push({ x, y });
     this.moveTo = this.waypoints.shift();
   }
+  // move toward a (possibly moving) goal, following an A* route when the straight line is blocked
+  goTo(tx, ty, speed, dt, stop) {
+    const d = Math.hypot(tx - this.x, ty - this.y);
+    if (d <= stop) { this.moving = false; this.route = null; return true; }
+    const now = this.clock;
+    const stale = !this.routeGoal || Math.hypot(this.routeGoal.x - tx, this.routeGoal.y - ty) > 80 || now - this.routeT > 1.2;
+    if (this.forceRoute || (stale && now - (this.routeCheck || 0) > 0.25)) {
+      this.routeCheck = now;
+      const direct = !this.forceRoute && (d < 80 || Nav.lineClear(this.x, this.y, tx, ty));
+      this.route = direct ? null : Nav.find(this.x, this.y, tx, ty);
+      this.routeGoal = { x: tx, y: ty }; this.routeT = now; this.forceRoute = false;
+      this.routeFailed = !direct && !this.route;
+    }
+    if (this.route && this.route.length) {
+      const n = this.route[0];
+      if (this.moveToward(n.x, n.y, speed, dt, 6)) this.route.shift();
+      this.moving = true;
+      return false;
+    }
+    return this.moveToward(tx, ty, speed, dt, stop);
+  }
+  // call after movement each frame: detects being pinned against a wall
+  checkStuck(dt, speed, game) {
+    const moved = Math.hypot(this.x - this.lastX, this.y - this.lastY);
+    this.lastX = this.x; this.lastY = this.y;
+    if (!this.moving || this.action) { this.stuckT = Math.max(0, (this.stuckT || 0) - dt * 2); return; }
+    if (moved < speed * dt * 0.3) this.stuckT = (this.stuckT || 0) + dt; else this.stuckT = Math.max(0, (this.stuckT || 0) - dt);
+    if (this.stuckT > 0.45 && !this.rerouted) { this.forceRoute = true; this.rerouted = true; if (this.moveTo) this.navigateTo(...this.finalDest()); }
+    if (this.stuckT > 2.2) {
+      // still pinned: give up on this goal so AI mode can choose another
+      this.stuckT = 0; this.rerouted = false; this.route = null;
+      if (this.target) {
+        this.ignore[this.target.id] = game.time + 10;
+        if (this.auto) this.target = null;
+        UI.chat('길이 막혀 다른 대상을 찾습니다.', 'sys');
+      } else if (this.moveTo) {
+        this.moveTo = null; this.waypoints = [];
+        if (this.auto) this.driftT = 0;
+      }
+    }
+    if (this.stuckT === 0) this.rerouted = false;
+  }
+  finalDest() { const w = this.waypoints.length ? this.waypoints[this.waypoints.length - 1] : this.moveTo; return [w.x, w.y]; }
   stopAll() { this.moveTo = null; this.waypoints = []; this.target = null; this.talkTo = null; this.pendingSkill = null; }
 
   update(dt, game) {
     super.update(dt);
     if (this.dead) return;
+    this.clock += dt;
     this.updateIdle(dt, game);
+    this.move(dt, game);
+    this.checkStuck(dt, this.curSpeed || 150, game);
+  }
+  move(dt, game) {
     this.s.playTime += dt;
     this.inTown = World.zoneAt(this.x, this.y).safe;
     this.atkCd -= dt; this.potionCd -= dt; this.combatT -= dt; this.sprintCd -= dt;
@@ -301,6 +353,7 @@ class Player extends Hero {
     if (this.action) return;
 
     const speed = 165 * (1 + this.stats.moveSpd / 100) * (this.sprintT > 0 ? 1.45 : 1) * this.speedMul * (this.s.gm && this.s.gm.speed ? 2 : 1);
+    this.curSpeed = speed;
     // keyboard movement overrides everything
     if (this.keys.x || this.keys.y) {
       const l = Math.hypot(this.keys.x, this.keys.y);
@@ -314,7 +367,7 @@ class Player extends Hero {
     if (this.auto) this.autoThink(game);
     // talk to NPC
     if (this.talkTo) {
-      if (this.moveToward(this.talkTo.x, this.talkTo.y, speed, dt, 64)) {
+      if (this.goTo(this.talkTo.x, this.talkTo.y, speed, dt, 64)) {
         this.moving = false; this.face(this.talkTo);
         const n = this.talkTo; this.talkTo = null;
         game.interact(n);
@@ -326,7 +379,7 @@ class Player extends Hero {
       if (this.target.dead) { this.target = null; this.moving = false; return; }
       const psk = this.pendingSkill != null ? Skills.eff(this, this.classDef.skills[this.pendingSkill]) : null;
       const range = (psk ? this.skillRange(psk) : this.classDef.range) + this.target.radius;
-      if (U.dist(this, this.target) > range) { this.moveToward(this.target.x, this.target.y, speed, dt, range - 8); return; }
+      if (U.dist(this, this.target) > range) { this.goTo(this.target.x, this.target.y, speed, dt, range - 8); return; }
       this.moving = false;
       if (psk) { const i = this.pendingSkill; this.pendingSkill = null; if (this.castSkill(i, game)) return; }
       if (this.atkCd <= 0) { this.basicAttack(this.target, game); this.combatT = 4; }
@@ -345,7 +398,7 @@ class Player extends Hero {
   autoThink(game) {
     if (this.inTown && !this.target && !this.moveTo) return;
     if (!this.target || this.target.dead) {
-      this.target = game.nearestMonster(this, 650, (m) => (m.def.boss ? this.s.lv >= m.lv - 6 : m.lv <= this.s.lv + 5) || m.target === this);
+      this.target = game.nearestMonster(this, 650, (m) => !(this.ignore[m.id] > game.time) && ((m.def.boss ? this.s.lv >= m.lv - 6 : m.lv <= this.s.lv + 5) || m.target === this));
       if (!this.target && !this.moveTo && !World.zoneAt(this.x, this.y).dungeon) {
         // drift toward the centre of the closest suitable spawn
         const sp = game.bestSpawnNear(this);
