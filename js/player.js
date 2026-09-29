@@ -454,11 +454,13 @@ class Player extends Hero {
     const id = Looks.current(this), look = Looks.BY_ID[id];
     if (this.mounted) {
       const rrow = this.rideFace > 0 ? 11 : 9;
-      Mounts.drawEntity(ctx, cam, this, (g, fx, fy) => { g.imageSmoothingEnabled = false; Looks.drawComposite(g, this.sheet, id, rrow, 0, fx, fy, 1, { flash: this.flash, t: now }); });
+      Mounts.drawEntity(ctx, cam, this, ArtChar.on(this) ? ArtChar.riderFn(this, this.rideFace)
+        : (g, fx, fy) => { g.imageSmoothingEnabled = false; Looks.drawComposite(g, this.sheet, id, rrow, 0, fx, fy, 1, { flash: this.flash, t: now }); });
       this.weaponPt = null; ctx.globalAlpha = 1;
       return;
     }
-    const pt = Looks.drawComposite(ctx, this.sheet, id, row, col, x, y, pixScale(this.scale), { flash: this.flash, t: now });
+    const pt = ArtChar.on(this) ? ArtChar.draw(ctx, cam, this, alpha)
+      : Looks.drawComposite(ctx, this.sheet, id, row, col, x, y, pixScale(this.scale), { flash: this.flash, t: now });
     this.weaponPt = pt ? { cx: pt.cx + cam.x, cy: pt.cy + cam.y, tx: pt.tx + cam.x, ty: pt.ty + cam.y } : null;
     // weapon trail during swings and flourishes
     const swinging = this.action && !this.dead && (this.action.anim === 'slash' || this.action.flourish || look.grade >= 3);
@@ -491,7 +493,7 @@ class Player extends Hero {
     }
     ctx.globalAlpha = 1;
   }
-  get headY() { return this.mounted ? this.y - (this.rideTop || 90) : this.y - 58 * this.scale; }
+  get headY() { return this.mounted ? this.y - (this.rideTop || 90) : ArtChar.on(this) ? this.y - ArtChar.H - 2 : this.y - 58 * this.scale; }
   aura(ctx, x, y) {
     if (!this.s.card) return;
     const g = D.CARD_BY_ID[this.s.card].grade;

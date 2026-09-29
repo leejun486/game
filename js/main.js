@@ -5,6 +5,9 @@ const SAVE_KEY = 'eclipse_awakening_save_v1';
 const Game = {
   player: null, monsters: [], npcs: [], bots: [], projectiles: [], fx: [], floaters: [], respawns: [], drops: [],
   cam: { x: 0, y: 0 }, zoom: 1, shake: 0, time: 0, started: false, muted: false, lastCardNotice: '',
+  // graphics options: illustration field characters, retro pixel filter
+  gfx: (() => { try { return { art: true, pixel: false, ...JSON.parse(localStorage.getItem('eclipse_gfx') || '{}') }; } catch (e) { return { art: true, pixel: false }; } })(),
+  saveGfx() { try { localStorage.setItem('eclipse_gfx', JSON.stringify(this.gfx)); } catch (e) { /* private mode */ } },
 
   fighters() { return this.player && !this.player.dead ? [this.player, ...this.bots] : this.bots; },
   nearestMonster(from, maxD, pred) {
@@ -189,7 +192,7 @@ const Game = {
   // 2.5D pixel look: the world is rendered at one pixel per PX world units and scaled up with hard
   // edges, so the zoom is snapped to keep every art pixel a whole number of device pixels
   const PX = 2;
-  function snapZoom(z) { return Math.max(1, Math.round(PX * z * dpr)) / (PX * dpr); }
+  function snapZoom(z) { return Game.gfx.pixel ? Math.max(1, Math.round(PX * z * dpr)) / (PX * dpr) : z; }
   addEventListener('resize', resize);
   resize();
 
@@ -489,18 +492,21 @@ const Game = {
   // ---------------------------------------------------------------- render
   let lowCv = null, lowCtx = null;
   function render() {
-    const z = Game.zoom, devPx = Math.round(PX * z * dpr);
+    const z = Game.zoom, pix = Game.gfx.pixel;
+    // pixel filter: one canvas pixel per PX world units, blown up with hard edges; otherwise full resolution
+    const devPx = pix ? Math.round(PX * z * dpr) : 1, PXe = pix ? PX : 1 / (z * dpr);
     const sh = Game.shake;
-    const cam = { x: Math.round((Game.cam.x + (sh ? U.rand(-sh, sh) : 0)) / PX) * PX, y: Math.round((Game.cam.y + (sh ? U.rand(-sh, sh) : 0)) / PX) * PX };
+    const snap = pix ? PX : 1;
+    const cam = { x: Math.round((Game.cam.x + (sh ? U.rand(-sh, sh) : 0)) / snap) * snap, y: Math.round((Game.cam.y + (sh ? U.rand(-sh, sh) : 0)) / snap) * snap };
     const lw = Math.ceil(canvas.width / devPx), lh = Math.ceil(canvas.height / devPx);
     if (!lowCv || lowCv.width !== lw || lowCv.height !== lh) {
       lowCv = document.createElement('canvas'); lowCv.width = lw; lowCv.height = lh;
       lowCtx = lowCv.getContext('2d');
     }
-    const vw = lw * PX, vh = lh * PX;
+    const vw = lw * PXe, vh = lh * PXe;
     const out = ctx;
     const ctxW = lowCtx; // world pass draws in world units onto the low-res canvas
-    ctxW.setTransform(1 / PX, 0, 0, 1 / PX, 0, 0);
+    ctxW.setTransform(1 / PXe, 0, 0, 1 / PXe, 0, 0);
     ctxW.imageSmoothingEnabled = false;
     ctxW.fillStyle = '#1a1a14'; ctxW.fillRect(0, 0, vw, vh);
     World.drawGround(ctxW, cam, vw, vh, Game.started ? 2 : 4);
@@ -564,7 +570,7 @@ const Game = {
       lg.clearRect(0, 0, lightCv.width, lightCv.height);
       lg.fillStyle = `rgba(4,8,30,${dark})`; lg.fillRect(0, 0, lightCv.width, lightCv.height);
       lg.globalCompositeOperation = 'destination-out';
-      const s = 1 / PX;
+      const s = 1 / PXe;
       for (const [lx, ly, lr] of lights) {
         const x = (lx - cam.x) * s, y = (ly - cam.y) * s, r = lr * s;
         const gr = lg.createRadialGradient(x, y, 0, x, y, r);
@@ -573,7 +579,7 @@ const Game = {
       }
       ctxW.setTransform(1, 0, 0, 1, 0, 0);
       ctxW.drawImage(lightCv, 0, 0);
-      ctxW.setTransform(1 / PX, 0, 0, 1 / PX, 0, 0);
+      ctxW.setTransform(1 / PXe, 0, 0, 1 / PXe, 0, 0);
     }
     // elemental particles on top of the lighting so fire and frost glow at night
     VFX.draw(ctxW, cam);

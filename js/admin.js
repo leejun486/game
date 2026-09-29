@@ -74,6 +74,8 @@ const Admin = (() => {
       if (q.type === 'enchant') { const w = p.equipped('weapon'); if (w) w.en = Math.max(w.en || 0, q.n); }
       return `퀘스트 [${q.title}] 완료 처리 (트래커를 눌러 보상 수령)`;
     },
+    gfxArt: () => { Game.gfx.art = !Game.gfx.art; Game.saveGfx(); return `필드 일러스트 캐릭터 ${Game.gfx.art ? 'ON' : 'OFF (도트)'}`; },
+    gfxPixel: () => { Game.gfx.pixel = !Game.gfx.pixel; Game.saveGfx(); dispatchEvent(new Event('resize')); return `도트 필터 ${Game.gfx.pixel ? 'ON' : 'OFF'}`; },
     gmOff: (p) => { p.s.gm = { god: false, oneHit: false, speed: false }; return '치트 모두 해제'; },
   };
 
@@ -83,6 +85,7 @@ const Admin = (() => {
     ['캐릭터', [['lv1', '레벨 +1'], ['lv10', '레벨 +10'], ['lvMax', '최대 레벨'], ['heal', '회복 · 쿨 초기화'], ['questSkip', '현재 퀘스트 완료']]],
     ['초월', [['cardsAll', '모든 카드 획득'], ['cardsMax', '카드 최대 성장'], ['cardLegend', '전설 카드 1장'], ['looksAll', '무기 외형 전부'], ['petsAll', '펫 전부'], ['mountsAll', '탈것 전부']]],
     ['치트', [['god', '무적', 'god'], ['oneHit', '원킬', 'oneHit'], ['speed', '이동속도 2배', 'speed'], ['gmOff', '치트 모두 해제']]],
+    ['그래픽', [['gfxArt', '일러스트 캐릭터', 'art'], ['gfxPixel', '도트 필터', 'pixel']]],
     ['월드', [['bosses', '보스 즉시 소환'], ['dungeon', '던전 횟수 초기화'], ['dayNight', '낮/밤 전환'], ['passMax', '시즌 패스 만렙'], ['attend', '출석 초기화']]],
   ];
 
@@ -92,10 +95,11 @@ const Admin = (() => {
     el.querySelector('.panel-head img').style.cssText = 'width:22px;vertical-align:-4px;margin-right:4px';
     const render = () => {
       const p = Game.player, g = gm(p);
+      const val = (f) => (f === 'art' || f === 'pixel' ? Game.gfx[f] : g[f]);
       body.innerHTML = `<p class="gm-warn">운영자 전용 기능입니다. 변경 사항은 즉시 적용되고 저장됩니다.</p>
         <div class="gm-now">다이아 <b>${U.fmt(p.s.dia)}</b> · 아데나 <b>${U.fmt(p.s.gold)}</b> · 소환권 <b>${p.count('ticket')}</b> · Lv.<b>${p.s.lv}</b></div>` +
         SECTIONS.map(([title, btns]) => `<div class="gm-sec"><h4>${title}</h4><div class="gm-btns">${btns.map(([id, label, flag]) =>
-          `<button class="${flag ? (g[flag] ? 'gold-btn' : 'dark-btn') : 'dark-btn'}" data-gm="${id}">${label}${flag ? (g[flag] ? ' ON' : ' OFF') : ''}</button>`).join('')}</div></div>`).join('') +
+          `<button class="${flag ? (val(flag) ? 'gold-btn' : 'dark-btn') : 'dark-btn'}" data-gm="${id}">${label}${flag ? (val(flag) ? ' ON' : ' OFF') : ''}</button>`).join('')}</div></div>`).join('') +
         `<div class="gm-sec"><h4>직접 입력</h4><div class="gm-btns">
           <input id="gm-dia" type="number" min="0" placeholder="다이아 수량"><button class="dark-btn" data-gm-in="dia">다이아 지급</button>
           <input id="gm-lv" type="number" min="1" max="${D.MAX_LV}" placeholder="레벨 (1~${D.MAX_LV})"><button class="dark-btn" data-gm-in="lv">레벨 설정</button></div></div>`;

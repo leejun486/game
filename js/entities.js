@@ -436,13 +436,21 @@ class Bot extends Hero {
     }
   }
   draw(ctx, cam) {
+    if (ArtChar.on(this)) {
+      let alpha = this.dead ? Math.max(0, 1 - Math.max(0, this.deadT - 0.8) / 1.2) : 1;
+      if (this.fadeIn > 0) alpha *= 1 - this.fadeIn / 0.45;
+      if (alpha <= 0) return;
+      if (this.mounted && !this.dead) { ctx.globalAlpha = alpha; Mounts.drawEntity(ctx, cam, this, ArtChar.riderFn(this, this.rideFace)); ctx.globalAlpha = 1; return; }
+      ArtChar.draw(ctx, cam, this, alpha);
+      return;
+    }
     if (!this.mounted || this.dead) return super.draw(ctx, cam);
     const img = Sprites[this.sheet], row = this.rideFace > 0 ? 11 : 9;
     if (this.fadeIn > 0) ctx.globalAlpha = 1 - this.fadeIn / 0.45;
     Mounts.drawEntity(ctx, cam, this, (g, fx, fy) => { g.imageSmoothingEnabled = false; if (img) g.drawImage(img, 0, row * 64, 64, 64, fx - 32, fy - 56, 64, 64); });
     ctx.globalAlpha = 1;
   }
-  get headY() { return this.mounted ? this.y - (this.rideTop || 90) : this.y - 58 * this.scale; }
+  get headY() { return this.mounted ? this.y - (this.rideTop || 90) : ArtChar.on(this) ? this.y - ArtChar.H - 2 : this.y - 58 * this.scale; }
   drawOverlay(ctx, cam) {
     const x = this.x - cam.x, y = this.headY - cam.y;
     drawLabel(ctx, this.name, x, y - 4, '#8fc1ff');
