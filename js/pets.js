@@ -349,6 +349,7 @@ const Pets = (() => {
     layer.appendChild(el);
     if (!sel) sel = p.s.pet || LIST[0].id;
     const render = () => {
+      if (el.querySelector('.summon-stage')) return; // a reward popping mid-summon must not wipe the reveal
       const d = BY_ID[sel], owned = p.s.pets[sel] || 0, eq = p.s.pet === sel;
       const list = LIST.filter((x) => filter < 0 || x.grade === filter).sort((a, b) => (!!p.s.pets[b.id] - !!p.s.pets[a.id]) || b.grade - a.grade);
       const bon = (o) => Object.entries(o).map(([k, v]) => `${D.STAT_NAMES[k][0]} <span>+${v}${D.STAT_NAMES[k][1]}</span>`).join(', ');

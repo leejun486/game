@@ -229,6 +229,7 @@ const Looks = (() => {
     const mine = LIST.filter((l) => l.cls === p.cls);
     if (!sel || BY_ID[sel].cls !== p.cls) sel = current(p);
     const render = () => {
+      if (el.querySelector('.summon-stage')) return; // a reward popping mid-summon must not wipe the reveal
       const look = BY_ID[sel], owned = p.s.wlooks[sel] || 0;
       const eq = current(p) === sel;
       const list = mine.filter((l) => filter < 0 || l.grade === filter).sort((a, b) => (!!p.s.wlooks[b.id] - !!p.s.wlooks[a.id]) || b.grade - a.grade);
