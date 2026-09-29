@@ -320,6 +320,7 @@ class Hero extends Entity {
   }
   get classDef() { return D.CLASSES[this.cls]; }
   basicAttack(target, game) {
+    if (this.mounted) Mounts.dismount(this, game);
     const c = this.classDef;
     const st = this.stats;
     const spd = this.cls === 'mage' ? st.castSpd : st.atkSpd;
@@ -348,6 +349,7 @@ class Bot extends Hero {
     this.stats = { atk: c.base.atk + c.grow.atk * this.lv + this.lv, atkSpd: U.randi(0, 40), castSpd: U.randi(0, 40), crit: 5, def: 10 };
     this.state = 'town'; this.stateT = U.rand(5, 50); this.wanderTo = null; this.idleT = 0;
     this.chatT = U.rand(10, 80);
+    this.mountId = Math.random() < 0.5 ? U.pick(Mounts.LIST).id : null; this.rideFace = 1;
     this.ignore = {};
   }
   pickHuntSpawn() {
@@ -388,7 +390,13 @@ class Bot extends Hero {
         this.teleport(D.TOWN.x + U.rand(-400, 400), D.TOWN.y + U.rand(-400, 400), game);
       }
     }
+    Mounts.tick(this, dt, game);
     if (this.action) return;
+    // ride while strolling around town, walk while hunting
+    if (this.mountId) {
+      if (this.state === 'town' && this.wanderTo && !this.mounted) Mounts.mount(this, game, true);
+      if (this.state === 'hunt' && this.mounted && this.target) Mounts.dismount(this, game);
+    }
     if (this.state === 'hunt') {
       if (!this.target || this.target.dead) {
         this.target = null;
@@ -412,7 +420,7 @@ class Bot extends Hero {
     }
     // wander / idle
     if (this.wanderTo) {
-      if (this.goTo(this.wanderTo.x, this.wanderTo.y, 120, dt, 8, 4000)) { this.wanderTo = null; this.idleT = U.rand(1, 6); }
+      if (this.goTo(this.wanderTo.x, this.wanderTo.y, 120 * Mounts.speedMul(this), dt, 8, 4000)) { this.wanderTo = null; this.idleT = U.rand(1, 6); }
       else if (this.trackStuck(dt, 120) > 1.5 || this.routeFailed) { this.wanderTo = null; this.idleT = 0.5; this.stuckT = 0; this.routeFailed = false; }
     } else {
       this.idleT -= dt;
@@ -424,6 +432,14 @@ class Bot extends Hero {
       }
     }
   }
+  draw(ctx, cam) {
+    if (!this.mounted || this.dead) return super.draw(ctx, cam);
+    const img = Sprites[this.sheet], row = this.rideFace > 0 ? 11 : 9;
+    if (this.fadeIn > 0) ctx.globalAlpha = 1 - this.fadeIn / 0.45;
+    Mounts.drawEntity(ctx, cam, this, (g, fx, fy) => { g.imageSmoothingEnabled = false; if (img) g.drawImage(img, 0, row * 64, 64, 64, fx - 32, fy - 56, 64, 64); });
+    ctx.globalAlpha = 1;
+  }
+  get headY() { return this.mounted ? this.y - (this.rideTop || 90) : this.y - 58 * this.scale; }
   drawOverlay(ctx, cam) {
     const x = this.x - cam.x, y = this.headY - cam.y;
     drawLabel(ctx, this.name, x, y - 4, '#8fc1ff');

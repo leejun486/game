@@ -389,6 +389,7 @@ const Game = {
     else if (k === 'p') UI.open('pass');
     else if (k === 'v') UI.open('weaponlook');
     else if (k === 'n') UI.open('pet');
+    else if (k === 'r') UI.toggleRide();
     else if (k === 'o') UI.open('bosstime');
     else if (k === 'tab') { e.preventDefault(); UI.open('menu'); }
   });

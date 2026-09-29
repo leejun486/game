@@ -578,3 +578,6 @@ body.touch #chat { bottom: 250px; }
 @media (max-width: 900px) { .sk-wrap { grid-template-columns: 1fr; } .sk-list { flex-direction: row; overflow-x: auto; } .sk-item { min-width: 170px; } .sk-opts { grid-template-columns: 1fr; } .sk-or { display: none; } }
 
 @media (max-width: 900px) { #slots { gap: 2px; } #slots .slot { width: 34px; height: 34px; padding: 4px; } #slots .slot .n { font-size: 9px; } }
+
+.ride-opt { display: flex; gap: 6px; align-items: center; font-size: 13px; margin: 8px 0; color: var(--text); cursor: pointer; }
+@media (max-width: 900px) { #right-buttons { gap: 6px; } }

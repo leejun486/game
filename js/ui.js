@@ -134,6 +134,7 @@ const UI = (() => {
     $('auto-potion-count').textContent = U.fmt(hpTotal);
     $('auto-potion').classList.toggle('on', !!st.autoPotion);
     $('btn-auto').classList.toggle('on', p.auto);
+    $('btn-ride').classList.toggle('on', !!p.mounted);
     // buffs
     const bEl = $('buffs');
     const buffHtml = p.buffs.map((b) => {
@@ -244,7 +245,7 @@ const UI = (() => {
     const grid = [
       ['character', 'character', '캐릭터'], ['stats', 'star', '잠재력'], ['skills', 'blade', '전투 특성'], ['transcend', 'transcend', '초월', 1], ['weaponlook', 'sword', '무기 외형'], ['collection', 'collection', '결속'], ['skin', 'wings', '스킨'],
       ['teleport', 'teleport', '권능'], ['summon', 'summon', '서판 조합'], ['quests', 'quest', '퀘스트', 1], ['event', 'bell', '의뢰'], ['craft', 'craft', '제작'], ['achievement', 'achievement', '업적', 1], ['collection', 'spellbook', '수집', 1],
-      ['pet', 'pet', '펫', 1], ['guild', 'guild', '길드', 1], ['ranking', 'ranking', '순위'], ['exchange', 'exchange', '관계'], ['exchange', 'trade', '거래소'], ['pvp', 'pvp', 'PvP'], ['ranking', 'skull', '원수'], ['auto', 'auto', 'AI 모드'],
+      ['pet', 'pet', '펫', 1], ['mount', 'mount', '탈것', 1], ['guild', 'guild', '길드', 1], ['ranking', 'ranking', '순위'], ['exchange', 'exchange', '관계'], ['exchange', 'trade', '거래소'], ['pvp', 'pvp', 'PvP'], ['ranking', 'skull', '원수'], ['auto', 'auto', 'AI 모드'],
       ['map', 'compass', '위치 저장'],
     ];
     el.innerHTML = `
@@ -536,7 +537,7 @@ const UI = (() => {
       <div class="list-row"><span>운영자 모드 (F2)</span><button class="gold-btn" data-do="gm">열기</button></div>
       <div class="list-row"><span>게임 저장</span><button class="dark-btn" data-do="save">저장</button></div>
       <div class="list-row"><span>저장 삭제 후 처음부터</span><button class="red-btn" data-do="reset">초기화</button></div>
-      <p class="sub" style="color:#888;font-size:12px;line-height:1.6">조작: 클릭 이동/공격 · WASD 이동 · 1~4 스킬 · 5~8 아이템 · Space 근처 적 공격 · G AI 모드 · Shift 질주 · I 인벤토리 · K 스킬 · U 상점 · 1~4·Q·E 스킬 · K 스킬 트리 · C 캐릭터 · J 퀘스트 · Y 초월 · V 무기 외형 · N 펫 · P 시즌 패스 · O 보스 정보 · T 순간이동 · B 귀환 · M 지도 · Enter 채팅 · 마우스 휠 줌</p>`;
+      <p class="sub" style="color:#888;font-size:12px;line-height:1.6">조작: 클릭 이동/공격 · WASD 이동 · 1~4 스킬 · 5~8 아이템 · Space 근처 적 공격 · G AI 모드 · Shift 질주 · I 인벤토리 · K 스킬 · U 상점 · 1~4·Q·E 스킬 · K 스킬 트리 · C 캐릭터 · J 퀘스트 · Y 초월 · V 무기 외형 · N 펫 · R 탈것 탑승 · P 시즌 패스 · O 보스 정보 · T 순간이동 · B 귀환 · M 지도 · Enter 채팅 · 마우스 휠 줌</p>`;
     body.onclick = (e) => {
       const b = e.target.closest('[data-do]'); if (!b) return;
       const a = b.dataset.do;
@@ -607,24 +608,39 @@ const UI = (() => {
     const dest = Quests.destination(p);
     if (q.type === 'equipCard') return open('transcend');
     if (q.type === 'enchant') return openEnchant('weapon');
+    // no teleport: ride there along the A* path (auto-mount handles the horse)
     if (dest && dest.npc) {
       const n = game.npcs.find((x) => x.def.id === dest.npc);
-      p.auto = false;
-      const walk = () => { p.talkTo = n; };
-      if (U.dist(p, n) < 900) { p.stopAll(); walk(); }
-      else { toast(`${n.def.name}에게 이동합니다.`, '#9fe0ff'); game.teleportPlayer(n.x, n.y + 90, { then: walk }); }
+      p.stopAll(); p.auto = false;
+      if (U.dist(p, n) < 300) { p.talkTo = n; return; }
+      p.navigateTo(n.x, n.y + 70); p.talkAfterNav = n; p.questTravel = { npc: true };
+      if (p.mountId && !p.mounted) Mounts.mount(p, game);
+      toast(`${n.def.name}에게 이동합니다.`, '#9fe0ff');
       return;
     }
     // kill quests go to that monster's spawn; level / daily quests go to the best hunting ground
     const spawn = dest ? D.SPAWNS.find((s) => s.m === q.m) : game.bestSpawnNear(p);
     if (!spawn) return open('quests');
     const cx = spawn.x * D.TILE, cy = spawn.y * D.TILE;
-    const hunt = () => { if (!p.auto) { p.auto = true; refreshHud(); } };
     if (Math.hypot(p.x - cx, p.y - cy) < spawn.r * D.TILE) {
-      hunt(); toast('이미 사냥터에 있습니다. AI 모드로 사냥합니다.', '#9fe0ff'); return;
+      if (!p.auto) { p.auto = true; refreshHud(); }
+      toast('이미 사냥터에 있습니다. AI 모드로 사냥합니다.', '#9fe0ff'); return;
     }
-    toast(`${D.MONSTERS[spawn.m].name} 사냥터로 순간이동합니다.`, '#9fe0ff');
-    game.teleportPlayer(cx + U.rand(-80, 80), cy + U.rand(-80, 80), { then: hunt });
+    p.stopAll(); p.auto = false;
+    const f = World.findFree(cx + U.rand(-80, 80), cy + U.rand(-80, 80), 16);
+    p.navigateTo(f.x, f.y); p.questTravel = { hunt: true };
+    if (p.mountId && !p.mounted) Mounts.mount(p, game);
+    toast(`${D.MONSTERS[spawn.m].name} 사냥터로 이동합니다.${p.mountId ? ' (탈것 탑승)' : ''}`, '#9fe0ff');
+    refreshHud();
+  }
+
+  function toggleRide() {
+    const p = game.player;
+    if (!p || p.dead) return;
+    if (!p.mountId) { toast('사용 중인 탈것이 없습니다. (탈것 메뉴)'); return open('mount'); }
+    if (p.action && p.action.idle) p.action = null;
+    if (p.mounted) Mounts.dismount(p, game); else if (!p.action) { p.target = null; Mounts.mount(p, game); }
+    refreshHud();
   }
 
   function toggleAuto() {
@@ -652,6 +668,7 @@ const UI = (() => {
     $('btn-auto').onclick = toggleAuto;
     $('btn-target').onclick = () => game.attackNearest();
     $('btn-sprint').onclick = () => game.player.sprint();
+    $('btn-ride').onclick = toggleRide;
     $('auto-potion').onclick = () => { game.player.s.autoPotion = !game.player.s.autoPotion; toast(`자동 물약 ${game.player.s.autoPotion ? '켜짐' : '꺼짐'}`); refreshHud(); };
     $('minimap').onclick = () => open('map');
     $('quest-tracker').onclick = questGo;
@@ -668,7 +685,7 @@ const UI = (() => {
   }
 
   return {
-    init, iconImg, spriteCanvas, drawSprite, chat, announce, toast, skillName, refreshHud, refreshQuest, refreshAll, markInv,
+    toggleRide, init, iconImg, spriteCanvas, drawSprite, chat, announce, toast, skillName, refreshHud, refreshQuest, refreshAll, markInv,
     flashSlot, drawMinimap, open, close, isOpen, openEnchant, toggleAuto, useSlotItem, esc, ico, makePanel, OPENERS,
     get panelName() { return panel && panel.name; },
     setPanel(p) { panel = p; },

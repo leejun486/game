@@ -151,6 +151,15 @@ const VFX = (() => {
   function poisoned(mon, dt) {
     if (Math.random() < dt * 8) add({ tex: TEX.bubble, x: mon.x + R(-12, 12), y: mon.y, z: R(20, 50) * mon.scale, vz: R(20, 40), life: 0.8, s0: 8, s1: 12, add: false });
   }
+  const dustTex = {};
+  function dust(x, y, n = 1, color = '#e8d9c0') {
+    if (!dustTex[color]) { const c = color; dustTex[c] = radial([[0, Looks.hexA(c, 0.7)], [0.6, Looks.hexA(c, 0.3)], [1, Looks.hexA(c, 0)]]); }
+    for (let i = 0; i < n; i++) add({ tex: dustTex[color], x: x + R(-10, 10), y: y + R(-4, 4), z: 2, vx: R(-40, 40), vy: R(-10, 10), vz: R(10, 40), drag: 2, life: R(0.4, 0.7), s0: 10, s1: 26, a: 0.7, add: false });
+  }
+  function sparkle(x, y, z, color) {
+    if (!dustTex['s' + color]) dustTex['s' + color] = radial([[0, 'rgba(255,255,255,1)'], [0.3, Looks.hexA(color, 0.9)], [1, Looks.hexA(color, 0)]]);
+    add({ tex: dustTex['s' + color], x, y, z, vz: R(10, 30), life: R(0.4, 0.8), s0: 9, s1: 1 });
+  }
   function decal(kind, x, y, r, dur) { decals.push({ kind, x, y, r, t: 0, dur, seed: Math.random() * 100 }); if (decals.length > 40) decals.shift(); }
 
   // ---------------------------------------------------------------- update / draw
@@ -321,5 +330,5 @@ const VFX = (() => {
     ctx.restore();
   }
 
-  return { trail, fireBurst, iceBurst, sparkBurst, debris, hazard, burning, poisoned, decal, flash, update, drawGround, draw, status, lights, drawFireball, drawIceLance, drawFrostArrow, drawFireArrow, get count() { return parts.length; } };
+  return { dust, sparkle, trail, fireBurst, iceBurst, sparkBurst, debris, hazard, burning, poisoned, decal, flash, update, drawGround, draw, status, lights, drawFireball, drawIceLance, drawFrostArrow, drawFireArrow, get count() { return parts.length; } };
 })();

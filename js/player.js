@@ -8,6 +8,8 @@ class Player extends Hero {
     this.s = save; // persistent data
     Looks.migrate(this);
     Pets.migrate(this);
+    Mounts.migrate(this);
+    this.mountId = save.mount; this.rideFace = 1;
     Skills.migrate(this);
     this.idleT = 0; this.nextFlourish = 3; this.trail = []; this.moteT = 0;
     this.radius = 14;
@@ -143,6 +145,7 @@ class Player extends Hero {
     // weapon look: equip + collection bonus
     for (const b of Looks.bonuses(this)) add(b);
     for (const b of Pets.bonuses(this)) add(b);
+    for (const b of Mounts.bonuses(this)) add(b);
     // buffs
     let atkPct = 0;
     for (const b of this.buffs) { add({ atkSpd: b.atkSpd || 0, moveSpd: b.moveSpd || 0, crit: b.crit || 0, dmgRed: b.dmgRed || 0 }); atkPct += b.atkPct || 0; }
@@ -235,6 +238,7 @@ class Player extends Hero {
     this.mp -= sk.mp;
     this.skillCd[id] = sk.cd;
     this.pendingSkill = null;
+    if (this.mounted) Mounts.dismount(this, game);
     Skills.cast(this, id, sk, target, game);
     UI.flashSlot(i);
     return true;
@@ -292,13 +296,14 @@ class Player extends Hero {
     if (this.stuckT === 0) this.rerouted = false;
   }
   finalDest() { const w = this.waypoints.length ? this.waypoints[this.waypoints.length - 1] : this.moveTo; return [w.x, w.y]; }
-  stopAll() { this.moveTo = null; this.waypoints = []; this.target = null; this.talkTo = null; this.pendingSkill = null; }
+  stopAll() { this.moveTo = null; this.waypoints = []; this.target = null; this.talkTo = null; this.pendingSkill = null; this.questTravel = null; }
 
   update(dt, game) {
     super.update(dt);
     if (this.dead) return;
     this.updateIdle(dt, game);
     this.move(dt, game);
+    Mounts.tick(this, dt, game);
     this.checkStuck(dt, this.curSpeed || 150, game);
   }
   move(dt, game) {
@@ -330,14 +335,19 @@ class Player extends Hero {
     }
     if (this.action) return;
 
-    const speed = 165 * (1 + this.stats.moveSpd / 100) * (this.sprintT > 0 ? 1.45 : 1) * this.speedMul * (this.s.gm && this.s.gm.speed ? 2 : 1);
+    const speed = Mounts.speedMul(this) * 165 * (1 + this.stats.moveSpd / 100) * (this.sprintT > 0 ? 1.45 : 1) * this.speedMul * (this.s.gm && this.s.gm.speed ? 2 : 1);
     this.curSpeed = speed;
+    // ride automatically for long trips (quest travel, AI travel, map clicks)
+    if (this.moveTo && !this.mounted && this.mountId && this.s.autoRide && !this.target && this.combatT <= 0) {
+      const [fx, fy] = this.finalDest();
+      if (Math.hypot(fx - this.x, fy - this.y) > 380) Mounts.mount(this, game, true);
+    }
     // keyboard movement overrides everything
     if (this.keys.x || this.keys.y) {
       const l = Math.hypot(this.keys.x, this.keys.y);
       this.tryMove((this.keys.x / l) * speed * dt, (this.keys.y / l) * speed * dt);
       this.dir = dirFromVec(this.keys.x, this.keys.y); this.moving = true;
-      this.moveTo = null; this.waypoints = []; this.talkTo = null;
+      this.moveTo = null; this.waypoints = []; this.talkTo = null; this.questTravel = null;
       if (!this.auto) this.target = null;
       return;
     }
@@ -367,7 +377,10 @@ class Player extends Hero {
     if (this.moveTo) {
       if (this.moveToward(this.moveTo.x, this.moveTo.y, speed, dt, 6)) {
         this.moveTo = this.waypoints.shift() || null;
-        if (!this.moveTo) this.moving = false;
+        if (!this.moveTo) {
+          this.moving = false;
+          if (this.questTravel) { const q = this.questTravel; this.questTravel = null; if (q.hunt) { this.auto = true; UI.toast('사냥터에 도착했습니다. AI 모드로 사냥합니다.', '#9fe0ff'); UI.refreshHud(); } }
+        }
       }
       return;
     }
@@ -377,6 +390,7 @@ class Player extends Hero {
     if (this.inTown && !this.target && !this.moveTo) return;
     if (!this.target || this.target.dead) {
       this.target = game.nearestMonster(this, 650, (m) => !(this.ignore[m.id] > game.time) && ((m.def.boss ? this.s.lv >= m.lv - 6 : m.lv <= this.s.lv + 5) || m.target === this));
+      if (this.questTravel) this.target = null; // riding to the quest spot: don't stop for fights
       if (!this.target && !this.moveTo && !World.zoneAt(this.x, this.y).dungeon) {
         // drift toward the centre of the closest suitable spawn
         const sp = game.bestSpawnNear(this);
@@ -409,7 +423,7 @@ class Player extends Hero {
   }
   // standing still: breathe, and every few seconds show off the weapon look
   updateIdle(dt, game) {
-    const busy = this.keys.x || this.keys.y || this.target || this.moveTo || this.talkTo || this.auto || this.teleporting;
+    const busy = this.keys.x || this.keys.y || this.target || this.moveTo || this.talkTo || this.auto || this.teleporting || this.mounted;
     if (this.action && this.action.idle && busy) { this.action = null; this.orbitFx = null; }
     if (this.orbitFx) { this.orbitFx.t += dt; if (this.orbitFx.t > this.orbitFx.dur) this.orbitFx = null; }
     if (this.action && this.action.flourish) Looks.tickFlourish(this, game, dt, this.weaponPt);
@@ -438,6 +452,12 @@ class Player extends Hero {
     ctx.globalAlpha = alpha;
     this.aura(ctx, x, y);
     const id = Looks.current(this), look = Looks.BY_ID[id];
+    if (this.mounted) {
+      const rrow = this.rideFace > 0 ? 11 : 9;
+      Mounts.drawEntity(ctx, cam, this, (g, fx, fy) => { g.imageSmoothingEnabled = false; Looks.drawComposite(g, this.sheet, id, rrow, 0, fx, fy, 1, { flash: this.flash, t: now }); });
+      this.weaponPt = null; ctx.globalAlpha = 1;
+      return;
+    }
     const pt = Looks.drawComposite(ctx, this.sheet, id, row, col, x, y, this.scale, { flash: this.flash, t: now });
     this.weaponPt = pt ? { cx: pt.cx + cam.x, cy: pt.cy + cam.y, tx: pt.tx + cam.x, ty: pt.ty + cam.y } : null;
     // weapon trail during swings and flourishes
@@ -471,6 +491,7 @@ class Player extends Hero {
     }
     ctx.globalAlpha = 1;
   }
+  get headY() { return this.mounted ? this.y - (this.rideTop || 90) : this.y - 58 * this.scale; }
   aura(ctx, x, y) {
     if (!this.s.card) return;
     const g = D.CARD_BY_ID[this.s.card].grade;
