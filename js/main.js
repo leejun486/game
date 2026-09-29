@@ -275,6 +275,7 @@ const Game = {
   function start(save) {
     U.audio();
     Game.player = new Player(save);
+    Pets.spawn(Game);
     const f = World.findFree(Game.player.x, Game.player.y, 16);
     Game.player.x = f.x; Game.player.y = f.y;
     Game.started = true;
@@ -384,6 +385,7 @@ const Game = {
     else if (k === 'y') UI.open('transcend');
     else if (k === 'p') UI.open('pass');
     else if (k === 'v') UI.open('weaponlook');
+    else if (k === 'n') UI.open('pet');
     else if (k === 'o') UI.open('bosstime');
     else if (k === 'tab') { e.preventDefault(); UI.open('menu'); }
   });
@@ -429,6 +431,7 @@ const Game = {
       if (p.talkAfterNav && !p.moveTo) { p.talkTo = p.talkAfterNav; p.talkAfterNav = null; }
     }
     Dungeon.update(Game, dt);
+    if (Game.pet) Game.pet.update(dt, Game);
     Game.updateDrops(dt);
     for (const m of Game.monsters) m.update(dt, Game);
     for (const n of Game.npcs) { n.lookAt = p; n.update(dt); }
@@ -507,6 +510,7 @@ const Game = {
     for (const n of Game.npcs) if (inView(n)) ents.push(n);
     for (const b of Game.bots) if (inView(b)) ents.push(b);
     if (Game.player) ents.push(Game.player);
+    if (Game.pet) ents.push(Game.pet);
     for (const e of ents) vis.push({ y: e.y, ent: e });
     vis.sort((a, b) => a.y - b.y);
     for (const v of vis) {

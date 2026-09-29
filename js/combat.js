@@ -242,7 +242,7 @@ const Combat = (() => {
   // ---------------------------------------------------------------- effects
   function makeFx(type, x, y, o = {}) {
     const dur = { spark: 0.25, slash: 0.22, bigslash: 0.35, doom: 0.5, whirl: 0.45, explode: 0.55, ice: 0.6, meteor: 1.25, rain: 0.9,
-      heal: 1.0, buff: 0.9, levelup: 1.8, teleport: 0.8, tpcast: 1.0, tparrive: 0.75, mote: 0.7, glint: 0.45, rune: 1.2, burst: 0.3, loot: 0.9 }[type] || 0.5;
+      heal: 1.0, buff: 0.9, levelup: 1.8, teleport: 0.8, tpcast: 1.0, tparrive: 0.75, mote: 0.7, glint: 0.45, rune: 1.2, breath: 0.5, petbolt: 0.35, burst: 0.3, loot: 0.9 }[type] || 0.5;
     return Object.assign({ type, x, y, t: 0, dur }, o);
   }
   function updateFx(game, dt) {
@@ -355,6 +355,31 @@ const Combat = (() => {
           const a = i * 2.4, rr = 20;
           ctx.fillRect(x + Math.cos(a) * rr * Math.sin(i + k * 3), y - 10 - ((k * 70 + i * 9) % 70), 3, 3);
         }
+        break;
+      }
+      case 'breath': {
+        // cone of fire from (x,y) toward f.to
+        const tx = f.to[0] - cam.x, ty = f.to[1] - cam.y;
+        const a = Math.atan2(ty - y, tx - x), L = Math.hypot(tx - x, ty - y) * Math.min(1, k * 2.5);
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.save(); ctx.translate(x, y); ctx.rotate(a);
+        const gr = ctx.createLinearGradient(0, 0, L, 0);
+        gr.addColorStop(0, hexA('#fff4c0', 0.95 * (1 - k))); gr.addColorStop(0.35, hexA(f.color, 0.85 * (1 - k))); gr.addColorStop(1, hexA(f.color, 0));
+        ctx.fillStyle = gr;
+        ctx.beginPath(); ctx.moveTo(0, -3); ctx.lineTo(L, -L * 0.28); ctx.quadraticCurveTo(L * 1.1, 0, L, L * 0.28); ctx.lineTo(0, 3); ctx.closePath(); ctx.fill();
+        for (let i = 0; i < 8; i++) { const d = ((f.t * 3 + i * 0.13) % 1) * L; ctx.fillStyle = hexA('#ffe08a', 1 - k); ctx.fillRect(d, Math.sin(i * 7 + f.t * 20) * d * 0.2, 3, 3); }
+        ctx.restore();
+        break;
+      }
+      case 'petbolt': {
+        const tgt = f.to;
+        const tx = tgt.x - cam.x, ty = tgt.y - 26 - cam.y;
+        const bx = U.lerp(x, tx, k), by = U.lerp(y, ty, k) - Math.sin(k * Math.PI) * 30;
+        ctx.globalCompositeOperation = 'lighter';
+        const r = f.big ? 16 : 9;
+        const gr = ctx.createRadialGradient(bx, by, 0, bx, by, r);
+        gr.addColorStop(0, '#fff'); gr.addColorStop(0.35, hexA(f.color, 0.95)); gr.addColorStop(1, hexA(f.color, 0));
+        ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(bx, by, r, 0, Math.PI * 2); ctx.fill();
         break;
       }
       case 'rune': {
@@ -475,7 +500,22 @@ const Combat = (() => {
     ctx.restore();
   }
 
-  return { floatText, heroHit, monsterHit, shoot, updateProjectiles, drawProjectile, castSkill, makeFx, updateFx, drawFx, drawFloater, damageMonster };
+  // damage dealt by the player's pet; rewards and aggro go to the player
+  function petHit(game, mon, mult, color) {
+    const p = game.player;
+    if (!mon || mon.dead || !p) return 0;
+    const raw = p.stats.atk * mult * U.rand(0.9, 1.1);
+    const crit = Math.random() * 100 < p.stats.crit;
+    const dmg = Math.max(1, Math.round(Math.max(raw * 0.2, raw * (crit ? 1.6 : 1) - mon.def_ * 0.5)));
+    mon.hp -= dmg; mon.flash = 0.12;
+    mon.damagedBy.set('player', (mon.damagedBy.get('player') || 0) + dmg);
+    if (!mon.target) mon.aggroOn(p);
+    game.floaters.push({ text: String(dmg), x: mon.x + U.rand(-14, 14), y: mon.headY + 4, t: 0, color: crit ? '#ffdb4d' : color, big: false });
+    if (mon.hp <= 0) kill(game, mon, p);
+    return dmg;
+  }
+
+  return { floatText, heroHit, monsterHit, shoot, petHit, updateProjectiles, drawProjectile, castSkill, makeFx, updateFx, drawFx, drawFloater, damageMonster };
 })();
 
 // ---------------------------------------------------------------- quests

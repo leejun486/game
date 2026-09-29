@@ -251,20 +251,19 @@ D.CARD_MAX_LV = 10;
 // type: talk(npc) | kill(monster,n) | level(n) | equipCard | enchant(n) | killAny(n)
 D.QUESTS = [
   { title: '1. 모험의 시작', desc: '잡화 상인 노바와 대화', type: 'talk', npc: 'nova', reward: { gold: 500, items: { hp_s: 20 } } },
-  { title: '2. 초원의 위협', desc: '고블린 처치', type: 'kill', m: 'goblin', n: 10, reward: { gold: 1000, items: { hp_s: 20, tp_town: 3 } } },
-  { title: '3. 초월의 힘', desc: '초월 카드 장착하기', type: 'equipCard', reward: { items: { ticket: 3 }, dia: 100 } },
-  { title: '4. 늑대 사냥', desc: '늑대인간 처치', type: 'kill', m: 'wolfman', n: 15, reward: { gold: 2000, items: { sc_weapon: 2 } } },
-  { title: '5. 강화의 길', desc: '무기를 +1 이상 강화', type: 'enchant', n: 1, reward: { gold: 3000, items: { sc_armor: 1 } } },
-  { title: '6. 북부의 멧돼지', desc: '멧돼지 전사 처치', type: 'kill', m: 'boarman', n: 20, reward: { gold: 4000, items: { hp_m: 20, sc_armor: 2 } } },
-  { title: '7. 성장하는 영웅', desc: '레벨 10 달성', type: 'level', n: 10, reward: { dia: 300, items: { ticket: 2 } } },
-  { title: '8. 망자의 묘지', desc: '굶주린 좀비 처치', type: 'kill', m: 'zombie', n: 20, reward: { gold: 6000, items: { hp_m: 30 } } },
-  { title: '9. 뼈의 군대', desc: '해골 전사 처치', type: 'kill', m: 'skeleton', n: 25, reward: { gold: 8000, items: { sc_weapon: 2 } } },
-  { title: '10. 피의 군주', desc: '뱀파이어 군주 처치', type: 'kill', m: 'vampire', n: 1, reward: { dia: 500, items: { ticket: 5 } } },
-  { title: '11. 숙련된 모험가', desc: '레벨 20 달성', type: 'level', n: 20, reward: { dia: 300, gold: 10000 } },
-  { title: '12. 오크 요새 공략', desc: '오크 전사 처치', type: 'kill', m: 'orc', n: 30, reward: { gold: 12000, items: { hp_l: 20 } } },
-  { title: '13. 늪지의 사냥꾼', desc: '리자드맨 처치', type: 'kill', m: 'lizardman', n: 30, reward: { gold: 15000, items: { sc_weapon: 3 } } },
-  { title: '14. 뒤틀린 기운', desc: '흉포한 트롤 처치', type: 'kill', m: 'troll', n: 140, reward: { dia: 800, items: { ticket: 5 } } },
-  { title: '15. 미궁의 왕', desc: '미노타우르스 킹 처치', type: 'kill', m: 'minotaur', n: 1, reward: { dia: 1500, items: { ticket: 10 } } },
+  { title: '2. 초원의 위협', desc: '고블린 처치', type: 'kill', m: 'goblin', n: 10, reward: { gold: 1000, dia: 100, items: { hp_s: 20, tp_town: 3, ticket: 3 } } },
+  { title: '3. 늑대 사냥', desc: '늑대인간 처치', type: 'kill', m: 'wolfman', n: 15, reward: { gold: 2000, items: { sc_weapon: 2 } } },
+  { title: '4. 강화의 길', desc: '무기를 +1 이상 강화', type: 'enchant', n: 1, reward: { gold: 3000, items: { sc_armor: 1 } } },
+  { title: '5. 북부의 멧돼지', desc: '멧돼지 전사 처치', type: 'kill', m: 'boarman', n: 20, reward: { gold: 4000, items: { hp_m: 20, sc_armor: 2 } } },
+  { title: '6. 성장하는 영웅', desc: '레벨 10 달성', type: 'level', n: 10, reward: { dia: 300, items: { ticket: 2 } } },
+  { title: '7. 망자의 묘지', desc: '굶주린 좀비 처치', type: 'kill', m: 'zombie', n: 20, reward: { gold: 6000, items: { hp_m: 30 } } },
+  { title: '8. 뼈의 군대', desc: '해골 전사 처치', type: 'kill', m: 'skeleton', n: 25, reward: { gold: 8000, items: { sc_weapon: 2 } } },
+  { title: '9. 피의 군주', desc: '뱀파이어 군주 처치', type: 'kill', m: 'vampire', n: 1, reward: { dia: 500, items: { ticket: 5 } } },
+  { title: '10. 숙련된 모험가', desc: '레벨 20 달성', type: 'level', n: 20, reward: { dia: 300, gold: 10000 } },
+  { title: '11. 오크 요새 공략', desc: '오크 전사 처치', type: 'kill', m: 'orc', n: 30, reward: { gold: 12000, items: { hp_l: 20 } } },
+  { title: '12. 늪지의 사냥꾼', desc: '리자드맨 처치', type: 'kill', m: 'lizardman', n: 30, reward: { gold: 15000, items: { sc_weapon: 3 } } },
+  { title: '13. 뒤틀린 기운', desc: '흉포한 트롤 처치', type: 'kill', m: 'troll', n: 140, reward: { dia: 800, items: { ticket: 5 } } },
+  { title: '14. 미궁의 왕', desc: '미노타우르스 킹 처치', type: 'kill', m: 'minotaur', n: 1, reward: { dia: 1500, items: { ticket: 10 } } },
 ];
 D.DAILY_QUEST = { title: '일일 토벌', desc: '아무 몬스터 처치', type: 'killAny', n: 100, reward: { dia: 100, gold: 5000 } };
 

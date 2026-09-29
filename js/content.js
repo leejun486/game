@@ -76,6 +76,8 @@ const Content = (() => {
     s.guild = s.guild || '';
     s.dungeon = s.dungeon || { day: '', used: 0, clears: 0 };
     s.bossKills = s.bossKills || 0;
+    // v2 quest list removed the old #3 (초월 카드 장착) quest: shift saves past it
+    if (!s.qv) { if (s.quest > 2) s.quest--; else if (s.quest === 2) s.qprog = 0; s.qv = 2; }
   }
   // extra stats from collections + guild, consumed by Player.recalc
   function bonuses(p) {

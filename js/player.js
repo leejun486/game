@@ -7,6 +7,7 @@ class Player extends Hero {
     Content.migrate(save);
     this.s = save; // persistent data
     Looks.migrate(this);
+    Pets.migrate(this);
     this.idleT = 0; this.nextFlourish = 3; this.trail = []; this.moteT = 0;
     this.radius = 14;
     this.skillCd = {}; this.buffs = [];
@@ -28,7 +29,7 @@ class Player extends Hero {
       ],
       equip: { weapon: 1, armor: 2, ring: null },
       cards: {}, card: null,
-      quest: 0, qprog: 0, daily: { day: '', prog: 0, done: false },
+      quest: 0, qprog: 0, qv: 2, daily: { day: '', prog: 0, done: false },
       autoPotion: true, kills: 0, playTime: 0,
     };
     return s;
@@ -139,6 +140,7 @@ class Player extends Hero {
     for (const b of Content.bonuses(this)) add(b);
     // weapon look: equip + collection bonus
     for (const b of Looks.bonuses(this)) add(b);
+    for (const b of Pets.bonuses(this)) add(b);
     // buffs
     let atkPct = 0;
     for (const b of this.buffs) { add({ atkSpd: b.atkSpd || 0, moveSpd: b.moveSpd || 0 }); atkPct += b.atkPct || 0; }

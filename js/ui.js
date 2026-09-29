@@ -239,7 +239,7 @@ const UI = (() => {
     const grid = [
       ['character', 'character', '캐릭터'], ['stats', 'star', '잠재력'], ['skills', 'blade', '전투 특성'], ['transcend', 'transcend', '초월', 1], ['weaponlook', 'sword', '무기 외형'], ['collection', 'collection', '결속'], ['skin', 'wings', '스킨'],
       ['teleport', 'teleport', '권능'], ['summon', 'summon', '서판 조합'], ['quests', 'quest', '퀘스트', 1], ['event', 'bell', '의뢰'], ['craft', 'craft', '제작'], ['achievement', 'achievement', '업적', 1], ['collection', 'spellbook', '수집', 1],
-      ['guild', 'guild', '길드', 1], ['ranking', 'ranking', '순위'], ['exchange', 'exchange', '관계'], ['exchange', 'trade', '거래소'], ['pvp', 'pvp', 'PvP'], ['ranking', 'skull', '원수'], ['auto', 'auto', 'AI 모드'],
+      ['pet', 'pet', '펫', 1], ['guild', 'guild', '길드', 1], ['ranking', 'ranking', '순위'], ['exchange', 'exchange', '관계'], ['exchange', 'trade', '거래소'], ['pvp', 'pvp', 'PvP'], ['ranking', 'skull', '원수'], ['auto', 'auto', 'AI 모드'],
       ['map', 'compass', '위치 저장'],
     ];
     el.innerHTML = `
@@ -531,7 +531,7 @@ const UI = (() => {
       <div class="list-row"><span>운영자 모드 (F2)</span><button class="gold-btn" data-do="gm">열기</button></div>
       <div class="list-row"><span>게임 저장</span><button class="dark-btn" data-do="save">저장</button></div>
       <div class="list-row"><span>저장 삭제 후 처음부터</span><button class="red-btn" data-do="reset">초기화</button></div>
-      <p class="sub" style="color:#888;font-size:12px;line-height:1.6">조작: 클릭 이동/공격 · WASD 이동 · 1~4 스킬 · 5~8 아이템 · Space 근처 적 공격 · G AI 모드 · Shift 질주 · I 인벤토리 · K 스킬 · U 상점 · C 캐릭터 · J 퀘스트 · Y 초월 · V 무기 외형 · P 시즌 패스 · O 보스 정보 · T 순간이동 · B 귀환 · M 지도 · Enter 채팅 · 마우스 휠 줌</p>`;
+      <p class="sub" style="color:#888;font-size:12px;line-height:1.6">조작: 클릭 이동/공격 · WASD 이동 · 1~4 스킬 · 5~8 아이템 · Space 근처 적 공격 · G AI 모드 · Shift 질주 · I 인벤토리 · K 스킬 · U 상점 · C 캐릭터 · J 퀘스트 · Y 초월 · V 무기 외형 · N 펫 · P 시즌 패스 · O 보스 정보 · T 순간이동 · B 귀환 · M 지도 · Enter 채팅 · 마우스 휠 줌</p>`;
     body.onclick = (e) => {
       const b = e.target.closest('[data-do]'); if (!b) return;
       const a = b.dataset.do;
