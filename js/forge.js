@@ -125,7 +125,7 @@ const Forge = (() => {
 
   // ---------------------------------------------------------------- the show
   // pre-rendered clips per result tier; a tier without a clip (or a clip that fails to load) uses the canvas show
-  const VIDEOS = { 1: 'assets/forge/g1.mp4', 2: 'assets/forge/g2.mp4' };
+  const VIDEOS = { 1: 'assets/forge/g1.mp4', 2: 'assets/forge/g2.mp4', 3: 'assets/forge/g3.mp4' };
   const tier = (grade) => Math.max(1, grade); // 일반 and 고급 share one clip
 
   // host: element to cover (the summon stage); grade: best grade in the pull; onDone after it ends
