@@ -404,11 +404,6 @@ class Bot extends Hero {
     super.update(dt);
     this.inTown = World.zoneAt(this.x, this.y).safe;
     this.atkCd -= dt; this.stateT -= dt; this.chatT -= dt;
-    if (this.chatT <= 0) {
-      this.chatT = U.rand(40, 140);
-      const msg = U.pick(D.BOT_CHAT);
-      game.say(this, msg);
-    }
     if (this.hp < this.maxHp) this.hp = Math.min(this.maxHp, this.hp + this.maxHp * 0.04 * dt);
     if (this.hp <= this.maxHp * 0.15) { this.hp = this.maxHp; this.state = 'town'; this.stateT = U.rand(20, 40); this.teleport(D.TOWN.x + U.rand(-300, 300), D.TOWN.y + U.rand(-300, 300), game); return; }
     if (this.stateT <= 0) {

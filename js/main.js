@@ -293,6 +293,7 @@ const Game = {
     const f = World.findFree(Game.player.x, Game.player.y, 16);
     Game.player.x = f.x; Game.player.y = f.y;
     Game.started = true;
+    BotChat.init();
     Game.snapCamera();
     document.getElementById('title-screen').classList.add('hidden');
     document.getElementById('hud').classList.remove('hidden');
@@ -451,6 +452,7 @@ const Game = {
     Dungeon.update(Game, dt);
     Skills.update(Game, dt);
     VFX.update(dt);
+    BotChat.update(dt);
     if (Game.pet) Game.pet.update(dt, Game);
     Game.updateDrops(dt);
     for (const m of Game.monsters) m.update(dt, Game);

@@ -181,6 +181,7 @@ class Player extends Hero {
       U.sfx.level();
       UI.toast(`레벨 업! Lv.${this.s.lv}`, '#ffe38a');
       UI.chat(`축하합니다! 레벨 ${this.s.lv}이(가) 되었습니다. 스킬 포인트 +1 (K)`, 'sys');
+      if (this.s.lv % 5 === 0) BotChat.onEvent(`${this.name}가 레벨 ${this.s.lv}을(를) 달성했다`, [`${this.name}님 ${this.s.lv}렙 ㅊㅋ`, 'ㅊㅊ', `벌써 ${this.s.lv}렙이네`]);
       for (const id of this.classDef.skills) if (D.SKILLS[id].unlock === this.s.lv) UI.toast(`새 스킬 해금: ${D.SKILLS[id].name}`, '#ffe38a');
       this.autoEquipBest();
       Quests.check(game);

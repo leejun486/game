@@ -116,6 +116,12 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
   background: rgba(0,0,0,.55); border: 1px solid var(--line); color: var(--text); border-radius: 3px;
   font-family: inherit; opacity: .6;
 }
+.chat-row { display: flex; gap: 4px; margin-top: 4px; pointer-events: auto; }
+.chat-row #chat-input { margin-top: 0; flex: 1; }
+#chat-ai { width: 32px; border: 1px solid var(--line); background: rgba(0,0,0,.55); border-radius: 3px; cursor: pointer; font-size: 15px; opacity: .7; filter: grayscale(.6); }
+#chat-ai.on { opacity: 1; filter: none; border-color: var(--gold-2); box-shadow: 0 0 8px rgba(233,190,110,.35); }
+#chat-ai.busy { animation: aiPulse 0.9s ease-in-out infinite; }
+@keyframes aiPulse { 50% { box-shadow: 0 0 14px rgba(160,210,255,.8); } }
 #chat-input:focus { outline: none; opacity: 1; border-color: var(--gold-2); }
 
 #announce {

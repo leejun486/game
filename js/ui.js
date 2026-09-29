@@ -376,11 +376,13 @@ const UI = (() => {
       U.sfx.success();
       toast(`${def.name}이(가) 한 순간 ${def.kind === 'weapon' ? '파랗게' : '은색으로'} 빛납니다. (+${it.en})`, '#9fe0ff');
       chat(`+${it.en} ${def.name} 강화 성공!`, 'sys');
+      if (it.en >= 6) BotChat.onEvent(`${p.name}가 무기 강화로 +${it.en} ${def.name}을(를) 만드는 데 성공했다`, ['ㅊㅋㅊㅋ', `+${it.en} ㄷㄷ`, `${p.name}님 부럽다`]);
       if (it.en >= 7) announce(`<b>${esc(p.name)}</b>님이 <em>+${it.en} ${esc(def.name)}</em> 강화에 성공했습니다!`);
     } else {
       U.sfx.fail();
       toast(`${def.name}이(가) 강렬하게 빛나더니 증발되었습니다...`, '#ff8a80');
       chat(`+${cur} ${def.name} 강화 실패 (증발)`, 'warn');
+      if (cur >= 5) BotChat.onEvent(`${p.name}의 +${cur} ${def.name}이(가) 강화에 실패해서 증발했다`, ['헐..', 'ㅠㅠ 힘내요', `+${cur}에서 날아갔네`]);
       p.removeItem(it.uid); invSel = null;
     }
     p.recalc();
@@ -677,7 +679,7 @@ const UI = (() => {
       e.stopPropagation();
       if (e.key === 'Enter') {
         const v = input.value.trim();
-        if (v) game.say(game.player, v);
+        if (v) { game.say(game.player, v); BotChat.onPlayerSay(v); }
         input.value = ''; input.blur();
       } else if (e.key === 'Escape') input.blur();
     });

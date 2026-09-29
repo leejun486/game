@@ -67,6 +67,7 @@ const Combat = (() => {
     const expMul = diff > 8 ? Math.max(0.1, 1 - (diff - 8) * 0.1) : 1;
     const exp = Math.round(d.exp * expMul);
     p.gainExp(exp, game);
+    if (d.boss) BotChat.onEvent(`${p.name}가 보스 ${d.name}을(를) 처치했다`, [`${d.name} 잡았다고?`, `${p.name}님 ㄷㄷ`, '드랍 뭐 나왔어요?']);
     floatText(game, mon, `EXP +${U.fmt(exp)}`, '#7cf29a');
     const gold = U.randi(d.gold[0], d.gold[1]);
     p.s.gold += gold;
