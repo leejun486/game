@@ -58,6 +58,40 @@ class Entity {
     return false;
   }
   face(o) { this.dir = dirFromVec(o.x - this.x, o.y - this.y); }
+  // move toward a (possibly moving) goal; follow an A* route when the straight line is blocked
+  goTo(tx, ty, speed, dt, stop, maxNodes) {
+    const d = Math.hypot(tx - this.x, ty - this.y);
+    if (d <= stop) { this.moving = false; this.route = null; return true; }
+    const now = this.clock || 0;
+    const stale = !this.routeGoal || Math.hypot(this.routeGoal.x - tx, this.routeGoal.y - ty) > 80 || now - this.routeT > 1.2;
+    if (Nav.ready && (this.forceRoute || (stale && now - (this.routeCheck || 0) > (this.navPriority ? 0.25 : 0.5)))) {
+      this.routeCheck = now;
+      const direct = !this.forceRoute && (d < 80 || Nav.lineClear(this.x, this.y, tx, ty, Math.min(14, this.radius)));
+      if (direct) { this.route = null; this.routeFailed = false; }
+      else {
+        const r = this.navPriority ? Nav.find(this.x, this.y, tx, ty) : Nav.findBudget(this.x, this.y, tx, ty, maxNodes || 20000);
+        if (r !== undefined) { this.route = r; this.routeFailed = !r; }
+      }
+      if (direct || this.route !== undefined) { this.routeGoal = { x: tx, y: ty }; this.routeT = now; this.forceRoute = false; }
+    }
+    if (this.route && this.route.length) {
+      const n = this.route[0];
+      if (this.moveToward(n.x, n.y, speed, dt, 6)) this.route.shift();
+      this.moving = true;
+      return false;
+    }
+    return this.moveToward(tx, ty, speed, dt, stop);
+  }
+  // accumulate seconds spent pushing against something; forces a re-route after ~0.45s
+  trackStuck(dt, speed) {
+    const moved = Math.hypot(this.x - (this.lastX ?? this.x), this.y - (this.lastY ?? this.y));
+    this.lastX = this.x; this.lastY = this.y;
+    if (!this.moving || this.action) { this.stuckT = Math.max(0, (this.stuckT || 0) - dt * 2); return this.stuckT; }
+    if (moved < speed * dt * 0.3) this.stuckT = (this.stuckT || 0) + dt; else this.stuckT = Math.max(0, (this.stuckT || 0) - dt);
+    if (this.stuckT > 0.45 && !this.rerouted) { this.forceRoute = true; this.rerouted = true; }
+    if (this.stuckT === 0) this.rerouted = false;
+    return this.stuckT;
+  }
   // start an action animation; onHit fires at the anim's hit frame
   act(anim, dur, onHit, stretch = false) {
     anim = animFor(this.sheet, anim);
@@ -92,6 +126,7 @@ class Entity {
     return { row: w.row + this.dir, col: 0 };
   }
   update(dt) {
+    this.clock = (this.clock || 0) + dt;
     if (this.moving) this.walkT += dt * this.speedMul;
     if (this.flash > 0) this.flash -= dt;
     if (this.fadeIn > 0) this.fadeIn -= dt;
@@ -191,14 +226,23 @@ class Monster extends Entity {
     }
     if (this.action) return;
     if (this.returning) {
-      if (this.moveToward(this.home.x, this.home.y, this.def.spd * 1.8, dt, 10)) { this.returning = false; this.hp = this.maxHp; }
+      const sp = this.def.spd * 1.8;
+      if (this.goTo(this.home.x, this.home.y, sp, dt, 10, 20000)) { this.returning = false; this.hp = this.maxHp; }
+      else if (this.trackStuck(dt, sp) > 3) { this.x = this.home.x; this.y = this.home.y; this.returning = false; this.hp = this.maxHp; this.stuckT = 0; }
       return;
     }
     if (this.target) {
       const d = U.dist(this, this.target);
       const reach = this.def.range + (this.target.radius || 14);
-      if (d > reach) this.moveToward(this.target.x, this.target.y, this.def.spd * this.speedMul, dt, reach - 6);
-      else {
+      if (d > reach) {
+        const sp = this.def.spd * this.speedMul;
+        this.goTo(this.target.x, this.target.y, sp, dt, reach - 6);
+        // can't reach the target (wall, water): give up and walk home
+        if (this.trackStuck(dt, sp) > 2.5 || (this.routeFailed && d > 200)) {
+          if (!this.inDungeon) { this.target = null; this.returning = true; }
+          this.stuckT = 0; this.routeFailed = false;
+        }
+      } else {
         this.moving = false; this.face(this.target);
         if (this.atkCd <= 0) {
           this.atkCd = this.def.boss ? 1.6 : 1.5;
@@ -212,12 +256,12 @@ class Monster extends Entity {
     // wander
     this.wanderT -= dt;
     if (this.wanderTo) {
-      if (this.moveToward(this.wanderTo.x, this.wanderTo.y, this.def.spd * 0.5, dt, 6)) this.wanderTo = null;
+      if (this.moveToward(this.wanderTo.x, this.wanderTo.y, this.def.spd * 0.5, dt, 6) || this.trackStuck(dt, this.def.spd * 0.5) > 1) { this.wanderTo = null; this.stuckT = 0; }
     } else if (this.wanderT <= 0) {
       this.wanderT = U.rand(2, 6);
       const a = Math.random() * Math.PI * 2, r = U.rand(40, 160);
       const nx = this.x + Math.cos(a) * r, ny = this.y + Math.sin(a) * r;
-      if (Math.hypot(nx - this.home.x, ny - this.home.y) < this.spawn.r * D.TILE + 50) this.wanderTo = { x: nx, y: ny };
+      if (Math.hypot(nx - this.home.x, ny - this.home.y) < this.spawn.r * D.TILE + 50 && Nav.lineClear(this.x, this.y, nx, ny, 12)) this.wanderTo = { x: nx, y: ny };
     }
   }
   drawOverlay(ctx, cam, isTarget) {
@@ -304,6 +348,7 @@ class Bot extends Hero {
     this.stats = { atk: c.base.atk + c.grow.atk * this.lv + this.lv, atkSpd: U.randi(0, 40), castSpd: U.randi(0, 40), crit: 5, def: 10 };
     this.state = 'town'; this.stateT = U.rand(5, 50); this.wanderTo = null; this.idleT = 0;
     this.chatT = U.rand(10, 80);
+    this.ignore = {};
   }
   pickHuntSpawn() {
     const ok = D.SPAWNS.filter((s) => !D.MONSTERS[s.m].boss && D.MONSTERS[s.m].lv <= this.lv + 3);
@@ -349,14 +394,17 @@ class Bot extends Hero {
         this.target = null;
         let bd = 520;
         for (const m of game.monsters) {
-          if (m.dead || m.def.boss && this.lv < m.lv) continue;
+          if (m.dead || m.def.boss && this.lv < m.lv || this.ignore[m.id] > game.time) continue;
           const d = U.dist(this, m);
           if (d < bd) { bd = d; this.target = m; }
         }
       }
       if (this.target) {
         const range = this.classDef.range + this.target.radius;
-        if (U.dist(this, this.target) > range) this.moveToward(this.target.x, this.target.y, 150, dt, range - 8);
+        if (U.dist(this, this.target) > range) {
+          this.goTo(this.target.x, this.target.y, 150, dt, range - 8);
+          if (this.trackStuck(dt, 150) > 2 || this.routeFailed) { this.ignore[this.target.id] = game.time + 10; this.target = null; this.stuckT = 0; this.routeFailed = false; }
+        }
         else if (this.atkCd <= 0) { this.moving = false; this.basicAttack(this.target, game); }
         else this.moving = false;
         return;
@@ -364,7 +412,8 @@ class Bot extends Hero {
     }
     // wander / idle
     if (this.wanderTo) {
-      if (this.moveToward(this.wanderTo.x, this.wanderTo.y, 120, dt, 8)) { this.wanderTo = null; this.idleT = U.rand(1, 6); }
+      if (this.goTo(this.wanderTo.x, this.wanderTo.y, 120, dt, 8, 4000)) { this.wanderTo = null; this.idleT = U.rand(1, 6); }
+      else if (this.trackStuck(dt, 120) > 1.5 || this.routeFailed) { this.wanderTo = null; this.idleT = 0.5; this.stuckT = 0; this.routeFailed = false; }
     } else {
       this.idleT -= dt;
       if (this.idleT <= 0) {

@@ -419,6 +419,7 @@ const Game = {
   let hudT = 0, miniT = 0, badgeT = 0;
   function update(dt) {
     Game.time += dt;
+    Nav.frame();
     const p = Game.player;
     if (p) {
       let kx = 0, ky = 0;

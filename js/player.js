@@ -16,7 +16,7 @@ class Player extends Hero {
     this.moveTo = null; this.waypoints = []; this.talkTo = null;
     this.auto = false; this.combatT = 0; this.potionCd = 0; this.sprintT = 0; this.sprintCd = 0;
     this.keys = { x: 0, y: 0 };
-    this.clock = 0; this.ignore = {}; this.lastX = this.x; this.lastY = this.y; this.stuckT = 0;
+    this.navPriority = true; this.ignore = {}; this.lastX = this.x; this.lastY = this.y; this.stuckT = 0;
     this.recalc();
     this.hp = save.hp ? Math.min(save.hp, this.maxHp) : this.maxHp;
     this.mp = save.mp ? Math.min(save.mp, this.maxMp) : this.maxMp;
@@ -270,27 +270,6 @@ class Player extends Hero {
     this.waypoints.push({ x, y });
     this.moveTo = this.waypoints.shift();
   }
-  // move toward a (possibly moving) goal, following an A* route when the straight line is blocked
-  goTo(tx, ty, speed, dt, stop) {
-    const d = Math.hypot(tx - this.x, ty - this.y);
-    if (d <= stop) { this.moving = false; this.route = null; return true; }
-    const now = this.clock;
-    const stale = !this.routeGoal || Math.hypot(this.routeGoal.x - tx, this.routeGoal.y - ty) > 80 || now - this.routeT > 1.2;
-    if (this.forceRoute || (stale && now - (this.routeCheck || 0) > 0.25)) {
-      this.routeCheck = now;
-      const direct = !this.forceRoute && (d < 80 || Nav.lineClear(this.x, this.y, tx, ty));
-      this.route = direct ? null : Nav.find(this.x, this.y, tx, ty);
-      this.routeGoal = { x: tx, y: ty }; this.routeT = now; this.forceRoute = false;
-      this.routeFailed = !direct && !this.route;
-    }
-    if (this.route && this.route.length) {
-      const n = this.route[0];
-      if (this.moveToward(n.x, n.y, speed, dt, 6)) this.route.shift();
-      this.moving = true;
-      return false;
-    }
-    return this.moveToward(tx, ty, speed, dt, stop);
-  }
   // call after movement each frame: detects being pinned against a wall
   checkStuck(dt, speed, game) {
     const moved = Math.hypot(this.x - this.lastX, this.y - this.lastY);
@@ -318,7 +297,6 @@ class Player extends Hero {
   update(dt, game) {
     super.update(dt);
     if (this.dead) return;
-    this.clock += dt;
     this.updateIdle(dt, game);
     this.move(dt, game);
     this.checkStuck(dt, this.curSpeed || 150, game);

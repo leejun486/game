@@ -89,5 +89,14 @@ const Nav = (() => {
     return out;
   }
 
-  return { build, find, lineClear, get ready() { return !!walk; } };
+  // A* calls for monsters/bots are rationed per frame so big fights stay smooth
+  // budget is counted in A* nodes; a search that could exceed what's left waits for the next frame
+  let budget = 0;
+  const frame = (n = 45000) => { budget = n; };
+  function findBudget(ax, ay, bx, by, maxNodes = 20000) {
+    if (budget < maxNodes) return undefined;
+    budget -= maxNodes;
+    return find(ax, ay, bx, by, maxNodes);
+  }
+  return { build, find, findBudget, frame, lineClear, get ready() { return !!walk; } };
 })();
