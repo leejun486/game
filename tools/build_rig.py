@@ -2,7 +2,7 @@
 """Bake animated field sprites from character turnaround art (front / side / back views).
 
 Usage:
-  python3 tools/build_rig.py            # writes assets/sprites/r_<cls>.png and assets/sprites/rig_meta.js
+  python3 tools/build_rig.py            # writes assets/sprites/r_<cls>(_fist).png and assets/sprites/rig_meta.js
   python3 tools/build_rig.py --preview out.png
 
 Each view is split into rigid parts (body, two arms, two legs) using the joint positions in RIG
@@ -31,6 +31,8 @@ FS = 128                 # output frame size
 WK = 2                   # working resolution multiplier
 CH = 96                  # character height in output pixels
 FEET = (64, 122)         # feet position inside an output frame
+TE = 0.5                 # elbow position along shoulder -> hand
+FIST = 30                # fist radius (source px) drawn over the weapon grip
 ROWS = [7, 7, 7, 7, 8, 8, 8, 8, 9, 9, 9, 9, 6, 6, 6, 6, 13, 13, 13, 13, 6]
 UPD, LEFT, DOWN, RIGHT = 0, 1, 2, 3
 
@@ -134,7 +136,18 @@ class View:
                     hole[y, xs.min():xs.max() + 1] |= m[y, xs.min():xs.max() + 1]
         self.body = Image.fromarray(diffuse_fill(body, hole) if hole.any() else body)
         part = lambda m: Image.fromarray(np.where(m[:, :, None], A, 0).astype(np.uint8))
+        # two-segment arms: upper arm turns at the shoulder, forearm at the elbow; the fist is also cut
+        # out on its own so it can be drawn over the weapon grip
         self.arm_imgs = [part(m) for m in self.arm_masks]
+        self.upper, self.fore, self.fist, self.elbows, self.rest = [], [], [], [], []
+        for (sh, hd), m in zip(self.arms, self.arm_masks):
+            _, tt = seg_dist(xx, yy, sh, hd)
+            el = (sh[0] + (hd[0] - sh[0]) * TE, sh[1] + (hd[1] - sh[1]) * TE)
+            self.upper.append(part(m & (tt < TE + 0.07)))
+            self.fore.append(part(m & (tt >= TE - 0.03)))
+            self.fist.append(part(m & (np.hypot(xx - hd[0], yy - hd[1]) < FIST * s)))
+            self.elbows.append(el)
+            self.rest.append((math.degrees(math.atan2(el[1] - sh[1], el[0] - sh[0])), math.degrees(math.atan2(hd[1] - el[1], hd[0] - el[0]))))
         self.leg_imgs = [part(m | t) for m, t in zip(self.leg_masks, self.leg_tuck)]
         self.W, self.H = W, H
         self.cx = cx
@@ -160,89 +173,95 @@ def rot_pt(p, pivot, ang, dx=0, dy=0):
 
 
 # ---------------------------------------------------------------- poses
+# Arms are posed by absolute direction (screen degrees: 0 forward/right, 90 down, 180 back/left, -90 up)
+# of the upper arm and the forearm, in the side view facing right; front/back views mirror as needed.
 class Pose:
     def __init__(self):
-        self.body = (0.0, 0.0, 0.0)       # (angle about the hips, dx, dy) in output px
-        self.arms = [0.0, 0.0]            # rotation per arm (deg, clockwise)
-        self.legs = [(0.0, 0.0), (0.0, 0.0)]  # (angle, lift) per leg
-        self.wpn = None                   # weapon angle (screen deg, 0 = right, -90 = up)
+        self.body = (0.0, 0.0, 0.0)            # (angle about the hips, dx, dy) in output px
+        self.arms = [None, None]               # per arm: (upper dir, forearm dir) or None = rest (+ swing)
+        self.swing = [0.0, 0.0]                # small rotation added to a resting arm
+        self.legs = [(0.0, 0.0), (0.0, 0.0)]   # (angle, lift) per leg
+        self.wpn = None                        # weapon direction
         self.draw = 0.0
         self.lie = 0.0
         self.kneel = 0.0
-
-
-def raise_sign(d, i):
-    """rotation sign that lifts arm i outward/up for view direction d"""
-    if d == DOWN:
-        return 1 if i == 0 else -1
-    if d == UPD:
-        return 1 if i == 0 else -1
-    return -1  # side view (facing right): negative swings the near arm forward/up
 
 
 def weapon_arm(d):
     return 0 if d in (DOWN, RIGHT) else 1  # front: viewer-left; back: viewer-right; side: near
 
 
+def mir(a):
+    return None if a is None else 180 - a
+
+
+# side view keyframes (facing right). front view uses FRONT tables; back view mirrors the front.
+SLASH_SIDE = [(80, 50, -35), (-115, 175, 115), (-95, -165, 160), (-15, 5, 10), (40, 60, 75), (70, 55, 35)]
+SLASH_FRONT = [(115, 95, -105), (-125, -60, -15), (-100, -35, -45), (165, 155, 155), (135, 120, 115), (118, 100, 95)]
+REST_WPN = {"sword": {RIGHT: 35, DOWN: 105, UPD: 75}, "bow": {RIGHT: -90, DOWN: -90, UPD: -90}, "staff": {RIGHT: -95, DOWN: -92, UPD: -88}}
+
+
 def pose_for(anim, d, i, kind):
     p = Pose()
     side = d == RIGHT
-    wa = weapon_arm(d) if not side else 0
+    wa = 0 if side else weapon_arm(d)
+    front = d == DOWN
+    back = d == UPD
+    fix = (lambda a: a) if not back else mir  # back view = mirrored front table on the other arm
     if anim == "walk":
         ph = (i - 1) / 8 * 2 * math.pi if i else 0.0
         sn = math.sin(ph) if i else 0.0
         p.body = (0, 0, -abs(sn) * 2.2 if i else 0)
         if side:
             p.legs = [(22 * sn, 0), (-22 * sn, 0)]
-            p.arms = [16 * sn, 0]
+            p.swing = [-14 * sn, 0]
         else:
             p.legs = [(0, max(0, sn) * 4), (0, max(0, -sn) * 4)]
-            p.arms = [4 * sn, 4 * sn]
+            p.swing = [4 * sn, 4 * sn]
             p.body = (1.5 * sn, 0, p.body[2])
-        p.wpn = {"sword": -60 if side else -75, "bow": -90, "staff": -95}[kind]
+        p.wpn = REST_WPN[kind][d] + (-6 * sn if kind == "sword" else 0)
         return p
     if anim == "slash":
         if side:
-            p.arms = [[20, 120, 160, 10, -80, -60][i], 0]
-            p.wpn = [-40, -150, -120, -10, 45, 35][i]
-            p.body = ([2, 5, 6, -4, -8, -5][i], [0, -1, -2, 2, 4, 3][i], 0)
-            p.legs = [([0, 0, -6, 10, 14, 12][i], 0), ([0, 0, 4, -10, -14, -12][i], 0)]
+            u, f, w = SLASH_SIDE[i]
+            p.body = ([2, 6, 7, -5, -8, -4][i], [0, -1, -2, 3, 4, 2][i], 0)
+            p.legs = [([0, 0, -6, 12, 16, 12][i], 0), ([0, 0, 4, -10, -14, -10][i], 0)]
         else:
-            s = raise_sign(d, wa)
-            lift = [15, 80, 130, 40, -10, 0][i]
-            p.arms[wa] = s * lift
-            base = -120 if d == DOWN else -60
-            p.wpn = base + (-1 if d == DOWN else 1) * [0, 30, 45, -60, -120, -130][i]
-            p.body = (s * [0, 2, 3, -2, -4, -3][i], 0, 0)
+            u, f, w = SLASH_FRONT[i]
+            u, f, w = fix(u), fix(f), fix(w)
+            p.body = ([0, 2, 3, -3, -4, -2][i] * (1 if front else -1), 0, 0)
+        p.arms[wa] = (u, f)
+        p.wpn = w
         return p
     if anim == "thrust":
         k = [0, 0.2, 0.45, 0.6, 0.9, 1.0, 0.7, 0.3][i]
         if side:
-            p.arms = [-80 * k, 0]
-            p.wpn = -95 + 40 * k
+            p.arms[0] = (90 - 80 * k, 60 - 70 * k)
+            p.wpn = -92 + 30 * k
             p.body = (-4 * k, 2 * k, 0)
         else:
-            p.arms[wa] = raise_sign(d, wa) * 60 * k
-            p.wpn = -92
+            u, f = 118 + 40 * k, 100 + 70 * k  # viewer-left arm lifts out to the side
+            p.arms[wa] = (fix(u), fix(f))
+            p.wpn = fix(-95 - 8 * k)
             p.body = (0, 0, -2 * k)
         return p
     if anim == "spellcast":
         k = [0, 0.35, 0.7, 1, 1, 1, 0.4][i]
         if side:
-            p.arms = [-125 * k, 0]
+            p.arms[0] = (90 - 150 * k, 60 - 145 * k)
         else:
-            p.arms = [raise_sign(d, 0) * 95 * k, raise_sign(d, 1) * 95 * k]
-        p.wpn = {"sword": -75, "bow": -90, "staff": -95}[kind]
+            p.arms = [(118 + 95 * k, 110 + 110 * k), (62 - 95 * k, 70 - 110 * k)]
+        p.wpn = REST_WPN[kind][d]
         p.body = (0, 0, -2 * k)
         return p
     if anim == "shoot":
         k = [0, 0.2, 0.4, 0.6, 0.8, 1, 1, 1, 1, 0.2, 0.1, 0, 0][i]
         up = min(1, i / 3) if i < 11 else 0.4
         if side:
-            p.arms = [-88 * up, 0]
+            p.arms[0] = (90 - 88 * up, 60 - 60 * up)
             p.body = (-2 * up, 0, 0)
         else:
-            p.arms[wa] = raise_sign(d, wa) * 50 * up
+            p.arms[wa] = (fix(118 + 40 * up), fix(100 + 55 * up))
         p.wpn = -90
         p.draw = k if i < 9 else 0
         return p
@@ -262,13 +281,13 @@ class Rig:
         self.views = {v: View(cls, v) for v in ("front", "side", "back")}
 
     def frame(self, anim, d, i):
-        """returns (Image FSxFS, meta dict)"""
+        """returns (body Image FSxFS, fist Image FSxFS, meta list)"""
         dd = RIGHT if d == LEFT else d
         v = self.views[{DOWN: "front", UPD: "back", RIGHT: "side"}[dd]]
         p = pose_for(anim, dd, i, self.kind)
         CW = FS * WK
         canvas = Image.new("RGBA", (CW, CW))
-        # place the view so its feet sit at FEET and its hips centre on x
+        fistc = Image.new("RGBA", (CW, CW))
         ox = FEET[0] * WK - v.cx
         oy = FEET[1] * WK - v.feet_y
         k = p.kneel
@@ -276,64 +295,68 @@ class Rig:
         bdx *= WK; bdy = (bdy + k * 10) * WK
         hipc = ((v.hips[0][0] + v.hips[-1][0]) / 2, v.hips[0][1])
 
-        def place(img, dx=0, dy=0):
-            canvas.alpha_composite(img, (int(round(ox + dx)), int(round(oy + dy))))
+        def place(c, img):
+            c.alpha_composite(img, (int(round(ox)), int(round(oy))))
 
-        def full(img):
-            c = Image.new("RGBA", (v.W, v.H)); c.alpha_composite(img); return c
-
-        # legs behind the body (far leg first); kneeling folds them up under the skirt
-        order = [0, 1]
-        for li in order:
+        for li in (0, 1):
             ang, lift = p.legs[li]
             img = v.leg_imgs[li]
             if k > 0:
                 img = rot_about(img, v.hips[li], 0, 0, -k * 26 * WK)
-                img = Image.fromarray(np.asarray(img))
             img = rot_about(img, v.hips[li], ang, 0, -lift * WK)
             if dd == RIGHT and li == 0:
                 arr = np.asarray(img).astype(np.float32); arr[:, :, :3] *= 0.82; img = Image.fromarray(arr.astype(np.uint8))
-            place(img, 0, 0 if k == 0 else 0)
-        # body (+ arms) rotate together about the hip centre
+            place(canvas, img)
         layer = Image.new("RGBA", (v.W, v.H))
-        arm_order = [0, 1] if len(v.arms) == 2 else [0]
-        hands = []
-        behind = []
-        for ai in arm_order:
-            ang = p.arms[ai]
-            sh, hd = v.arms[ai]
-            img = rot_about(v.arm_imgs[ai], sh, ang)
-            hand = rot_pt(hd, sh, ang)
-            hands.append(hand)
-            behind.append(img)
+        fl = Image.new("RGBA", (v.W, v.H))
         layer.alpha_composite(v.body)
-        for img in behind:
-            layer.alpha_composite(img)
-        layer = rot_about(layer, hipc, bang, bdx, bdy)
-        hands = [rot_pt(h, hipc, bang, bdx, bdy) for h in hands]
-        place(layer)
-        img = canvas
+        hands = []
         wa = 0 if dd == RIGHT else weapon_arm(dd)
+        for ai in range(len(v.arms)):
+            sh, hd = v.arms[ai]
+            el = v.elbows[ai]
+            ru, rf = v.rest[ai]
+            if p.arms[ai] is None:
+                du = df = p.swing[ai]
+            else:
+                du = p.arms[ai][0] - ru
+                df = p.arms[ai][1] - rf
+            # upper arm about the shoulder; forearm about the (moved) elbow
+            up = rot_about(v.upper[ai], sh, du)
+            el2 = rot_pt(el, sh, du)
+            fo = rot_about(v.fore[ai], el, df, el2[0] - el[0], el2[1] - el[1])
+            fi = rot_about(v.fist[ai], el, df, el2[0] - el[0], el2[1] - el[1])
+            hand = rot_pt(hd, el, df, el2[0] - el[0], el2[1] - el[1])
+            layer.alpha_composite(up); layer.alpha_composite(fo)
+            if ai == wa:
+                fl.alpha_composite(fi)
+            hands.append(hand)
+        layer = rot_about(layer, hipc, bang, bdx, bdy)
+        fl = rot_about(fl, hipc, bang, bdx, bdy)
+        hands = [rot_pt(h, hipc, bang, bdx, bdy) for h in hands]
+        place(canvas, layer); place(fistc, fl)
         hx, hy = hands[wa if wa < len(hands) else 0]
         hx, hy = (hx + ox) / WK, (hy + oy) / WK
-        ang = p.wpn
+        ang = p.wpn + bang
+        img = canvas
         if p.lie > 0:
-            # fall over sideways about the feet
             # lying body is centred back over the feet so it stays inside the frame
             img = rot_about(img, (FEET[0] * WK, FEET[1] * WK), 88 * p.lie, -46 * WK * p.lie, -16 * WK * p.lie)
+            fistc = rot_about(fistc, (FEET[0] * WK, FEET[1] * WK), 88 * p.lie, -46 * WK * p.lie, -16 * WK * p.lie)
             hx, hy = rot_pt((hx, hy), FEET, 88 * p.lie, -46 * p.lie, -16 * p.lie)
             ang = ang + 88 * p.lie
         out = img.resize((FS, FS), Image.LANCZOS)
-        layer_ = "bg" if dd == UPD else "fg"
-        meta = [round(hx, 1), round(hy, 1), round(ang, 1), 0 if layer_ == "bg" else 1, round(p.draw, 2)]
+        fout = fistc.resize((FS, FS), Image.LANCZOS)
+        meta = [round(hx, 1), round(hy, 1), round(ang, 1), 0 if dd == UPD else 1, round(p.draw, 2)]
         if d == LEFT:
-            out = out.transpose(Image.FLIP_LEFT_RIGHT)
+            out = out.transpose(Image.FLIP_LEFT_RIGHT); fout = fout.transpose(Image.FLIP_LEFT_RIGHT)
             meta[0] = round(FS - meta[0], 1)
             meta[2] = round(180 - meta[2], 1)
-        return out, meta
+        return out, fout, meta
 
     def sheet(self):
         im = Image.new("RGBA", (13 * FS, 21 * FS))
+        fim = Image.new("RGBA", (13 * FS, 21 * FS))
         meta = []
         groups = [("spellcast", 0), ("thrust", 4), ("walk", 8), ("slash", 12), ("shoot", 16)]
         rows = {}
@@ -345,19 +368,20 @@ class Rig:
             anim, d = rows[r]
             mr = []
             for i in range(ROWS[r]):
-                f, m = self.frame(anim, d, i)
-                im.alpha_composite(f, (i * FS, r * FS))
+                f, ff, m = self.frame(anim, d, i)
+                im.alpha_composite(f, (i * FS, r * FS)); fim.alpha_composite(ff, (i * FS, r * FS))
                 mr.append(m)
             meta.append(mr)
-        return im, meta
+        return im, fim, meta
 
 
 def build_all():
     out = {}
     for cls in RIG:
         rig = Rig(cls)
-        im, meta = rig.sheet()
+        im, fim, meta = rig.sheet()
         im.save(os.path.join(ROOT, f"assets/sprites/r_{cls}.png"), optimize=True)
+        fim.save(os.path.join(ROOT, f"assets/sprites/r_{cls}_fist.png"), optimize=True)
         out["r_" + cls] = {"fs": FS, "feet": FEET, "rows": ROWS, "kind": rig.kind, "hands": meta}
         print("rig", cls)
     with open(os.path.join(ROOT, "assets/sprites/rig_meta.js"), "w") as f:
@@ -371,7 +395,8 @@ def preview(path):
         row = []
         for anim, d, idx in [("walk", DOWN, 0), ("walk", DOWN, 3), ("walk", RIGHT, 2), ("walk", RIGHT, 6), ("walk", UPD, 3), ("walk", LEFT, 4),
                              ("slash", RIGHT, 2), ("slash", RIGHT, 4), ("slash", DOWN, 2), ("spellcast", DOWN, 4), ("shoot", RIGHT, 7), ("hurt", DOWN, 5)]:
-            f, m = rig.frame(anim, d, idx)
+            f, ff, m = rig.frame(anim, d, idx)
+            f.alpha_composite(ff)
             row.append((f, m))
         cells.append(row)
     Z = 2

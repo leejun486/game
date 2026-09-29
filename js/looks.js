@@ -89,7 +89,7 @@ const Looks = (() => {
     const body = Sprites[sheet];
     if (!body) return;
     const si = sheetInfo(sheet);
-    if (si.rig) return drawRig(ctx, body, si, id, row, col, x, y, s, opt);
+    if (si.rig) return drawRig(ctx, body, si, id, row, col, x, y, s, opt, sheet);
     const look = BY_ID[id], cls = look.cls;
     const arow = atlasRow(cls, row);
     const bx = Math.round(x - 32 * s), by = Math.round(y - 56 * s);
@@ -127,14 +127,15 @@ const Looks = (() => {
     return pt ? { cx: wx + pt[0] * s, cy: wy + pt[1] * s, tx: wx + pt[2] * s, ty: wy + pt[3] * s } : null;
   }
   // SD rig body + a weapon look drawn in code at the frame's hand position
-  function drawRig(ctx, body, si, id, row, col, x, y, s, opt) {
+  function drawRig(ctx, body, si, id, row, col, x, y, s, opt, sheet) {
     const k = s * si.k, fs = si.fs;
     const hm = si.rig.hands[row] && si.rig.hands[row][col];
     const look = BY_ID[id];
     const bx = x - si.fx * k, by = y - si.fy * k;
     const t = opt.t ?? performance.now() / 1000;
     const glow = look && look.grade >= 3 ? hexA(ELEM[look.el].color, 0.4 + Math.sin(t * 4) * 0.15) : null;
-    const face = row < 20 && row % 4 === 1 ? -1 : 1;
+    // bows/arrows aim away from the body: left in the side view facing left and in the front view (viewer-left hand)
+    const face = row < 20 && (row % 4 === 1 || row % 4 === 2) ? -1 : 1;
     let tip = null;
     const weapon = () => { if (hm && look) tip = WeaponArt.draw(ctx, id, bx + hm[0] * k, by + hm[1] * k, hm[2], k * 1.05, hm[4], face, glow); };
     const smooth = ctx.imageSmoothingEnabled;
@@ -147,7 +148,12 @@ const Looks = (() => {
       ctx.drawImage(body, col * fs, row * fs, fs, fs, bx, by, fs * k, fs * k);
       ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = a;
     }
-    if (hm && hm[3] === 1) weapon();
+    if (hm && hm[3] === 1) {
+      weapon();
+      // the weapon hand goes back on top so the grip sits inside the fist
+      const fist = Sprites[sheet + '_fist'];
+      if (fist && fist.complete) ctx.drawImage(fist, col * fs, row * fs, fs, fs, bx, by, fs * k, fs * k);
+    }
     ctx.imageSmoothingEnabled = smooth;
     if (!hm || !tip) return null;
     const hx = bx + hm[0] * k, hy = by + hm[1] * k;

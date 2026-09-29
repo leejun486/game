@@ -30,10 +30,10 @@ const WeaponArt = (() => {
     ms_frost: { kind: 'staff', wood: '#a8c8e8', top: 'orb', gem: '#8ae8ff', big: true },
     ms_inferno: { kind: 'staff', wood: '#3a1a1a', top: 'orb', gem: '#ff5a1a', big: true, horns: true },
   };
-  const OL = 'rgba(20,12,16,0.85)';
+  const OL = 'rgba(40,24,28,0.62)';
   const shade = (hex, k) => { const n = parseInt(hex.slice(1), 16); const f = (v) => Math.max(0, Math.min(255, Math.round(v * k))); return `rgb(${f(n >> 16)},${f((n >> 8) & 255)},${f(n & 255)})`; };
   function line(g, pts, col, w) { g.strokeStyle = col; g.lineWidth = w; g.lineCap = 'round'; g.lineJoin = 'round'; g.beginPath(); pts.forEach(([x, y], i) => (i ? g.lineTo(x, y) : g.moveTo(x, y))); g.stroke(); }
-  function inked(g, path, fill) { g.beginPath(); path(); g.lineJoin = 'round'; g.strokeStyle = OL; g.lineWidth = 1.6; g.stroke(); g.fillStyle = fill; g.fill(); }
+  function inked(g, path, fill) { g.beginPath(); path(); g.lineJoin = 'round'; g.strokeStyle = OL; g.lineWidth = 1.2; g.stroke(); g.fillStyle = fill; g.fill(); }
 
   // draw weapon `id` gripped at (x, y), pointing along ang (deg); face = +1 right / -1 left; returns the tip
   function draw(g, id, x, y, ang, s, pull, face, glowCol) {
@@ -42,13 +42,19 @@ const WeaponArt = (() => {
     g.save(); g.translate(x, y); g.rotate(a); g.scale(s, s);
     let tip = [40, 0];
     if (w.kind === 'sword') {
-      const L = w.len, hw = w.thin ? 1.3 : 2.4, cv = w.curve || 0;
-      line(g, [[-2, 0], [-11, 0]], OL, 5.2); line(g, [[-2, 0], [-11, 0]], w.hilt, 3.2);
-      line(g, [[-11, 0], [-13, 5], [-12, 11]], '#c0282a', 2.2); // tassel
-      inked(g, () => g.rect(-2, -5.5, 3, 11), w.guard);
-      const gr = g.createLinearGradient(0, -hw, 0, hw); gr.addColorStop(0, '#ffffff'); gr.addColorStop(0.45, w.blade); gr.addColorStop(1, shade(w.blade, 0.55));
-      inked(g, () => { g.moveTo(1, -hw); g.quadraticCurveTo(L * 0.6, -hw - cv, L - 6, -hw - cv * 1.3); g.lineTo(L, -cv * 1.6); g.lineTo(L - 6, hw - cv * 1.3); g.quadraticCurveTo(L * 0.6, hw - cv, 1, hw); g.closePath(); }, gr);
-      if (w.edge) line(g, [[4, -hw + 0.6], [L - 7, -hw - cv * 1.2 + 0.6]], w.edge, 0.9);
+      // grip sits inside the fist (origin); guard just past it, blade beyond
+      const L = w.len * 0.78, hw = w.thin ? 1.2 : 2.1, cv = (w.curve || 0) * 0.8;
+      line(g, [[4, 0], [-8, 0]], OL, 4.4); line(g, [[4, 0], [-8, 0]], w.hilt, 2.6);
+      line(g, [[-2, -1.2], [0, 1.2]], 'rgba(200,40,40,0.9)', 0.9); line(g, [[-5, -1.2], [-3, 1.2]], 'rgba(200,40,40,0.9)', 0.9); // wrap
+      inked(g, () => g.arc(-8, 0, 1.7, 0, Math.PI * 2), w.guard); // pommel
+      const gg = g.createLinearGradient(0, -5, 0, 5); gg.addColorStop(0, '#fff6d0'); gg.addColorStop(0.5, w.guard); gg.addColorStop(1, shade(w.guard, 0.5));
+      inked(g, () => { g.moveTo(4, -5); g.quadraticCurveTo(6.5, 0, 4, 5); g.lineTo(6.5, 4); g.quadraticCurveTo(8, 0, 6.5, -4); g.closePath(); }, gg);
+      const bx0 = 7.5;
+      const gr = g.createLinearGradient(0, -hw - cv, 0, hw);
+      gr.addColorStop(0, '#ffffff'); gr.addColorStop(0.35, shade(w.blade, 1.08)); gr.addColorStop(0.55, shade(w.blade, 0.8)); gr.addColorStop(1, shade(w.blade, 0.45));
+      inked(g, () => { g.moveTo(bx0, -hw); g.quadraticCurveTo(L * 0.6, -hw - cv, L - 5, -hw - cv * 1.3); g.lineTo(L, -cv * 1.6); g.lineTo(L - 5, hw - cv * 1.3); g.quadraticCurveTo(L * 0.6, hw - cv, bx0, hw); g.closePath(); }, gr);
+      line(g, [[bx0 + 1, -0.2], [L - 8, -cv * 1.2 - 0.2]], 'rgba(90,100,120,0.55)', 0.6); // fuller
+      if (w.edge) line(g, [[bx0 + 1, -hw + 0.5], [L - 6, -hw - cv * 1.2 + 0.5]], w.edge, 0.8);
       tip = [L, -cv * 1.6];
     } else if (w.kind === 'mace' || w.kind === 'axe') {
       const L = w.len;
@@ -65,36 +71,37 @@ const WeaponArt = (() => {
         tip = [L, 18];
       }
     } else if (w.kind === 'bow') {
-      const R = w.big ? 30 : 26, b = face; // limbs bow away from the archer
-      const back = -b * (w.recurve ? 5 : 8);
-      const px = -b * (8 + pull * 16);
+      const R = w.big ? 21 : 18, b = face; // limbs bow away from the archer
+      const back = -b * (w.recurve ? 3.5 : 5.5);
+      const px = -b * (5.5 + pull * 12);
       // local frame: u runs along the stave (the weapon angle), v across it; +v*b points at the target
       const P = (u, v) => [u, v];
       const limb = (sgn) => {
-        const t0 = P(0, b * 4), c = P(sgn * R * 0.55, b * 6), t1 = P(sgn * R, back);
+        const t0 = P(0, b * 3), c = P(sgn * R * 0.55, b * 4.5), t1 = P(sgn * R, back);
         g.beginPath(); g.moveTo(...t0); g.quadraticCurveTo(...c, ...t1);
         if (w.recurve) { const t2 = P(sgn * (R + 5), back + b * 5); g.quadraticCurveTo(...P(sgn * (R + 3), back), ...t2); }
-        g.lineCap = 'round'; g.strokeStyle = OL; g.lineWidth = 4.6; g.stroke(); g.strokeStyle = w.wood; g.lineWidth = 2.8; g.stroke();
+        g.lineCap = 'round'; g.strokeStyle = OL; g.lineWidth = 3.4; g.stroke(); g.strokeStyle = w.wood; g.lineWidth = 2.2; g.stroke();
+        g.strokeStyle = 'rgba(255,240,210,0.45)'; g.lineWidth = 0.7; g.stroke();
       };
       // string first (behind the stave), pulled back toward the archer
       const T = (sgn) => P(sgn * R, back);
       g.strokeStyle = w.string; g.lineWidth = 0.9;
       g.beginPath(); g.moveTo(...T(-1)); g.lineTo(...P(0, back + px)); g.lineTo(...T(1)); g.stroke();
       if (pull > 0.1) { // nocked arrow
-        line(g, [P(0, back + px), P(0, b * 18)], '#e8d8b0', 1.4);
-        inked(g, () => { const a0 = P(-2.5, b * 16), a1 = P(0, b * 22), a2 = P(2.5, b * 16); g.moveTo(...a0); g.lineTo(...a1); g.lineTo(...a2); g.closePath(); }, '#e8ecf0');
+        line(g, [P(0, back + px), P(0, b * 13)], '#e8d8b0', 1.1);
+        inked(g, () => { const a0 = P(-1.8, b * 11.5), a1 = P(0, b * 16), a2 = P(1.8, b * 11.5); g.moveTo(...a0); g.lineTo(...a1); g.lineTo(...a2); g.closePath(); }, '#e8ecf0');
         line(g, [P(-2, back + px), P(0, back + px + b * 4)], '#ff6a8a', 1.4); line(g, [P(2, back + px), P(0, back + px + b * 4)], '#ff6a8a', 1.4);
       }
       limb(-1); limb(1);
-      inked(g, () => { const [gx, gy] = P(0, b * 3); g.rect(gx - 2.4, gy - 4, 4.8, 8); }, '#5a3a22');
-      for (const sgn of [-1, 1]) { const [tx, ty] = T(sgn); inked(g, () => g.arc(tx, ty, 1.8, 0, Math.PI * 2), w.tip); }
-      tip = P(0, b * 20);
+      inked(g, () => { const [gx, gy] = P(0, b * 3); g.rect(gx - 3, gy - 1.6, 6, 3.2); }, '#5a3a22');
+      for (const sgn of [-1, 1]) { const [tx, ty] = T(sgn); inked(g, () => g.arc(tx, ty, 1.2, 0, Math.PI * 2), w.tip); }
+      tip = P(0, b * 14);
     } else if (w.kind === 'staff') {
-      const L = 52;
-      const gr = g.createLinearGradient(0, -2, 0, 2); gr.addColorStop(0, shade(w.wood, 1.35)); gr.addColorStop(1, shade(w.wood, 0.7));
-      inked(g, () => g.rect(-22, -1.8, L + 22, 3.6), gr);
-      for (let i = -16; i < L; i += 11) line(g, [[i, -1.8], [i + 4, 1.8]], shade(w.wood, 0.55), 0.8); // wrap
-      const gem = w.gem, R = w.big ? 6.5 : 5;
+      const L = 36;
+      const gr = g.createLinearGradient(0, -1.5, 0, 1.5); gr.addColorStop(0, shade(w.wood, 1.45)); gr.addColorStop(0.5, w.wood); gr.addColorStop(1, shade(w.wood, 0.65));
+      inked(g, () => { g.moveTo(-15, -1); g.lineTo(L, -1.5); g.lineTo(L, 1.5); g.lineTo(-15, 1); g.closePath(); }, gr);
+      for (let i = -10; i < L; i += 9) line(g, [[i, -1.4], [i + 3, 1.4]], shade(w.wood, 0.55), 0.6); // wrap
+      const gem = w.gem, R = w.big ? 5 : 4.2;
       if (w.top === 'orb') {
         if (w.horns) { line(g, [[L - 2, -3], [L + 6, -11], [L + 12, -12]], OL, 3.4); line(g, [[L - 2, -3], [L + 6, -11], [L + 12, -12]], '#e8dcc0', 2); line(g, [[L - 2, 3], [L + 6, 11], [L + 12, 12]], OL, 3.4); line(g, [[L - 2, 3], [L + 6, 11], [L + 12, 12]], '#e8dcc0', 2); }
         line(g, [[L - 3, -4], [L + 2, -6]], '#d8b050', 2); line(g, [[L - 3, 4], [L + 2, 6]], '#d8b050', 2);
