@@ -434,6 +434,7 @@ const Game = {
     }
     Dungeon.update(Game, dt);
     Skills.update(Game, dt);
+    VFX.update(dt);
     if (Game.pet) Game.pet.update(dt, Game);
     Game.updateDrops(dt);
     for (const m of Game.monsters) m.update(dt, Game);
@@ -486,6 +487,7 @@ const Game = {
     ctx.imageSmoothingEnabled = false;
     ctx.fillStyle = '#1a1a14'; ctx.fillRect(0, 0, vw, vh);
     World.drawGround(ctx, cam, vw, vh, Game.started ? 2 : 4);
+    VFX.drawGround(ctx, cam);
 
     // gather visible props
     const x0 = cam.x - 200, y0 = cam.y - 120, x1 = cam.x + vw + 200, y1 = cam.y + vh + 260;
@@ -533,7 +535,9 @@ const Game = {
         if (r) lights.push([pr.x, pr.y - (pr.type === 'house' ? 60 : 40), r]);
       }
       if (Game.player) lights.push([Game.player.x, Game.player.y - 30, 170]);
-      for (const pr of Game.projectiles) if (pr.kind === 'bolt') lights.push([pr.x, pr.y, 110]);
+      for (const pr of Game.projectiles) if (pr.kind === 'bolt' || pr.el) lights.push([pr.x, pr.y, pr.el === 'fire' ? 150 : 110]);
+      for (const l of VFX.lights()) lights.push(l);
+      for (const h of Skills.hazards) if (h.kind === 'fire' || h.kind === 'blizzard') lights.push([h.x, h.y - 20, h.r * 1.4]);
       for (const f of Game.fx) if (['explode', 'meteor', 'levelup', 'teleport', 'heal', 'buff', 'doom'].includes(f.type)) lights.push([f.x, f.y - 30, 180]);
       if (!lightCv || lightCv.width !== canvas.width || lightCv.height !== canvas.height) {
         lightCv = document.createElement('canvas'); lightCv.width = canvas.width; lightCv.height = canvas.height;
@@ -554,6 +558,8 @@ const Game = {
       ctx.drawImage(lightCv, 0, 0);
       ctx.setTransform(dpr * z, 0, 0, dpr * z, 0, 0);
     }
+    // elemental particles on top of the lighting so fire and frost glow at night
+    VFX.draw(ctx, cam);
     // overlays (names, bars)
     const p = Game.player;
     for (const e of ents) {

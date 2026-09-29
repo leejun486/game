@@ -169,24 +169,26 @@ const Skills = (() => {
     if (!p) return;
     for (const h of hazards) {
       h.t += dt; h.tick -= dt;
+      VFX.hazard(h, dt);
       if (h.tick <= 0 && h.t <= h.dur) {
         h.tick = 0.5;
         for (const m of game.monsters) {
           if (m.dead || Math.hypot(m.x - h.x, (m.y - h.y) * 1.3) > h.r + m.radius) continue;
           hit(game, p, m, h.mult, h.m || {}, { noStun: true });
-          if (KIND[h.kind].slow) m.slowT = Math.max(m.slowT, 1);
-          if (h.freeze && Math.random() < h.freeze) { m.stunT = Math.max(m.stunT || 0, 1); game.fx.push(Combat.makeFx('ice', m.x, m.y)); }
+          if (KIND[h.kind].slow) { m.slowT = Math.max(m.slowT, 1); if (h.kind !== 'crack') m.chillT = Math.max(m.chillT || 0, 1.2); }
+          if (h.freeze && Math.random() < h.freeze) { m.stunT = Math.max(m.stunT || 0, 1); m.frozenT = Math.max(m.frozenT || 0, 1); VFX.iceBurst(m.x, m.y, 40, 0.5); }
         }
       }
       if (h.t > h.dur && h.endBlast && !h.blasted) {
         h.blasted = true;
-        game.fx.push(Combat.makeFx('explode', h.x, h.y, { r: h.r * 1.2, color: '#bfe8ff' })); game.shake = 8; U.sfx.boom();
+        VFX.iceBurst(h.x, h.y, h.r, 1.4); game.shake = 8; U.sfx.boom();
         area(game, p, h.x, h.y, h.r, h.endBlast, h.m || {});
       }
     }
     for (let i = hazards.length - 1; i >= 0; i--) if (hazards[i].t > hazards[i].dur + 0.4) hazards.splice(i, 1);
     for (const d of dots) {
       d.t += dt; d.tick -= dt;
+      if (d.kind === 'burn') VFX.burning(d.mon, dt); else if (d.kind === 'poison') VFX.poisoned(d.mon, dt);
       if (d.tick <= 0) { d.tick = 0.5; if (!d.mon.dead) Combat.damageMonster(game, p, d.mon, d.mult); }
     }
     for (let i = dots.length - 1; i >= 0; i--) if (dots[i].t >= dots[i].dur || dots[i].mon.dead) dots.splice(i, 1);
@@ -206,7 +208,7 @@ const Skills = (() => {
       ctx.restore();
       // particles
       ctx.save(); ctx.globalCompositeOperation = 'lighter';
-      const n = h.kind === 'blizzard' ? 26 : 12;
+      const n = ['fire', 'ice', 'blizzard'].includes(h.kind) ? 0 : 12;
       for (let i = 0; i < n; i++) {
         const a = i * 2.39996, rr = h.r * Math.sqrt(((i * 0.618) % 1));
         const px = x + Math.cos(a) * rr, py = y + Math.sin(a) * rr * 0.55;
@@ -219,6 +221,7 @@ const Skills = (() => {
     }
     // DoT markers
     for (const d of dots) {
+      if (d.kind === 'burn' || d.kind === 'poison') continue;
       const x = d.mon.x - cam.x, y = d.mon.y - cam.y - 30 * d.mon.scale;
       ctx.fillStyle = Looks.hexA(KIND[d.kind].color, 0.8);
       for (let i = 0; i < 3; i++) ctx.fillRect(x - 8 + i * 8, y - ((t * 30 + i * 9) % 20), 2.5, 2.5);
@@ -231,7 +234,8 @@ const Skills = (() => {
     const dmg = Combat.damageMonster(game, p, mon, mult * (1 + (m.mult || 0)), { critBonus: m.crit || 0, slow: o.slow });
     const ls = (m.lifesteal || 0) + ((p.buffs.find((b) => b.lifesteal) || {}).lifesteal || 0);
     if (ls && dmg) p.hp = Math.min(p.maxHp, p.hp + dmg * ls);
-    if (m.stun && !o.noStun && !mon.dead) { mon.stunT = Math.max(mon.stunT || 0, m.stun); }
+    if (m.stun && !o.noStun && !mon.dead) { mon.stunT = Math.max(mon.stunT || 0, m.stun); if (m.el === 'ice') mon.frozenT = Math.max(mon.frozenT || 0, m.stun); }
+    if (m.el === 'ice' && (o.slow || m.slow)) mon.chillT = Math.max(mon.chillT || 0, o.slow || m.slow);
     if (m.dot && !mon.dead) dots.push({ mon, mult: m.dot.mult, dur: m.dot.dur, kind: m.dot.kind, t: 0, tick: 0.5 });
     return dmg;
   }
@@ -251,7 +255,11 @@ const Skills = (() => {
     const targets = nearby(game, from, 260, [from]).slice(0, n);
     for (const t of targets) {
       game.fx.push(Combat.makeFx('petbolt', from.x, from.y - 26, { to: t, color, dur: 0.3 }));
-      setTimeout(() => hit(game, p, t, mult, Object.assign({}, m, { stun: 0, dot: null })), 300);
+      setTimeout(() => {
+        if (t.dead) return;
+        if (m.el === 'fire') VFX.fireBurst(t.x, t.y, 40, 0.45); else if (m.el === 'ice') VFX.iceBurst(t.x, t.y, 34, 0.5);
+        hit(game, p, t, mult, Object.assign({}, m, { stun: 0, dot: null }));
+      }, 300);
     }
   }
   const later = (ms, fn) => setTimeout(fn, ms);
@@ -259,6 +267,7 @@ const Skills = (() => {
   // ---------------------------------------------------------------- casting
   function cast(p, id, sk, target, game) {
     const m = sk.m, base = D.SKILLS[id];
+    m.el = base.el;
     const dur = 0.55 / (1 + (p.cls === 'mage' ? p.stats.castSpd : p.stats.atkSpd) / 200);
     if (target) p.face(target);
     p.combatT = 5;
@@ -322,7 +331,7 @@ const Skills = (() => {
     },
     k_quake(p, sk, m, t, game, R) {
       const r = R(sk.radius);
-      const blast = (mult) => { game.fx.push(Combat.makeFx('explode', p.x, p.y, { r: r * 1.1, color: '#d8a860' })); area(game, p, p.x, p.y, r, mult, m, { slow: 2 }); game.shake = 12; U.sfx.boom(); };
+      const blast = (mult) => { game.fx.push(Combat.makeFx('explode', p.x, p.y, { r: r * 1.1, color: '#d8a860' })); VFX.debris(p.x, p.y, 16); area(game, p, p.x, p.y, r, mult, m, { slow: 2 }); game.shake = 12; U.sfx.boom(); };
       blast(sk.mult);
       const cx = p.x, cy = p.y;
       if (m.echo) later(m.echo.delay, () => { game.fx.push(Combat.makeFx('explode', cx, cy, { r: r * 1.2, color: '#ffb46a' })); area(game, p, cx, cy, r, sk.mult * m.echo.mult, Object.assign({}, m, { stun: 0 })); game.shake = 8; U.sfx.boom(); });
@@ -368,8 +377,8 @@ const Skills = (() => {
     },
     e_frost(p, sk, m, t, game) {
       const slow = 3 * (m.slowMul || 1);
-      Combat.shoot(p, t, { kind: 'arrow', mult: sk.mult, onHit: (x) => {
-        hit(game, p, x, sk.mult, m, { slow }); game.fx.push(Combat.makeFx('ice', x.x, x.y));
+      Combat.shoot(p, t, { kind: 'arrow', el: 'ice', mult: sk.mult, onHit: (x) => {
+        hit(game, p, x, sk.mult, m, { slow }); VFX.iceBurst(x.x, x.y, 60);
         if (m.shards) shards(game, p, x, m.shards.n, sk.mult * m.shards.mult, m, '#bfefff');
         if (m.ground) ground(x.x, x.y, 100, m.ground.mult, m.ground.dur, m.ground.kind);
       } });
@@ -382,7 +391,7 @@ const Skills = (() => {
       for (let i = 0; i < n; i++) later(i * 60, () => {
         const tgt = pool[i % pool.length];
         if (tgt.dead) return;
-        Combat.shoot(p, tgt, { kind: 'arrow', mult: sk.mult, onHit: (x) => hit(game, p, x, sk.mult, m) });
+        Combat.shoot(p, tgt, { kind: 'arrow', el: m.dot && m.dot.kind === 'burn' ? 'fire' : null, mult: sk.mult, onHit: (x) => { hit(game, p, x, sk.mult, m); if (m.dot && m.dot.kind === 'burn') VFX.fireBurst(x.x, x.y, 30, 0.3); } });
         if (i % 2 === 0) U.sfx.bow();
       });
       game.fx.push(Combat.makeFx('whirl', p.x, p.y, { r: 90 }));
@@ -394,8 +403,8 @@ const Skills = (() => {
       for (let i = 0; i < n; i++) later(i * 160, () => {
         const tgt = targets[i % targets.length];
         if (tgt.dead) return;
-        Combat.shoot(p, tgt, { kind: 'bolt', mult: sk.mult, opts: { color: '#ff8a2e' }, onHit: (x) => {
-          game.fx.push(Combat.makeFx('explode', x.x, x.y, { r, color: '#ff8a2e' }));
+        Combat.shoot(p, tgt, { kind: 'bolt', el: 'fire', mult: sk.mult, opts: { color: '#ff8a2e' }, onHit: (x) => {
+          VFX.fireBurst(x.x, x.y, r);
           area(game, p, x.x, x.y, r, sk.mult, m); U.sfx.boom(); game.shake = 5;
           if (m.ground) ground(x.x, x.y, r, m.ground.mult, m.ground.dur, m.ground.kind);
           if (m.shards) shards(game, p, x, m.shards.n, sk.mult * m.shards.mult, m, '#ff8a2e');
@@ -406,12 +415,13 @@ const Skills = (() => {
     m_ice(p, sk, m, t, game) {
       const slow = 3 * (m.slowMul || 1);
       if (m.pierce) {
-        Combat.shoot(p, t, { kind: 'bolt', mult: sk.mult * (1 + (m.mult || 0)), pierce: true, opts: { color: '#7fd4ff' } });
+        Combat.shoot(p, t, { kind: 'bolt', el: 'ice', mult: sk.mult * (1 + (m.mult || 0)), pierce: true, opts: { color: '#7fd4ff' } });
         const pr = game.projectiles[game.projectiles.length - 1];
-        pr.slow = slow; pr.critBonus = m.crit || 0; pr.onPierce = (x) => { if (m.stun) x.stunT = Math.max(x.stunT || 0, m.stun); if (m.shards) shards(game, p, x, m.shards.n, sk.mult * m.shards.mult, m, '#bfefff'); };
+        pr.big = true;
+        pr.slow = slow; pr.critBonus = m.crit || 0; pr.onPierce = (x) => { VFX.iceBurst(x.x, x.y, 40, 0.6); x.chillT = Math.max(x.chillT || 0, slow); if (m.stun) x.stunT = Math.max(x.stunT || 0, m.stun); if (m.shards) shards(game, p, x, m.shards.n, sk.mult * m.shards.mult, m, '#bfefff'); };
       } else {
-        Combat.shoot(p, t, { kind: 'bolt', mult: sk.mult, opts: { color: '#7fd4ff' }, onHit: (x) => {
-          hit(game, p, x, sk.mult, m, { slow }); game.fx.push(Combat.makeFx('ice', x.x, x.y));
+        Combat.shoot(p, t, { kind: 'bolt', el: 'ice', mult: sk.mult, opts: { color: '#7fd4ff' }, onHit: (x) => {
+          hit(game, p, x, sk.mult, m, { slow }); VFX.iceBurst(x.x, x.y, 70);
           if (m.shards) shards(game, p, x, m.shards.n, sk.mult * m.shards.mult, m, '#bfefff');
           if (m.ground) ground(x.x, x.y, 100, m.ground.mult, m.ground.dur, m.ground.kind);
         } });
@@ -447,6 +457,7 @@ const Skills = (() => {
         const from = prev, to = cur, mm = mult;
         later(i * 110, () => {
           game.fx.push(Combat.makeFx('zap', from.x, from.y - 30, { to: [to.x, to.y - 30], color: '#aee6ff' }));
+          VFX.sparkBurst(to.x, to.y, 'zap', 14);
           hit(game, p, to, mm, m, { slow: m.slow });
         });
         hitList.push(cur);
@@ -459,6 +470,7 @@ const Skills = (() => {
     m_blizzard(p, sk, m, t, game, R) {
       const r = R(sk.radius);
       ground(t.x, t.y, r, sk.mult, 4 + (m.durAdd || 0), 'blizzard', { freeze: m.freezeChance || 0, endBlast: m.endBlast || 0, m });
+      VFX.flash(t.x, t.y, r * 1.6, '#bfe8ff', 0.6);
       U.sfx.magic();
     },
   };

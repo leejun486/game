@@ -267,17 +267,17 @@ const Pets = (() => {
       const mult = DMG[d.grade];
       if (d.art === 'dragon') {
         game.fx.push(Combat.makeFx('breath', this.x + this.face * 60, this.y - 56, { to: [tgt.x, tgt.y - 20], color: '#ff6a1a', dur: 0.5 }));
-        setTimeout(() => { if (!tgt.dead) { Combat.petHit(game, tgt, mult, '#ffb36a'); for (const m of game.monsters) if (m !== tgt && !m.dead && U.dist(m, tgt) < 90) Combat.petHit(game, m, mult * 0.5, '#ffb36a'); game.fx.push(Combat.makeFx('explode', tgt.x, tgt.y, { r: 90, color: '#ff6a1a' })); } }, 260);
+        setTimeout(() => { if (!tgt.dead) { Combat.petHit(game, tgt, mult, '#ffb36a'); for (const m of game.monsters) if (m !== tgt && !m.dead && U.dist(m, tgt) < 90) Combat.petHit(game, m, mult * 0.5, '#ffb36a'); VFX.fireBurst(tgt.x, tgt.y, 90, 0.9); } }, 260);
         U.sfx.boom();
       } else if (d.ranged) {
         const sx = this.x + this.face * (d.fly ? 20 : 10), sy = this.y - (d.fly ? 44 : 18);
         game.fx.push(Combat.makeFx('petbolt', sx, sy, { to: tgt, color: el, big: d.grade >= 3, dur: 0.35 }));
-        setTimeout(() => { if (!tgt.dead) { Combat.petHit(game, tgt, mult, '#ffd6f0'); game.fx.push(Combat.makeFx('burst', tgt.x, tgt.y - 26, { color: el, r: d.grade >= 3 ? 70 : 40 })); } }, 330);
+        setTimeout(() => { if (!tgt.dead) { Combat.petHit(game, tgt, mult, '#ffd6f0'); if (d.el === 'fire') VFX.fireBurst(tgt.x, tgt.y, d.grade >= 3 ? 60 : 36, d.grade >= 3 ? 0.6 : 0.35); else if (d.el === 'ice') VFX.iceBurst(tgt.x, tgt.y, 40, 0.5); else game.fx.push(Combat.makeFx('burst', tgt.x, tgt.y - 26, { color: el, r: d.grade >= 3 ? 70 : 40 })); } }, 330);
       } else {
         // melee lunge
         this.x += this.face * 10;
         Combat.petHit(game, tgt, mult, CUTE(d) ? '#ffd6f0' : '#c9f0ff');
-        game.fx.push(Combat.makeFx(d.art === 'frostwolf' ? 'ice' : 'spark', tgt.x, tgt.y - (d.art === 'frostwolf' ? 0 : 20), { color: el }));
+        if (d.art === 'frostwolf') { VFX.iceBurst(tgt.x, tgt.y, 46, 0.7); tgt.chillT = Math.max(tgt.chillT || 0, 1.5); } else if (d.art === 'fox') VFX.fireBurst(tgt.x, tgt.y, 26, 0.3); else game.fx.push(Combat.makeFx('spark', tgt.x, tgt.y - 20, { color: el }));
         if (d.grade >= 3) game.shake = Math.max(game.shake, 3);
       }
       if (CUTE(d) && Math.random() < 0.25) this.say(U.pick(d.voice));

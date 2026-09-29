@@ -166,10 +166,13 @@ class Monster extends Entity {
     ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y - 40 * this.scale, 60 * this.scale, 0, Math.PI * 2); ctx.fill();
     ctx.restore();
   }
+  draw(ctx, cam) { super.draw(ctx, cam); if (!this.dead && (this.frozenT > 0 || this.chillT > 0)) VFX.status(ctx, cam, this); }
   aggroOn(e) { if (!this.dead && e && !e.dead) this.target = e; }
   update(dt, game) {
     super.update(dt);
     if (this.dead) return;
+    if (this.chillT > 0) this.chillT -= dt;
+    if (this.frozenT > 0) this.frozenT -= dt;
     if (this.stunT > 0) { this.stunT -= dt; this.moving = false; this.action = null; return; }
     this.atkCd -= dt;
     const leash = !this.inDungeon && Math.hypot(this.x - this.home.x, this.y - this.home.y) > 950;

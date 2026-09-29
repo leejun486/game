@@ -97,7 +97,7 @@ const Combat = (() => {
     const sy = hero.y - 30;
     const pr = {
       kind: o.kind, x: hero.x, y: sy, target, owner: hero, mult: o.mult, speed: o.kind === 'arrow' ? 900 : 620,
-      opts: o.opts || {}, onHit: o.onHit, t: 0, pierce: o.pierce,
+      opts: o.opts || {}, onHit: o.onHit, t: 0, pierce: o.pierce, el: o.el !== undefined ? o.el : (o.kind === 'bolt' ? 'arcane' : null),
     };
     if (o.pierce) {
       const a = Math.atan2(target.y - hero.y, target.x - hero.x);
@@ -110,6 +110,7 @@ const Combat = (() => {
     const out = [];
     for (const p of game.projectiles) {
       p.t += dt;
+      if (p.el) VFX.trail(p.el, p.x, p.y, dt, p.big);
       if (p.pierce) {
         p.x += p.vx * p.speed * dt; p.y += p.vy * p.speed * dt; p.life -= dt;
         for (const m of game.monsters) {
@@ -139,6 +140,8 @@ const Combat = (() => {
   function drawProjectile(ctx, cam, p) {
     const x = p.x - cam.x, y = p.y - cam.y;
     const a = p.pierce ? Math.atan2(p.vy, p.vx) : p.ang || 0;
+    if (p.el === 'fire') return p.kind === 'arrow' ? VFX.drawFireArrow(ctx, x, y, a) : VFX.drawFireball(ctx, x, y, a, p.big);
+    if (p.el === 'ice') return p.kind === 'arrow' ? VFX.drawFrostArrow(ctx, x, y, a) : VFX.drawIceLance(ctx, x, y, a, p.big);
     ctx.save(); ctx.translate(x, y); ctx.rotate(a);
     if (p.kind === 'arrow') {
       if (p.pierce) {
@@ -250,7 +253,11 @@ const Combat = (() => {
     for (const f of game.fx) {
       f.t += dt;
       if (f.follow) { f.x = f.follow.x; f.y = f.follow.y; }
-      if (f.type === 'meteor' && !f.landed && f.t >= 0.7) { f.landed = true; f.onLand && f.onLand(); }
+      if (f.type === 'meteor' && !f.landed) {
+        const q = Math.min(1, f.t / 0.7);
+        VFX.trail('fire', f.x + (1 - q) * 260, f.y - (1 - q) * 520 - 20, dt, true);
+        if (f.t >= 0.7) { f.landed = true; VFX.fireBurst(f.x, f.y, f.r || 90, (f.r || 90) > 120 ? 1.6 : 0.9); VFX.debris(f.x, f.y, 12); f.onLand && f.onLand(); }
+      }
     }
     game.fx = game.fx.filter((f) => f.t < f.dur);
     for (const ft of game.floaters) { ft.t += dt; ft.y -= (ft.big ? 40 : 34) * dt; }
