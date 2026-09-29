@@ -128,37 +128,27 @@ class Mob:
                     dy = base_dy
             return dx, dy, rot, sx, sy, 1
         if anim in ("slash", "thrust"):
-            heavy = anim == "thrust"
-            hit = 3 / 6 if anim == "slash" else 5 / 8
-            fwd = 1 if d == RIGHT else 0
-            down = 1 if d == DOWN else (-1 if d == UPD else 0)
-            if t < hit:
-                u = t / hit
-                if heavy:  # rear up
-                    dy, sy, sx = -8 * u, 1 + 0.1 * u, 1 - 0.05 * u
-                    rot = -8 * u * fwd
-                else:  # wind up (lean back)
-                    rot = -10 * u * fwd
-                    dx = -4 * u * fwd
-                    dy = -3 * u * down + (-2 * u if not fwd else 0)
-                    sy = 1 + 0.05 * u
+            # hand-timed keys: (forward, up, lean deg, stretch along the strike, squash)
+            # side view strikes forward; front view lunges toward the camera (grows), back view away (shrinks)
+            if anim == "slash":  # quick swipe: crouch, coil, snap forward (hit on frame 3), follow through, settle
+                K = [(0, 0, 0, 1, 1), (-3, 2, -5, 0.97, 0.94), (-5, 1, -8, 0.96, 0.92), (15, -1, 9, 1.12, 0.96), (11, 0, 6, 1.06, 0.98), (4, 0, 2, 1.01, 1)]
+            else:  # heavy slam: crouch, rise high, hang, crash down (hit on frame 5), shake off
+                K = [(0, 0, 0, 1, 1), (-2, 3, -3, 0.96, 0.9), (-4, -7, -8, 1.02, 1.08), (-5, -13, -11, 1.04, 1.12), (0, -9, -4, 1.03, 1.06),
+                     (12, 3, 8, 1.16, 0.84), (8, 1, 5, 1.08, 0.92), (3, 0, 2, 1.02, 0.98)]
+            f, u, lean, st, sq = K[i]
+            if d == RIGHT:
+                dx, dy, rot, sx, sy = f, u, lean, st, sq
             else:
-                u = (t - hit) / (1 - hit)
-                e = 1 - u
-                if heavy:  # slam
-                    dy = 2 * e
-                    sy, sx = 1 - 0.14 * e, 1 + 0.12 * e
-                    rot = 6 * e * fwd
-                    dx = 8 * e * fwd
-                else:  # lunge
-                    rot = 12 * e * fwd
-                    dx = 12 * e * fwd
-                    dy = 6 * e * down
-                    sx, sy = 1 + 0.08 * e, 1 - 0.06 * e
+                toward = 1 if d == DOWN else -1
+                grow = 1 + toward * (st - 1) * 0.9
+                dx, dy, rot = 0, u + toward * f * 0.35, 0
+                sx, sy = grow * (2 - sq) ** 0.3, grow * sq
+            if g == "hop":
+                rot *= 0.5
+            if g == "crawl":
+                dy *= 0.4
             if fly:
                 dy += base_dy
-            if g == "hop":
-                rot *= 0.4
             return dx, dy, rot, sx, sy, 1
         if anim == "hurt":  # death: fall over and flatten
             k = [0, 0.25, 0.55, 0.85, 1, 1][i]
@@ -184,7 +174,8 @@ class Mob:
         layer = Image.new("RGBA", (W, W))
         layer.alpha_composite(im, (int(round(ox)), int(round(oy))))
         if rot:
-            layer = layer.rotate(-rot, resample=Image.BICUBIC, center=(fx, fy))
+            pv = (fx, fy - im.height * (0.1 if anim == 'hurt' else 0.42))  # death tips over at the feet, attacks lean at the hips
+            layer = layer.rotate(-rot, resample=Image.BICUBIC, center=pv)
         canvas.alpha_composite(layer, (0, 0)) if not (dx or dy) else canvas.alpha_composite(
             layer.transform(layer.size, Image.AFFINE, (1, 0, -dx * SS, 0, 1, -dy * SS), resample=Image.BICUBIC))
         out = canvas.resize((self.fs, self.fs), Image.LANCZOS)

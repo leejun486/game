@@ -37,6 +37,9 @@ const Combat = (() => {
     const game = Game;
     if (!target || target.dead || mon.dead) return;
     if (U.dist(mon, target) > mon.def.range + target.radius + 30) return;
+    // swipe marks across the target, angled along the attack
+    const ang = Math.atan2(target.y - mon.y, target.x - mon.x);
+    game.fx.push(makeFx('claw', target.x, target.y - 30 * (target.scale || 1), { ang, heavy, big: mon.def.boss, color: mon.def.boss ? '#ffb070' : '#ffe8d8' }));
     if (target === game.player) {
       const p = target, st = p.stats;
       if (p.s.gm && p.s.gm.god) { floatText(game, p, 'IMMUNE', '#ffd76a'); return; }
@@ -245,7 +248,7 @@ const Combat = (() => {
 
   // ---------------------------------------------------------------- effects
   function makeFx(type, x, y, o = {}) {
-    const dur = { spark: 0.25, slash: 0.22, bigslash: 0.35, doom: 0.5, whirl: 0.45, explode: 0.55, ice: 0.6, meteor: 1.25, rain: 0.9,
+    const dur = { claw: 0.26, spark: 0.25, slash: 0.22, bigslash: 0.35, doom: 0.5, whirl: 0.45, explode: 0.55, ice: 0.6, meteor: 1.25, rain: 0.9,
       heal: 1.0, buff: 0.9, levelup: 1.8, teleport: 0.8, tpcast: 1.0, tparrive: 0.75, mote: 0.7, glint: 0.45, rune: 1.2, breath: 0.5, petbolt: 0.35, dash: 0.3, zap: 0.25, burst: 0.3, loot: 0.9 }[type] || 0.5;
     return Object.assign({ type, x, y, t: 0, dur }, o);
   }
@@ -273,6 +276,21 @@ const Combat = (() => {
         for (let i = 0; i < 6; i++) {
           const a = i * 1.05 + f.x;
           ctx.beginPath(); ctx.moveTo(x + Math.cos(a) * 4, y + Math.sin(a) * 4); ctx.lineTo(x + Math.cos(a) * (8 + k * 20), y + Math.sin(a) * (8 + k * 20)); ctx.stroke();
+        }
+        break;
+      }
+      case 'claw': {
+        // three curved streaks that sweep in, flash and fade
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.translate(x, y); ctx.rotate((f.ang || 0) + Math.PI / 2 - 0.5);
+        const L = (f.big ? 46 : 30) * (f.heavy ? 1.3 : 1), grow = Math.min(1, k / 0.35), fade = 1 - Math.max(0, (k - 0.35) / 0.65);
+        ctx.lineCap = 'round';
+        for (let i = -1; i <= 1; i++) {
+          const ox = i * (f.big ? 12 : 8);
+          ctx.beginPath(); ctx.moveTo(ox - L * 0.5, -L * 0.5); ctx.quadraticCurveTo(ox + 6, 0, ox - L * 0.5 + L * grow, -L * 0.5 + L * grow);
+          ctx.globalCompositeOperation = 'source-over';
+          ctx.globalAlpha = fade * 0.7; ctx.strokeStyle = '#8a0c0c'; ctx.lineWidth = (f.heavy ? 9 : 7) * (1 - k * 0.4); ctx.stroke();
+          ctx.globalAlpha = fade; ctx.strokeStyle = f.color; ctx.lineWidth = (f.heavy ? 4 : 3) * (1 - k * 0.4); ctx.stroke();
         }
         break;
       }
