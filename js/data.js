@@ -20,13 +20,13 @@ D.GRADES = [
 // ---------------- classes & skills ----------------
 D.CLASSES = {
   knight: {
-    name: '기사', sheet: 'knight_px', desc: '강인한 체력과 근접 전투의 달인.\n높은 방어력으로 전장을 지배한다.',
+    name: '기사', sheet: 'knight', desc: '강인한 체력과 근접 전투의 달인.\n높은 방어력으로 전장을 지배한다.',
     base: { hp: 190, mp: 40, atk: 14, def: 6 }, grow: { hp: 24, mp: 3, atk: 2.3, def: 0.9 },
     range: 62, attack: 'slash', atkDelay: 0.95, weapon: 'sword',
     skills: ['k_smash', 'k_whirl', 'k_rage', 'k_doom', 'k_charge', 'k_quake'],
   },
   elf: {
-    name: '요정', sheet: 'elf_px', desc: '숲의 축복을 받은 궁수.\n먼 거리에서 적을 꿰뚫는다.',
+    name: '요정', sheet: 'elf', desc: '숲의 축복을 받은 궁수.\n먼 거리에서 적을 꿰뚫는다.',
     base: { hp: 135, mp: 80, atk: 12, def: 3 }, grow: { hp: 15, mp: 6, atk: 2.1, def: 0.5 },
     range: 330, attack: 'shoot', atkDelay: 1.0, weapon: 'bow', projectile: 'arrow',
     skills: ['e_triple', 'e_rain', 'e_wind', 'e_energy', 'e_frost', 'e_storm'],
