@@ -602,3 +602,4 @@ body.touch #chat { bottom: 250px; }
 .forge-fx.flash::after { animation: forgeFlash 1.6s ease-out forwards; }
 @keyframes forgeFlash { 0% { opacity: 0; } 18% { opacity: .95; } 100% { opacity: .25; } }
 .forge-fx .forge-title { z-index: 2; }
+.forge-skipall { position: absolute; right: 16px; top: 14px; z-index: 3; font-size: 12px; padding: 6px 12px; }

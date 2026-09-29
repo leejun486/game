@@ -126,8 +126,36 @@ const Forge = (() => {
   // ---------------------------------------------------------------- the show
   // pre-rendered clips (8s) for 희귀+; a missing clip or a load failure falls back to the canvas show
   const VIDEOS = { 2: 'assets/forge/g2.mp4', 3: 'assets/forge/g3.mp4', 4: 'assets/forge/g4.mp4' };
-  // the cinematic is reserved for a single pull that lands 희귀 or better; everything else goes straight to the cards
+  // a single pull that lands 희귀 or better plays its clip straight away
   const wants = (results) => results.length === 1 && results[0].grade >= 2;
+
+  // multi-pull: each 희귀+ card plays its clip when it is flipped. Returns true when the flip was
+  // taken over (the card flips itself via `again` once the clip ends); clips on one stage queue up
+  function gate(results, item, sc, stage, again) {
+    if (results.length < 2 || item.grade < 2 || sc.dataset.fx === 'done' || stage._forgeSkipAll) return false;
+    if (sc.dataset.fx === 'wait') return true;
+    sc.dataset.fx = 'wait';
+    stage._forgeMulti = true;
+    (stage._forgeQ || (stage._forgeQ = [])).push([item.grade, () => { sc.dataset.fx = 'done'; again(); }]);
+    if (!stage._forgeBusy) next(stage);
+    return true;
+  }
+  function next(stage) {
+    const it = stage._forgeQ.shift();
+    if (!it) { stage._forgeBusy = false; return; }
+    if (stage._forgeSkipAll || !stage.isConnected) { it[1](); return next(stage); }
+    stage._forgeBusy = true;
+    play(stage, it[0], () => { it[1](); next(stage); });
+  }
+  // stop queuing clips on this stage (확인 / 모두 건너뛰기): pending cards flip immediately
+  function skipAll(stage) { stage._forgeSkipAll = true; }
+  function skipAllButton(wrap, host, finish) {
+    if (!host._forgeMulti) return;
+    const b = document.createElement('button');
+    b.className = 'forge-skipall dark-btn'; b.textContent = '모두 건너뛰기';
+    b.onclick = (e) => { e.stopPropagation(); skipAll(host); finish(); };
+    wrap.appendChild(b);
+  }
 
   // host: element to cover (the summon stage); grade: best grade in the pull; onDone after it ends
   function play(host, grade, onDone) {
@@ -145,6 +173,7 @@ const Forge = (() => {
       wrap.classList.add('out');
       setTimeout(() => { wrap.remove(); onDone && onDone(); }, 350);
     };
+    skipAllButton(wrap, host, finish);
     const fallback = () => {
       if (done || started) return finish();
       done = true; wrap.remove(); playCanvas(host, grade, onDone);
@@ -194,6 +223,7 @@ const Forge = (() => {
       wrap.classList.add('out');
       setTimeout(() => { wrap.remove(); onDone && onDone(); }, 350);
     };
+    skipAllButton(wrap, host, finish);
     wrap.onclick = (e) => { e.stopPropagation(); finish(); };
     const spark = (x, y, n, c, speed = 1) => { for (let i = 0; i < n; i++) { const a = -Math.PI * (0.1 + Math.random() * 0.8); const v = (200 + Math.random() * 500) * speed; sparks.push({ x, y, vx: Math.cos(a) * v * (Math.random() < 0.5 ? -1 : 1), vy: Math.sin(a) * v, life: 0.5 + Math.random() * 0.5, t: 0, c }); } };
     let last = t0;
@@ -332,5 +362,5 @@ const Forge = (() => {
     };
     raf = requestAnimationFrame(frame);
   }
-  return { play, wants };
+  return { play, wants, gate, skipAll };
 })();

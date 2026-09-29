@@ -266,8 +266,9 @@ const Transcend = (() => {
     });
     const flip = (sc) => {
       if (sc.classList.contains('flip')) return;
-      sc.classList.add('flip');
       const c = results[+sc.dataset.i];
+      if (Forge.gate(results, c, sc, stage, () => flip(sc))) return; // 희귀+ in a multi-pull: clip first, then the card turns
+      sc.classList.add('flip');
       if (c.grade >= 4) U.sfx.legend(); else if (c.grade >= 3) U.sfx.success(); else U.sfx.ui();
       if (c.grade >= 3) {
         const html = `<b>${esc(p.name)}</b>님이 <em class="${c.grade >= 4 ? 'legend' : ''}">${esc(c.name)}</em> 초월을 획득했습니다.`;
@@ -277,7 +278,7 @@ const Transcend = (() => {
     stage.onclick = (e) => {
       const sc = e.target.closest('.s-card'); if (sc) return flip(sc);
       if (e.target.closest('[data-all]')) stage.querySelectorAll('.s-card').forEach((s, i) => setTimeout(() => flip(s), i * 120));
-      if (e.target.closest('[data-ok]')) { stage.querySelectorAll('.s-card').forEach(flip); stage.remove(); back(); }
+      if (e.target.closest('[data-ok]')) { Forge.skipAll(stage); stage.querySelectorAll('.s-card').forEach(flip); stage.remove(); back(); }
       if (e.target.closest('[data-go]')) { stage.remove(); sel = results.slice().sort((a, b) => b.grade - a.grade)[0].id; tab = 'list'; UI.open('transcend'); }
     };
   }

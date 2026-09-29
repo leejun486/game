@@ -313,15 +313,16 @@ const Looks = (() => {
     stage.querySelectorAll('.s-card').forEach((sc, i) => thumb(sc.querySelector('canvas'), p.sheet, res[i].id));
     const flip = (sc) => {
       if (sc.classList.contains('flip')) return;
-      sc.classList.add('flip');
       const l = res[+sc.dataset.i];
+      if (Forge.gate(res, l, sc, stage, () => flip(sc))) return; // 희귀+ in a multi-pull: clip first, then the card turns
+      sc.classList.add('flip');
       if (l.grade >= 4) U.sfx.legend(); else if (l.grade >= 3) U.sfx.success(); else U.sfx.ui();
       if (l.grade >= 3) UI.announce(`<b>${esc(p.name)}</b>님이 <em class="${l.grade >= 4 ? 'legend' : ''}">${esc(l.name)}</em> 무기 외형을 획득했습니다.`);
     };
     stage.onclick = (e) => {
       const sc = e.target.closest('.s-card'); if (sc) return flip(sc);
       if (e.target.closest('[data-all]')) stage.querySelectorAll('.s-card').forEach((s, i) => setTimeout(() => flip(s), i * 110));
-      if (e.target.closest('[data-ok]')) { stage.querySelectorAll('.s-card').forEach(flip); stage.remove(); sel = res.slice().sort((a, b) => b.grade - a.grade)[0].id; back(); }
+      if (e.target.closest('[data-ok]')) { Forge.skipAll(stage); stage.querySelectorAll('.s-card').forEach(flip); stage.remove(); sel = res.slice().sort((a, b) => b.grade - a.grade)[0].id; back(); }
     };
   }
 
