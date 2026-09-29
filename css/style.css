@@ -596,3 +596,5 @@ body.touch #chat { bottom: 250px; }
 .forge-title.show { opacity: 1; transform: scale(1); }
 .forge-fx.out { opacity: 0; }
 @media (max-width: 600px) { .forge-title { font-size: 38px; } }
+.forge-fx.forge-video { background: #000; }
+.forge-fx video { width: 100%; height: 100%; object-fit: cover; display: block; }

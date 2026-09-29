@@ -124,8 +124,50 @@ const Forge = (() => {
   }
 
   // ---------------------------------------------------------------- the show
+  // pre-rendered clips per result tier; a tier without a clip (or a clip that fails to load) uses the canvas show
+  const VIDEOS = { 1: 'assets/forge/g1.mp4', 2: 'assets/forge/g2.mp4' };
+  const tier = (grade) => Math.max(1, grade); // 일반 and 고급 share one clip
+
   // host: element to cover (the summon stage); grade: best grade in the pull; onDone after it ends
   function play(host, grade, onDone) {
+    const src = VIDEOS[tier(grade)];
+    if (!src) return playCanvas(host, grade, onDone);
+    const wrap = document.createElement('div');
+    wrap.className = 'forge-fx forge-video';
+    wrap.innerHTML = '<video playsinline preload="auto"></video><div class="forge-skip">클릭하여 건너뛰기</div><div class="forge-title"></div>';
+    host.appendChild(wrap);
+    const v = wrap.querySelector('video');
+    let done = false, started = false;
+    const finish = () => {
+      if (done) return; done = true;
+      v.pause();
+      wrap.classList.add('out');
+      setTimeout(() => { wrap.remove(); onDone && onDone(); }, 350);
+    };
+    const fallback = () => {
+      if (done || started) return finish();
+      done = true; wrap.remove(); playCanvas(host, grade, onDone);
+    };
+    wrap.onclick = (e) => { e.stopPropagation(); finish(); };
+    v.onplaying = () => { started = true; };
+    v.onended = () => setTimeout(finish, grade >= 2 ? 1300 : 0); // hold the final frame so the title reads
+    v.onerror = fallback;
+    v.ontimeupdate = () => {
+      if (grade >= 2 && v.duration && v.currentTime > v.duration - 1.2 && !wrap.querySelector('.forge-title.show')) {
+        const title = wrap.querySelector('.forge-title');
+        title.textContent = D.GRADES[grade].name + '!'.repeat(grade - 1);
+        title.style.color = D.GRADES[grade].color; title.className = 'forge-title show g' + grade;
+      }
+    };
+    v.muted = !!(window.Game && Game.muted);
+    v.src = src;
+    const p = v.play();
+    // autoplay with sound can be refused; retry muted rather than skipping the show
+    if (p && p.catch) p.catch(() => { if (done) return; v.muted = true; v.play().catch(fallback); });
+    setTimeout(() => { if (!started) fallback(); }, 4000); // never leave the stage stuck behind a stalled clip
+  }
+
+  function playCanvas(host, grade, onDone) {
     const wrap = document.createElement('div');
     wrap.className = 'forge-fx';
     wrap.innerHTML = '<canvas></canvas><div class="forge-skip">클릭하여 건너뛰기</div><div class="forge-title"></div>';
