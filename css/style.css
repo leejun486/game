@@ -587,3 +587,12 @@ body.touch #chat { bottom: 250px; }
 
 .ride-opt { display: flex; gap: 6px; align-items: center; font-size: 13px; margin: 8px 0; color: var(--text); cursor: pointer; }
 @media (max-width: 900px) { #right-buttons { gap: 6px; } }
+
+/* summon forge cinematic */
+.forge-fx { position: absolute; inset: 0; z-index: 20; background: #050408; cursor: pointer; transition: opacity .35s; }
+.forge-fx canvas { width: 100%; height: 100%; display: block; }
+.forge-skip { position: absolute; right: 16px; bottom: 12px; font-size: 12px; color: #8a8298; opacity: .7; pointer-events: none; }
+.forge-title { position: absolute; left: 0; right: 0; top: 18%; text-align: center; font: 900 54px/1 serif; letter-spacing: 6px; opacity: 0; transform: scale(1.6); transition: opacity .4s, transform .5s cubic-bezier(.2,1.6,.4,1); pointer-events: none; -webkit-text-stroke: 2px #1a0f05; paint-order: stroke fill; text-shadow: 0 2px 0 #000, 0 0 18px currentColor, 0 0 40px currentColor; }
+.forge-title.show { opacity: 1; transform: scale(1); }
+.forge-fx.out { opacity: 0; }
+@media (max-width: 600px) { .forge-title { font-size: 38px; } }

@@ -1084,6 +1084,7 @@ const Mounts = (() => {
       <div class="front card gr${x.grade}"><canvas width="96" height="128"></canvas><div class="nm ${D.GRADES[x.grade].cls}">${esc(x.name)}</div></div></div>`).join('')}</div>
       <div class="summon-btns"><button class="dark-btn" data-all>모두 열기</button><button class="gold-btn" data-ok>확인</button></div>`;
     panelEl.appendChild(stage);
+    Forge.play(stage, Math.max(...res.map((x) => x.grade)));
     stage.querySelectorAll('.s-card').forEach((sc, i) => thumb(sc.querySelector('canvas'), res[i].id));
     const flip = (sc) => {
       if (sc.classList.contains('flip')) return;

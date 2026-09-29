@@ -258,6 +258,7 @@ const Transcend = (() => {
       <div class="front card gr${c.grade}"><canvas width="96" height="128"></canvas><div class="nm ${D.GRADES[c.grade].cls}">${esc(c.name)}</div></div></div>`).join('')}</div>
       <div class="summon-btns"><button class="dark-btn" data-all>모두 열기</button><button class="gold-btn" data-ok>확인</button><button class="dark-btn" data-go>초월 화면</button></div>`;
     panelEl.closest('#panel-layer').appendChild(stage);
+    Forge.play(stage, Math.max(...results.map((x) => x.grade)));
     stage.querySelectorAll('.s-card').forEach((sc, i) => {
       const cv = sc.querySelector('canvas'), g = cv.getContext('2d');
       g.imageSmoothingEnabled = false;
