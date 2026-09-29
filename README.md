@@ -89,3 +89,11 @@ js/pets.js          펫: 코드로 그리는 펫 아트, 따라다니기·공격
 - **캐릭터·몬스터 스프라이트**: [Universal LPC Spritesheet Character Generator](https://github.com/sanderfrenken/Universal-LPC-Spritesheet-Character-Generator)의 레이어(CC-BY-SA 3.0 / GPL 3.0 / OGA-BY 3.0)를 `tools/build_sprites.py`로 합성했습니다. 작가별 크레딧은 [`assets/sprites/CREDITS.md`](assets/sprites/CREDITS.md)에 있습니다.
 - **아이콘**: [game-icons.net](https://game-icons.net) (CC BY 3.0). 작가는 Lorc, Delapouite, Skoll, Faithtoken, Zeromancer, Willdabeast, Carl Olsen, Caro Asercion, sbed, Darkzaitzev입니다. 색상만 바꿨습니다. 자세한 내용은 [`assets/icons/LICENSE-game-icons.txt`](assets/icons/LICENSE-game-icons.txt)를 참고하세요.
 - 지형, 나무, 건물, 이펙트, 펫은 코드로 직접 그립니다.
+
+## 서리 설원 (Lv.40~)
+
+북서쪽 끝의 눈 덮인 고레벨 사냥터입니다. 순간이동사 카심에게 '서리 설원'으로 이동하거나, 초원 서쪽 눈길을 따라 올라가면 됩니다.
+
+- 몬스터: 서리 늑대인간(Lv.40), 얼어붙은 망자(Lv.43), 빙하 트롤(Lv.46)
+- 보스: 서리 거인 요툰(Lv.52, 7분 재출현). 몇 초마다 바닥에 경고 원을 띄운 뒤 서리 발구르기로 주변을 강타하고 이동속도를 늦춥니다. 체력이 절반 아래로 떨어지면 서리 늑대 4마리를 불러냅니다.
+- 퀘스트 15~18이 설원으로 이어지고, 거인은 전설 무기를 떨어뜨립니다.

@@ -195,9 +195,22 @@ const Game = {
   const total = names.length + 1; // + weapon looks
   const tick = () => { loaded++; if (loaded === total) ready(); };
   Looks.load(tick);
+  // recoloured monster sheets are canvases made from their base sheet once it loads
+  const variantsOf = {};
+  for (const [v, [base, filter]] of Object.entries(D.SHEET_VARIANTS || {})) {
+    window.SPRITE_ROWS[v] = window.SPRITE_ROWS[base];
+    (variantsOf[base] = variantsOf[base] || []).push([v, filter]);
+  }
+  const makeVariants = (n, img) => {
+    for (const [v, filter] of variantsOf[n] || []) {
+      const c = document.createElement('canvas'); c.width = img.width; c.height = img.height;
+      const g = c.getContext('2d'); g.filter = filter; g.drawImage(img, 0, 0);
+      Sprites[v] = c;
+    }
+  };
   names.forEach((n) => {
     const img = new Image();
-    img.onload = tick;
+    img.onload = () => { makeVariants(n, img); tick(); };
     img.onerror = () => { console.warn('sprite failed', n); tick(); };
     img.src = `assets/sprites/${n}.png`;
     Sprites[n] = img;
@@ -575,8 +588,18 @@ const Game = {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     const W = innerWidth, H = innerHeight;
     const zone = p ? World.zoneAt(p.x, p.y).id : 'town';
-    const tint = { grave: 'rgba(20,30,70,0.28)', orc: 'rgba(90,40,10,0.14)', forest: 'rgba(0,40,20,0.12)', field: 'rgba(255,220,150,0.04)', town: 'rgba(255,200,120,0.05)' }[zone];
+    const tint = { grave: 'rgba(20,30,70,0.28)', orc: 'rgba(90,40,10,0.14)', forest: 'rgba(0,40,20,0.12)', snow: 'rgba(160,200,255,0.10)', field: 'rgba(255,220,150,0.04)', town: 'rgba(255,200,120,0.05)' }[zone];
     if (tint) { ctx.fillStyle = tint; ctx.fillRect(0, 0, W, H); }
+    if (zone === 'snow') { // falling snow drifting in the wind
+      const tt = performance.now() / 1000;
+      ctx.fillStyle = 'rgba(255,255,255,0.85)';
+      for (let i = 0; i < 140; i++) {
+        const sp = 30 + (i % 7) * 12, sz = 1 + (i % 3);
+        const px = ((i * 97.3 + tt * 22 + Math.sin(tt * 0.8 + i) * 18) % (W + 40) + W + 40) % (W + 40) - 20;
+        const py = ((i * 57.1 + tt * sp) % (H + 20)) - 10;
+        ctx.fillRect(px, py, sz, sz);
+      }
+    }
     const vg = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.35, W / 2, H / 2, Math.max(W, H) * 0.75);
     vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,0.55)');
     ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);

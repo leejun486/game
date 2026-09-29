@@ -2,7 +2,7 @@
 // World: tile map generation, terrain rendering (chunked), props, collision, minimap.
 const World = (() => {
   const T = D.TILE, W = D.MAP_W, H = D.MAP_H;
-  const GRASS = 0, DIRT = 1, STONE = 2, GRAVE = 3, SAND = 4, WATER = 5, FOREST = 6, ROAD = 7, CLIFF = 8, DUNGEON = 9;
+  const GRASS = 0, DIRT = 1, STONE = 2, GRAVE = 3, SAND = 4, WATER = 5, FOREST = 6, ROAD = 7, CLIFF = 8, DUNGEON = 9, SNOW = 10, ICE = 11, TRAIL = 12;
   const tiles = new Uint8Array(W * H);
   const solid = new Uint8Array(W * H);
   const props = [];
@@ -29,6 +29,7 @@ const World = (() => {
         else if (z === 'forest') t = n > 0.66 ? GRASS : FOREST;
         else if (z === 'grave') t = n > 0.6 ? FOREST : GRAVE;
         else if (z === 'orc') t = n > 0.64 ? DIRT : SAND;
+        else if (z === 'snow') t = SNOW;
         tiles[ty * W + tx] = t;
       }
     }
@@ -58,6 +59,14 @@ const World = (() => {
     };
     road(90, 74, 92, 8, 1); road(106, 90, 172, 86, 1); road(90, 106, 90, 172, 1); road(74, 90, 52, 94, 1);
     road(90, 60, 60, 72, 1);
+    road(60, 72, 44, 52, 1); road(44, 52, 24, 12, 1); // trail up into the snowfield
+    // snowfield: lakes freeze over (walkable ice), the trail is packed snow
+    for (let ty = 0; ty < H; ty++) for (let tx = 0; tx < W; tx++) {
+      if (zoneAt(tx * T + 32, ty * T + 32).id !== 'snow') continue;
+      const i = ty * W + tx;
+      if (tiles[i] === WATER) tiles[i] = ICE;
+      else if (tiles[i] === DIRT) tiles[i] = TRAIL;
+    }
     // cobbled streets inside town
     for (let ty = 75; ty <= 105; ty++) for (let tx = 75; tx <= 105; tx++) {
       if (Math.abs(tx - 90) <= 1 || Math.abs(ty - 90) <= 1) {
@@ -84,7 +93,7 @@ const World = (() => {
   function freeTile(tx, ty, margin = 0) {
     for (let oy = -margin; oy <= margin; oy++) for (let ox = -margin; ox <= margin; ox++) {
       const t = tileAt(tx + ox, ty + oy);
-      if (t === WATER || t === CLIFF || t === DIRT || t === ROAD || t === STONE) return false;
+      if (t === WATER || t === CLIFF || t === DIRT || t === ROAD || t === STONE || t === TRAIL) return false;
     }
     return true;
   }
@@ -151,6 +160,13 @@ const World = (() => {
           else if (roll < (spawnArea ? 0.075 : 0.1)) addProp('deadtree', x, y, 16);
           else if (roll < 0.12) addProp('bones', x, y, 0, { ground: true });
           else if (roll < 0.13) addProp('rock', x, y, 16);
+        } else if (z === 'snow') {
+          if (Math.hypot(tx - 22, ty - 8) < 9) continue; // keep the giant's arena open
+          if (t === ICE) { if (roll < 0.01) addProp('icecrystal', x, y, 16); continue; }
+          if (roll < (spawnArea ? 0.03 : 0.13)) addProp('snowpine', x, y, 20);
+          else if (roll < (spawnArea ? 0.04 : 0.16)) addProp('icecrystal', x, y, 16);
+          else if (roll < 0.18) addProp('snowrock', x, y, 16);
+          else if (roll < 0.2) addProp('snowdrift', x, y, 0, { ground: true });
         } else if (z === 'orc') {
           if (roll < 0.012) addProp('tent', x, y, 40);
           else if (roll < 0.02) addProp('bonfire', x, y, 18);
@@ -173,6 +189,8 @@ const World = (() => {
     // boss arenas
     addProp('altar', 165 * T, 86 * T, 0, { ground: true });
     addProp('altar', 90 * T, 168 * T, 0, { ground: true });
+    addProp('altar', 22 * T, 8 * T, 0, { ground: true, frost: true });
+    for (let a = 0; a < 6; a++) { const ang = (a / 6) * Math.PI * 2; addProp('icecrystal', (22 + Math.cos(ang) * 6) * T, (8 + Math.sin(ang) * 4.5) * T, 16); }
   }
   // 이클립스 균열: a walled arena only reachable through the dungeon teleport
   function buildDungeon() {
@@ -237,7 +255,7 @@ const World = (() => {
 
   const PAL = {
     [GRASS]: [78, 112, 54], [FOREST]: [50, 82, 42], [DIRT]: [124, 100, 70], [STONE]: [170, 154, 130],
-    [ROAD]: [140, 128, 110], [DUNGEON]: [58, 52, 66], [GRAVE]: [74, 70, 64], [SAND]: [178, 148, 100], [WATER]: [38, 78, 112], [CLIFF]: [30, 30, 30],
+    [ROAD]: [140, 128, 110], [DUNGEON]: [58, 52, 66], [GRAVE]: [74, 70, 64], [SAND]: [178, 148, 100], [WATER]: [38, 78, 112], [CLIFF]: [30, 30, 30], [SNOW]: [214, 224, 236], [ICE]: [150, 196, 226], [TRAIL]: [176, 182, 192],
   };
 
   function texel(wx, wy) {
@@ -299,6 +317,21 @@ const World = (() => {
       if (shore) k *= 0.8;
     } else if (t === GRAVE) {
       if (fine > 0.9) { g += 10; }
+    } else if (t === SNOW) {
+      // soft drifts with blue shadows and glints
+      const drift = U.fbm(wx * 0.006, wy * 0.006, 61, 3);
+      k = 0.9 + drift * 0.14 + (fine - 0.5) * 0.04;
+      b += 8 - drift * 10; r -= (1 - drift) * 12; g -= (1 - drift) * 6;
+      if (fine > 0.985) { r = g = b = 255; k = 1; }
+    } else if (t === TRAIL) { // trodden snow with footprints
+      k = 0.92 + n * 0.12 + (fine - 0.5) * 0.06;
+      if (U.hash(Math.floor(wx / 14), Math.floor(wy / 10), 77) > 0.9) k *= 0.88;
+    } else if (t === ICE) {
+      k = 0.92 + n * 0.12;
+      const crack = Math.abs(U.fbm(wx * 0.015, wy * 0.015, 83, 3) - 0.5);
+      if (crack < 0.012) { r += 60; g += 50; b += 30; }
+      const sheen = Math.sin((wx + wy) * 0.02 + U.vnoise(wx * 0.004, wy * 0.004, 9) * 5);
+      if (sheen > 0.92) { r += 30; g += 30; b += 20; }
     } else if (t === SAND) {
       if (fine > 0.95) { r -= 25; g -= 25; b -= 20; }
     }
@@ -519,18 +552,60 @@ const World = (() => {
       g.fillStyle = '#7d7688'; g.fillRect(10, h - 140, 40, 12);
       g.fillStyle = 'rgba(170,90,255,0.55)'; g.fillRect(27, h - 110, 4, 60);
     });
+    for (let v = 0; v < 4; v++) {
+      const rr = U.rng(300 + v);
+      art['snowpine' + v] = mk(110, 180, (g, w, h) => {
+        shadow(g, w / 2 + 8, h - 10, 36, 12, 0.25);
+        g.fillStyle = '#3f2c1e'; g.fillRect(w / 2 - 5, h - 34, 10, 26);
+        for (let i = 0; i < 5; i++) {
+          const y = h - 30 - i * 27, hw = 48 - i * 8;
+          const k = 0.7 + i * 0.07;
+          g.fillStyle = `rgb(${24 * k | 0},${60 * k | 0},${54 * k | 0})`;
+          g.beginPath(); g.moveTo(w / 2 - hw, y); g.lineTo(w / 2, y - 46); g.lineTo(w / 2 + hw, y); g.closePath(); g.fill();
+          // snow caps on each tier
+          g.fillStyle = '#eef4fb';
+          g.beginPath(); g.moveTo(w / 2 - hw * 0.72, y - 10); g.quadraticCurveTo(w / 2 - hw * 0.3, y - 4 - rr() * 4, w / 2, y - 12); g.quadraticCurveTo(w / 2 + hw * 0.35, y - 3, w / 2 + hw * 0.7, y - 11); g.lineTo(w / 2, y - 46); g.closePath(); g.fill();
+          g.fillStyle = 'rgba(150,180,220,0.45)'; g.beginPath(); g.moveTo(w / 2, y - 46); g.lineTo(w / 2 + hw * 0.7, y - 11); g.lineTo(w / 2 + 4, y - 10); g.closePath(); g.fill();
+        }
+      });
+      art['icecrystal' + v] = mk(70, 90, (g, w, h) => {
+        shadow(g, w / 2, h - 8, 26, 7, 0.25);
+        const shards = 3 + v;
+        for (let i = 0; i < shards; i++) {
+          const x = w / 2 + (rr() - 0.5) * 34, len = 28 + rr() * 44, lean = (rr() - 0.5) * 0.7, bw = 6 + rr() * 6;
+          const tx = x + Math.sin(lean) * len, ty = h - 10 - Math.cos(lean) * len;
+          const gr = g.createLinearGradient(x, h - 10, tx, ty); gr.addColorStop(0, '#5aa8e0'); gr.addColorStop(0.6, '#bfeaff'); gr.addColorStop(1, '#ffffff');
+          g.fillStyle = gr; g.beginPath(); g.moveTo(x - bw, h - 10); g.lineTo(tx, ty); g.lineTo(x + bw, h - 10); g.closePath(); g.fill();
+          g.strokeStyle = 'rgba(30,70,130,0.7)'; g.lineWidth = 1.2; g.stroke();
+          g.strokeStyle = 'rgba(255,255,255,0.8)'; g.beginPath(); g.moveTo(x - bw * 0.3, h - 12); g.lineTo(tx, ty); g.stroke();
+        }
+      });
+      art['snowrock' + v] = mk(80, 60, (g, w, h) => {
+        shadow(g, w / 2 + 4, h - 10, 30, 9, 0.25);
+        const pts = [];
+        for (let i = 0; i < 8; i++) { const a = (i / 8) * Math.PI * 2; pts.push([w / 2 + Math.cos(a) * (22 + rr() * 8), h - 22 + Math.sin(a) * (14 + rr() * 5)]); }
+        g.fillStyle = '#6a7482'; g.beginPath(); pts.forEach(([x, y], i) => (i ? g.lineTo(x, y) : g.moveTo(x, y))); g.fill();
+        g.fillStyle = '#f2f6fb'; g.beginPath(); g.ellipse(w / 2 - 2, h - 32, 20, 8, -0.15, 0, Math.PI * 2); g.fill();
+        g.fillStyle = '#4c5563'; g.beginPath(); g.ellipse(w / 2 + 6, h - 16, 16, 5, 0, 0, Math.PI); g.fill();
+      });
+      art['snowdrift' + v] = mk(70, 26, (g) => {
+        g.fillStyle = 'rgba(255,255,255,0.75)'; g.beginPath(); g.ellipse(35, 16, 30, 7, 0, 0, Math.PI * 2); g.fill();
+        g.fillStyle = 'rgba(140,170,210,0.35)'; g.beginPath(); g.ellipse(40, 19, 22, 4, 0, 0, Math.PI * 2); g.fill();
+      });
+    }
     art.woodpile = mk(50, 30, (g) => { g.fillStyle = '#4a3020'; g.fillRect(8, 16, 34, 6); g.fillRect(12, 11, 26, 6); g.fillStyle = '#2b2b2b'; blob(g, 25, 16, 10, 'rgba(30,30,30,0.6)'); });
   }
 
   function drawProp(ctx, p, sx, sy, t) {
     let a;
     switch (p.type) {
-      case 'tree': case 'pine': case 'deadtree': case 'rock': case 'bush': case 'flowers': case 'tomb': case 'stall': a = art[p.type + p.v % (p.type === 'house' ? 3 : 4)]; break;
+      case 'tree': case 'pine': case 'deadtree': case 'rock': case 'bush': case 'flowers': case 'tomb': case 'stall':
+      case 'snowpine': case 'icecrystal': case 'snowrock': case 'snowdrift': a = art[p.type + p.v % 4]; break;
       case 'house': a = art['house' + (p.v % 3)]; break;
       default: a = art[p.type];
     }
     if (p.type === 'portal') return drawPortal(ctx, sx, sy, t);
-    if (p.type === 'altar') return drawAltar(ctx, sx, sy, t);
+    if (p.type === 'altar') return drawAltar(ctx, sx, sy, t, p.frost);
     if (p.type === 'rift') return drawRift(ctx, sx, sy, t);
     if (p.type === 'brazier') { ctx.fillStyle = '#3a3440'; ctx.fillRect(sx - 12, sy - 30, 24, 30); ctx.fillStyle = '#56505e'; ctx.fillRect(sx - 16, sy - 34, 32, 6); return flame(ctx, sx, sy - 36, 1.2, t, sx, true); }
     if (p.type === 'torch') return drawTorch(ctx, sx, sy, t, p);
@@ -594,10 +669,10 @@ const World = (() => {
     ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, 110, 0, Math.PI * 2); ctx.fill();
     ctx.restore();
   }
-  function drawAltar(ctx, x, y, t) {
+  function drawAltar(ctx, x, y, t, frost) {
     ctx.save(); ctx.translate(x, y); ctx.scale(1, 0.6);
-    ctx.fillStyle = 'rgba(60,10,10,0.55)'; ctx.beginPath(); ctx.arc(0, 0, 170, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = `rgba(220,40,40,${0.45 + Math.sin(t * 2) * 0.2})`; ctx.lineWidth = 4;
+    ctx.fillStyle = frost ? 'rgba(20,60,110,0.45)' : 'rgba(60,10,10,0.55)'; ctx.beginPath(); ctx.arc(0, 0, 170, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = frost ? `rgba(120,210,255,${0.5 + Math.sin(t * 2) * 0.2})` : `rgba(220,40,40,${0.45 + Math.sin(t * 2) * 0.2})`; ctx.lineWidth = 4;
     ctx.beginPath(); ctx.arc(0, 0, 150, 0, Math.PI * 2); ctx.stroke();
     ctx.beginPath();
     for (let i = 0; i <= 5; i++) { const a = (i * 2 * Math.PI * 2) / 5 - Math.PI / 2; const px = Math.cos(a) * 150, py = Math.sin(a) * 150; i ? ctx.lineTo(px, py) : ctx.moveTo(px, py); }
@@ -616,14 +691,14 @@ const World = (() => {
     }
     g.putImageData(img, 0, 0);
     for (const p of props) {
-      if (p.type === 'tree' || p.type === 'pine') { g.fillStyle = 'rgba(20,50,20,0.7)'; g.fillRect(p.x / T, p.y / T, 1, 1); }
+      if (p.type === 'tree' || p.type === 'pine' || p.type === 'snowpine') { g.fillStyle = 'rgba(20,50,20,0.7)'; g.fillRect(p.x / T, p.y / T, 1, 1); }
       if (p.type === 'house' || p.type === 'palisade' || p.type === 'tent') { g.fillStyle = '#6a4a2c'; g.fillRect(p.x / T - 0.5, p.y / T - 0.5, 1.5, 1.5); }
     }
     miniBase = c;
   }
 
   return {
-    GRASS, DIRT, STONE, GRAVE, SAND, WATER, FOREST, ROAD, DUNGEON,
+    GRASS, DIRT, STONE, GRAVE, SAND, WATER, FOREST, ROAD, DUNGEON, SNOW, ICE,
     tiles, props, tileAt, zoneAt, blocked, findFree,
     init() { generate(); buildArt(); buildMini(); },
     drawGround, drawProp,

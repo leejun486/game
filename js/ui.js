@@ -564,7 +564,7 @@ const UI = (() => {
       const lbl = (t, x, y, col = '#fff') => { g.strokeText(t, x * S, y * S); g.fillStyle = col; g.fillText(t, x * S, y * S); };
       lbl('라스카노 마을', 90, 86, '#9fe0ff'); lbl('바람의 초원', 90, 40); lbl('망자의 묘지', 145, 70); lbl('오크 요새', 90, 128); lbl('고요한 숲', 30, 120);
       g.font = 'bold 16px sans-serif';
-      lbl('☠ 뱀파이어 군주', 165, 80, '#ff6b5e'); lbl('☠ 미노타우르스 킹', 90, 162, '#ff6b5e');
+      lbl('☠ 뱀파이어 군주', 165, 80, '#ff6b5e'); lbl('☠ 미노타우르스 킹', 90, 162, '#ff6b5e'); lbl('☠ 서리 거인', 22, 4, '#8fd8ff');
       const p = game.player;
       g.fillStyle = '#fff'; g.beginPath(); g.arc(p.x / D.TILE * S, p.y / D.TILE * S, 7, 0, Math.PI * 2); g.fill();
       g.strokeStyle = '#e33'; g.lineWidth = 3; g.stroke();

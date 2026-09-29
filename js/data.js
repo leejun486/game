@@ -75,6 +75,18 @@ D.MONSTERS = {
   lizardman: { name: '리자드맨', sheet: 'lizardman', lv: 25, hp: 760, atk: 50, def: 19, spd: 88, scale: 1.05, aggro: true, range: 56 },
   troll: { name: '흉포한 트롤', sheet: 'troll', lv: 30, hp: 1200, atk: 64, def: 24, spd: 70, scale: 1.25, aggro: true, range: 60 },
   minotaur: { name: '미노타우르스 킹', sheet: 'minotaur', lv: 38, hp: 16000, atk: 105, def: 34, spd: 90, scale: 1.7, aggro: true, range: 76, boss: true },
+  // 서리 설원 (Lv.40+): frost-tinted variants of the LPC sheets (D.SHEET_VARIANTS)
+  frost_wolf: { name: '서리 늑대인간', sheet: 'wolfman_frost', lv: 40, hp: 1600, atk: 80, def: 29, spd: 100, scale: 1.05, aggro: true, range: 54 },
+  frost_skel: { name: '얼어붙은 망자', sheet: 'skeleton_frost', lv: 43, hp: 1900, atk: 88, def: 32, spd: 85, scale: 1.05, aggro: true, range: 58 },
+  ice_troll: { name: '빙하 트롤', sheet: 'troll_frost', lv: 46, hp: 2600, atk: 96, def: 36, spd: 72, scale: 1.35, aggro: true, range: 62 },
+  frost_giant: { name: '서리 거인 요툰', sheet: 'troll_giant', lv: 52, hp: 48000, atk: 150, def: 46, spd: 80, scale: 2.3, aggro: true, range: 92, boss: true, skill: 'frostStomp' },
+};
+// recoloured copies of loaded sheets: name -> [base sheet, canvas filter]
+D.SHEET_VARIANTS = {
+  wolfman_frost: ['wolfman', 'hue-rotate(185deg) saturate(0.55) brightness(1.45)'],
+  skeleton_frost: ['skeleton', 'sepia(0.4) hue-rotate(160deg) saturate(2.2) brightness(1.05)'],
+  troll_frost: ['troll', 'hue-rotate(150deg) saturate(1.4) brightness(1.1)'],
+  troll_giant: ['troll', 'hue-rotate(175deg) saturate(1.9) brightness(1.3) contrast(1.1)'],
 };
 for (const k in D.MONSTERS) {
   const m = D.MONSTERS[k];
@@ -91,6 +103,7 @@ D.MAX_LV = 60;
 D.ZONES = [
   { id: 'town', name: '라스카노 마을', safe: true, test: (tx, ty) => Math.abs(tx - 90) <= 15 && Math.abs(ty - 90) <= 15 },
   { id: 'dungeon', name: '이클립스 균열', dungeon: true, test: (tx, ty) => tx >= 148 && tx <= 177 && ty >= 4 && ty <= 32 },
+  { id: 'snow', name: '서리 설원', test: (tx, ty) => tx < 52 && ty < 58 },
   { id: 'field', name: '바람의 초원', test: (tx, ty) => ty < 75 && tx >= 50 && tx <= 130 },
   { id: 'grave', name: '망자의 묘지', test: (tx, ty) => tx > 105 },
   { id: 'orc', name: '오크 요새', test: (tx, ty) => ty > 105 },
@@ -112,6 +125,10 @@ D.SPAWNS = [
   { m: 'lizardman', x: 62, y: 140, r: 10, n: 12 },
   { m: 'troll', x: 100, y: 150, r: 11, n: 12 },
   { m: 'minotaur', x: 90, y: 168, r: 3, n: 1, respawn: 300 },
+  { m: 'frost_wolf', x: 40, y: 48, r: 8, n: 14 },
+  { m: 'frost_skel', x: 16, y: 22, r: 8, n: 14 },
+  { m: 'ice_troll', x: 40, y: 18, r: 8, n: 12 },
+  { m: 'frost_giant', x: 22, y: 8, r: 3, n: 1, respawn: 420 },
 ];
 
 // teleport destinations (tile coords)
@@ -125,6 +142,7 @@ D.TELEPORTS = [
   { name: '오크 요새 입구', x: 90, y: 116, cost: 900, lv: 'Lv.20~' },
   { name: '리자드맨 늪지', x: 66, y: 136, cost: 1200, lv: 'Lv.25~' },
   { name: '트롤 서식지', x: 100, y: 144, cost: 1500, lv: 'Lv.30~' },
+  { name: '서리 설원', x: 46, y: 54, cost: 2500, lv: 'Lv.40~' },
 ];
 
 // ---------------- items ----------------
@@ -190,6 +208,10 @@ D.DROPS = {
   lizardman: [['hp_l', 0.05], ['w_sword3', 0.002], ['w_bow3', 0.002], ['w_staff3', 0.002], ['sc_armor', 0.01]],
   troll: [['hp_l', 0.08], ['a_3', 0.003], ['sc_weapon', 0.012], ['ticket', 0.004]],
   vampire: [['ticket', 1], ['sc_weapon', 0.8], ['sc_armor', 0.8], ['w_sword4', 0.2], ['w_bow4', 0.2], ['w_staff4', 0.2], ['r_3', 0.15], ['a_4', 0.15]],
+  frost_wolf: [['hp_l', 0.08], ['sc_weapon', 0.012], ['sc_armor', 0.012]],
+  frost_skel: [['hp_l', 0.08], ['r_3', 0.002], ['sc_weapon', 0.015], ['ticket', 0.004]],
+  ice_troll: [['hp_l', 0.1], ['a_4', 0.002], ['w_sword5', 0.001], ['w_bow5', 0.001], ['w_staff5', 0.001], ['ticket', 0.006]],
+  frost_giant: [['ticket', 1], ['ticket', 1], ['ticket', 1], ['sc_weapon', 1], ['sc_armor', 1], ['w_sword5', 0.3], ['w_bow5', 0.3], ['w_staff5', 0.3], ['a_4', 0.4], ['r_3', 0.4]],
   minotaur: [['ticket', 1], ['ticket', 1], ['sc_weapon', 1], ['w_sword5', 0.15], ['w_bow5', 0.15], ['w_staff5', 0.15], ['a_4', 0.3], ['r_3', 0.3]],
 };
 
@@ -270,6 +292,10 @@ D.QUESTS = [
   { title: '12. 늪지의 사냥꾼', desc: '리자드맨 처치', type: 'kill', m: 'lizardman', n: 30, reward: { gold: 15000, items: { sc_weapon: 3 } } },
   { title: '13. 뒤틀린 기운', desc: '흉포한 트롤 처치', type: 'kill', m: 'troll', n: 140, reward: { dia: 800, items: { ticket: 5 } } },
   { title: '14. 미궁의 왕', desc: '미노타우르스 킹 처치', type: 'kill', m: 'minotaur', n: 1, reward: { dia: 1500, items: { ticket: 10 } } },
+  { title: '15. 서리 설원 개척', desc: '서리 늑대인간 처치', type: 'kill', m: 'frost_wolf', n: 40, reward: { gold: 30000, items: { hp_l: 30, sc_weapon: 3 } } },
+  { title: '16. 얼음 무덤', desc: '얼어붙은 망자 처치', type: 'kill', m: 'frost_skel', n: 50, reward: { gold: 40000, items: { sc_armor: 4 } } },
+  { title: '17. 빙하의 파수꾼', desc: '빙하 트롤 처치', type: 'kill', m: 'ice_troll', n: 60, reward: { dia: 1000, items: { ticket: 5 } } },
+  { title: '18. 거인의 몰락', desc: '서리 거인 요툰 처치', type: 'kill', m: 'frost_giant', n: 1, reward: { dia: 3000, items: { ticket: 15 } } },
 ];
 D.DAILY_QUEST = { title: '일일 토벌', desc: '아무 몬스터 처치', type: 'killAny', n: 100, reward: { dia: 100, gold: 5000 } };
 
@@ -283,7 +309,7 @@ D.NPCS = [
   { id: 'guard1', name: '경비병', sheet: 'npc_guard', dx: -1.5, dy: -15.5, dir: 2, talk: '북쪽은 바람의 초원이다. 고블린부터 상대하도록.' },
   { id: 'guard2', name: '경비병', sheet: 'npc_guard', dx: 15.5, dy: -1.5, dir: 1, talk: '동쪽은 망자의 묘지... 밤이 되면 뱀파이어가 나타난다더군.' },
   { id: 'guard3', name: '경비병', sheet: 'npc_guard', dx: 1.5, dy: 15.5, dir: 2, talk: '남쪽 오크 요새는 레벨 20 이상만 가도록.' },
-  { id: 'guard4', name: '경비병', sheet: 'npc_guard', dx: -15.5, dy: 1.5, dir: 3, talk: '서쪽은 고요한 숲이다. 호수가 아름답지.' },
+  { id: 'guard4', name: '경비병', sheet: 'npc_guard', dx: -15.5, dy: 1.5, dir: 3, talk: '서쪽은 고요한 숲이다. 북서쪽 끝 서리 설원에는 거인이 잠들어 있다더군.' },
 ];
 
 // ---------------- other players (bots) ----------------

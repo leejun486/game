@@ -33,10 +33,10 @@ const Combat = (() => {
     game.fx.push(makeFx('slash', target.x, target.y - 26, { dir: hero.dir }));
     damageMonster(game, hero, target, mult);
   }
-  function monsterHit(mon, target, heavy) {
+  function monsterHit(mon, target, heavy, aoe) {
     const game = Game;
     if (!target || target.dead || mon.dead) return;
-    if (U.dist(mon, target) > mon.def.range + target.radius + 30) return;
+    if (!aoe && U.dist(mon, target) > mon.def.range + target.radius + 30) return;
     if (target === game.player) {
       const p = target, st = p.stats;
       if (p.s.gm && p.s.gm.god) { floatText(game, p, 'IMMUNE', '#ffd76a'); return; }
@@ -283,6 +283,14 @@ const Combat = (() => {
         const r = big ? 46 : 30, st = -2.4 + (f.dir || 0) * 0.6;
         ctx.beginPath(); ctx.arc(x, y, r, st + k * 1.2, st + 1.8 + k * 1.2); ctx.stroke();
         if (big) { ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(x, y, r * 0.7, st + 0.6 + k * 1.5, st + 2.4 + k * 1.5); ctx.stroke(); }
+        break;
+      }
+      case 'stompwarn': { // ground ring that fills up until the stomp lands
+        ctx.translate(x, y); ctx.scale(1, 0.55);
+        const R = f.r || 180;
+        ctx.fillStyle = `rgba(90,180,255,${0.12 + k * 0.18})`; ctx.beginPath(); ctx.arc(0, 0, R, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = 'rgba(160,225,255,0.35)'; ctx.beginPath(); ctx.arc(0, 0, R * k, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = `rgba(200,240,255,${0.6 + Math.sin(f.t * 30) * 0.3})`; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(0, 0, R, 0, Math.PI * 2); ctx.stroke();
         break;
       }
       case 'doom': {

@@ -231,6 +231,7 @@ class Monster extends Entity {
       else if (this.trackStuck(dt, sp) > 3) { this.x = this.home.x; this.y = this.home.y; this.returning = false; this.hp = this.maxHp; this.stuckT = 0; }
       return;
     }
+    if (this.target && this.def.skill === 'frostStomp' && this.bossSkill(dt, game)) return;
     if (this.target) {
       const d = U.dist(this, this.target);
       const reach = this.def.range + (this.target.radius || 14);
@@ -263,6 +264,36 @@ class Monster extends Entity {
       const nx = this.x + Math.cos(a) * r, ny = this.y + Math.sin(a) * r;
       if (Math.hypot(nx - this.home.x, ny - this.home.y) < this.spawn.r * D.TILE + 50 && Nav.lineClear(this.x, this.y, nx, ny, 12)) this.wanderTo = { x: nx, y: ny };
     }
+  }
+  // 서리 거인: every few seconds a telegraphed frost stomp (big ring, then damage + slow);
+  // below half health it also calls frost wolves once
+  bossSkill(dt, game) {
+    this.skillCd = (this.skillCd ?? 4) - dt;
+    if (!this.summoned && this.hp < this.maxHp * 0.5) {
+      this.summoned = true;
+      UI.announce(`<em>${this.name}</em>이(가) 서리 늑대를 불러냅니다!`);
+      for (let i = 0; i < 4; i++) {
+        const a = (i / 4) * Math.PI * 2, m = new Monster(D.MONSTERS.frost_wolf, { x: this.x / D.TILE + Math.cos(a) * 2.5, y: this.y / D.TILE + Math.sin(a) * 2, r: 1, noRespawn: true });
+        m.summon = true; m.target = this.target; m.home = { x: this.home.x, y: this.home.y };
+        game.monsters.push(m); game.fx.push(Combat.makeFx('teleport', m.x, m.y));
+      }
+    }
+    if (this.skillCd > 0 || U.dist(this, this.target) > 420) return false;
+    this.skillCd = U.rand(7, 9);
+    const R = 190, x = this.x, y = this.y;
+    game.fx.push(Combat.makeFx('stompwarn', x, y, { r: R, dur: 1.3 }));
+    this.act('thrust', 1.3, () => {
+      game.shake = 12; U.sfx.hit && U.sfx.hit();
+      VFX.iceBurst(x, y, R, 1.8);
+      game.fx.push(Combat.makeFx('explode', x, y, { color: '#9fe0ff', r: R }));
+      for (const e of game.fighters()) {
+        if (e.dead || Math.hypot(e.x - x, e.y - y) > R + (e.radius || 14)) continue;
+        Combat.monsterHit(this, e, true, true);
+        e.slowT = 3;
+      }
+    }, true);
+    this.moving = false;
+    return true;
   }
   drawOverlay(ctx, cam, isTarget) {
     if (this.dead) return;
