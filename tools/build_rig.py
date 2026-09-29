@@ -197,8 +197,9 @@ def mir(a):
 
 # side view keyframes (facing right). front view uses FRONT tables; back view mirrors the front.
 SLASH_SIDE = [(80, 50, -35), (-115, 175, 115), (-95, -165, 160), (-15, 5, 10), (40, 60, 75), (70, 55, 35)]
-SLASH_FRONT = [(115, 95, -105), (-125, -60, -15), (-100, -35, -45), (165, 155, 155), (135, 120, 115), (118, 100, 95)]
-REST_WPN = {"sword": {RIGHT: 35, DOWN: 105, UPD: 75}, "bow": {RIGHT: -90, DOWN: -90, UPD: -90}, "staff": {RIGHT: -95, DOWN: -92, UPD: -88}}
+RELAX = (100, 94)  # front view viewer-left arm hanging close to the body (upper, forearm)
+SLASH_FRONT = [(100, 94, -105), (-125, -60, -15), (-100, -35, -45), (165, 155, 155), (122, 112, 108), (104, 96, 98)]
+REST_WPN = {"sword": {RIGHT: 40, DOWN: 98, UPD: 82}, "bow": {RIGHT: -72, DOWN: -100, UPD: -80}, "staff": {RIGHT: -95, DOWN: -92, UPD: -88}}
 
 
 def pose_for(anim, d, i, kind):
@@ -217,7 +218,7 @@ def pose_for(anim, d, i, kind):
             p.swing = [-14 * sn, 0]
         else:
             p.legs = [(0, max(0, sn) * 4), (0, max(0, -sn) * 4)]
-            p.swing = [4 * sn, 4 * sn]
+            p.arms = [(RELAX[0] + 4 * sn, RELAX[1] + 4 * sn), (180 - RELAX[0] + 4 * sn, 180 - RELAX[1] + 4 * sn)]
             p.body = (1.5 * sn, 0, p.body[2])
         p.wpn = REST_WPN[kind][d] + (-6 * sn if kind == "sword" else 0)
         return p
@@ -240,7 +241,7 @@ def pose_for(anim, d, i, kind):
             p.wpn = -92 + 30 * k
             p.body = (-4 * k, 2 * k, 0)
         else:
-            u, f = 118 + 40 * k, 100 + 70 * k  # viewer-left arm lifts out to the side
+            u, f = RELAX[0] + 58 * k, RELAX[1] + 76 * k  # viewer-left arm lifts out to the side
             p.arms[wa] = (fix(u), fix(f))
             p.wpn = fix(-95 - 8 * k)
             p.body = (0, 0, -2 * k)
@@ -250,7 +251,7 @@ def pose_for(anim, d, i, kind):
         if side:
             p.arms[0] = (90 - 150 * k, 60 - 145 * k)
         else:
-            p.arms = [(118 + 95 * k, 110 + 110 * k), (62 - 95 * k, 70 - 110 * k)]
+            p.arms = [(RELAX[0] + 113 * k, RELAX[1] + 126 * k), (180 - RELAX[0] - 113 * k, 180 - RELAX[1] - 126 * k)]
         p.wpn = REST_WPN[kind][d]
         p.body = (0, 0, -2 * k)
         return p
@@ -261,7 +262,7 @@ def pose_for(anim, d, i, kind):
             p.arms[0] = (90 - 88 * up, 60 - 60 * up)
             p.body = (-2 * up, 0, 0)
         else:
-            p.arms[wa] = (fix(118 + 40 * up), fix(100 + 55 * up))
+            p.arms[wa] = (fix(RELAX[0] + 58 * up), fix(RELAX[1] + 61 * up))
         p.wpn = -90
         p.draw = k if i < 9 else 0
         return p
@@ -316,7 +317,11 @@ class Rig:
             sh, hd = v.arms[ai]
             el = v.elbows[ai]
             ru, rf = v.rest[ai]
-            if p.arms[ai] is None:
+            if p.arms[ai] is None and dd != RIGHT:
+                # the free arm hangs relaxed instead of in the source A-pose
+                ua, fa = (RELAX if ai == 0 else (180 - RELAX[0], 180 - RELAX[1]))
+                du, df = ua - ru + p.swing[ai], fa - rf + p.swing[ai]
+            elif p.arms[ai] is None:
                 du = df = p.swing[ai]
             else:
                 du = p.arms[ai][0] - ru

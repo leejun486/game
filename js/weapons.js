@@ -91,7 +91,7 @@ const WeaponArt = (() => {
     if (w.kind === 'bow') {
       // string pulled back toward the archer (image -x); arrow nocked while drawing
       const pxl = A.strTop[0] - pull * 30;
-      g.strokeStyle = '#f4e8d0'; g.lineWidth = 1.1; g.lineCap = 'round';
+      g.strokeStyle = 'rgba(236,222,196,0.55)'; g.lineWidth = 0.9; g.lineCap = 'round';
       g.beginPath(); g.moveTo(A.strTop[0] - gx, A.strTop[1] - gy); g.lineTo(pxl - gx, 0); g.lineTo(A.strBot[0] - gx, A.strBot[1] - gy); g.stroke();
       if (pull > 0.1) {
         g.strokeStyle = '#e0cfa8'; g.lineWidth = 2; g.beginPath(); g.moveTo(pxl - gx, 0); g.lineTo(A.tip[0] - gx + 20, 0); g.stroke();
