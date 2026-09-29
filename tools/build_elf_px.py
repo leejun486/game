@@ -4,7 +4,7 @@ from single-pose PixelLab art in assets/src/elf_px/ (48x48, one pose per directi
 Rows 0-20 are the standard LPC layout for up/left/down/right; rows 21-40 add diagonals in the same
 animation order (spellcast, thrust, walk, slash, shoot) x (up_left, down_left, down_right, up_right).
 Where PixelLab animations exist (walk_<dir>.gif, shoot_<dir>.gif) their frames replace the procedural motion;
-a down_right animation also serves down (close enough to the front pose) and, mirrored, down_left.
+a missing direction uses its left/right mirror, and the down diagonals fall back to the down animation.
 The poses are static, so motion is procedural: a walking bob and sway, a lean for casts and swings,
 a draw-and-release recoil for the bow, and a topple for the hurt/death row."""
 from PIL import Image, ImageSequence
@@ -85,23 +85,41 @@ def mirror(anim):
     return [f.transpose(Image.FLIP_LEFT_RIGHT) for f in anim[0]], anim[1]
 
 
-WALK_ROW = {'down': 8 + 2, 'down_right': 21 + 8 + 2, 'down_left': 21 + 8 + 1}
-SHOOT_ROW = {'down': 16 + 2, 'down_right': 21 + 16 + 2, 'down_left': 21 + 16 + 1}
-walk = gif_frames('walk_down_right.gif')
-if walk:
-    for d, anim in (('down_right', walk), ('down', walk), ('down_left', mirror(walk))):
-        frames, bottom = anim
-        for c in range(1, 9):  # col 0 stays the standing pose
-            put(WALK_ROW[d], c, frames[(c - 1) * len(frames) // 8], bottom=bottom)
-shoot = gif_frames('shoot_down_right.gif')
-if shoot:
-    REL = 5  # frame where the arrow leaves the bow in the art
-    for d, anim in (('down_right', shoot), ('down', shoot), ('down_left', mirror(shoot))):
-        frames, bottom = anim
-        n = len(frames)
-        for c in range(13):  # the game releases on col 9 of 13: stretch the draw, keep the follow-through
-            k = round(c * REL / 9) if c <= 9 else min(n - 1, REL + round((c - 9) * (n - 1 - REL) / 3))
-            put(SHOOT_ROW[d], c, frames[k], bottom=bottom)
+# row of each direction in the walk / shoot blocks (LPC rows 8-11 / 16-19, diagonals 29-32 / 37-40)
+ROW = {'up': 0, 'left': 1, 'down': 2, 'right': 3, 'up_left': 21, 'down_left': 22, 'down_right': 23, 'up_right': 24}
+MIRROR = {'left': 'right', 'right': 'left', 'up_left': 'up_right', 'up_right': 'up_left', 'down_left': 'down_right', 'down_right': 'down_left'}
+# a direction without its own animation borrows the nearest one that has it
+BORROW = {'down_right': 'down', 'down_left': 'down'}
+
+
+def resolve(kind):
+    """direction -> (frames, bottom) for every direction an animation file (or its mirror/borrow) covers"""
+    out = {}
+    for d in ROW:
+        a = gif_frames(f'{kind}_{d}.gif')
+        if a:
+            out[d] = a
+    for d in ROW:
+        if d not in out and MIRROR.get(d) in out:
+            out[d] = mirror(out[MIRROR[d]])
+    for d, src in BORROW.items():
+        if d not in out and src in out:
+            out[d] = out[src]
+    return out
+
+
+for d, (frames, bottom) in resolve('walk').items():
+    row = 8 + ROW[d] if ROW[d] < 4 else ROW[d] + 8
+    for c in range(1, 9):  # col 0 stays the standing pose
+        put(row, c, frames[(c - 1) * len(frames) // 8], bottom=bottom)
+
+REL = 5  # frame where the arrow leaves the bow in every PixelLab shot
+for d, (frames, bottom) in resolve('shoot').items():
+    row = 16 + ROW[d] if ROW[d] < 4 else ROW[d] + 16
+    n = len(frames)
+    for c in range(13):  # the game releases on col 9 of 13: stretch the draw, keep the follow-through
+        k = round(c * REL / 9) if c <= 9 else min(n - 1, REL + round((c - 9) * (n - 1 - REL) / 3))
+        put(row, c, frames[k], bottom=bottom)
 
 # hurt / death (row 20, 6 frames): topple sideways from the front pose and sink
 down = pose['down']
