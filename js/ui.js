@@ -209,15 +209,16 @@ const UI = (() => {
     box.onclick = advance;
     show();
   }
-  // new characters: the intro, cut by cut. Each cut plays its clip with its prologue lines as subtitles;
-  // a cut whose clip is missing shows those lines as a text crawl instead, then the title card closes it.
+  // new characters: the intro clip with its prologue lines as timed subtitles, then the title card.
+  // If the clip can't play, the lines are shown as a text crawl instead.
   function intro(then) {
     const el = document.createElement('div');
     el.id = 'intro';
     el.innerHTML = '<video playsinline preload="auto"></video><div class="intro-text"></div><div class="intro-sub"></div><button class="intro-skip">건너뛰기 ▶</button>';
     document.body.appendChild(el);
     const v = el.querySelector('video'), tx = el.querySelector('.intro-text'), sub = el.querySelector('.intro-sub');
-    let done = false, timer = 0, ci = 0;
+    const cues = D.INTRO.cues, title = D.PROLOGUE[D.PROLOGUE.length - 1];
+    let done = false, timer = 0, started = false, shown = -1;
     const finish = () => {
       if (done) return; done = true; clearTimeout(timer); v.pause(); v.removeAttribute('src');
       el.classList.add('out'); setTimeout(() => { el.remove(); then && then(); }, 600);
@@ -229,32 +230,26 @@ const UI = (() => {
       const step = () => {
         if (done) return;
         if (k >= lines.length) { tx.innerHTML = ''; return next(); }
-        const line = lines[k++], title = line === D.PROLOGUE[D.PROLOGUE.length - 1];
-        tx.innerHTML = `<p class="${title ? 'title' : ''}">${esc(line)}</p>`;
-        timer = setTimeout(step, title ? 3400 : 3600);
+        const line = lines[k++];
+        tx.innerHTML = `<p class="${line === title ? 'title' : ''}">${esc(line)}</p>`;
+        timer = setTimeout(step, line === title ? 3400 : 3600);
       };
       step();
     };
-    const playCut = () => {
-      if (done) return;
-      const cut = D.INTRO_CUTS[ci++];
-      if (!cut) return textLines([D.PROLOGUE[D.PROLOGUE.length - 1]], () => { timer = setTimeout(finish, 400); });
-      const lines = cut.lines.map((i) => D.PROLOGUE[i]);
-      let started = false;
-      v.ontimeupdate = null; sub.textContent = ''; // drop the previous clip's subtitle timing
-      v.onerror = () => { if (!started) textLines(lines, playCut); };
-      v.onended = () => { sub.textContent = ''; playCut(); };
-      v.onloadedmetadata = () => {
-        started = true; v.style.opacity = 1; tx.innerHTML = '';
-        // spread the lines over the clip as subtitles
-        const per = (v.duration || 8) / lines.length;
-        v.ontimeupdate = () => { const k = Math.min(lines.length - 1, Math.floor(v.currentTime / per)); if (sub.dataset.k !== String(ci * 10 + k)) { sub.dataset.k = String(ci * 10 + k); sub.innerHTML = `<span>${esc(lines[k])}</span>`; } };
-      };
-      v.muted = !!Game.muted;
-      v.src = cut.src;
-      v.play().catch(() => { v.muted = true; v.play().catch(() => { if (!started) textLines(lines, playCut); }); });
+    const fallback = () => { if (!started && !done) { started = true; textLines(D.PROLOGUE, () => { timer = setTimeout(finish, 400); }); } };
+    v.onerror = fallback;
+    v.onplaying = () => { started = true; v.style.opacity = 1; };
+    v.ontimeupdate = () => {
+      let k = -1;
+      for (let i = 0; i < cues.length; i++) if (v.currentTime >= cues[i][0]) k = i;
+      if (k === shown) return;
+      shown = k;
+      sub.innerHTML = k < 0 ? '' : `<span>${esc(D.PROLOGUE[cues[k][1]])}</span>`;
     };
-    playCut();
+    v.onended = () => { sub.textContent = ''; textLines([title], () => { timer = setTimeout(finish, 400); }); };
+    v.muted = !!Game.muted;
+    v.src = D.INTRO.src;
+    v.play().catch(() => { v.muted = true; v.play().catch(fallback); });
   }
   function refreshAll() { refreshHud(); refreshQuest(); if (panel && panel.rerender) panel.rerender(); }
 
