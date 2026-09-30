@@ -1,5 +1,5 @@
 'use strict';
-// Background music: small procedural tracks played with WebAudio (no audio files).
+// Background music: small procedural tracks played with WebAudio, plus recorded tracks (file) for some places.
 // Each zone has its own mood; a boss fight switches to the battle track. Tracks crossfade over ~2s.
 // A look-ahead scheduler queues 16th-note steps a little ahead of the audio clock.
 const Music = (() => {
@@ -27,7 +27,7 @@ const Music = (() => {
     snow: { bpm: 70, root: 57, scale: LYD, chords: [0, 1, 0, 4], pad: 'glass', arp: 'bell', bass: false, lead: 0.3, leadInst: 'bell', drums: null, vol: 0.8 },
     volcano: { bpm: 92, root: 40, scale: PHRY, chords: [0, 1, 0, 6], pad: 'dark', arp: null, bass: 'riff', lead: 0.25, leadInst: 'horn', drums: 'k.k.s..kk.k.s.t.', vol: 0.95 },
     void: { bpm: 60, root: 41, scale: DIM, chords: [0, 2, 0, 5], pad: 'choir', arp: 'bell', bass: true, lead: 0.2, leadInst: 'bell', drums: 'k.......t.......', vol: 0.95 },
-    dungeon: { bpm: 96, root: 45, scale: HARM, chords: [0, 5, 6, 4], pad: 'dark', arp: 'pluck', bass: 'riff', lead: 0.3, leadInst: 'horn', drums: 'k...s...k.k.s...', vol: 0.9 },
+    dungeon: { file: 'assets/music/cave.mp3', vol: 1.1 }, // 이클립스 균열 (the cave)
     boss: { bpm: 138, root: 45, scale: HARM, chords: [0, 0, 5, 4, 0, 0, 6, 4], pad: 'dark', arp: 'saw', bass: 'drive', lead: 0.6, leadInst: 'horn', drums: 'k.hsk.hsk.hsk.ss', vol: 1 },
   };
 
@@ -107,11 +107,12 @@ const Music = (() => {
     if (!ac || !cur) return;
     const ahead = ac.currentTime + 0.25;
     for (const tr of [cur, ...fading]) {
+      if (tr.def.file) continue; // recorded tracks play themselves
       const sp = 60 / tr.def.bpm / 4;
       if (tr.next < ac.currentTime - 1) tr.next = ac.currentTime + 0.05; // tab was asleep: don't burst-play the backlog
       while (tr.next < ahead) { playStep(tr, tr.next); tr.next += sp; }
     }
-    for (let i = fading.length - 1; i >= 0; i--) if (ac.currentTime > fading[i].endAt) { fading[i].gain.disconnect(); fading.splice(i, 1); }
+    for (let i = fading.length - 1; i >= 0; i--) if (ac.currentTime > fading[i].endAt) { if (fading[i].el) fading[i].el.pause(); fading[i].gain.disconnect(); fading.splice(i, 1); }
   }
 
   // ---------------------------------------------------------------- control
@@ -141,6 +142,12 @@ const Music = (() => {
     const def = TRACKS[id] || TRACKS.field;
     const gain = ac.createGain(); gain.gain.value = 0.0001; gain.gain.setTargetAtTime(def.vol, t + 0.2, 0.7); gain.connect(master);
     cur = { id, def, gain, step: 0, next: t + 0.1 };
+    if (def.file) { // a looping recording routed through the same gain/master chain (volume, mute, crossfade)
+      const el = new Audio(def.file); el.loop = true; el.preload = 'auto';
+      ac.createMediaElementSource(el).connect(gain);
+      el.play().catch(() => {});
+      cur.el = el;
+    }
   }
   // pick the track for where the player is; a boss fighting the player (or targeted by them) wins
   let checkT = 0;
