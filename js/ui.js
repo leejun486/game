@@ -319,9 +319,9 @@ const UI = (() => {
       const def = D.ITEMS[it.id];
       const eq = Object.values(p.s.equip).includes(it.uid);
       const lines = [];
-      if (def.atk) lines.push(`공격력 +${def.atk}${it.en ? ` (강화 +${it.en * 2 + Math.max(0, it.en - 6) * 2})` : ''}`);
-      if (def.def) lines.push(`방어력 +${def.def}${it.en && def.kind === 'armor' ? ` (강화 +${(it.en * 1.5).toFixed(0)})` : ''}`);
-      if (def.hp) lines.push(`최대 HP +${def.hp}`);
+      if (def.atk) lines.push(`공격력 +${def.atk}${it.en && def.kind === 'weapon' ? ` (강화 +${D.enchantAtk(def, it.en)})` : ''}`);
+      if (def.def) lines.push(`방어력 +${def.def}${it.en && def.kind === 'armor' ? ` (강화 +${D.enchantDef(it.en)})` : ''}`);
+      if (def.hp) lines.push(`최대 HP +${def.hp}${it.en && def.kind === 'armor' ? ` (강화 +${D.enchantHp(it.en)})` : ''}`);
       if (def.atkSpd) lines.push(`공격 속도 +${def.atkSpd}%`);
       if (def.cls) lines.push(`${D.CLASSES[def.cls].name} 전용`);
       if (def.lv > 1) lines.push(`착용 레벨 ${def.lv}`);

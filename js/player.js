@@ -86,8 +86,8 @@ class Player extends Hero {
   gearScore(it) {
     if (!it) return -1;
     const d = D.ITEMS[it.id], en = it.en || 0;
-    if (d.kind === 'weapon') return d.atk + en * 2 + Math.max(0, en - 6) * 2;
-    if (d.kind === 'armor') return d.def + en * 1.5 + (d.hp + en * 15) / 20;
+    if (d.kind === 'weapon') return d.atk + D.enchantAtk(d, en);
+    if (d.kind === 'armor') return d.def + D.enchantDef(en) + (d.hp + D.enchantHp(en)) / 20;
     return (d.atk || 0) * 2 + (d.def || 0) + (d.hp || 0) / 40 + (d.atkSpd || 0);
   }
   // equip anything in the bag that is usable and better than what is worn
@@ -132,8 +132,8 @@ class Player extends Hero {
       const def = D.ITEMS[it.id];
       add({ atk: def.atk || 0, def: def.def || 0, hp: def.hp || 0, atkSpd: def.atkSpd || 0 });
       const en = it.en || 0;
-      if (slot === 'weapon') st.atk += en * 2 + Math.max(0, en - 6) * 2;
-      if (slot === 'armor') { st.def += en * 1.5; st.maxHp += en * 15; }
+      if (slot === 'weapon') st.atk += D.enchantAtk(def, en);
+      if (slot === 'armor') { st.def += D.enchantDef(en); st.maxHp += D.enchantHp(en); }
     }
     // transcend card
     const card = this.s.card && D.CARD_BY_ID[this.s.card];

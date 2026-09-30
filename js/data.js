@@ -224,6 +224,15 @@ D.forClass = (id, cls) => {
   return D.ITEMS[alt] ? alt : id;
 };
 D.isEquip = (it) => it.kind === 'weapon' || it.kind === 'armor' || it.kind === 'ring';
+// gear carries the character: equipment stats are scaled up so a good weapon or armor outweighs levels,
+// and enchanting grows a weapon by a share of its own attack (+9 is about 2.3x the base weapon)
+D.GEAR_SCALE = { weapon: { atk: 2.4 }, armor: { def: 2, hp: 3 }, ring: { atk: 2, def: 2, hp: 2 } };
+for (const it of Object.values(D.ITEMS)) { const g = D.GEAR_SCALE[it.kind]; if (g) for (const k in g) if (it[k]) it[k] = Math.round(it[k] * g[k]); }
+D.enchantAtk = (def, en) => Math.round(def.atk * (en * 0.1 + Math.max(0, en - 6) * 0.12));
+D.enchantDef = (en) => en * 3;
+D.enchantHp = (en) => en * 40;
+// drop chance multipliers by item kind (potions and town scrolls unchanged)
+D.DROP_MUL = { weapon: 3, armor: 3, ring: 3, enchant: 2.5, ticket: 2 };
 D.SAFE_ENCHANT = { weapon: 6, armor: 4 };
 D.enchantRate = (cur) => [0.5, 0.4, 0.33, 0.25, 0.18, 0.12, 0.08, 0.05, 0.03][Math.max(0, cur - 6)] || 0.02;
 

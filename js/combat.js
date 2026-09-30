@@ -76,7 +76,7 @@ const Combat = (() => {
     // drops: plain loot flies to the player; 희귀+ stays on the ground under a pillar of light (see Game.updateDrops)
     const table = [...D.DROPS.common, ...(D.DROPS[d.id] || [])];
     for (let [id, ch] of table) {
-      if (Math.random() < ch) {
+      if (Math.random() < Math.min(1, ch * (D.DROP_MUL[D.ITEMS[id].kind] || 1))) {
         id = D.forClass(id, p.cls);
         const n = D.ITEMS[id].kind === 'potion' ? U.randi(1, 3) : 1;
         const a = Math.random() * Math.PI * 2, r = U.rand(20, 60);
