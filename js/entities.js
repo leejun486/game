@@ -399,8 +399,8 @@ class Hero extends Entity {
     });
     // only your own swings make noise; other players fight silently
     if (this !== game.player) return;
-    if (c.attack === 'slash') U.sfx.swing();
-    else if (c.attack === 'shoot') setTimeout(() => U.sfx.bow(), delay * 400);
+    if (c.attack === 'slash') U.sfx.slash();
+    else if (c.attack === 'shoot') setTimeout(() => U.sfx.pluck(), delay * 400);
   }
 }
 

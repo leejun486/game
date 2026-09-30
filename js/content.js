@@ -48,17 +48,72 @@ const Content = (() => {
     { id: 'dg10', name: '균열 정복자', desc: '이클립스 균열 10회 클리어', need: 10, cur: (p) => p.s.dungeon.clears || 0, dia: 400 },
     { id: 'rich', name: '백만장자', desc: '아데나 1,000,000 보유', need: 1000000, cur: (p) => p.s.gold, dia: 200 },
   ];
+  // Item collections. A slot is an item id, optionally with a minimum enchant ('w_sword3+7'). Weapon slots
+  // take any class's version of that weapon (drops always come in the player's own class).
+  // cat: weapon | armor | enchant | set | misc | boss
   const COLL = [
-    { id: 'c1', name: '초보 모험가의 무기', items: ['w_sword1', 'w_bow1', 'w_staff1'], bonus: { atk: 2 } },
-    { id: 'c2', name: '수련자의 장비', items: ['a_1', 'r_1'], bonus: { def: 2, hp: 30 } },
-    { id: 'c3', name: '연금술사의 선반', items: ['hp_s', 'hp_m', 'hp_l', 'mp_s', 'haste'], bonus: { hp: 50, mp: 30 } },
-    { id: 'c4', name: '주문서 수집가', items: ['tp_town', 'sc_weapon', 'sc_armor'], bonus: { crit: 2 } },
-    { id: 'c5', name: '강철의 기사', items: ['w_sword2', 'a_2'], bonus: { atk: 3, def: 2 } },
-    { id: 'c6', name: '숲과 마나', items: ['w_bow2', 'w_staff2'], bonus: { atkSpd: 3, castSpd: 3 } },
-    { id: 'c7', name: '미스릴 수집가', items: ['w_sword3', 'w_bow3', 'w_staff3'], bonus: { atk: 6 } },
-    { id: 'c8', name: '판금의 수호', items: ['a_3', 'r_2'], bonus: { def: 5, hp: 150 } },
-    { id: 'c9', name: '영웅의 증표', items: ['a_4', 'r_3'], bonus: { atk: 8, dmgRed: 3 } },
+    { id: 'c1', cat: 'weapon', name: '초보 모험가의 무기', items: ['w_sword1', 'w_bow1', 'w_staff1'], bonus: { atk: 2 } },
+    { id: 'c5', cat: 'weapon', name: '강철의 기사', items: ['w_sword2', 'a_2'], bonus: { atk: 3, def: 2 } },
+    { id: 'c6', cat: 'weapon', name: '숲과 마나', items: ['w_bow2', 'w_staff2'], bonus: { atkSpd: 3, castSpd: 3 } },
+    { id: 'c7', cat: 'weapon', name: '미스릴 수집가', items: ['w_sword3', 'w_bow3', 'w_staff3'], bonus: { atk: 6 } },
+    { id: 'w1', cat: 'weapon', name: '흑요석의 날', items: ['w_sword4', 'w_sword4'], bonus: { atk: 8, crit: 1 } },
+    { id: 'w2', cat: 'weapon', name: '무기 장인의 진열장', items: ['w_sword1', 'w_sword2', 'w_sword3', 'w_sword4'], bonus: { atk: 5, atkSpd: 3, castSpd: 3 } },
+    { id: 'w3', cat: 'weapon', name: '전설의 무기고', items: ['w_sword5', 'w_sword6'], bonus: { atk: 15, crit: 3 } },
+    { id: 'c2', cat: 'armor', name: '수련자의 장비', items: ['a_1', 'r_1'], bonus: { def: 2, hp: 30 } },
+    { id: 'c8', cat: 'armor', name: '판금의 수호', items: ['a_3', 'r_2'], bonus: { def: 5, hp: 150 } },
+    { id: 'c9', cat: 'armor', name: '영웅의 증표', items: ['a_4', 'r_3'], bonus: { atk: 8, dmgRed: 3 } },
+    { id: 'a1', cat: 'armor', name: '갑옷 진열장', items: ['a_1', 'a_2', 'a_3'], bonus: { def: 4, hp: 120 } },
+    { id: 'a2', cat: 'armor', name: '용의 비늘', items: ['a_4', 'a_4'], bonus: { def: 6, hp: 250 } },
+    { id: 'a3', cat: 'armor', name: '불타는 갑주', items: ['a_5'], bonus: { hp: 400, dmgRed: 3 } },
+    { id: 'a4', cat: 'armor', name: '반지 수집가', items: ['r_1', 'r_2', 'r_3'], bonus: { atk: 4, def: 3, hp: 100 } },
+    { id: 'a5', cat: 'armor', name: '장신구 명장', items: ['r_r', 'r_h', 'r_l'], bonus: { atk: 10, crit: 5 } },
+    { id: 'e1', cat: 'enchant', name: '+3 강화 입문', items: ['w_sword1+3', 'a_1+3'], bonus: { atk: 3, def: 2 } },
+    { id: 'e2', cat: 'enchant', name: '+5 강철 연마', items: ['w_sword2+5', 'a_2+5'], bonus: { atk: 6, hp: 120 } },
+    { id: 'e3', cat: 'enchant', name: '+6 안전 강화의 달인', items: ['w_sword3+6', 'a_3+4'], bonus: { atk: 10, def: 5 } },
+    { id: 'e4', cat: 'enchant', name: '+7 도전자', items: ['w_sword3+7'], bonus: { atk: 8, crit: 4 } },
+    { id: 'e5', cat: 'enchant', name: '+7 영웅의 칼날', items: ['w_sword4+7', 'a_4+5'], bonus: { atk: 15, hp: 300 } },
+    { id: 'e6', cat: 'enchant', name: '+8 전설의 연마', items: ['w_sword5+8'], bonus: { atk: 25, crit: 5 } },
+    { id: 'e7', cat: 'enchant', name: '+6 강철 갑옷 장인', items: ['a_2+6', 'a_3+6'], bonus: { def: 10, hp: 300, dmgRed: 2 } },
+    { id: 'e8', cat: 'enchant', name: '+9 신화의 경지', items: ['w_sword6+9'], bonus: { atk: 40, atkSpd: 8, castSpd: 8, crit: 5 } },
+    { id: 'e9', cat: 'enchant', name: '+7 은빛 기사단', items: ['w_sword_r1+7', 'a_r1+5'], bonus: { atk: 12, hp: 200 } },
+    { id: 'e10', cat: 'enchant', name: '+8 핏빛 군단', items: ['w_sword_h1+8', 'a_h1+6'], bonus: { atk: 22, hp: 450, crit: 3 } },
+    { id: 's1', cat: 'set', name: '은빛 기사단 전시', items: ['w_sword_r1', 'a_r1'], bonus: { atk: 5, hp: 150 } },
+    { id: 's2', cat: 'set', name: '폭풍의 흔적', items: ['w_sword_r2', 'a_r2'], bonus: { atkSpd: 4, castSpd: 4, moveSpd: 3 } },
+    { id: 's3', cat: 'set', name: '핏빛 군단의 깃발', items: ['w_sword_h1', 'a_h1'], bonus: { atk: 10, hp: 300 } },
+    { id: 's4', cat: 'set', name: '심연의 문장', items: ['w_sword_h2', 'a_h2'], bonus: { def: 10, dmgRed: 3 } },
+    { id: 's5', cat: 'set', name: '천상의 심판 성물', items: ['w_sword_l1', 'a_l1', 'r_l'], bonus: { atk: 25, hp: 800, crit: 5 } },
+    { id: 'c3', cat: 'misc', name: '연금술사의 선반', items: ['hp_s', 'hp_m', 'hp_l', 'mp_s', 'haste'], bonus: { hp: 50, mp: 30 } },
+    { id: 'c4', cat: 'misc', name: '주문서 수집가', items: ['tp_town', 'sc_weapon', 'sc_armor'], bonus: { crit: 2 } },
+    { id: 'm1', cat: 'misc', name: '회복의 달인', items: ['hp_l', 'hp_l', 'hp_l', 'hp_l', 'hp_l'], bonus: { hp: 150, mp: 50 } },
+    { id: 'm2', cat: 'misc', name: '강화 재료 창고', items: ['sc_weapon', 'sc_weapon', 'sc_armor', 'sc_armor'], bonus: { atk: 4, def: 4 } },
+    { id: 'm3', cat: 'misc', name: '여행자의 가방', items: ['tp_town', 'tp_town', 'tp_town', 'haste', 'haste'], bonus: { moveSpd: 5, eva: 20 } },
+    { id: 'm4', cat: 'misc', name: '초월의 인장', items: ['ticket', 'ticket', 'ticket'], bonus: { expPct: 5 } },
+    { id: 'b1', cat: 'boss', name: '뱀파이어 군주의 유산', items: ['w_sword4', 'a_4', 'r_3'], bonus: { atk: 8, dmgRed: 2 } },
+    { id: 'b2', cat: 'boss', name: '미노타우르스의 보물', items: ['w_sword5', 'a_4', 'r_h'], bonus: { hp: 300, def: 6 } },
+    { id: 'b3', cat: 'boss', name: '서리 거인의 결정', items: ['w_sword_h2', 'a_h2', 'r_h'], bonus: { atk: 12, hp: 250, eva: 30 } },
+    { id: 'b4', cat: 'boss', name: '화염 군주의 전리품', items: ['w_sword6', 'a_5', 'r_l'], bonus: { atk: 20, hp: 400, crit: 3 } },
   ];
+  const COLL_CATS = [['all', '전체'], ['weapon', '무기'], ['armor', '방어구·장신구'], ['enchant', '강화'], ['set', '세트'], ['misc', '소모품'], ['boss', '보스 전리품']];
+  // slot 'w_bow3+7' -> { id, en, fam }: weapons match by family (any class), everything else by id
+  const fam = (id) => id.replace(/^w_(sword|bow|staff)/, 'w_*');
+  const parseSlot = (slot) => { const [id, en] = slot.split('+'); return { id, en: +en || 0, fam: fam(id) }; };
+  // the unequipped bag item that fills a slot, preferring the lowest enchant that still qualifies
+  function candidate(p, slot) {
+    const q = parseSlot(slot), eq = Object.values(p.s.equip);
+    return p.s.inv.filter((i) => fam(i.id) === q.fam && (i.en || 0) >= q.en && !eq.includes(i.uid))
+      .sort((a, b) => (a.en || 0) - (b.en || 0))[0];
+  }
+  // registered slots are stored as slot indices (older saves stored item ids)
+  function regOf(p, c) {
+    let r = p.s.coll[c.id] || (p.s.coll[c.id] = []);
+    if (r.some((x) => typeof x === 'string')) {
+      const idx = [];
+      for (const id of r) { const k = c.items.findIndex((it, i) => !idx.includes(i) && fam(it.split('+')[0]) === fam(id)); if (k >= 0) idx.push(k); }
+      r = p.s.coll[c.id] = idx;
+    }
+    return r;
+  }
+  const complete = (p, c) => regOf(p, c).length === c.items.length;
   const GUILDS = [
     { name: '용맹', desc: '공격에 특화된 전투 혈맹', bonus: { atk: 4 }, label: '공격력 +4' },
     { name: '붉은매', desc: '빠른 성장을 추구하는 사냥 혈맹', bonus: { expPct: 10 }, label: '획득 경험치 +10%' },
@@ -82,7 +137,7 @@ const Content = (() => {
   // extra stats from collections + guild, consumed by Player.recalc
   function bonuses(p) {
     const out = [];
-    for (const c of COLL) if ((p.s.coll[c.id] || []).length === c.items.length) out.push(c.bonus);
+    for (const c of COLL) if (complete(p, c)) out.push(c.bonus);
     const g = GUILDS.find((x) => x.name === p.s.guild);
     if (g) out.push(g.bonus);
     return out;
@@ -232,33 +287,64 @@ const Content = (() => {
     return { rerender: render };
   };
 
+  let collCat = 'all', collReady = false;
   O.collection = () => {
-    const { body } = UI.makePanel('수집');
+    const { el, body } = UI.makePanel('수집');
+    el.style.width = 'min(760px, 96vw)';
+    const bonusText = (b) => Object.entries(b).map(([k, v]) => `${D.STAT_NAMES[k][0]} +${v}${D.STAT_NAMES[k][1]}`).join(', ');
     const render = () => {
       const p = Game.player;
-      const eq = Object.values(p.s.equip);
-      body.innerHTML = `<p style="margin-top:0;color:#a39a88">아이템을 등록하면 소모되며, 세트를 완성하면 능력치가 영구적으로 오릅니다. (장착 중인 장비는 등록할 수 없습니다)</p>` + COLL.map((c) => {
-        const reg = p.s.coll[c.id] || [];
-        const complete = reg.length === c.items.length;
-        const bonus = Object.entries(c.bonus).map(([k, v]) => `${D.STAT_NAMES[k][0]} +${v}${D.STAT_NAMES[k][1]}`).join(', ');
-        return `<div class="coll ${complete ? 'complete' : ''}"><div class="coll-head"><b>${c.name}</b><span class="${complete ? 'g1' : 'sub'}">${complete ? '완성 · ' : ''}${bonus}</span></div>
-          <div class="coll-items">${c.items.map((id) => {
-            const it = D.ITEMS[id], done = reg.includes(id);
-            const have = p.s.inv.some((i) => i.id === id && !eq.includes(i.uid));
-            return `<div class="cell bg${it.grade} ${done ? '' : 'dim'}" title="${esc(it.name)}" ${!done && have ? `data-reg="${c.id}:${id}"` : ''}>${ico(it.icon)}${done ? '<span class="eq">✔</span>' : have ? '<span class="c" style="color:#7ee07e">등록</span>' : ''}</div>`;
-          }).join('')}</div></div>`;
-      }).join('');
+      const done = COLL.filter((c) => complete(p, c));
+      const total = {};
+      for (const c of done) for (const k in c.bonus) total[k] = (total[k] || 0) + c.bonus[k];
+      const canReg = (c) => !complete(p, c) && c.items.some((slot, i) => !regOf(p, c).includes(i) && candidate(p, slot));
+      const list = COLL.filter((c) => (collCat === 'all' || c.cat === collCat) && (!collReady || canReg(c)));
+      const readyN = COLL.filter(canReg).length;
+      body.innerHTML = `<div class="coll-summary"><div><b>수집 ${done.length} / ${COLL.length}</b> <span class="sub">완성한 수집의 효과는 영구 적용됩니다.</span></div>
+          <div class="coll-total">${Object.keys(total).length ? bonusText(total) : '<span class="sub">아직 완성한 수집이 없습니다.</span>'}</div></div>
+        <div class="coll-tabs">${COLL_CATS.map(([k, n]) => `<button data-cat="${k}" class="${collCat === k ? 'on' : ''}">${n}</button>`).join('')}
+          <label class="coll-ready"><input type="checkbox" data-ready ${collReady ? 'checked' : ''}> 등록 가능만 (${readyN})</label>
+          <button class="gold-btn" data-regall ${readyN ? '' : 'disabled'}>모두 등록</button></div>
+        <p class="sub" style="margin:6px 0 8px">등록한 아이템은 소모됩니다. '모두 등록'은 장비만 등록합니다. 장착 중인 장비는 등록되지 않으며, <b>+숫자</b> 칸은 그 이상 강화된 장비만 등록할 수 있습니다. 무기 칸은 내 직업의 같은 등급 무기로 채울 수 있습니다.</p>` +
+        list.map((c) => {
+          const reg = regOf(p, c), full = reg.length === c.items.length;
+          return `<div class="coll ${full ? 'complete' : ''}"><div class="coll-head"><b>${c.name}</b><span class="${full ? 'g1' : 'sub'}">${full ? '완성 · ' : `${reg.length}/${c.items.length} · `}${bonusText(c.bonus)}</span></div>
+            <div class="coll-items">${c.items.map((slot, i) => {
+              const q = parseSlot(slot), it = D.ITEMS[D.forClass(q.id, p.cls)], got = reg.includes(i), cand = !got && candidate(p, slot);
+              return `<div class="cell bg${it.grade} ${got ? '' : 'dim'}" title="${esc((q.en ? '+' + q.en + ' 이상 ' : '') + it.name)}" ${cand ? `data-reg="${c.id}:${i}"` : ''}>${ico(it.icon)}${q.en ? `<span class="en">+${q.en}</span>` : ''}${got ? '<span class="eq">✔</span>' : cand ? '<span class="c" style="color:#7ee07e">등록</span>' : ''}</div>`;
+            }).join('')}</div></div>`;
+        }).join('');
+    };
+    const register = (p, c, i) => {
+      const it = candidate(p, c.items[i]);
+      if (!it || regOf(p, c).includes(i)) return false;
+      p.removeItem(it.uid);
+      p.s.coll[c.id].push(i);
+      return true;
     };
     body.onclick = (e) => {
+      const p = Game.player;
+      const cat = e.target.closest('[data-cat]'); if (cat) { collCat = cat.dataset.cat; U.sfx.ui(); return render(); }
+      if (e.target.closest('[data-ready]')) { collReady = e.target.checked; return render(); }
+      if (e.target.closest('[data-regall]')) {
+        if (!confirm('등록 가능한 장비를 모두 등록합니다. (물약·주문서·소환권은 직접 등록) 등록한 아이템은 사라집니다. 진행할까요?')) return;
+        // equipment only, and the steepest enchant requirements first so a +7 weapon lands in a +7 slot
+        const before = COLL.filter((c) => complete(p, c)).length;
+        const tasks = [];
+        for (const c of COLL) { if (complete(p, c)) continue; const r = regOf(p, c); c.items.forEach((slot, i) => { const q = parseSlot(slot); if (!r.includes(i) && D.isEquip(D.ITEMS[q.id])) tasks.push([c, i, q.en]); }); }
+        tasks.sort((x, y) => y[2] - x[2]);
+        let n = 0;
+        for (const [c, i] of tasks) if (register(p, c, i)) n++;
+        const fin = COLL.filter((c) => complete(p, c)).length - before;
+        if (n) { fin ? U.sfx.legend() : U.sfx.success(); UI.toast(`${n}개 등록${fin ? ` · 수집 ${fin}개 완성!` : ''}`, '#7ee07e'); p.recalc(); UI.refreshHud(); }
+        return render();
+      }
       const b = e.target.closest('[data-reg]'); if (!b) return;
-      const [cid, id] = b.dataset.reg.split(':');
-      const p = Game.player, eq = Object.values(p.s.equip);
-      const it = p.s.inv.find((i) => i.id === id && !eq.includes(i.uid));
-      if (!it) return;
-      p.removeItem(it.uid);
-      (p.s.coll[cid] = p.s.coll[cid] || []).push(id);
+      const [cid, i] = b.dataset.reg.split(':');
       const c = COLL.find((x) => x.id === cid);
-      if (p.s.coll[cid].length === c.items.length) { U.sfx.legend(); UI.toast(`수집 완성: ${c.name}`, '#7ee07e'); } else U.sfx.success();
+      regOf(p, c);
+      if (!register(p, c, +i)) return;
+      if (complete(p, c)) { U.sfx.legend(); UI.toast(`수집 완성: ${c.name}`, '#7ee07e'); } else U.sfx.success();
       p.recalc(); UI.refreshHud(); render();
     };
     render();

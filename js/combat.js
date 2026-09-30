@@ -18,19 +18,40 @@ const Combat = (() => {
     if (hero === game.player) {
       mon.damagedBy.set('player', (mon.damagedBy.get('player') || 0) + dmg);
       floatText(game, mon, String(dmg), crit ? '#ffdb4d' : '#ffffff', crit);
-      crit ? U.sfx.crit() : U.sfx.hit();
+      hitFeedback(game, hero, mon, crit, opts.el);
       if (crit) game.shake = Math.max(game.shake, 4);
-    }
+    } else game.fx.push(makeFx('spark', mon.x, mon.y - 28 * mon.scale, { color: crit ? '#ffdb4d' : '#fff' }));
     if (opts.slow) mon.slowT = opts.slow;
-    game.fx.push(makeFx('spark', mon.x, mon.y - 28 * mon.scale, { color: crit ? '#ffdb4d' : '#fff' }));
     if (mon.hp <= 0) kill(game, mon, hero);
     return dmg;
+  }
+  // the player's hits sound and look different per class and element, with random variety
+  function hitFeedback(game, hero, mon, crit, el) {
+    const x = mon.x, y = mon.y - 28 * mon.scale;
+    if (el === 'fire') { U.sfx.fireHit(); VFX.fireBurst(mon.x, mon.y, 26, 0.3); }
+    else if (el === 'ice') { U.sfx.iceHit(); VFX.iceBurst(mon.x, mon.y, 24, 0.35); }
+    else if (el === 'lightning') { U.sfx.zapHit(); VFX.sparkBurst(x, mon.y, 'zap', 5); }
+    else if (hero.cls === 'knight') {
+      crit ? U.sfx.heavyHit() : U.sfx.slashHit();
+      game.fx.push(makeFx(crit ? 'bigslash' : 'slash', x, y, { dir: U.rand(-3, 3), color: crit ? '#ffd76a' : ['#fff6d8', '#ffe6c0', '#e8f0ff'][U.randi(0, 2)] }));
+    } else if (hero.cls === 'elf') {
+      crit ? U.sfx.heavyHit() : U.sfx.arrowHit();
+      game.fx.push(makeFx('spark', x, y, { color: crit ? '#ffdb4d' : ['#b8ffcf', '#e8ffe0', '#9fe8ff'][U.randi(0, 2)] }));
+      if (Math.random() < 0.5) VFX.dust(mon.x, mon.y, 2, '#d8f0c0');
+    } else {
+      crit ? U.sfx.heavyHit() : U.sfx.boltHit();
+      game.fx.push(makeFx('burst', x, y, { r: crit ? 40 : 24, color: ['#b18cff', '#8fb8ff', '#d08cff'][U.randi(0, 2)] }));
+    }
+    if (crit) {
+      game.fx.push(makeFx('shock', mon.x, mon.y, { r: 60, color: '#ffd76a', dur: 0.35 }));
+      if (el) U.sfx.heavyHit();
+    }
   }
   function heroHit(hero, target, mult) {
     const game = Game;
     if (!target || target.dead) return;
     if (U.dist(hero, target) > hero.classDef.range + target.radius + 40) return;
-    game.fx.push(makeFx('slash', target.x, target.y - 26, { dir: hero.dir }));
+    if (hero !== game.player) game.fx.push(makeFx('slash', target.x, target.y - 26, { dir: hero.dir }));
     damageMonster(game, hero, target, mult);
   }
   function monsterHit(mon, target, heavy, aoe) {
@@ -105,7 +126,7 @@ const Combat = (() => {
       pr.vx = Math.cos(a); pr.vy = Math.sin(a); pr.hit = new Set(); pr.life = 0.7;
     }
     game.projectiles.push(pr);
-    if (o.kind === 'bolt' && hero === game.player) U.sfx.magic();
+    if (o.kind === 'bolt' && hero === game.player) U.sfx.boltCast();
   }
   function updateProjectiles(game, dt) {
     const out = [];
@@ -116,7 +137,7 @@ const Combat = (() => {
         p.x += p.vx * p.speed * dt; p.y += p.vy * p.speed * dt; p.life -= dt;
         for (const m of game.monsters) {
           if (m.dead || p.hit.has(m)) continue;
-          if (Math.hypot(m.x - p.x, m.y - 30 - p.y) < 40 * m.scale) { p.hit.add(m); damageMonster(game, p.owner, m, p.mult, { critBonus: p.critBonus ?? 20, slow: p.slow }); if (p.onPierce) p.onPierce(m); }
+          if (Math.hypot(m.x - p.x, m.y - 30 - p.y) < 40 * m.scale) { p.hit.add(m); damageMonster(game, p.owner, m, p.mult, { critBonus: p.critBonus ?? 20, slow: p.slow, el: p.el }); if (p.onPierce) p.onPierce(m); }
         }
         if (p.life > 0) out.push(p);
         else if (p.onEnd) p.onEnd(p.x, p.y + 30);

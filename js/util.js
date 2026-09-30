@@ -74,8 +74,47 @@ const U = (() => {
     const g = a.createGain(); g.gain.value = vol;
     src.connect(f); f.connect(g); g.connect(a.destination); src.start();
   }
+  // filtered noise (bandpass / lowpass / highpass) with an optional delay, for textured hits
+  function nz(dur, vol, type, freq, q = 1, delay = 0) {
+    if (muted) return;
+    const a = audio(); if (!a) return;
+    const len = Math.floor(a.sampleRate * dur), buf = a.createBuffer(1, len, a.sampleRate), d = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 1.6);
+    const src = a.createBufferSource(); src.buffer = buf;
+    const f = a.createBiquadFilter(); f.type = type; f.frequency.value = freq; f.Q.value = q;
+    const g = a.createGain(); g.gain.value = vol;
+    src.connect(f); f.connect(g); g.connect(a.destination); src.start(a.currentTime + delay);
+  }
+  const later = (ms, fn) => (ms ? setTimeout(fn, ms) : fn());
+  const J = (v, k = 0.12) => v * (1 + (Math.random() * 2 - 1) * k); // pitch jitter so repeats never sound identical
+  // at most one play per name per window: area skills hit many monsters in the same frame
+  const lastPlay = {};
+  const gate = (name, ms) => { const t = performance.now(); if (t - (lastPlay[name] || 0) < ms) return false; lastPlay[name] = t; return true; };
   const sfx = {
     swing: () => noiseBurst(0.12, 0.05, 2500),
+    // ---- basic attacks and hits, per class (random variants + jitter)
+    slash: () => {
+      const v = Math.floor(Math.random() * 3);
+      nz(0.13, 0.07, 'bandpass', J([2200, 1700, 2800][v]), 1.2);
+      if (v === 1) tone(J(260), 0.1, 'sawtooth', 0.015, -120);
+    },
+    slashHit: () => { if (!gate('slashHit', 45)) return; nz(0.07, 0.09, 'bandpass', J(900), 1.5); tone(J(180, 0.2), 0.07, 'square', 0.025, -70); tone(J(1600, 0.15), 0.09, 'triangle', 0.012, -300); },
+    heavyHit: () => { if (!gate('heavyHit', 60)) return; nz(0.18, 0.13, 'lowpass', 700); tone(J(80), 0.2, 'sawtooth', 0.05, -35); tone(J(1300), 0.25, 'triangle', 0.02, -500); },
+    pluck: () => { tone(J(300, 0.15), 0.12, 'triangle', 0.045, -110); nz(0.04, 0.03, 'highpass', 4000); later(40, () => nz(0.12, 0.025, 'bandpass', J(3200), 2)); },
+    arrowHit: () => { if (!gate('arrowHit', 40)) return; tone(J(230, 0.2), 0.08, 'triangle', 0.04, -140); nz(0.06, 0.06, 'bandpass', J(1300), 1.4); },
+    boltCast: () => { tone(J(620), 0.18, 'sine', 0.04, 700); tone(J(930), 0.14, 'triangle', 0.015, 900); },
+    boltHit: () => { if (!gate('boltHit', 45)) return; tone(J(1400), 0.16, 'sine', 0.035, -900); nz(0.12, 0.03, 'highpass', 6000); },
+    fireHit: () => { if (!gate('fireHit', 50)) return; nz(0.22, 0.09, 'lowpass', J(900)); for (let i = 0; i < 3; i++) later(30 + i * 45, () => nz(0.03, 0.05, 'highpass', 3000)); },
+    iceHit: () => { if (!gate('iceHit', 50)) return; tone(J(2300, 0.1), 0.18, 'triangle', 0.02); tone(J(3100, 0.1), 0.12, 'sine', 0.015); nz(0.06, 0.06, 'highpass', 5000); },
+    zapHit: () => { if (!gate('zapHit', 50)) return; tone(J(1200), 0.09, 'square', 0.025, -900); nz(0.08, 0.05, 'bandpass', J(3000), 2); },
+    // ---- skill casts
+    fireCast: () => { nz(0.45, 0.07, 'lowpass', 600); tone(J(140), 0.4, 'sawtooth', 0.025, 300); later(120, () => nz(0.25, 0.05, 'bandpass', 1500, 0.8)); },
+    iceCast: () => [1600, 2000, 2400, 3000].forEach((f, i) => later(i * 55, () => tone(J(f, 0.05), 0.22, 'triangle', 0.022))),
+    zapCast: () => { for (let i = 0; i < 4; i++) later(i * 40, () => { tone(J(900 + i * 300), 0.05, 'square', 0.02, -400); nz(0.04, 0.04, 'bandpass', 3500, 3); }); },
+    volley: (n = 4) => { for (let i = 0; i < n; i++) later(i * 55, () => tone(J(300 + i * 25, 0.1), 0.1, 'triangle', 0.03, -100)); },
+    bladeStorm: () => { nz(0.35, 0.08, 'bandpass', 700, 0.7); later(90, () => nz(0.2, 0.06, 'bandpass', 2000, 1)); tone(J(1100), 0.35, 'triangle', 0.018, -400); },
+    powerUp: () => { tone(200, 0.5, 'sine', 0.05, 700); tone(300, 0.5, 'triangle', 0.02, 1000); later(250, () => nz(0.2, 0.04, 'highpass', 3000)); },
+    healChime: () => [660, 880, 1100, 1320].forEach((f, i) => later(i * 70, () => tone(f, 0.35, 'sine', 0.035))),
     hit: () => { noiseBurst(0.08, 0.08, 400); tone(140, 0.08, 'square', 0.03, -60); },
     crit: () => { noiseBurst(0.14, 0.1, 300); tone(90, 0.18, 'sawtooth', 0.05, -40); },
     bow: () => tone(600, 0.1, 'triangle', 0.04, -350),

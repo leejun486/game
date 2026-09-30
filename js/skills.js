@@ -231,7 +231,7 @@ const Skills = (() => {
   // ---------------------------------------------------------------- damage helpers
   function hit(game, p, mon, mult, m, o = {}) {
     if (!mon || mon.dead) return 0;
-    const dmg = Combat.damageMonster(game, p, mon, mult * (1 + (m.mult || 0)), { critBonus: m.crit || 0, slow: o.slow });
+    const dmg = Combat.damageMonster(game, p, mon, mult * (1 + (m.mult || 0)), { critBonus: m.crit || 0, slow: o.slow, el: m.el });
     const ls = (m.lifesteal || 0) + ((p.buffs.find((b) => b.lifesteal) || {}).lifesteal || 0);
     if (ls && dmg) p.hp = Math.min(p.maxHp, p.hp + dmg * ls);
     if (m.stun && !o.noStun && !mon.dead) { mon.stunT = Math.max(mon.stunT || 0, m.stun); if (m.el === 'ice') mon.frozenT = Math.max(mon.frozenT || 0, m.stun); }
@@ -272,6 +272,11 @@ const Skills = (() => {
     if (target) p.face(target);
     p.combatT = 5;
     UI.skillName(displayName(p, id));
+    if (p === game.player) {
+      const snd = { m_fire: 'fireCast', m_meteor: 'fireCast', m_ice: 'iceCast', m_blizzard: 'iceCast', m_chain: 'zapCast', m_heal: 'healChime', k_rage: 'powerUp', e_wind: 'powerUp',
+        k_whirl: 'bladeStorm', k_quake: 'bladeStorm', k_smash: 'slash', k_doom: 'bladeStorm', k_charge: 'slash', e_triple: 'volley', e_rain: 'volley', e_storm: 'volley', e_energy: 'boltCast', e_frost: 'iceCast' }[id];
+      if (snd) U.sfx[snd]();
+    }
     if (p === game.player) game.fx.push(Combat.makeFx('castcircle', p.x, p.y, { follow: p, color: { knight: '#ff8a3a', elf: '#6dffb0', mage: '#a88bff' }[p.cls] }));
     const R = (r) => r * (1 + (m.radius || 0));
     const doIt = IMPL[id];

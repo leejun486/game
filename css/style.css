@@ -637,3 +637,11 @@ body.touch #chat { bottom: 250px; }
 .gacha .reel.fail canvas { filter: saturate(.55) brightness(.8); }
 .set-line { margin-top: 6px; font-size: 12px; color: #8a8298; }
 .set-line.on { color: #7dff9a; }
+.coll-summary { border: 1px solid #3d9a45; background: rgba(60,150,70,.08); padding: 10px; margin-bottom: 10px; }
+.coll-total { margin-top: 6px; color: #7ee07e; font-size: 13px; line-height: 1.6; }
+.coll-tabs { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.coll-tabs button[data-cat] { padding: 5px 10px; background: #1a1424; border: 1px solid var(--line); color: #bdb3a0; cursor: pointer; font-size: 12.5px; }
+.coll-tabs button[data-cat].on { color: var(--gold); border-color: var(--gold); background: #2a1e0c; }
+.coll-ready { margin-left: auto; font-size: 12px; color: #bdb3a0; }
+.coll-items .cell { position: relative; }
+.coll-items .cell .en { position: absolute; left: 3px; top: 2px; font-size: 11px; font-weight: bold; color: #ffd76a; text-shadow: 0 1px 2px #000; }
