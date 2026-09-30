@@ -22,7 +22,7 @@ D.CLASSES = {
   knight: {
     name: '기사', sheet: 'knight', desc: '강인한 체력과 근접 전투의 달인.\n높은 방어력으로 전장을 지배한다.',
     base: { hp: 190, mp: 40, atk: 14, def: 6 }, grow: { hp: 24, mp: 3, atk: 2.3, def: 0.9 },
-    range: 62, attack: 'slash', atkDelay: 0.95, weapon: 'sword', cleave: { r: 90, n: 3, mult: 0.55 },
+    range: 62, attack: 'slash', atkDelay: 0.95, weapon: 'sword', cleave: { r: 90, n: 3, mult: 0.3 },
     skills: ['k_smash', 'k_whirl', 'k_rage', 'k_doom', 'k_charge', 'k_quake'],
   },
   elf: {
@@ -41,8 +41,8 @@ D.CLASSES = {
 
 // type: single | aoe_self | aoe_target | buff | heal | multi | pierce
 D.SKILLS = {
-  k_smash: { name: '강타', icon: 'slash', mp: 6, cd: 3, mult: 2.3, type: 'single', anim: 'slash', desc: '대상에게 230% 피해, 주변 110 범위에 절반의 충격파' },
-  k_whirl: { name: '회오리 베기', icon: 'whirl', mp: 12, cd: 4, mult: 2.2, type: 'aoe_self', radius: 200, anim: 'slash', desc: '주변 모든 적에게 220% 피해' },
+  k_smash: { name: '강타', icon: 'slash', mp: 6, cd: 3, mult: 2.3, type: 'single', anim: 'slash', desc: '대상에게 230% 피해, 주변 110 범위에 충격파 (80%)' },
+  k_whirl: { name: '회오리 베기', icon: 'whirl', mp: 12, cd: 4, mult: 1.5, type: 'aoe_self', radius: 200, anim: 'slash', desc: '주변 모든 적에게 150% 피해' },
   k_rage: { name: '버서커', icon: 'aura', mp: 20, cd: 40, type: 'buff', buff: { id: 'rage', name: '버서커', atkPct: 35, atkSpd: 20, dur: 20 }, anim: 'slash', desc: '20초간 공격력 +35%, 공격속도 +20%' },
   k_doom: { name: '파멸의 일격', icon: 'meteor', mp: 25, cd: 14, mult: 5.0, type: 'single', anim: 'slash', fx: 'doom', desc: '대상에게 공격력의 500% 치명적 피해' },
 
@@ -55,7 +55,7 @@ D.SKILLS = {
   m_ice: { name: '아이스 스피어', icon: 'icebolt', mp: 16, cd: 6, mult: 2.6, type: 'single', el: 'ice', anim: 'thrust', fx: 'ice', slow: 3, desc: '260% 피해 + 3초간 둔화' },
   m_heal: { name: '힐', icon: 'heal', mp: 22, cd: 10, type: 'heal', pct: 0.35, anim: 'thrust', desc: '최대 HP의 35% 회복' },
   k_charge: { name: '돌진 베기', icon: 'blade', mp: 18, cd: 8, mult: 1.8, type: 'single', range: 360, anim: 'slash', unlock: 15, desc: '대상에게 돌진하여 180% 피해, 지나는 길의 적도 벤다' },
-  k_quake: { name: '대지 분쇄', icon: 'craft', mp: 26, cd: 8, mult: 3.0, type: 'aoe_self', radius: 260, anim: 'slash', unlock: 20, desc: '땅을 내리쳐 주변 적에게 300% 피해 + 2초 둔화' },
+  k_quake: { name: '대지 분쇄', icon: 'craft', mp: 26, cd: 8, mult: 2.4, type: 'aoe_self', radius: 260, anim: 'slash', unlock: 20, desc: '땅을 내리쳐 주변 적에게 240% 피해 + 2초 둔화' },
   e_frost: { name: '빙결 화살', icon: 'frozen-orb', mp: 16, cd: 6, mult: 2.0, type: 'single', el: 'ice', anim: 'shoot', unlock: 15, desc: '200% 피해 + 3초간 둔화' },
   e_storm: { name: '폭풍의 화살', icon: 'heavy-arrow', mp: 28, cd: 8, mult: 1.0, type: 'aoe_self', radius: 350, count: 14, anim: 'shoot', unlock: 20, desc: '주변 적들에게 화살 14발을 난사 (각 100%)' },
   m_chain: { name: '체인 라이트닝', icon: 'lightning', mp: 20, cd: 5, mult: 1.7, type: 'single', el: 'lightning', anim: 'thrust', unlock: 15, desc: '170% 번개가 주변 적 3명에게 연쇄 (연쇄마다 20% 감소)' },

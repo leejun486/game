@@ -283,7 +283,7 @@ const Skills = (() => {
       game.fx.push(Combat.makeFx('bigslash', t.x, t.y - 26, { color: '#fff3c0' }));
       hit(game, p, t, sk.mult, Object.assign({}, m, { crit: (m.crit || 0) + 10 }));
       // the blow always sends a shockwave around the target; the 광역 branch widens and strengthens it
-      const sp = m.splash || { r: 110, mult: 0.5 };
+      const sp = m.splash || { r: 110, mult: 0.35 };
       area(game, p, t.x, t.y, sp.r, sk.mult * sp.mult, Object.assign({}, m, { stun: 0 }), undefined, [t]); game.fx.push(Combat.makeFx('whirl', t.x, t.y, { r: sp.r }));
       if (m.stun) game.fx.push(Combat.makeFx('glint', t.x, t.y - 50, { color: '#ffe28a' }));
       game.shake = 4; U.sfx.crit();
