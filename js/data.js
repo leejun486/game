@@ -325,7 +325,7 @@ D.enchantAtk = (def, en) => Math.round(def.atk * (en * 0.1 + Math.max(0, en - 6)
 D.enchantDef = (en) => en * 3;
 D.enchantHp = (en) => en * 40;
 // drop chance multipliers by item kind (potions and town scrolls unchanged)
-D.DROP_MUL = { weapon: 5, armor: 5, ring: 5, enchant: 2.5, ticket: 2 };
+D.DROP_MUL = { weapon: 3.5, armor: 3.5, ring: 3.5, enchant: 2, ticket: 1.6 };
 // set bonuses: the set's weapon and armor worn together
 D.SETS = {
   silver: { name: '은빛 기사단', bonus: { atkPct: 8, hp: 200 } },
