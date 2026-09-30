@@ -635,3 +635,5 @@ body.touch #chat { bottom: 250px; }
 .gacha .reel .nm .syn.ok { color: #7dff9a; }
 .gacha .reel .nm .syn.no { color: #8a8298; }
 .gacha .reel.fail canvas { filter: saturate(.55) brightness(.8); }
+.set-line { margin-top: 6px; font-size: 12px; color: #8a8298; }
+.set-line.on { color: #7dff9a; }

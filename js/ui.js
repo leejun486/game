@@ -233,7 +233,7 @@ const UI = (() => {
   }
 
   OPENERS.soon = (name) => {
-    const titles = { event: '이벤트', pass: '시즌 패스', guild: '혈맹', craft: '제작', exchange: '거래소', pvp: 'PvP', dungeon: '던전', collection: '수집', achievement: '업적' };
+    const titles = { event: '이벤트', pass: '시즌 패스', guild: '혈맹', craft: '제작', exchange: '거래소', relation: '관계', pvp: 'PvP', dungeon: '던전', collection: '수집', achievement: '업적' };
     const { body } = makePanel(titles[name] || '알림', 'center dialog');
     body.innerHTML = `<p style="text-align:center;color:#a39a88;padding:20px 0">업데이트 예정입니다.</p>`;
     return {};
@@ -246,7 +246,7 @@ const UI = (() => {
     const grid = [
       ['character', 'character', '캐릭터'], ['stats', 'star', '잠재력'], ['skills', 'blade', '전투 특성'], ['transcend', 'transcend', '초월', 1], ['weaponlook', 'sword', '무기 외형'], ['collection', 'collection', '결속'], ['skin', 'wings', '스킨'],
       ['teleport', 'teleport', '권능'], ['summon', 'summon', '서판 조합'], ['quests', 'quest', '퀘스트', 1], ['event', 'bell', '의뢰'], ['craft', 'craft', '제작'], ['achievement', 'achievement', '업적', 1], ['collection', 'spellbook', '수집', 1],
-      ['pet', 'pet', '펫', 1], ['mount', 'mount', '탈것', 1], ['guild', 'guild', '길드', 1], ['ranking', 'ranking', '순위'], ['exchange', 'exchange', '관계'], ['exchange', 'trade', '거래소'], ['pvp', 'pvp', 'PvP'], ['ranking', 'skull', '원수'], ['auto', 'auto', 'AI 모드'],
+      ['pet', 'pet', '펫', 1], ['mount', 'mount', '탈것', 1], ['guild', 'guild', '길드', 1], ['ranking', 'ranking', '순위'], ['relation', 'trade', '관계'], ['exchange', 'exchange', '거래소'], ['pvp', 'pvp', 'PvP'], ['ranking', 'skull', '원수'], ['auto', 'auto', 'AI 모드'],
       ['map', 'compass', '위치 저장'],
     ];
     el.innerHTML = `
@@ -323,12 +323,14 @@ const UI = (() => {
       if (def.def) lines.push(`방어력 +${def.def}${it.en && def.kind === 'armor' ? ` (강화 +${D.enchantDef(it.en)})` : ''}`);
       if (def.hp) lines.push(`최대 HP +${def.hp}${it.en && def.kind === 'armor' ? ` (강화 +${D.enchantHp(it.en)})` : ''}`);
       if (def.atkSpd) lines.push(`공격 속도 +${def.atkSpd}%`);
+      if (def.crit) lines.push(`치명타 +${def.crit}%`);
       if (def.cls) lines.push(`${D.CLASSES[def.cls].name} 전용`);
       if (def.lv > 1) lines.push(`착용 레벨 ${def.lv}`);
       const why = D.isEquip(def) && p.canEquip(it);
       const sell = Math.floor((def.price || 1000) * 0.3);
       box.innerHTML = `<h4 class="${D.GRADES[def.grade].cls}">${it.en ? '+' + it.en + ' ' : ''}${esc(def.name)} <small style="color:#888">[${D.GRADES[def.grade].name}]</small></h4>
         <div style="color:#bbb">${def.desc ? esc(def.desc) : ''}${lines.join(' · ')}</div>
+        ${def.set ? `<div class="set-line ${p.activeSet() === def.set ? 'on' : ''}">[${esc(D.SETS[def.set].name)} 세트] 무기+갑옷 착용 시: ${D.setBonusText(D.SETS[def.set].bonus)}${p.activeSet() === def.set ? ' (적용 중)' : ''}</div>` : ''}
         ${why ? `<div class="req-msg">⚠ ${esc(why)} (현재 Lv.${p.s.lv} ${esc(p.classDef.name)})</div>` : ''}
         <div class="btns">
           ${D.isEquip(def) ? (eq ? `<button class="dark-btn" data-do="unequip">해제</button>` : `<button class="gold-btn" data-do="use" ${why ? 'disabled' : ''}>장착</button>`) : ''}

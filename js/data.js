@@ -51,16 +51,16 @@ D.SKILLS = {
   e_wind: { name: '윈드 샷', icon: 'sprint', mp: 20, cd: 40, type: 'buff', buff: { id: 'wind', name: '윈드 샷', atkSpd: 40, moveSpd: 15, dur: 20 }, anim: 'shoot', desc: '20초간 공격속도 +40%, 이동속도 +15%' },
   e_energy: { name: '에너지 볼트', icon: 'energy-arrow', mp: 26, cd: 12, mult: 4.2, type: 'pierce', anim: 'shoot', desc: '관통하는 거대한 화살 (420%)' },
 
-  m_fire: { name: '파이어 볼', icon: 'fireball', mp: 10, cd: 2.5, mult: 1.9, type: 'aoe_target', radius: 90, el: 'fire', anim: 'thrust', fx: 'fire', desc: '폭발하는 화염구 (190% 광역)' },
-  m_ice: { name: '아이스 스피어', icon: 'icebolt', mp: 16, cd: 6, mult: 2.6, type: 'single', el: 'ice', anim: 'thrust', fx: 'ice', slow: 3, desc: '260% 피해 + 3초간 둔화' },
+  m_fire: { name: '파이어 볼', icon: 'fireball', mp: 10, cd: 2.5, mult: 1.6, type: 'aoe_target', radius: 90, el: 'fire', anim: 'thrust', fx: 'fire', desc: '폭발하는 화염구 (160% 광역)' },
+  m_ice: { name: '아이스 스피어', icon: 'icebolt', mp: 16, cd: 6, mult: 2.3, type: 'single', el: 'ice', anim: 'thrust', fx: 'ice', slow: 3, desc: '230% 피해 + 3초간 둔화' },
   m_heal: { name: '힐', icon: 'heal', mp: 22, cd: 10, type: 'heal', pct: 0.35, anim: 'thrust', desc: '최대 HP의 35% 회복' },
   k_charge: { name: '돌진 베기', icon: 'blade', mp: 18, cd: 8, mult: 1.8, type: 'single', range: 360, anim: 'slash', unlock: 15, desc: '대상에게 돌진하여 180% 피해, 지나는 길의 적도 벤다' },
   k_quake: { name: '대지 분쇄', icon: 'craft', mp: 26, cd: 8, mult: 2.4, type: 'aoe_self', radius: 260, anim: 'slash', unlock: 20, desc: '땅을 내리쳐 주변 적에게 240% 피해 + 2초 둔화' },
   e_frost: { name: '빙결 화살', icon: 'frozen-orb', mp: 16, cd: 6, mult: 2.0, type: 'single', el: 'ice', anim: 'shoot', unlock: 15, desc: '200% 피해 + 3초간 둔화' },
   e_storm: { name: '폭풍의 화살', icon: 'heavy-arrow', mp: 28, cd: 8, mult: 1.0, type: 'aoe_self', radius: 350, count: 14, anim: 'shoot', unlock: 20, desc: '주변 적들에게 화살 14발을 난사 (각 100%)' },
-  m_chain: { name: '체인 라이트닝', icon: 'lightning', mp: 20, cd: 5, mult: 1.7, type: 'single', el: 'lightning', anim: 'thrust', unlock: 15, desc: '170% 번개가 주변 적 3명에게 연쇄 (연쇄마다 20% 감소)' },
-  m_blizzard: { name: '블리자드', icon: 'lightning2', mp: 38, cd: 14, mult: 0.45, type: 'aoe_target', radius: 170, el: 'ice', anim: 'thrust', unlock: 30, desc: '4초간 눈보라 지대 생성 (0.5초마다 45% + 둔화)' },
-  m_meteor: { name: '메테오 스트라이크', icon: 'meteor', mp: 40, cd: 16, mult: 3.8, type: 'aoe_target', radius: 190, el: 'fire', anim: 'thrust', fx: 'meteor', desc: '거대한 운석 낙하 (380% 광역)' },
+  m_chain: { name: '체인 라이트닝', icon: 'lightning', mp: 20, cd: 5, mult: 1.45, type: 'single', el: 'lightning', anim: 'thrust', unlock: 15, desc: '145% 번개가 주변 적 3명에게 연쇄 (연쇄마다 20% 감소)' },
+  m_blizzard: { name: '블리자드', icon: 'lightning2', mp: 38, cd: 14, mult: 0.38, type: 'aoe_target', radius: 170, el: 'ice', anim: 'thrust', unlock: 30, desc: '4초간 눈보라 지대 생성 (0.5초마다 38% + 둔화)' },
+  m_meteor: { name: '메테오 스트라이크', icon: 'meteor', mp: 40, cd: 16, mult: 3.2, type: 'aoe_target', radius: 190, el: 'fire', anim: 'thrust', fx: 'meteor', desc: '거대한 운석 낙하 (320% 광역)' },
 };
 
 // ---------------- monsters ----------------
@@ -204,12 +204,40 @@ D.ITEMS = {
   w_sword6: { name: '이그니스의 멸화검', icon: 'sword3', kind: 'weapon', cls: 'knight', atk: 84, lv: 55, price: 0, grade: 4 },
   w_bow6: { name: '용암심장 장궁', icon: 'bow3', kind: 'weapon', cls: 'elf', atk: 80, lv: 55, price: 0, grade: 4 },
   w_staff6: { name: '화염 군주의 홀', icon: 'staff3', kind: 'weapon', cls: 'mage', atk: 86, lv: 55, price: 0, grade: 4 },
+  // ---- equipment sets: a set's weapon + armor worn together unlock its set bonus (D.SETS)
+  // 희귀: 은빛 기사단 (Lv.22), 폭풍 추적자 (Lv.27)
+  w_sword_r1: { name: '은빛 기사단 장검', icon: 'sword2', kind: 'weapon', cls: 'knight', atk: 26, lv: 22, price: 0, grade: 2, set: 'silver' },
+  w_bow_r1: { name: '은빛 기사단 장궁', icon: 'bow2', kind: 'weapon', cls: 'elf', atk: 25, lv: 22, price: 0, grade: 2, set: 'silver' },
+  w_staff_r1: { name: '은빛 기사단 지팡이', icon: 'staff2', kind: 'weapon', cls: 'mage', atk: 27, lv: 22, price: 0, grade: 2, set: 'silver' },
+  w_sword_r2: { name: '폭풍 추적자의 검', icon: 'sword2', kind: 'weapon', cls: 'knight', atk: 30, lv: 27, price: 0, grade: 2, set: 'storm' },
+  w_bow_r2: { name: '폭풍 추적자의 활', icon: 'bow2', kind: 'weapon', cls: 'elf', atk: 29, lv: 27, price: 0, grade: 2, set: 'storm' },
+  w_staff_r2: { name: '폭풍 추적자의 지팡이', icon: 'staff2', kind: 'weapon', cls: 'mage', atk: 31, lv: 27, price: 0, grade: 2, set: 'storm' },
+  // 영웅: 핏빛 군단 (Lv.36), 심연의 파수꾼 (Lv.44)
+  w_sword_h1: { name: '핏빛 군단 대검', icon: 'sword3', kind: 'weapon', cls: 'knight', atk: 42, lv: 36, price: 0, grade: 3, set: 'blood' },
+  w_bow_h1: { name: '핏빛 군단 장궁', icon: 'bow3', kind: 'weapon', cls: 'elf', atk: 40, lv: 36, price: 0, grade: 3, set: 'blood' },
+  w_staff_h1: { name: '핏빛 군단 마력봉', icon: 'staff3', kind: 'weapon', cls: 'mage', atk: 44, lv: 36, price: 0, grade: 3, set: 'blood' },
+  w_sword_h2: { name: '심연 파수꾼의 검', icon: 'sword3', kind: 'weapon', cls: 'knight', atk: 50, lv: 44, price: 0, grade: 3, set: 'abyss' },
+  w_bow_h2: { name: '심연 파수꾼의 활', icon: 'bow3', kind: 'weapon', cls: 'elf', atk: 48, lv: 44, price: 0, grade: 3, set: 'abyss' },
+  w_staff_h2: { name: '심연 파수꾼의 홀', icon: 'staff3', kind: 'weapon', cls: 'mage', atk: 52, lv: 44, price: 0, grade: 3, set: 'abyss' },
+  // 전설: 천상의 심판 (Lv.62)
+  w_sword_l1: { name: '천상의 심판검', icon: 'sword3', kind: 'weapon', cls: 'knight', atk: 96, lv: 62, price: 0, grade: 4, set: 'judge' },
+  w_bow_l1: { name: '천상의 심판궁', icon: 'bow3', kind: 'weapon', cls: 'elf', atk: 92, lv: 62, price: 0, grade: 4, set: 'judge' },
+  w_staff_l1: { name: '천상의 심판봉', icon: 'staff3', kind: 'weapon', cls: 'mage', atk: 100, lv: 62, price: 0, grade: 4, set: 'judge' },
 
   a_1: { name: '가죽 갑옷', icon: 'armor1', kind: 'armor', def: 2, hp: 10, lv: 1, price: 300, grade: 0 },
   a_2: { name: '사슬 갑옷', icon: 'armor2', kind: 'armor', def: 6, hp: 40, lv: 10, price: 7000, grade: 1 },
   a_3: { name: '판금 갑옷', icon: 'armor3', kind: 'armor', def: 11, hp: 90, lv: 20, price: 45000, grade: 2 },
   a_4: { name: '용 비늘 갑옷', icon: 'armor4', kind: 'armor', def: 19, hp: 180, lv: 30, price: 0, grade: 3 },
   a_5: { name: '흑요석 용암 갑주', icon: 'armor4', kind: 'armor', def: 30, hp: 340, lv: 55, price: 0, grade: 4 },
+  a_r1: { name: '은빛 기사단 갑옷', icon: 'armor3', kind: 'armor', def: 13, hp: 110, lv: 22, price: 0, grade: 2, set: 'silver' },
+  a_r2: { name: '폭풍 추적자의 갑옷', icon: 'armor3', kind: 'armor', def: 15, hp: 130, lv: 27, price: 0, grade: 2, set: 'storm' },
+  a_h1: { name: '핏빛 군단 갑주', icon: 'armor4', kind: 'armor', def: 21, hp: 200, lv: 36, price: 0, grade: 3, set: 'blood' },
+  a_h2: { name: '심연 파수꾼의 갑주', icon: 'armor4', kind: 'armor', def: 25, hp: 250, lv: 44, price: 0, grade: 3, set: 'abyss' },
+  a_l1: { name: '천상의 심판 갑주', icon: 'armor4', kind: 'armor', def: 36, hp: 420, lv: 62, price: 0, grade: 4, set: 'judge' },
+  // accessories, one per grade
+  r_r: { name: '맹공의 반지', icon: 'ring1', kind: 'ring', atk: 7, crit: 4, lv: 24, price: 0, grade: 2 },
+  r_h: { name: '군주의 목걸이', icon: 'ring3', kind: 'ring', atk: 10, hp: 150, crit: 6, lv: 40, price: 0, grade: 3 },
+  r_l: { name: '심판자의 인장', icon: 'ring2', kind: 'ring', atk: 16, def: 6, hp: 300, crit: 10, atkSpd: 10, lv: 60, price: 0, grade: 4 },
 
   r_1: { name: '힘의 반지', icon: 'ring1', kind: 'ring', atk: 4, lv: 5, price: 5000, grade: 1 },
   r_2: { name: '체력의 반지', icon: 'ring2', kind: 'ring', hp: 120, def: 2, lv: 15, price: 20000, grade: 2 },
@@ -232,7 +260,16 @@ D.enchantAtk = (def, en) => Math.round(def.atk * (en * 0.1 + Math.max(0, en - 6)
 D.enchantDef = (en) => en * 3;
 D.enchantHp = (en) => en * 40;
 // drop chance multipliers by item kind (potions and town scrolls unchanged)
-D.DROP_MUL = { weapon: 3, armor: 3, ring: 3, enchant: 2.5, ticket: 2 };
+D.DROP_MUL = { weapon: 5, armor: 5, ring: 5, enchant: 2.5, ticket: 2 };
+// set bonuses: the set's weapon and armor worn together
+D.SETS = {
+  silver: { name: '은빛 기사단', bonus: { atkPct: 8, hp: 200 } },
+  storm: { name: '폭풍 추적자', bonus: { atkPct: 8, atkSpd: 12 } },
+  blood: { name: '핏빛 군단', bonus: { atkPct: 12, hp: 450, crit: 4 } },
+  abyss: { name: '심연의 파수꾼', bonus: { atkPct: 12, def: 25, dmgRed: 6 } },
+  judge: { name: '천상의 심판', bonus: { atkPct: 18, hp: 900, crit: 8, atkSpd: 10 } },
+};
+D.setBonusText = (b) => [b.atkPct && `공격력 +${b.atkPct}%`, b.hp && `최대 HP +${b.hp}`, b.def && `방어력 +${b.def}`, b.atkSpd && `공격 속도 +${b.atkSpd}%`, b.crit && `치명타 +${b.crit}%`, b.dmgRed && `받는 피해 -${b.dmgRed}`].filter(Boolean).join(', ');
 D.SAFE_ENCHANT = { weapon: 6, armor: 4 };
 D.enchantRate = (cur) => [0.5, 0.4, 0.33, 0.25, 0.18, 0.12, 0.08, 0.05, 0.03][Math.max(0, cur - 6)] || 0.02;
 
@@ -243,21 +280,21 @@ D.DROPS = {
   wolfman: [['r_1', 0.004], ['sc_armor', 0.003]],
   boarman: [['hp_m', 0.05], ['sc_armor', 0.005], ['sc_weapon', 0.003]],
   zombie: [['hp_m', 0.08], ['w_sword2', 0.004], ['w_bow2', 0.004], ['w_staff2', 0.004], ['sc_weapon', 0.005]],
-  skeleton: [['hp_m', 0.08], ['a_2', 0.004], ['sc_weapon', 0.007], ['sc_armor', 0.007]],
-  orc: [['hp_m', 0.1], ['r_2', 0.002], ['sc_weapon', 0.008], ['ticket', 0.002]],
-  lizardman: [['hp_l', 0.05], ['w_sword3', 0.002], ['w_bow3', 0.002], ['w_staff3', 0.002], ['sc_armor', 0.01]],
-  troll: [['hp_l', 0.08], ['a_3', 0.003], ['sc_weapon', 0.012], ['ticket', 0.004]],
-  vampire: [['ticket', 1], ['sc_weapon', 0.8], ['sc_armor', 0.8], ['w_sword4', 0.2], ['w_bow4', 0.2], ['w_staff4', 0.2], ['r_3', 0.15], ['a_4', 0.15]],
-  frost_wolf: [['hp_l', 0.08], ['sc_weapon', 0.012], ['sc_armor', 0.012]],
-  frost_skel: [['hp_l', 0.08], ['r_3', 0.002], ['sc_weapon', 0.015], ['ticket', 0.004]],
-  ice_troll: [['hp_l', 0.1], ['a_4', 0.002], ['w_sword5', 0.001], ['w_bow5', 0.001], ['w_staff5', 0.001], ['ticket', 0.006]],
-  frost_giant: [['ticket', 1], ['ticket', 1], ['ticket', 1], ['sc_weapon', 1], ['sc_armor', 1], ['w_sword5', 0.3], ['w_bow5', 0.3], ['w_staff5', 0.3], ['a_4', 0.4], ['r_3', 0.4]],
-  flame_orc: [['hp_l', 0.1], ['sc_weapon', 0.018], ['sc_armor', 0.018]],
-  magma_lizard: [['hp_l', 0.1], ['sc_weapon', 0.02], ['ticket', 0.006], ['a_4', 0.003]],
-  hell_wolf: [['hp_l', 0.1], ['r_3', 0.004], ['sc_armor', 0.02], ['ticket', 0.007]],
-  lava_troll: [['hp_l', 0.12], ['a_5', 0.0015], ['w_sword6', 0.0008], ['w_bow6', 0.0008], ['w_staff6', 0.0008], ['ticket', 0.009]],
-  ignis: [['ticket', 1], ['ticket', 1], ['ticket', 1], ['ticket', 1], ['sc_weapon', 1], ['sc_weapon', 1], ['sc_armor', 1], ['w_sword6', 0.3], ['w_bow6', 0.3], ['w_staff6', 0.3], ['a_5', 0.35], ['r_3', 0.5]],
-  minotaur: [['ticket', 1], ['ticket', 1], ['sc_weapon', 1], ['w_sword5', 0.15], ['w_bow5', 0.15], ['w_staff5', 0.15], ['a_4', 0.3], ['r_3', 0.3]],
+  skeleton: [['hp_m', 0.08], ['a_2', 0.004], ['sc_weapon', 0.007], ['sc_armor', 0.007], ['w_sword_r1', 0.0015], ['a_r1', 0.0015]],
+  orc: [['hp_m', 0.1], ['r_2', 0.002], ['sc_weapon', 0.008], ['ticket', 0.002], ['w_sword_r1', 0.002], ['a_r1', 0.002], ['r_r', 0.0015]],
+  lizardman: [['hp_l', 0.05], ['w_sword3', 0.002], ['w_bow3', 0.002], ['w_staff3', 0.002], ['sc_armor', 0.01], ['w_sword_r2', 0.002], ['a_r2', 0.002], ['r_r', 0.0015]],
+  troll: [['hp_l', 0.08], ['a_3', 0.003], ['sc_weapon', 0.012], ['ticket', 0.004], ['w_sword_r2', 0.002], ['a_r2', 0.002], ['w_sword_h1', 0.0008], ['a_h1', 0.0008]],
+  vampire: [['ticket', 1], ['sc_weapon', 0.8], ['sc_armor', 0.8], ['w_sword4', 0.2], ['w_bow4', 0.2], ['w_staff4', 0.2], ['r_3', 0.15], ['a_4', 0.15], ['w_sword_h1', 0.35], ['a_h1', 0.35], ['r_h', 0.2]],
+  frost_wolf: [['hp_l', 0.08], ['sc_weapon', 0.012], ['sc_armor', 0.012], ['w_sword_h1', 0.001], ['a_h1', 0.001]],
+  frost_skel: [['hp_l', 0.08], ['r_3', 0.002], ['sc_weapon', 0.015], ['ticket', 0.004], ['w_sword_h2', 0.0008], ['r_h', 0.0008]],
+  ice_troll: [['hp_l', 0.1], ['a_4', 0.002], ['w_sword5', 0.001], ['w_bow5', 0.001], ['w_staff5', 0.001], ['ticket', 0.006], ['a_h2', 0.0008], ['w_sword_h2', 0.0006]],
+  frost_giant: [['ticket', 1], ['ticket', 1], ['ticket', 1], ['sc_weapon', 1], ['sc_armor', 1], ['w_sword5', 0.3], ['w_bow5', 0.3], ['w_staff5', 0.3], ['a_4', 0.4], ['r_3', 0.4], ['w_sword_h2', 0.35], ['a_h2', 0.35], ['r_h', 0.3]],
+  flame_orc: [['hp_l', 0.1], ['sc_weapon', 0.018], ['sc_armor', 0.018], ['w_sword_h2', 0.001]],
+  magma_lizard: [['hp_l', 0.1], ['sc_weapon', 0.02], ['ticket', 0.006], ['a_4', 0.003], ['a_h2', 0.001]],
+  hell_wolf: [['hp_l', 0.1], ['r_3', 0.004], ['sc_armor', 0.02], ['ticket', 0.007], ['r_h', 0.001], ['w_sword_l1', 0.00012]],
+  lava_troll: [['hp_l', 0.12], ['a_5', 0.0015], ['w_sword6', 0.0008], ['w_bow6', 0.0008], ['w_staff6', 0.0008], ['ticket', 0.009], ['w_sword_l1', 0.00015], ['a_l1', 0.00015], ['r_l', 0.00012]],
+  ignis: [['ticket', 1], ['ticket', 1], ['ticket', 1], ['ticket', 1], ['sc_weapon', 1], ['sc_weapon', 1], ['sc_armor', 1], ['w_sword6', 0.3], ['w_bow6', 0.3], ['w_staff6', 0.3], ['a_5', 0.35], ['r_3', 0.5], ['w_sword_l1', 0.25], ['a_l1', 0.25], ['r_l', 0.2]],
+  minotaur: [['ticket', 1], ['ticket', 1], ['sc_weapon', 1], ['w_sword5', 0.15], ['w_bow5', 0.15], ['w_staff5', 0.15], ['a_4', 0.3], ['r_3', 0.3], ['w_sword_h2', 0.3], ['a_h2', 0.3], ['r_h', 0.3]],
 };
 
 D.SHOPS = {

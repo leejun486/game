@@ -112,6 +112,11 @@ class Player extends Hero {
   }
 
   // ---------------------------------------------------------------- stats
+  activeSet() {
+    const w = this.equipped('weapon'), a = this.equipped('armor');
+    const ws = w && D.ITEMS[w.id].set;
+    return ws && a && D.ITEMS[a.id].set === ws ? ws : null;
+  }
   recalc() {
     const c = this.classDef, lv = this.s.lv;
     const st = {
@@ -130,11 +135,15 @@ class Player extends Hero {
       const it = this.equipped(slot);
       if (!it) continue;
       const def = D.ITEMS[it.id];
-      add({ atk: def.atk || 0, def: def.def || 0, hp: def.hp || 0, atkSpd: def.atkSpd || 0 });
+      add({ atk: def.atk || 0, def: def.def || 0, hp: def.hp || 0, atkSpd: def.atkSpd || 0, crit: def.crit || 0 });
       const en = it.en || 0;
       if (slot === 'weapon') st.atk += D.enchantAtk(def, en);
       if (slot === 'armor') { st.def += D.enchantDef(en); st.maxHp += D.enchantHp(en); }
     }
+    // set bonus: the set's weapon and armor worn together
+    const setId = this.activeSet();
+    let setAtkPct = 0;
+    if (setId) { const b = D.SETS[setId].bonus; add({ hp: b.hp || 0, def: b.def || 0, atkSpd: b.atkSpd || 0, crit: b.crit || 0, dmgRed: b.dmgRed || 0 }); setAtkPct = b.atkPct || 0; }
     // transcend card
     const card = this.s.card && D.CARD_BY_ID[this.s.card];
     if (card) add(D.cardStats(card, (this.s.cards[card.id] || { lv: 1 }).lv));
@@ -147,7 +156,7 @@ class Player extends Hero {
     for (const b of Pets.bonuses(this)) add(b);
     for (const b of Mounts.bonuses(this)) add(b);
     // buffs
-    let atkPct = 0;
+    let atkPct = setAtkPct;
     for (const b of this.buffs) { add({ atkSpd: b.atkSpd || 0, moveSpd: b.moveSpd || 0, crit: b.crit || 0, dmgRed: b.dmgRed || 0 }); atkPct += b.atkPct || 0; }
     st.atk *= 1 + atkPct / 100;
     st.maxHp = Math.round(st.maxHp); st.maxMp = Math.round(st.maxMp);
