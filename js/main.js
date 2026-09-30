@@ -18,7 +18,10 @@ const Game = {
   },
   monstersNear(from, r) { return this.monsters.reduce((n, m) => n + (!m.dead && U.dist(from, m) < r ? 1 : 0), 0); },
   bestSpawnNear(p) {
-    // pick the highest-level suitable spawn; prefer close ones
+    // an unfinished kill quest keeps the AI at that monster's camp (it waits there for respawns)
+    const qm = this.questMonster(p);
+    if (qm) { const qs = D.SPAWNS.find((s) => s.m === qm); if (qs) return qs; }
+    // otherwise pick the highest-level suitable spawn; prefer close ones
     const lv = p.s.lv;
     const ok = D.SPAWNS.filter((s) => !D.MONSTERS[s.m].boss && D.MONSTERS[s.m].lv <= lv + 2);
     if (!ok.length) return D.SPAWNS[0];
@@ -26,6 +29,14 @@ const Game = {
     const cands = ok.filter((s) => D.MONSTERS[s.m].lv >= top - 4);
     cands.sort((a, b) => Math.hypot(a.x * 64 - p.x, a.y * 64 - p.y) - Math.hypot(b.x * 64 - p.x, b.y * 64 - p.y));
     return cands[0];
+  },
+  // the monster the current story quest asks for, while it still needs kills and the player can take it on
+  questMonster(p) {
+    if (Quests.isDaily(p)) return null;
+    const q = Quests.current(p);
+    if (q.type !== 'kill' || Quests.progress(p).done) return null;
+    const d = D.MONSTERS[q.m];
+    return d && (!d.boss || p.s.lv >= d.lv - 6) ? q.m : null;
   },
   say(ent, text) {
     ent.bubble = { text, t: 5 };

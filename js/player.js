@@ -411,14 +411,16 @@ class Player extends Hero {
         this.target = null; this.moveTo = { x: loot.x, y: loot.y }; this.waypoints = [];
         return;
       }
-      this.target = game.nearestMonster(this, 650, (m) => !(this.ignore[m.id] > game.time) && ((m.def.boss ? this.s.lv >= m.lv - 6 : m.lv <= this.s.lv + 5) || m.target === this));
+      const qm = game.questMonster(this);
+      this.target = game.nearestMonster(this, 650, (m) => !(this.ignore[m.id] > game.time) && ((m.def.boss ? this.s.lv >= m.lv - 6 : m.lv <= this.s.lv + 5) || m.target === this || m.def.id === qm));
       if (this.questTravel) this.target = null; // riding to the quest spot: don't stop for fights
       // siege: with no defender close by, go for the gate (then the tower)
       if (!this.target && Siege.active && World.zoneAt(this.x, this.y).id === 'castle') this.target = Siege.objective();
       if (!this.target && !this.moveTo && !World.zoneAt(this.x, this.y).dungeon) {
         // drift toward the centre of the closest suitable spawn
-        const sp = game.bestSpawnNear(this);
-        if (sp) this.navigateTo(sp.x * D.TILE + U.rand(-150, 150), sp.y * D.TILE + U.rand(-150, 150));
+        // roam the camp (not just its centre) so respawns anywhere in it are found
+        const sp = game.bestSpawnNear(this), R = sp ? Math.min(sp.r * D.TILE * 0.6, 500) : 0;
+        if (sp) this.navigateTo(sp.x * D.TILE + U.rand(-R, R), sp.y * D.TILE + U.rand(-R, R));
       }
     }
     if (this.target && !this.action && U.dist(this, this.target) < this.classDef.range + 200) {
