@@ -682,3 +682,63 @@ body.touch #chat { bottom: 250px; }
 #choice-box .ch-opt:hover { border-color: #c78bff; background: rgba(200,140,255,.12); }
 #choice-box .ch-opt small { display: block; margin-top: 4px; color: #b9a6d6; font-size: 12px; }
 @keyframes fadeIn { from { opacity: 0; } }
+
+/* ---------- touch layout (phones / tablets) ----------
+   left thumb: joystick · right thumb: big attack button with AI / ride / sprint around it ·
+   skills in one row between them · round shortcuts in a row under the top menu */
+body.touch .key { display: none; }
+body.touch #top-menu { transform: scale(.74); }
+body.touch #right-buttons { top: 50px; right: 206px; flex-direction: row; gap: 6px; }
+body.touch #right-buttons .round-btn { width: 40px; height: 40px; padding: 7px; }
+body.touch #quest-tracker { top: 50px; }
+body.touch #joy { display: block; left: 18px; bottom: 18px; width: 124px; height: 124px; }
+body.touch #action-buttons { right: 0; bottom: 0; width: 200px; height: 190px; display: block; gap: 0; }
+body.touch #action-buttons .act-btn { position: absolute; width: 56px; height: 56px; padding: 7px 7px 3px; }
+body.touch #action-buttons .act-btn img { width: 26px; height: 26px; }
+body.touch #btn-target { right: 16px; bottom: 18px; width: 84px !important; height: 84px !important; padding: 14px 14px 4px !important; border-width: 3px; }
+body.touch #btn-target img { width: 40px !important; height: 40px !important; }
+body.touch #btn-auto { right: 112px; bottom: 16px; }
+body.touch #btn-ride { right: 104px; bottom: 84px; }
+body.touch #btn-sprint { right: 36px; bottom: 112px; }
+body.touch #action-buttons .act-btn:active { transform: scale(.92); filter: brightness(1.3); }
+body.touch #potion-auto { left: 18px; right: auto; bottom: 150px; }
+body.touch #potion-auto .potion-orb { width: 50px; height: 50px; padding: 8px; }
+body.touch #bottom { bottom: 12px; }
+body.touch #slots { gap: 4px; }
+body.touch #slots .slot { width: 46px; height: 46px; padding: 5px; }
+body.touch #slots .slot .n { display: none; }
+body.touch #slots .slot:active { transform: scale(.9); }
+body.touch #left-buttons { flex-direction: row; left: auto; right: auto; }
+body.touch #chat { bottom: 150px; }
+
+/* short landscape screens: slimmer chat, it moves between the thumbs above the bars */
+@media (max-height: 520px) {
+  body.touch #zone-box { width: 104px; }
+  body.touch #minimap { width: 84px; height: 84px; }
+  body.touch #currency { top: 112px; font-size: 12px; }
+  body.touch #left-buttons { top: 28px; left: 100px; gap: 6px; }
+  body.touch #left-buttons .round-btn { width: 36px; height: 36px; padding: 6px; }
+  body.touch #chat { left: 50%; transform: translateX(-50%); width: min(44vw, 380px); bottom: 124px; }
+  body.touch #chat-log { max-height: 46px; font-size: 11px; line-height: 1.35; }
+  body.touch #chat .chat-row { display: none; }
+  body.touch #buffs { min-height: 0; }
+  body.touch .bar { width: 116px; }
+  body.touch #story-box { bottom: 118px; width: min(520px, 62vw); padding: 10px 14px; }
+  body.touch #story-box .st-text { font-size: 13px; min-height: 36px; }
+  body.touch #announce { top: 96px; }
+  body.touch #target-frame { top: 96px; }
+}
+/* portrait phones: the round shortcuts go back to a column on the right, clear of the quest tracker */
+@media (orientation: portrait) {
+  body.touch #right-buttons { top: 190px; right: 8px; flex-direction: column; }
+  body.touch #chat { bottom: 290px; width: 62vw; }
+  body.touch #chat-log { max-height: 90px; }
+  body.touch #story-box { bottom: 290px; }
+  body.touch #bottom { bottom: 178px; }
+  body.touch #slots { flex-wrap: wrap; justify-content: center; width: 250px; }
+  body.touch #potion-auto { left: 18px; bottom: 150px; }
+  body.touch #top-menu { transform: scale(.62); }
+  body.touch #zone-box { top: 52px; }
+  body.touch #currency { top: 176px; }
+  body.touch #left-buttons { top: 226px; }
+}

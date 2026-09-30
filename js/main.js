@@ -527,7 +527,12 @@ const Game = {
   // on-screen joystick for touch devices
   const joy = { x: 0, y: 0 };
   const joyEl = document.getElementById('joy'), knob = document.getElementById('joy-knob');
-  if (matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window) document.body.classList.add('touch');
+  if (matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window) {
+    document.body.classList.add('touch');
+    // keyboard hints mean nothing on a phone
+    document.querySelector('#btn-sprint span').textContent = '질주';
+    document.querySelector('#btn-ride span').textContent = '탑승';
+  }
   let joyId = null;
   const joyMove = (e) => {
     const r = joyEl.getBoundingClientRect();
