@@ -160,8 +160,10 @@ class Player extends Hero {
     for (const b of Mounts.bonuses(this)) add(b);
     // buffs
     let atkPct = setAtkPct;
-    for (const b of this.buffs) { add({ atkSpd: b.atkSpd || 0, moveSpd: b.moveSpd || 0, crit: b.crit || 0, dmgRed: b.dmgRed || 0 }); atkPct += b.atkPct || 0; }
+    let hpPct = 0;
+    for (const b of this.buffs) { add({ atkSpd: b.atkSpd || 0, moveSpd: b.moveSpd || 0, crit: b.crit || 0, dmgRed: b.dmgRed || 0, def: b.def || 0, castSpd: b.castSpd || 0, expPct: b.expPct || 0 }); atkPct += b.atkPct || 0; hpPct += b.hpPct || 0; }
     st.atk *= 1 + atkPct / 100;
+    st.maxHp *= 1 + hpPct / 100;
     st.maxHp = Math.round(st.maxHp); st.maxMp = Math.round(st.maxMp);
     st.atk = Math.round(st.atk); st.def = Math.round(st.def);
     this.stats = st;
@@ -332,7 +334,8 @@ class Player extends Hero {
     // regen
     const regenMul = this.inTown ? 5 : this.combatT > 0 ? 0.4 : 1.5;
     this.hp = Math.min(this.maxHp, this.hp + (this.maxHp * 0.006 + 0.5) * regenMul * dt);
-    this.mp = Math.min(this.maxMp, this.mp + (this.maxMp * 0.012 + 0.8) * regenMul * dt);
+    const mpBoost = 1 + this.buffs.reduce((a, b) => a + (b.mpRegen || 0), 0) / 100; // 파란 물약
+    this.mp = Math.min(this.maxMp, this.mp + (this.maxMp * 0.012 + 0.8) * regenMul * mpBoost * dt);
     // auto potion
     if (this.s.autoPotion && this.potionCd <= 0 && this.hp < this.maxHp * 0.55) {
       const miss = this.maxHp - this.hp;

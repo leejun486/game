@@ -139,8 +139,9 @@ const UI = (() => {
     // buffs
     const bEl = $('buffs');
     const buffHtml = p.buffs.map((b) => {
-      const icon = b.id === 'rage' ? 'aura' : b.id === 'wind' ? 'sprint' : b.id === 'haste' ? 'pot-green' : 'star';
-      return `<div class="buff" title="${esc(b.name)}">${ico(icon)}<b>${Math.ceil(b.t)}</b></div>`;
+      const icon = b.icon || (b.id === 'rage' ? 'aura' : b.id === 'wind' ? 'sprint' : b.id === 'haste' ? 'pot-green' : 'star');
+      const left = b.t >= 60 ? `${Math.ceil(b.t / 60)}분` : Math.ceil(b.t);
+      return `<div class="buff" title="${esc(b.name)}">${ico(icon)}<b>${left}</b></div>`;
     }).join('') + (st.card ? `<div class="buff" title="초월: ${esc(D.CARD_BY_ID[st.card].name)}" style="background:rgba(60,20,20,.85)">${ico('transcend')}</div>` : '');
     if (bEl._h !== buffHtml) { bEl.innerHTML = buffHtml; bEl._h = buffHtml; }
     // zone

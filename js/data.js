@@ -206,7 +206,15 @@ D.ITEMS = {
   hp_m: { name: '고급 체력 회복제', icon: 'pot-orange', kind: 'potion', heal: 250, price: 150, grade: 1, desc: 'HP를 250 회복합니다.' },
   hp_l: { name: '강력 체력 회복제', icon: 'pot-purple', kind: 'potion', heal: 700, price: 500, grade: 2, desc: 'HP를 700 회복합니다.' },
   mp_s: { name: '마나 회복제', icon: 'pot-blue', kind: 'potion', mana: 80, price: 80, grade: 0, desc: 'MP를 80 회복합니다.' },
-  haste: { name: '속도 향상 물약', icon: 'pot-green', kind: 'buff', buff: { id: 'haste', name: '가속', atkSpd: 15, moveSpd: 20, dur: 300 }, price: 400, grade: 1, desc: '300초간 공격속도 +15%, 이동속도 +20%' },
+  // buff potions: 5 minutes each; drinking the same potion again refreshes its timer, different potions stack
+  haste: { name: '초록 물약', icon: 'pot-green', kind: 'buff', buff: { id: 'haste', name: '초록 물약', icon: 'pot-green', atkSpd: 25, dur: 300 }, price: 400, grade: 1, desc: '5분간 공격 속도 +25%' },
+  pot_blue: { name: '파란 물약', icon: 'pot-mana', kind: 'buff', buff: { id: 'blue', name: '파란 물약', icon: 'pot-mana', mpRegen: 200, castSpd: 10, dur: 300 }, price: 400, grade: 1, desc: '5분간 MP 회복 속도 +200%, 시전 속도 +10%' },
+  pot_brave: { name: '용기의 물약', icon: 'pot-brave', kind: 'buff', buff: { id: 'brave', name: '용기의 물약', icon: 'pot-brave', atkPct: 12, dur: 300 }, price: 900, grade: 2, desc: '5분간 공격력 +12%' },
+  pot_wise: { name: '집중의 물약', icon: 'pot-wise', kind: 'buff', buff: { id: 'wise', name: '집중의 물약', icon: 'pot-wise', crit: 8, dur: 300 }, price: 900, grade: 2, desc: '5분간 치명타 +8%' },
+  pot_iron: { name: '철벽의 물약', icon: 'pot-iron', kind: 'buff', buff: { id: 'iron', name: '철벽의 물약', icon: 'pot-iron', def: 20, dmgRed: 5, dur: 300 }, price: 900, grade: 2, desc: '5분간 방어력 +20, 받는 피해 -5' },
+  pot_life: { name: '생명의 물약', icon: 'pot-life', kind: 'buff', buff: { id: 'life', name: '생명의 물약', icon: 'pot-life', hpPct: 15, dur: 300 }, price: 900, grade: 2, desc: '5분간 최대 HP +15%' },
+  pot_wind: { name: '바람의 물약', icon: 'pot-wind', kind: 'buff', buff: { id: 'windpot', name: '바람의 물약', icon: 'pot-wind', moveSpd: 25, dur: 300 }, price: 400, grade: 1, desc: '5분간 이동 속도 +25%' },
+  pot_exp: { name: '경험의 물약', icon: 'pot-exp', kind: 'buff', buff: { id: 'exp', name: '경험의 물약', icon: 'pot-exp', expPct: 20, dur: 300 }, price: 2000, grade: 2, desc: '5분간 획득 경험치 +20%' },
   tp_town: { name: '마을 귀환 주문서', icon: 'scroll-town', kind: 'scroll', price: 60, grade: 0, desc: '라스카노 마을로 귀환합니다.' },
   sc_weapon: { name: '무기 마법 주문서', icon: 'scroll-weapon', kind: 'enchant', target: 'weapon', price: 3000, grade: 2, desc: '무기를 강화합니다. 안전 강화 +6, 실패 시 증발할 수 있습니다.' },
   sc_armor: { name: '갑옷 마법 주문서', icon: 'scroll-armor', kind: 'enchant', target: 'armor', price: 2000, grade: 2, desc: '갑옷을 강화합니다. 안전 강화 +4, 실패 시 증발할 수 있습니다.' },
@@ -339,7 +347,7 @@ D.DROPS = {
 };
 
 D.SHOPS = {
-  general: { title: '잡화 상점', items: ['hp_s', 'hp_m', 'hp_l', 'mp_s', 'haste', 'tp_town', 'sc_weapon', 'sc_armor'] },
+  general: { title: '잡화 상점', items: ['hp_s', 'hp_m', 'hp_l', 'mp_s', 'haste', 'pot_blue', 'pot_brave', 'pot_wise', 'pot_iron', 'pot_life', 'pot_wind', 'pot_exp', 'tp_town', 'sc_weapon', 'sc_armor'] },
   weapon: { title: '무기 상점', items: ['w_sword1', 'w_sword2', 'w_sword3', 'w_bow1', 'w_bow2', 'w_bow3', 'w_staff1', 'w_staff2', 'w_staff3'] },
   armor: { title: '방어구 상점', items: ['a_1', 'a_2', 'a_3', 'r_1', 'r_2'] },
 };
