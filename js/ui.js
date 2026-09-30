@@ -214,7 +214,7 @@ const UI = (() => {
   function intro(then) {
     const el = document.createElement('div');
     el.id = 'intro';
-    el.innerHTML = '<video playsinline preload="auto"></video><div class="intro-text"></div><div class="intro-sub"></div><button class="intro-skip">건너뛰기 ▶</button>';
+    el.innerHTML = '<video playsinline webkit-playsinline preload="auto" disablepictureinpicture disableremoteplayback controlslist="nodownload nofullscreen noremoteplayback"></video><div class="intro-text"></div><div class="intro-sub"></div><button class="intro-skip">건너뛰기 ▶</button>';
     document.body.appendChild(el);
     const v = el.querySelector('video'), tx = el.querySelector('.intro-text'), sub = el.querySelector('.intro-sub');
     const cues = D.INTRO.cues, title = D.PROLOGUE[D.PROLOGUE.length - 1];
@@ -238,7 +238,9 @@ const UI = (() => {
     };
     const fallback = () => { if (!started && !done) { started = true; textLines(D.PROLOGUE, () => { timer = setTimeout(finish, 400); }); } };
     v.onerror = fallback;
-    v.onplaying = () => { started = true; v.style.opacity = 1; };
+    // keep the player hidden until real frames are moving, so its idle/play-button state never shows
+    v.onplaying = () => { started = true; };
+    v.addEventListener('timeupdate', () => { if (!done && v.currentTime > 0.05) v.classList.add('on'); });
     v.ontimeupdate = () => {
       let k = -1;
       for (let i = 0; i < cues.length; i++) if (v.currentTime >= cues[i][0]) k = i;
