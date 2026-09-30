@@ -218,8 +218,9 @@ const UI = (() => {
     document.body.appendChild(el);
     const v = el.querySelector('video'), tx = el.querySelector('.intro-text'), sub = el.querySelector('.intro-sub');
     let done = false, timer = 0, started = false, shown = -1;
+    Music.suppress(true);
     const finish = () => {
-      if (done) return; done = true; clearTimeout(timer); v.pause(); v.removeAttribute('src');
+      if (done) return; done = true; clearTimeout(timer); v.pause(); v.removeAttribute('src'); Music.suppress(false);
       el.classList.add('out'); setTimeout(() => { el.remove(); then && then(); }, 600);
     };
     el.querySelector('.intro-skip').onclick = finish;
@@ -644,6 +645,7 @@ const UI = (() => {
     const { body } = makePanel('설정', 'center dialog');
     const p = game.player;
     body.innerHTML = `<div class="list-row"><span>효과음</span><button class="dark-btn" data-do="snd">${game.muted ? '꺼짐' : '켜짐'}</button></div>
+      <div class="list-row"><span>배경음악 <small class="sub">(지역마다 다른 곡, 보스전 전용 곡)</small></span><span style="display:flex;gap:8px;align-items:center"><input type="range" min="0" max="100" value="${Math.round(Music.vol * 100)}" data-bgm-vol style="width:110px"><button class="dark-btn" data-do="bgm">${Music.on ? '켜짐' : '꺼짐'}</button></span></div>
       <div class="list-row"><span>자동 물약 (HP 55% 이하)</span><button class="dark-btn" data-do="pot">${p.s.autoPotion ? '켜짐' : '꺼짐'}</button></div>
       <div class="list-row"><span>인트로 영상</span><button class="dark-btn" data-do="intro">다시 보기</button></div>
       ${p.s.ending ? `<div class="list-row"><span>엔딩 영상 <small class="sub">(${esc(D.ENDINGS[p.s.ending].title)})</small></span><button class="dark-btn" data-do="ending">다시 보기</button></div>` : ''}
@@ -651,11 +653,13 @@ const UI = (() => {
       <div class="list-row"><span>게임 저장</span><button class="dark-btn" data-do="save">저장</button></div>
       <div class="list-row"><span>저장 삭제 후 처음부터</span><button class="red-btn" data-do="reset">초기화</button></div>
       <p class="sub" style="color:#888;font-size:12px;line-height:1.6">조작: 클릭 이동/공격 · WASD 이동 · 1~4 스킬 · 5~8 아이템 · Space 근처 적 공격 · G AI 모드 · Shift 질주 · I 인벤토리 · K 스킬 · U 상점 · 1~4·Q·E 스킬 · K 스킬 트리 · C 캐릭터 · J 퀘스트 · Y 초월 · V 무기 외형 · N 펫 · R 탈것 탑승 · P 시즌 패스 · O 보스 정보 · T 순간이동 · B 귀환 · M 지도 · Enter 채팅 · 마우스 휠 줌</p>`;
+    body.oninput = (e) => { if (e.target.matches('[data-bgm-vol]')) Music.set({ vol: e.target.value / 100, on: true }); };
     body.onclick = (e) => {
       const b = e.target.closest('[data-do]'); if (!b) return;
       const a = b.dataset.do;
       if (a === 'snd') { game.muted = !game.muted; U.setMuted(game.muted); }
       if (a === 'pot') p.s.autoPotion = !p.s.autoPotion;
+      if (a === 'bgm') Music.set({ on: !Music.on });
       if (a === 'gm') return open('admin');
       if (a === 'intro') { close(); return intro(); }
       if (a === 'ending') { close(); return ending(p.s.ending); }

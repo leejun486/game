@@ -566,6 +566,7 @@ const Game = {
     Skills.update(Game, dt);
     VFX.update(dt);
     BotChat.update(dt);
+    Music.update(Game, dt);
     if (Game.pet) Game.pet.update(dt, Game);
     Game.updateDrops(dt);
     for (const m of Game.monsters) m.update(dt, Game);
