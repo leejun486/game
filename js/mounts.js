@@ -950,11 +950,12 @@ const Mounts = (() => {
     drawLayer(ctx, d, 'front', x, y, face, st, sc, direct, !riderFn);
     return { saddleY: saddle[1] * sc };
   }
-  // riding up (vert -1) or down (+1) the screen: the side-view mount is foreshortened and tipped so its head
+  // riding up (vert -1) or down (+1) the screen: the side-view mount is slightly narrowed and tipped so its head
   // points into the distance or toward the camera, and the rider (drawn from the back or front row) sits
   // square on the saddle, behind the head when coming closer and in front of it when riding away
   function drawRiddenVertical(ctx, d, x, y, face, st, riderFn, sc, vert) {
-    const SX = 0.56, SH = vert * 0.42 * face;
+    // only a light foreshortening and tilt: squeezing and shearing the side view further made the mount look crushed
+    const SX = 0.84, SH = vert * 0.14 * face;
     ctx.fillStyle = 'rgba(0,0,0,0.3)';
     ctx.beginPath(); ctx.ellipse(x, y, d.w * 0.42 * sc * SX * (d.fly ? 0.7 : 1), 9 * sc, 0, 0, Math.PI * 2); ctx.fill();
     const layer = (name) => {
