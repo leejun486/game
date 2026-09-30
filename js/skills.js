@@ -239,10 +239,10 @@ const Skills = (() => {
     if (m.dot && !mon.dead) dots.push({ mon, mult: m.dot.mult, dur: m.dot.dur, kind: m.dot.kind, t: 0, tick: 0.5 });
     return dmg;
   }
-  function area(game, p, x, y, r, mult, m, o = {}) {
+  function area(game, p, x, y, r, mult, m, o = {}, exclude = []) {
     let n = 0;
     for (const mon of game.monsters) {
-      if (mon.dead || Math.hypot(mon.x - x, (mon.y - y) * 1.3) > r + mon.radius) continue;
+      if (mon.dead || exclude.includes(mon) || Math.hypot(mon.x - x, (mon.y - y) * 1.3) > r + mon.radius) continue;
       hit(game, p, mon, mult, m, o); n++;
     }
     return n;
@@ -282,7 +282,9 @@ const Skills = (() => {
     k_smash(p, sk, m, t, game) {
       game.fx.push(Combat.makeFx('bigslash', t.x, t.y - 26, { color: '#fff3c0' }));
       hit(game, p, t, sk.mult, Object.assign({}, m, { crit: (m.crit || 0) + 10 }));
-      if (m.splash) { area(game, p, t.x, t.y, m.splash.r, sk.mult * m.splash.mult, Object.assign({}, m, { stun: 0 })); game.fx.push(Combat.makeFx('whirl', t.x, t.y, { r: m.splash.r })); }
+      // the blow always sends a shockwave around the target; the 광역 branch widens and strengthens it
+      const sp = m.splash || { r: 110, mult: 0.5 };
+      area(game, p, t.x, t.y, sp.r, sk.mult * sp.mult, Object.assign({}, m, { stun: 0 }), undefined, [t]); game.fx.push(Combat.makeFx('whirl', t.x, t.y, { r: sp.r }));
       if (m.stun) game.fx.push(Combat.makeFx('glint', t.x, t.y - 50, { color: '#ffe28a' }));
       game.shake = 4; U.sfx.crit();
     },
@@ -318,7 +320,7 @@ const Skills = (() => {
       const dest = World.findFree(p.x + Math.cos(a) * d, p.y + Math.sin(a) * d, 14);
       p.x = dest.x; p.y = dest.y; p.face(t);
       game.fx.push(Combat.makeFx('dash', from.x, from.y, { to: [p.x, p.y], color: '#fff3c0' }));
-      if (m.line) for (const mon of game.monsters) {
+      for (const mon of game.monsters) { // cuts through everything on the dash path
         if (mon.dead || mon === t) continue;
         const px = mon.x - from.x, py = mon.y - from.y, lx = p.x - from.x, ly = p.y - from.y, L2 = lx * lx + ly * ly || 1;
         const k = U.clamp((px * lx + py * ly) / L2, 0, 1);
@@ -341,7 +343,7 @@ const Skills = (() => {
     // ---- elf
     e_triple(p, sk, m, t, game) {
       const n = sk.count + (m.count || 0);
-      const pool = m.scatter ? [t, ...nearby(game, t, 300, [t])] : [t];
+      const pool = [t, ...nearby(game, t, m.scatter ? 360 : 260, [t])].slice(0, m.scatter ? 6 : 4); // arrows fan out over the pack
       for (let i = 0; i < n; i++) later(i * 80, () => {
         const tgt = pool[i % pool.length];
         if (tgt.dead) return;

@@ -379,6 +379,23 @@ class Hero extends Entity {
     this.act(c.attack, delay * 0.92, () => {
       if (c.projectile) Combat.shoot(this, target, { kind: c.projectile, mult: 1 });
       else Combat.heroHit(this, target, 1);
+      // class passives that make plain attacks work on packs:
+      // knights cleave the enemies around the target, elves loose extra arrows at nearby enemies
+      if (c.cleave) {
+        let n = 0;
+        for (const m of game.monsters) {
+          if (n >= c.cleave.n || m === target || m.dead || Math.hypot(m.x - target.x, m.y - target.y) > c.cleave.r + m.radius) continue;
+          Combat.damageMonster(game, this, m, c.cleave.mult); n++;
+        }
+        if (n && this === game.player) game.fx.push(Combat.makeFx('whirl', target.x, target.y, { r: c.cleave.r, dur: 0.3 }));
+      }
+      if (c.volley) {
+        let n = 0;
+        for (const m of game.monsters) {
+          if (n >= c.volley.n || m === target || m.dead || Math.hypot(m.x - target.x, m.y - target.y) > c.volley.r) continue;
+          Combat.shoot(this, m, { kind: c.projectile, mult: c.volley.mult }); n++;
+        }
+      }
     });
     // only your own swings make noise; other players fight silently
     if (this !== game.player) return;
