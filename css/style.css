@@ -764,3 +764,6 @@ body.touch #chat { bottom: 150px; }
 #ask-box .ask-in { width: min(90vw, 420px); padding: 18px; border: 1px solid var(--line); background: linear-gradient(#241c34, #120e1a); box-shadow: 0 10px 40px rgba(0,0,0,.8); }
 #ask-box .ask-msg { color: #f0e8d8; font-size: 14px; line-height: 1.7; margin-bottom: 14px; }
 #ask-box .ask-btns { display: flex; gap: 8px; justify-content: flex-end; }
+/* 9 skills + 4 items: on touch screens the bar wraps into two rows */
+body.touch #slots { flex-wrap: wrap; justify-content: center; max-width: 380px; }
+@media (orientation: portrait) { body.touch #slots { width: 346px; max-width: 346px; } }

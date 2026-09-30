@@ -67,11 +67,11 @@ const UI = (() => {
     const p = game.player;
     const el = $('slots');
     el.innerHTML = '';
-    const KEYS = ['1', '2', '3', '4', 'Q', 'E'];
+    const KEYS = ['1', '2', '3', '4', 'Q', 'E', 'Z', 'X', 'F'];
     p.classDef.skills.forEach((id, i) => {
       const sk = D.SKILLS[id];
       const s = document.createElement('div');
-      s.className = 'slot skill'; s.title = `${sk.name}\n${sk.desc}`;
+      s.className = 'slot skill' + (sk.grade ? ' bg' + sk.grade : ''); s.title = `${sk.name}\n${sk.desc}`;
       s.innerHTML = `${ico(sk.icon)}<span class="n">${KEYS[i]}</span><span class="mp-cost">${sk.mp}</span><div class="cd" style="transform:scaleY(0)"></div><div class="cdt"></div><span class="lockv"></span>`;
       s.onclick = () => p.castSkill(i, game);
       el.appendChild(s);
@@ -120,10 +120,10 @@ const UI = (() => {
       const cd = p.skillCd[id] || 0, sk = Skills.eff(p, id), lock = !Skills.unlocked(p, id);
       s.querySelector('.cd').style.transform = `scaleY(${lock ? 1 : cd > 0 ? Math.min(1, cd / sk.cd) : 0})`;
       s.querySelector('.cdt').textContent = lock ? '' : cd > 0 ? Math.ceil(cd) : '';
-      s.querySelector('.lockv').textContent = lock ? `Lv${sk.unlock}` : '';
+      s.querySelector('.lockv').textContent = lock ? (p.s.lv < (sk.unlock || 1) ? `Lv${sk.unlock}` : '북') : '';
       s.querySelector('.mp-cost').textContent = sk.mp;
       s.classList.toggle('nomp', !lock && p.mp < sk.mp);
-      s.title = `${Skills.displayName(p, id)} (MP ${sk.mp}, 쿨타임 ${sk.cd}초)\n${sk.desc}${lock ? `\nLv.${sk.unlock} 해금` : ''}`;
+      s.title = `${Skills.displayName(p, id)} (MP ${sk.mp}, 쿨타임 ${sk.cd}초)\n${sk.desc}${lock ? `\n${Skills.lockText(p, id)}` : ''}`;
     });
     SLOT_ITEMS.forEach((id, i) => {
       const s = slots[nSk + i]; if (!s) return;

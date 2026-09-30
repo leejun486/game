@@ -512,6 +512,9 @@ const Game = {
     if (k >= '1' && k <= '4') p.castSkill(+k - 1, Game);
     else if (k === 'q') p.castSkill(4, Game);
     else if (k === 'e') p.castSkill(5, Game);
+    else if (k === 'z') p.castSkill(6, Game);
+    else if (k === 'x') p.castSkill(7, Game);
+    else if (k === 'f') p.castSkill(8, Game);
     else if (k >= '5' && k <= '8') UI.useSlotItem(+k - 5);
     else if (k === ' ') { e.preventDefault(); Game.attackNearest(); }
     else if (k === 'g') UI.toggleAuto();

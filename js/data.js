@@ -26,19 +26,19 @@ D.CLASSES = {
     name: '기사', sheet: 'knight', desc: '강인한 체력과 근접 전투의 달인.\n높은 방어력으로 전장을 지배한다.',
     base: { hp: 190, mp: 40, atk: 14, def: 6 }, grow: { hp: 24, mp: 3, atk: 2.3, def: 0.9 },
     range: 62, attack: 'slash', atkDelay: 0.95, weapon: 'sword', cleave: { r: 90, n: 3, mult: 0.3 },
-    skills: ['k_smash', 'k_whirl', 'k_rage', 'k_doom', 'k_charge', 'k_quake'],
+    skills: ['k_smash', 'k_whirl', 'k_rage', 'k_doom', 'k_charge', 'k_quake', 'k_aura', 'k_judge', 'k_avatar'],
   },
   elf: {
     name: '요정', sheet: 'elf', desc: '숲의 축복을 받은 궁수.\n먼 거리에서 적을 꿰뚫는다.',
     base: { hp: 135, mp: 80, atk: 12, def: 3 }, grow: { hp: 15, mp: 6, atk: 2.1, def: 0.5 },
     range: 330, attack: 'shoot', atkDelay: 1.0, weapon: 'bow', projectile: 'arrow', volley: { r: 260, n: 3, mult: 0.5 },
-    skills: ['e_triple', 'e_rain', 'e_wind', 'e_energy', 'e_frost', 'e_storm'],
+    skills: ['e_triple', 'e_rain', 'e_wind', 'e_energy', 'e_frost', 'e_storm', 'e_phoenix', 'e_starfall', 'e_spirit'],
   },
   mage: {
     name: '마법사', sheet: 'mage', desc: '원소를 다루는 현자.\n강력한 광역 마법으로 적을 쓸어버린다.',
     base: { hp: 115, mp: 140, atk: 15, def: 2 }, grow: { hp: 11, mp: 11, atk: 2.5, def: 0.4 },
     range: 300, attack: 'thrust', atkDelay: 1.05, weapon: 'staff', projectile: 'bolt',
-    skills: ['m_fire', 'm_ice', 'm_heal', 'm_meteor', 'm_chain', 'm_blizzard'],
+    skills: ['m_fire', 'm_ice', 'm_heal', 'm_meteor', 'm_chain', 'm_blizzard', 'm_thunder', 'm_inferno', 'm_eclipse'],
   },
 };
 
@@ -63,6 +63,16 @@ D.SKILLS = {
   e_storm: { name: '폭풍의 화살', icon: 'heavy-arrow', mp: 28, cd: 8, mult: 1.0, type: 'aoe_self', radius: 350, count: 14, anim: 'shoot', unlock: 20, desc: '주변 적들에게 화살 14발을 난사 (각 100%)' },
   m_chain: { name: '체인 라이트닝', icon: 'lightning', mp: 20, cd: 5, mult: 1.45, type: 'single', el: 'lightning', anim: 'thrust', unlock: 15, desc: '145% 번개가 주변 적 3명에게 연쇄 (연쇄마다 20% 감소)' },
   m_blizzard: { name: '블리자드', icon: 'lightning2', mp: 38, cd: 14, mult: 0.38, type: 'aoe_target', radius: 170, el: 'ice', anim: 'thrust', unlock: 30, desc: '4초간 눈보라 지대 생성 (0.5초마다 38% + 둔화)' },
+  // 영웅 (grade 3) / 전설 (grade 4) skills: learned from a skill book (book: true) once the level is reached; keys Z X F
+  k_aura: { name: '검기 폭풍', icon: 'spin', mp: 30, cd: 10, mult: 1.6, type: 'aoe_self', radius: 300, anim: 'slash', unlock: 35, grade: 3, book: true, desc: '주변 300 범위에 검기를 두 번 휘몰아침 (각 160%)' },
+  k_judge: { name: '천벌의 일격', icon: 'holy', mp: 45, cd: 18, mult: 4.5, type: 'single', range: 420, anim: 'slash', unlock: 50, grade: 4, book: true, desc: '대상에게 도약해 천벌을 내림: 260 범위 450% 피해 + 2초 기절' },
+  k_avatar: { name: '전쟁의 화신', icon: 'crown', mp: 50, cd: 60, mult: 2.0, type: 'buff', radius: 240, buff: { id: 'avatar', name: '전쟁의 화신', icon: 'crown', atkPct: 40, atkSpd: 25, dmgRed: 15, dur: 15 }, anim: 'slash', unlock: 65, grade: 4, book: true, desc: '15초간 공격력 +40%, 공격 속도 +25%, 받는 피해 -15. 발동 시 주변 240 범위 200% 충격파' },
+  e_phoenix: { name: '불사조 화살', icon: 'fireball', mp: 30, cd: 9, mult: 3.0, type: 'pierce', anim: 'shoot', unlock: 35, grade: 3, book: true, desc: '불사조가 일직선으로 날아가 경로의 모든 적에게 300% 화염 피해, 지나간 길이 3초간 불탐' },
+  e_starfall: { name: '별의 비', icon: 'sparkles', mp: 45, cd: 16, mult: 1.7, type: 'aoe_target', radius: 240, anim: 'shoot', unlock: 50, grade: 4, book: true, desc: '대상 지역에 별빛 화살이 세 번 쏟아짐 (각 170%, 둔화)' },
+  e_spirit: { name: '정령왕의 축복', icon: 'wings', mp: 50, cd: 60, mult: 1.4, type: 'buff', buff: { id: 'spirit', name: '정령왕의 축복', icon: 'wings', atkSpd: 40, crit: 20, moveSpd: 20, dur: 15 }, anim: 'shoot', unlock: 65, grade: 4, book: true, desc: '15초간 공격 속도 +40%, 치명타 +20%, 이동 속도 +20%. 발동 시 정령 화살 12발 (각 140%)' },
+  m_thunder: { name: '천둥 폭풍', icon: 'lightning', mp: 34, cd: 10, mult: 1.8, type: 'aoe_target', radius: 320, el: 'lightning', anim: 'thrust', unlock: 35, grade: 3, book: true, desc: '대상 주변 적들에게 낙뢰 8번 (각 180%)' },
+  m_inferno: { name: '지옥의 업화', icon: 'fireball', mp: 55, cd: 18, mult: 4.0, type: 'aoe_target', radius: 280, el: 'fire', anim: 'thrust', unlock: 50, grade: 4, book: true, desc: '대상 지역이 업화로 폭발 (400%), 5초간 불바다 (틱당 30%)' },
+  m_eclipse: { name: '이클립스', icon: 'star', mp: 70, cd: 24, mult: 5.5, type: 'aoe_target', radius: 320, el: 'arcane', anim: 'thrust', unlock: 65, grade: 4, book: true, desc: '검은 태양을 불러 주변 적을 끌어당긴 뒤 붕괴시킴 (550%)' },
   m_meteor: { name: '메테오 스트라이크', icon: 'meteor', mp: 40, cd: 16, mult: 3.2, type: 'aoe_target', radius: 190, el: 'fire', anim: 'thrust', fx: 'meteor', desc: '거대한 운석 낙하 (320% 광역)' },
 };
 
@@ -264,6 +274,17 @@ D.ITEMS = {
   w_bow_m1: { name: '일식의 종언궁', icon: 'w_bow_m1', kind: 'weapon', cls: 'elf', atk: 122, lv: 75, price: 0, grade: 5, set: 'eclipse' },
   w_staff_m1: { name: '일식의 종언봉', icon: 'w_staff_m1', kind: 'weapon', cls: 'mage', atk: 132, lv: 75, price: 0, grade: 5, set: 'eclipse' },
 
+  // skill books: read to learn a 영웅/전설 skill (fam pairs the same book across classes for drops)
+  sb_k_aura: { name: '영웅 스킬북: 검기 폭풍', icon: 'spellbook', kind: 'skillbook', skill: 'k_aura', cls: 'knight', fam: 'hero', lv: 35, price: 300000, grade: 3 },
+  sb_e_phoenix: { name: '영웅 스킬북: 불사조 화살', icon: 'spellbook', kind: 'skillbook', skill: 'e_phoenix', cls: 'elf', fam: 'hero', lv: 35, price: 300000, grade: 3 },
+  sb_m_thunder: { name: '영웅 스킬북: 천둥 폭풍', icon: 'spellbook', kind: 'skillbook', skill: 'm_thunder', cls: 'mage', fam: 'hero', lv: 35, price: 300000, grade: 3 },
+  sb_k_judge: { name: '전설 스킬북: 천벌의 일격', icon: 'spellbook', kind: 'skillbook', skill: 'k_judge', cls: 'knight', fam: 'legend1', lv: 50, price: 2000000, grade: 4 },
+  sb_e_starfall: { name: '전설 스킬북: 별의 비', icon: 'spellbook', kind: 'skillbook', skill: 'e_starfall', cls: 'elf', fam: 'legend1', lv: 50, price: 2000000, grade: 4 },
+  sb_m_inferno: { name: '전설 스킬북: 지옥의 업화', icon: 'spellbook', kind: 'skillbook', skill: 'm_inferno', cls: 'mage', fam: 'legend1', lv: 50, price: 2000000, grade: 4 },
+  sb_k_avatar: { name: '전설 스킬북: 전쟁의 화신', icon: 'spellbook', kind: 'skillbook', skill: 'k_avatar', cls: 'knight', fam: 'legend2', lv: 65, price: 4000000, grade: 4 },
+  sb_e_spirit: { name: '전설 스킬북: 정령왕의 축복', icon: 'spellbook', kind: 'skillbook', skill: 'e_spirit', cls: 'elf', fam: 'legend2', lv: 65, price: 4000000, grade: 4 },
+  sb_m_eclipse: { name: '전설 스킬북: 이클립스', icon: 'spellbook', kind: 'skillbook', skill: 'm_eclipse', cls: 'mage', fam: 'legend2', lv: 65, price: 4000000, grade: 4 },
+
   a_1: { name: '가죽 갑옷', icon: 'a_1', kind: 'armor', def: 2, hp: 10, lv: 1, price: 300, grade: 0 },
   a_2: { name: '사슬 갑옷', icon: 'a_2', kind: 'armor', def: 6, hp: 40, lv: 10, price: 7000, grade: 1 },
   a_3: { name: '판금 갑옷', icon: 'a_3', kind: 'armor', def: 11, hp: 90, lv: 20, price: 45000, grade: 2 },
@@ -286,9 +307,11 @@ D.ITEMS = {
   r_3: { name: '순발의 목걸이', icon: 'ring3', kind: 'ring', atkSpd: 10, atk: 6, lv: 25, price: 0, grade: 3 },
 };
 for (const k in D.ITEMS) D.ITEMS[k].id = k;
+for (const it of Object.values(D.ITEMS)) if (it.kind === 'skillbook') it.desc = `읽으면 ${D.CLASSES[it.cls].name} 스킬 「${D.SKILLS[it.skill].name}」을(를) 배웁니다. (Lv.${it.lv} 이상)\n${D.SKILLS[it.skill].desc}`;
 // same-tier weapon for another class, e.g. forClass('w_bow2', 'knight') -> 'w_sword2'
 D.forClass = (id, cls) => {
   const it = D.ITEMS[id];
+  if (it.kind === 'skillbook' && it.cls !== cls) { const alt = Object.values(D.ITEMS).find((x) => x.kind === 'skillbook' && x.fam === it.fam && x.cls === cls); return alt ? alt.id : id; }
   if (it.kind !== 'weapon' || it.cls === cls) return id;
   const alt = id.replace(/^w_(sword|bow|staff)/, 'w_' + { knight: 'sword', elf: 'bow', mage: 'staff' }[cls]);
   return D.ITEMS[alt] ? alt : id;
@@ -331,25 +354,26 @@ D.DROPS = {
   frost_wolf: [['hp_l', 0.08], ['sc_weapon', 0.012], ['sc_armor', 0.012], ['w_sword_h1', 0.001], ['a_h1', 0.001]],
   frost_skel: [['hp_l', 0.08], ['r_3', 0.002], ['sc_weapon', 0.015], ['ticket', 0.004], ['w_sword_h2', 0.0008], ['r_h', 0.0008]],
   ice_troll: [['hp_l', 0.1], ['a_4', 0.002], ['w_sword5', 0.001], ['w_bow5', 0.001], ['w_staff5', 0.001], ['ticket', 0.006], ['a_h2', 0.0008], ['w_sword_h2', 0.0006]],
-  frost_giant: [['ticket', 1], ['ticket', 1], ['ticket', 1], ['sc_weapon', 1], ['sc_armor', 1], ['w_sword5', 0.3], ['w_bow5', 0.3], ['w_staff5', 0.3], ['a_4', 0.4], ['r_3', 0.4], ['w_sword_h2', 0.35], ['a_h2', 0.35], ['r_h', 0.3]],
+  frost_giant: [['sb_k_aura', 0.2], ['sb_k_judge', 0.04], ['ticket', 1], ['ticket', 1], ['ticket', 1], ['sc_weapon', 1], ['sc_armor', 1], ['w_sword5', 0.3], ['w_bow5', 0.3], ['w_staff5', 0.3], ['a_4', 0.4], ['r_3', 0.4], ['w_sword_h2', 0.35], ['a_h2', 0.35], ['r_h', 0.3]],
   flame_orc: [['hp_l', 0.1], ['sc_weapon', 0.018], ['sc_armor', 0.018], ['w_sword_h2', 0.001]],
   magma_lizard: [['hp_l', 0.1], ['sc_weapon', 0.02], ['ticket', 0.006], ['a_4', 0.003], ['a_h2', 0.001]],
   hell_wolf: [['hp_l', 0.1], ['r_3', 0.004], ['sc_armor', 0.02], ['ticket', 0.007], ['r_h', 0.001], ['w_sword_l1', 0.00012]],
   lava_troll: [['hp_l', 0.12], ['a_5', 0.0015], ['w_sword6', 0.0008], ['w_bow6', 0.0008], ['w_staff6', 0.0008], ['ticket', 0.009], ['w_sword_l1', 0.00015], ['a_l1', 0.00015], ['r_l', 0.00012]],
-  ignis: [['ticket', 1], ['ticket', 1], ['ticket', 1], ['ticket', 1], ['sc_weapon', 1], ['sc_weapon', 1], ['sc_armor', 1], ['w_sword6', 0.3], ['w_bow6', 0.3], ['w_staff6', 0.3], ['a_5', 0.35], ['r_3', 0.5], ['w_sword_l1', 0.25], ['a_l1', 0.25], ['r_l', 0.2]],
+  ignis: [['sb_k_judge', 0.12], ['sb_k_aura', 0.25], ['ticket', 1], ['ticket', 1], ['ticket', 1], ['ticket', 1], ['sc_weapon', 1], ['sc_weapon', 1], ['sc_armor', 1], ['w_sword6', 0.3], ['w_bow6', 0.3], ['w_staff6', 0.3], ['a_5', 0.35], ['r_3', 0.5], ['w_sword_l1', 0.25], ['a_l1', 0.25], ['r_l', 0.2]],
   shadow_knight: [['hp_l', 0.12], ['sc_weapon', 0.022], ['sc_armor', 0.022], ['a_5', 0.002], ['w_sword_l1', 0.0002], ['a_l1', 0.0002]],
   nox_hound: [['hp_l', 0.12], ['sc_weapon', 0.024], ['ticket', 0.01], ['r_h', 0.002], ['r_l', 0.00018]],
   hollow: [['hp_l', 0.14], ['sc_armor', 0.026], ['ticket', 0.01], ['w_sword6', 0.0012], ['w_bow6', 0.0012], ['w_staff6', 0.0012], ['a_l1', 0.00022]],
   abyss_troll: [['hp_l', 0.15], ['sc_weapon', 0.03], ['ticket', 0.012], ['w_sword_l1', 0.0003], ['a_l1', 0.0003], ['r_l', 0.00025]],
-  nox_apostle: [['ticket', 1], ['ticket', 1], ['ticket', 1], ['ticket', 1], ['ticket', 1], ['sc_weapon', 1], ['sc_weapon', 1], ['sc_armor', 1], ['sc_armor', 1], ['w_sword_l1', 0.4], ['a_l1', 0.4], ['r_l', 0.3]],
-  nox: [['ticket', 1], ['ticket', 1], ['ticket', 1], ['ticket', 1], ['ticket', 1], ['ticket', 1], ['sc_weapon', 1], ['sc_weapon', 1], ['sc_armor', 1], ['sc_armor', 1], ['w_sword_l1', 0.5], ['a_l1', 0.5], ['w_sword_m1', 0.18], ['a_m1', 0.18], ['r_m', 0.12]],
-  minotaur: [['ticket', 1], ['ticket', 1], ['sc_weapon', 1], ['w_sword5', 0.15], ['w_bow5', 0.15], ['w_staff5', 0.15], ['a_4', 0.3], ['r_3', 0.3], ['w_sword_h2', 0.3], ['a_h2', 0.3], ['r_h', 0.3]],
+  nox_apostle: [['sb_k_judge', 0.15], ['sb_k_avatar', 0.06], ['ticket', 1], ['ticket', 1], ['ticket', 1], ['ticket', 1], ['ticket', 1], ['sc_weapon', 1], ['sc_weapon', 1], ['sc_armor', 1], ['sc_armor', 1], ['w_sword_l1', 0.4], ['a_l1', 0.4], ['r_l', 0.3]],
+  nox: [['sb_k_avatar', 0.2], ['sb_k_judge', 0.2], ['ticket', 1], ['ticket', 1], ['ticket', 1], ['ticket', 1], ['ticket', 1], ['ticket', 1], ['sc_weapon', 1], ['sc_weapon', 1], ['sc_armor', 1], ['sc_armor', 1], ['w_sword_l1', 0.5], ['a_l1', 0.5], ['w_sword_m1', 0.18], ['a_m1', 0.18], ['r_m', 0.12]],
+  minotaur: [['sb_k_aura', 0.15], ['ticket', 1], ['ticket', 1], ['sc_weapon', 1], ['w_sword5', 0.15], ['w_bow5', 0.15], ['w_staff5', 0.15], ['a_4', 0.3], ['r_3', 0.3], ['w_sword_h2', 0.3], ['a_h2', 0.3], ['r_h', 0.3]],
 };
 
 D.SHOPS = {
   general: { title: '잡화 상점', items: ['hp_s', 'hp_m', 'hp_l', 'mp_s', 'haste', 'pot_blue', 'pot_brave', 'pot_wise', 'pot_iron', 'pot_life', 'pot_wind', 'pot_exp', 'tp_town', 'sc_weapon', 'sc_armor'] },
   weapon: { title: '무기 상점', items: ['w_sword1', 'w_sword2', 'w_sword3', 'w_bow1', 'w_bow2', 'w_bow3', 'w_staff1', 'w_staff2', 'w_staff3'] },
   armor: { title: '방어구 상점', items: ['a_1', 'a_2', 'a_3', 'r_1', 'r_2'] },
+  book: { title: '스킬북 상점', items: ['sb_k_aura', 'sb_e_phoenix', 'sb_m_thunder', 'sb_k_judge', 'sb_e_starfall', 'sb_m_inferno', 'sb_k_avatar', 'sb_e_spirit', 'sb_m_eclipse'] },
 };
 
 // ---------------- transcend (초월) cards ----------------

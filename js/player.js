@@ -215,6 +215,16 @@ class Player extends Hero {
       game.fx.push(Combat.makeFx('heal', this.x, this.y, { follow: this, color: def.mana ? '#6cb6ff' : '#7dff8a', small: true }));
       U.sfx.potion();
       this.removeItem(uid);
+    } else if (def.kind === 'skillbook') {
+      const sk = D.SKILLS[def.skill];
+      if (def.cls !== this.cls) { UI.toast(`${D.CLASSES[def.cls].name} 전용 스킬북입니다.`, '#ff8a80'); return; }
+      if (this.s.lv < def.lv) { UI.toast(`레벨 ${def.lv} 이상부터 읽을 수 있습니다.`, '#ff8a80'); return; }
+      this.s.books = this.s.books || {};
+      if (this.s.books[def.skill]) { UI.toast('이미 배운 스킬입니다.'); return; }
+      this.s.books[def.skill] = true; this.removeItem(uid); U.sfx.legend();
+      game.fx.push(Combat.makeFx('pillar', this.x, this.y, { color: D.GRADES[def.grade].color, follow: this }));
+      UI.announce(`<b>${UI.esc(this.name)}</b>님이 ${D.GRADES[def.grade].name} 스킬 <em class="${def.grade >= 4 ? 'legend' : ''}">「${UI.esc(sk.name)}」</em>을(를) 배웠습니다!`);
+      UI.refreshAll();
     } else if (def.kind === 'buff') {
       this.addBuff(def.buff); U.sfx.potion(); this.removeItem(uid);
       game.fx.push(Combat.makeFx('buff', this.x, this.y, { follow: this, color: '#7dff8a' }));
@@ -233,7 +243,7 @@ class Player extends Hero {
   castSkill(i, game) {
     const id = this.classDef.skills[i];
     if (!id) return false;
-    if (!Skills.unlocked(this, id)) { UI.toast(`${D.SKILLS[id].name}: Lv.${D.SKILLS[id].unlock}에 해금됩니다.`); return false; }
+    if (!Skills.unlocked(this, id)) { UI.toast(`${D.SKILLS[id].name}: ${Skills.lockText(this, id)}`); return false; }
     const sk = Skills.eff(this, id);
     if (this.dead || (this.action && !this.action.idle)) return false;
     if (this.action && this.action.idle) this.action = null;

@@ -111,7 +111,10 @@ const Skills = (() => {
   // ---------------------------------------------------------------- state
   const tree = (p, id) => (p.s.tree[id] = p.s.tree[id] || [null, null, null]);
   function migrate(p) { p.s.tree = p.s.tree || {}; }
-  const unlocked = (p, id) => p.s.lv >= (D.SKILLS[id].unlock || 1);
+  // 영웅/전설 skills also need their skill book read (p.s.books)
+  const learned = (p, id) => !D.SKILLS[id].book || !!(p.s.books && p.s.books[id]);
+  const unlocked = (p, id) => p.s.lv >= (D.SKILLS[id].unlock || 1) && learned(p, id);
+  const lockText = (p, id) => (p.s.lv < (D.SKILLS[id].unlock || 1) ? `Lv.${D.SKILLS[id].unlock}에 해금됩니다.` : '스킬북을 읽어 배워야 합니다.');
   function spent(p) {
     let n = 0;
     for (const id in p.s.tree) p.s.tree[id].forEach((c, t) => { if (c) n += TIER_COST[t]; });
@@ -136,6 +139,7 @@ const Skills = (() => {
     return D.SKILLS[id].name + (tags.length ? ` · ${tags.join('·')}` : '');
   }
   function canChoose(p, id, t) {
+    if (!TREE[id]) return '스킬 트리가 없는 스킬입니다.';
     if (!unlocked(p, id)) return `Lv.${D.SKILLS[id].unlock}에 스킬이 해금됩니다.`;
     const tr = tree(p, id);
     if (tr[t]) return '이미 선택했습니다.';
@@ -274,7 +278,7 @@ const Skills = (() => {
     UI.skillName(displayName(p, id));
     if (p === game.player) {
       const snd = { m_fire: 'fireCast', m_meteor: 'fireCast', m_ice: 'iceCast', m_blizzard: 'iceCast', m_chain: 'zapCast', m_heal: 'healChime', k_rage: 'powerUp', e_wind: 'powerUp',
-        k_whirl: 'bladeStorm', k_quake: 'bladeStorm', k_smash: 'slash', k_doom: 'bladeStorm', k_charge: 'slash', e_triple: 'volley', e_rain: 'volley', e_storm: 'volley', e_energy: 'boltCast', e_frost: 'iceCast' }[id];
+        k_whirl: 'bladeStorm', k_quake: 'bladeStorm', k_smash: 'slash', k_doom: 'bladeStorm', k_charge: 'slash', k_aura: 'bladeStorm', k_judge: 'powerUp', k_avatar: 'powerUp', e_phoenix: 'fireCast', e_starfall: 'volley', e_spirit: 'powerUp', m_thunder: 'zapCast', m_inferno: 'fireCast', m_eclipse: 'boltCast', e_triple: 'volley', e_rain: 'volley', e_storm: 'volley', e_energy: 'boltCast', e_frost: 'iceCast' }[id];
       if (snd) U.sfx[snd]();
     }
     if (p === game.player) game.fx.push(Combat.makeFx('castcircle', p.x, p.y, { follow: p, color: { knight: '#ff8a3a', elf: '#6dffb0', mage: '#a88bff' }[p.cls] }));
@@ -475,6 +479,90 @@ const Skills = (() => {
       }
       U.sfx.magic();
     },
+    // ---- 영웅 / 전설
+    k_aura(p, sk, m, t, game, R) {
+      const r = R(sk.radius);
+      for (let i = 0; i < 2; i++) later(i * 350, () => {
+        game.fx.push(Combat.makeFx('whirl', p.x, p.y, { r })); game.fx.push(Combat.makeFx('shock', p.x, p.y, { r: r * 1.1, color: '#bfe8ff', dur: 0.5 }));
+        VFX.sparkBurst(p.x, p.y, 'spark', 18); area(game, p, p.x, p.y, r, sk.mult, m); U.sfx.bladeStorm(); game.shake = 6;
+      });
+    },
+    k_judge(p, sk, m, t, game) {
+      const from = { x: p.x, y: p.y }, a = Math.atan2(t.y - p.y, t.x - p.x), d = Math.max(0, U.dist(p, t) - 50);
+      const dest = World.findFree(p.x + Math.cos(a) * d, p.y + Math.sin(a) * d, 14);
+      p.x = dest.x; p.y = dest.y; p.face(t);
+      game.fx.push(Combat.makeFx('dash', from.x, from.y, { to: [p.x, p.y], color: '#ffe28a' }));
+      const tx = t.x, ty = t.y;
+      game.fx.push(Combat.makeFx('pillar', tx, ty, { color: '#ffe28a' }));
+      later(180, () => {
+        game.fx.push(Combat.makeFx('explode', tx, ty, { r: 260, color: '#ffd76a' })); VFX.sparkBurst(tx, ty, 'ember', 30); VFX.debris(tx, ty, 14);
+        area(game, p, tx, ty, 260, sk.mult, Object.assign({}, m, { stun: 2, crit: (m.crit || 0) + 20 }));
+        game.shake = 16; U.sfx.boom(); U.sfx.crit();
+      });
+    },
+    k_avatar(p, sk, m, t, game) {
+      p.addBuff(sk.buff);
+      game.fx.push(Combat.makeFx('buff', p.x, p.y, { follow: p, color: '#ffb03a' }));
+      game.fx.push(Combat.makeFx('shock', p.x, p.y, { r: sk.radius, color: '#ffcf6a', dur: 0.6 }));
+      VFX.fireBurst(p.x, p.y, 120, 1.2);
+      area(game, p, p.x, p.y, sk.radius, sk.mult, m); game.shake = 10; U.sfx.boom(); UI.refreshHud();
+    },
+    e_phoenix(p, sk, m, t, game) {
+      const a = Math.atan2(t.y - p.y, t.x - p.x), L = 620, sx = p.x, sy = p.y, ex = sx + Math.cos(a) * L, ey = sy + Math.sin(a) * L;
+      game.fx.push(Combat.makeFx('dash', sx, sy, { to: [ex, ey], color: '#ff8a2e' }));
+      for (let i = 1; i <= 7; i++) later(i * 45, () => VFX.fireBurst(sx + Math.cos(a) * L * i / 7, sy + Math.sin(a) * L * i / 7, 55, 0.6));
+      for (const mon of game.monsters) {
+        if (mon.dead) continue;
+        const px = mon.x - sx, py = mon.y - sy, k = U.clamp((px * Math.cos(a) + py * Math.sin(a)) / L, 0, 1);
+        if (Math.hypot(px - Math.cos(a) * L * k, py - Math.sin(a) * L * k) < 55 + mon.radius) later(k * 300, () => hit(game, p, mon, sk.mult, m));
+      }
+      for (const k of [0.35, 0.7, 1]) ground(sx + Math.cos(a) * L * k, sy + Math.sin(a) * L * k, 90, 0.25, 3, 'fire');
+      game.shake = 6;
+    },
+    e_starfall(p, sk, m, t, game, R) {
+      const r = R(sk.radius), tx = t.x, ty = t.y;
+      game.fx.push(Combat.makeFx('rain', tx, ty, { r, dur: 1.2 }));
+      for (let i = 0; i < 3; i++) later(250 + i * 300, () => {
+        for (let j = 0; j < 6; j++) VFX.sparkBurst(tx + U.rand(-r, r), ty + U.rand(-r, r) * 0.6, 'arcane', 6);
+        VFX.flash(tx, ty, r * 1.6, '#cfe0ff', 0.3);
+        area(game, p, tx, ty, r, sk.mult, m, { slow: 1.5 }); U.sfx.bow(); game.shake = 4;
+      });
+    },
+    e_spirit(p, sk, m, t, game) {
+      p.addBuff(sk.buff);
+      game.fx.push(Combat.makeFx('buff', p.x, p.y, { follow: p, color: '#9fffd8' }));
+      shards(game, p, p, 12, sk.mult, m, '#9fffd8'); U.sfx.magic(); UI.refreshHud();
+    },
+    m_thunder(p, sk, m, t, game, R) {
+      const pool = [t, ...nearby(game, t, R(sk.radius), [t])];
+      for (let i = 0; i < 8; i++) later(i * 120, () => {
+        const tgt = pool.filter((x) => !x.dead)[i % Math.max(1, pool.filter((x) => !x.dead).length)];
+        if (!tgt) return;
+        game.fx.push(Combat.makeFx('zap', tgt.x + U.rand(-30, 30), tgt.y - 320, { to: [tgt.x, tgt.y - 20], color: '#cfe8ff' }));
+        VFX.sparkBurst(tgt.x, tgt.y, 'zap', 16); hit(game, p, tgt, sk.mult, m); game.shake = 3;
+      });
+    },
+    m_inferno(p, sk, m, t, game, R) {
+      const r = R(sk.radius), tx = t.x, ty = t.y;
+      VFX.fireBurst(tx, ty, r, 2.5);
+      game.fx.push(Combat.makeFx('explode', tx, ty, { r, color: '#ff5a1a' }));
+      area(game, p, tx, ty, r, sk.mult, m); ground(tx, ty, r, 0.3, 5, 'fire');
+      game.shake = 14; U.sfx.boom();
+    },
+    m_eclipse(p, sk, m, t, game, R) {
+      const r = R(sk.radius), tx = t.x, ty = t.y;
+      game.fx.push(Combat.makeFx('shock', tx, ty, { r, color: '#b46bff', dur: 1.5 }));
+      VFX.voidBurst(tx, ty, 60, 0.8);
+      for (let i = 1; i <= 6; i++) later(i * 230, () => { // the black sun drags everything in
+        for (const mon of nearby(game, { x: tx, y: ty }, r + 60)) { if (mon.def.boss || mon.def.structure) continue; mon.x += (tx - mon.x) * 0.22; mon.y += (ty - mon.y) * 0.22; }
+        VFX.sparkBurst(tx, ty, 'arcane', 6);
+      });
+      later(1500, () => {
+        VFX.voidBurst(tx, ty, r, 2.5);
+        game.fx.push(Combat.makeFx('explode', tx, ty, { r, color: '#b46bff' }));
+        area(game, p, tx, ty, r, sk.mult, m); game.shake = 18; U.sfx.boom();
+      });
+    },
     m_blizzard(p, sk, m, t, game, R) {
       const r = R(sk.radius);
       ground(t.x, t.y, r, sk.mult, 4 + (m.durAdd || 0), 'blizzard', { freeze: m.freezeChance || 0, endBlast: m.endBlast || 0, m });
@@ -492,19 +580,26 @@ const Skills = (() => {
     if (!selId || !p.classDef.skills.includes(selId)) selId = p.classDef.skills[0];
     const render = () => {
       const pts = points(p);
-      const keys = ['1', '2', '3', '4', 'Q', 'E'];
+      const keys = ['1', '2', '3', '4', 'Q', 'E', 'Z', 'X', 'F'];
       body.innerHTML = `<div class="sk-top"><div>남은 스킬 포인트 <b class="sk-pts">${pts}</b> <span class="sub">(레벨업마다 +1 · 단계별 비용 1/2/3 · 단계 개방 Lv.${TIER_LV.join('/')})</span></div>
         <button class="dark-btn" data-reset>트리 초기화 (${U.fmt(RESET_COST)} 아데나)</button></div>
         <div class="sk-wrap"><div class="sk-list">${p.classDef.skills.map((id, i) => {
           const sk = D.SKILLS[id], lock = !unlocked(p, id), tr = p.s.tree[id] || [];
           const n = tr.filter(Boolean).length;
           return `<div class="sk-item ${id === selId ? 'on' : ''} ${lock ? 'lock' : ''}" data-sk="${id}"><div class="slot skill">${ico(sk.icon)}<span class="n">${keys[i]}</span></div>
-            <div><b>${esc(sk.name)}</b><div class="sub">${lock ? `🔒 Lv.${sk.unlock} 해금` : n ? esc(displayName(p, id).split(' · ')[1] || '') : '기본형'}</div><div class="pips">${[0, 1, 2].map((t) => `<i class="${tr[t] ? 'on' : ''}"></i>`).join('')}</div></div></div>`;
+            <div><b>${esc(sk.name)}</b><div class="sub">${sk.grade ? `<span class="${D.GRADES[sk.grade].cls}">${D.GRADES[sk.grade].name}</span> · ` : ''}${lock ? `🔒 ${p.s.lv < sk.unlock ? `Lv.${sk.unlock} 해금` : '스킬북 필요'}` : n ? esc(displayName(p, id).split(' · ')[1] || '') : sk.book ? '습득 완료' : '기본형'}</div>${TREE[id] ? `<div class="pips">${[0, 1, 2].map((t) => `<i class="${tr[t] ? 'on' : ''}"></i>`).join('')}</div>` : ''}</div></div>`;
         }).join('')}</div>
         <div class="sk-detail">${detail(selId)}</div></div>`;
     };
     const detail = (id) => {
-      const sk = D.SKILLS[id], e = eff(p, id), tr = tree(p, id);
+      const sk = D.SKILLS[id], e = eff(p, id);
+      if (!TREE[id]) { // 영웅/전설 skills: no tiers, learned from a book
+        const book = Object.values(D.ITEMS).find((x) => x.kind === 'skillbook' && x.skill === id);
+        return `<div class="sk-head">${ico(sk.icon)}<div><h4><span class="${D.GRADES[sk.grade].cls}">[${D.GRADES[sk.grade].name}]</span> ${esc(sk.name)}</h4><div class="sub">${esc(sk.desc)}</div>
+          <div class="sub">MP ${e.mp} · 쿨타임 ${e.cd}초 · Lv.${sk.unlock} 이상</div></div></div>
+          <div class="sk-tier"><div class="sk-tier-h">습득</div><p class="sub" style="line-height:1.7">${learned(p, id) ? '✔ 스킬북을 읽어 배운 스킬입니다.' : `「${esc(book ? book.name : '')}」을(를) 읽으면 배울 수 있습니다.<br>보스 처치 보상으로 얻거나, 상점의 <b>스킬북 상점</b>에서 살 수 있습니다.`}</p></div>`;
+      }
+      const tr = tree(p, id);
       return `<div class="sk-head">${ico(sk.icon)}<div><h4>${esc(displayName(p, id))}</h4><div class="sub">${esc(sk.desc)}</div>
           <div class="sub">MP ${e.mp} · 쿨타임 ${e.cd}초${sk.unlock ? ` · Lv.${sk.unlock} 해금` : ''}</div></div></div>
         ${[0, 1, 2].map((t) => {
@@ -534,5 +629,5 @@ const Skills = (() => {
     return { rerender: render };
   };
 
-  return { TREE, migrate, eff, mods, cast, update, drawGround, points, unlocked, displayName, anyChoice, choose, hazards, dots };
+  return { TREE, migrate, eff, mods, cast, update, drawGround, points, unlocked, learned, lockText, displayName, anyChoice, choose, hazards, dots };
 })();
