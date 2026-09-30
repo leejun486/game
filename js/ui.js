@@ -263,6 +263,17 @@ const UI = (() => {
     lines[3] = D.ENDINGS[choice].line;
     cinema({ src: D.OUTRO.src, cues: D.OUTRO.cues, lines, title: lines[lines.length - 1] }, then);
   }
+  // yes/no question drawn in the game (window.confirm is blocked when the page runs inside a sandboxed frame)
+  function ask(msg, onYes, yes = '확인') {
+    const el = document.createElement('div');
+    el.id = 'ask-box';
+    el.innerHTML = `<div class="ask-in"><div class="ask-msg">${esc(msg).replace(/\n/g, '<br>')}</div><div class="ask-btns"><button class="gold-btn" data-yes>${esc(yes)}</button><button class="dark-btn" data-no>취소</button></div></div>`;
+    document.body.appendChild(el);
+    el.onclick = (e) => {
+      if (e.target.closest('[data-yes]')) { el.remove(); onYes(); }
+      else if (e.target.closest('[data-no]') || e.target === el) el.remove();
+    };
+  }
   // a centred question with a button per option; cb(value)
   function choice(title, opts, cb) {
     const el = document.createElement('div');
@@ -345,6 +356,7 @@ const UI = (() => {
   // ------- big menu drawer (screenshot 2)
   OPENERS.menu = () => {
     const { el } = makePanel(null, 'menu-drawer');
+    const dots = Content.menuDots(game.player);
     const top = [['shop', 'shop', '상점'], ['summon', 'summon', '소환'], ['event', 'event', '이벤트'], ['pass', 'pass', '시즌 패스'], ['skills', 'skill', '스킬'], ['inventory', 'inventory', '인벤토리']];
     const grid = [
       ['character', 'character', '캐릭터'], ['stats', 'star', '잠재력'], ['skills', 'blade', '전투 특성'], ['transcend', 'transcend', '초월', 1], ['weaponlook', 'sword', '무기 외형'], ['collection', 'collection', '결속'], ['skin', 'wings', '스킨'],
@@ -353,7 +365,7 @@ const UI = (() => {
       ['map', 'compass', '위치 저장'],
     ];
     el.innerHTML = `
-      <div class="menu-top">${top.map(([a, i, t]) => `<button data-a="${a}">${ico(i)}<span>${t}</span></button>`).join('')}
+      <div class="menu-top">${top.map(([a, i, t]) => `<button data-a="${a}">${ico(i)}<span>${t}</span>${dots[a] ? '<i class="dot"></i>' : ''}</button>`).join('')}
         <button class="close-x" style="position:absolute;right:10px;top:8px;font-size:34px">×</button></div>
       <div class="banner" id="menu-banner"><div><h4>개발자 노트</h4><small>자세히 보기</small></div></div>
       <div class="feature-grid">
@@ -362,9 +374,9 @@ const UI = (() => {
         <button data-a="dungeon" style="background:linear-gradient(90deg,rgba(0,0,0,.6),rgba(0,0,0,.1)),radial-gradient(circle at 75% 50%,#7a3ad0,#150a24 65%)">던전<small>이클립스 균열 · 일일 3회</small></button>
         <button data-a="siege" style="background:linear-gradient(90deg,rgba(0,0,0,.6),rgba(0,0,0,.1)),linear-gradient(120deg,#6a4a3a,#1d1410)">공성전<small>아스텔라 성 · 혈맹 전쟁</small></button>
       </div>
-      <div class="icon-grid">${grid.map(([a, i, t, dot]) => `<button data-a="${a}">${ico(i)}<span>${t}</span>${dot ? '<i class="dot"></i>' : ''}</button>`).join('')}</div>
+      <div class="icon-grid">${grid.map(([a, i, t]) => `<button data-a="${a}">${ico(i)}<span>${t}</span>${dots[a] ? '<i class="dot"></i>' : ''}</button>`).join('')}</div>
       <div class="menu-side">
-        <button data-a="mail" title="우편">${ico('mail')}</button>
+        <button data-a="mail" title="우편" style="position:relative">${ico('mail')}${dots.mail ? '<i class="dot"></i>' : ''}</button>
         <button data-a="map" title="지도">${ico('map')}</button>
         <button data-a="admin" title="운영자 모드 (F2)">${ico('crown')}</button>
         <button data-a="settings" title="설정">${ico('settings')}</button>
@@ -465,7 +477,7 @@ const UI = (() => {
     return { rerender: render };
   };
 
-  function enchantItem(it) {
+  function enchantItem(it, sure) {
     const p = game.player;
     const def = D.ITEMS[it.id];
     const scroll = def.kind === 'weapon' ? 'sc_weapon' : 'sc_armor';
@@ -474,7 +486,7 @@ const UI = (() => {
     const safe = D.SAFE_ENCHANT[def.kind];
     if (cur >= 15) return toast('최대 강화 수치입니다.');
     const rate = cur < safe ? 1 : D.enchantRate(cur);
-    if (cur >= safe && !confirm(`안전 강화 수치(+${safe})를 넘었습니다.\n성공 확률 ${(rate * 100).toFixed(0)}%, 실패 시 아이템이 증발합니다.\n강화하시겠습니까?`)) return;
+    if (cur >= safe && !sure) return ask(`안전 강화 수치(+${safe})를 넘었습니다.\n성공 확률 ${(rate * 100).toFixed(0)}%, 실패 시 아이템이 증발합니다.\n강화하시겠습니까?`, () => enchantItem(it, true), '강화');
     p.removeById(scroll);
     const inc = cur < safe && cur < 3 ? U.randi(1, 2) : 1; // Lineage-style: low levels can jump
     if (Math.random() < rate) {
@@ -664,7 +676,7 @@ const UI = (() => {
       if (a === 'intro') { close(); return intro(); }
       if (a === 'ending') { close(); return ending(p.s.ending); }
       if (a === 'save') { game.save(); toast('저장되었습니다.'); }
-      if (a === 'reset' && confirm('정말 모든 진행 상황을 삭제할까요?')) { game.wipe(); return; }
+      if (a === 'reset') return ask('정말 모든 진행 상황을 삭제할까요?', () => game.wipe(), '삭제');
       OPENERS.settings();
     };
     return {};
@@ -804,7 +816,7 @@ const UI = (() => {
   }
 
   return {
-    story, intro, ending, choice,
+    story, intro, ending, choice, ask,
     toggleRide, init, iconImg, spriteCanvas, drawSprite, chat, announce, toast, skillName, refreshHud, refreshQuest, refreshAll, markInv,
     flashSlot, drawMinimap, open, close, isOpen, openEnchant, toggleAuto, useSlotItem, esc, ico, makePanel, OPENERS,
     get panelName() { return panel && panel.name; },

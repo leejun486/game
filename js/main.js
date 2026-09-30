@@ -381,7 +381,7 @@ const Game = {
       document.getElementById('continue-box').classList.remove('hidden');
       document.getElementById('continue-info').textContent = `(${save.name} · Lv.${save.lv} ${D.CLASSES[save.cls].name})`;
       document.getElementById('continue-btn').onclick = () => start(save);
-      document.getElementById('reset-btn').onclick = () => { if (confirm('저장된 캐릭터를 삭제할까요?')) Game.wipe(); };
+      document.getElementById('reset-btn').onclick = () => UI.ask('저장된 캐릭터를 삭제할까요?', () => Game.wipe(), '삭제');
     }
     const nick = document.getElementById('nick-input');
     nick.value = U.pick(['세라니스', '아크엔젤', '달빛기사', '용사', '제로원', '크로우']) + U.randi(1, 99);

@@ -212,6 +212,25 @@ const Content = (() => {
   };
   const achReady = (p) => ACH.some((a) => !p.s.ach[a.id] && a.cur(p) >= a.need);
 
+  // what needs doing, per menu entry: a red dot shows only for these (a reward waiting or an action to take)
+  function menuDots(p) {
+    const qp = Quests.progress(p);
+    const equipReg = COLL.some((c) => !complete(p, c) && c.items.some((slot, i) => D.isEquip(D.ITEMS[parseSlot(slot).id]) && !regOf(p, c).includes(i) && candidate(p, slot)));
+    return {
+      quests: qp.done && !qp.claimed,
+      mail: !p.s.mailClaimed,
+      achievement: achReady(p),
+      event: attendReady(p),
+      pass: passReady(p),
+      skills: Skills.anyChoice(p),
+      collection: equipReg,
+      transcend: !p.s.card && Object.keys(p.s.cards || {}).length > 0,
+      pet: !p.s.pet && Object.keys(p.s.pets || {}).length > 0,
+      mount: !p.s.mount && Object.keys(p.s.mounts || {}).length > 0,
+      guild: Siege.isOwner(p) && Siege.castle(p).taxDay !== today(),
+      siege: Siege.isOwner(p) && Siege.castle(p).taxDay !== today(),
+    };
+  }
   // red dots on the top menu
   function badges(game) {
     const p = game.player; if (!p) return;
@@ -222,7 +241,8 @@ const Content = (() => {
       if (!on && d) d.remove();
     };
     set('event', attendReady(p)); set('pass', passReady(p)); set('skills', Skills.anyChoice(p));
-    set('menu', achReady(p) || attendReady(p));
+    const dots = menuDots(p);
+    set('menu', Object.values(dots).some(Boolean));
   }
 
   // ---------------------------------------------------------------- panels
@@ -365,17 +385,19 @@ const Content = (() => {
       const cat = e.target.closest('[data-cat]'); if (cat) { collCat = cat.dataset.cat; U.sfx.ui(); return render(); }
       if (e.target.closest('[data-ready]')) { collReady = e.target.checked; return render(); }
       if (e.target.closest('[data-regall]')) {
-        if (!confirm('등록 가능한 장비를 모두 등록합니다. (물약·주문서·소환권은 직접 등록) 등록한 아이템은 사라집니다. 진행할까요?')) return;
         // equipment only, and the steepest enchant requirements first so a +7 weapon lands in a +7 slot
-        const before = COLL.filter((c) => complete(p, c)).length;
         const tasks = [];
-        for (const c of COLL) { if (complete(p, c)) continue; const r = regOf(p, c); c.items.forEach((slot, i) => { const q = parseSlot(slot); if (!r.includes(i) && D.isEquip(D.ITEMS[q.id])) tasks.push([c, i, q.en]); }); }
+        for (const c of COLL) { if (complete(p, c)) continue; const r = regOf(p, c); c.items.forEach((slot, i) => { const q = parseSlot(slot); if (!r.includes(i) && D.isEquip(D.ITEMS[q.id]) && candidate(p, slot)) tasks.push([c, i, q.en]); }); }
+        if (!tasks.length) return UI.toast('등록할 수 있는 장비가 없습니다. 물약·주문서·소환권은 칸을 눌러 직접 등록하세요.', '#ffd76a');
         tasks.sort((x, y) => y[2] - x[2]);
-        let n = 0;
-        for (const [c, i] of tasks) if (register(p, c, i)) n++;
-        const fin = COLL.filter((c) => complete(p, c)).length - before;
-        if (n) { fin ? U.sfx.legend() : U.sfx.success(); UI.toast(`${n}개 등록${fin ? ` · 수집 ${fin}개 완성!` : ''}`, '#7ee07e'); p.recalc(); UI.refreshHud(); }
-        return render();
+        return UI.ask("등록 가능한 장비를 모두 등록합니다.\n(물약·주문서·소환권은 직접 등록) 등록한 아이템은 사라집니다.", () => {
+          const before = COLL.filter((c) => complete(p, c)).length;
+          let n = 0;
+          for (const [c, i] of tasks) if (register(p, c, i)) n++;
+          const fin = COLL.filter((c) => complete(p, c)).length - before;
+          if (n) { fin ? U.sfx.legend() : U.sfx.success(); UI.toast(`${n}개 등록${fin ? ` · 수집 ${fin}개 완성!` : ''}`, '#7ee07e'); p.recalc(); UI.refreshHud(); }
+          render();
+        }, '모두 등록');
       }
       const b = e.target.closest('[data-reg]'); if (!b) return;
       const [cid, i] = b.dataset.reg.split(':');
@@ -433,11 +455,11 @@ const Content = (() => {
         UI.toast(`[${p.s.guild}] 혈맹에 가입했습니다!`, '#ffd76a');
         const mate = Game.bots.find((b) => b.guild === p.s.guild);
         if (mate) setTimeout(() => Game.say(mate, `${p.name}님 환영합니다~!`), 1200);
-      } else if (t('[data-leave]') && confirm('혈맹을 탈퇴할까요?')) { p.s.guild = ''; p.recalc(); }
-      else if (t('[data-disband]') && confirm('혈맹을 해산할까요? 모집한 혈맹원도 흩어집니다.')) {
+      } else if (t('[data-leave]')) return UI.ask('혈맹을 탈퇴할까요?', () => { p.s.guild = ''; p.recalc(); render(); UI.refreshHud(); }, '탈퇴');
+      else if (t('[data-disband]')) return UI.ask('혈맹을 해산할까요? 모집한 혈맹원도 흩어집니다.', () => {
         for (const b of Game.bots) if (b.guild === p.s.myClan.name) b.guild = U.pick(D.GUILDS);
-        delete p.s.clans[p.s.myClan.name]; p.s.myClan = null; p.s.clanBots = []; p.s.guild = ''; p.recalc();
-      } else if (t('[data-donate]')) {
+        delete p.s.clans[p.s.myClan.name]; p.s.myClan = null; p.s.clanBots = []; p.s.guild = ''; p.recalc(); render(); UI.refreshHud();
+      }, '해산'); else if (t('[data-donate]')) {
         const c = clanInfo(p), today = new Date().toDateString();
         if (c.day !== today) { c.day = today; c.don = 0; }
         if (c.don >= DONATE.perDay) return UI.toast('오늘은 더 기부할 수 없습니다.');
@@ -543,5 +565,5 @@ const Content = (() => {
     return {};
   };
 
-  return { migrate, bonuses, passXp, badges, give, GUILDS, clanXp, syncClanBots };
+  return { migrate, bonuses, passXp, badges, menuDots, give, GUILDS, clanXp, syncClanBots };
 })();

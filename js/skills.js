@@ -525,8 +525,9 @@ const Skills = (() => {
       if (e.target.closest('[data-reset]')) {
         if (!spent(p)) return UI.toast('초기화할 스킬이 없습니다.');
         if (p.s.gold < RESET_COST) return UI.toast('아데나가 부족합니다.', '#ff8a80');
-        if (!confirm('스킬 트리를 초기화하고 포인트를 돌려받을까요?')) return;
-        p.s.gold -= RESET_COST; p.s.tree = {}; U.sfx.coin(); UI.toast('스킬 트리를 초기화했습니다.'); UI.refreshAll(); render();
+        return UI.ask('스킬 트리를 초기화하고 포인트를 돌려받을까요?', () => {
+          p.s.gold -= RESET_COST; p.s.tree = {}; U.sfx.coin(); UI.toast('스킬 트리를 초기화했습니다.'); UI.refreshAll(); render();
+        });
       }
     };
     render();
