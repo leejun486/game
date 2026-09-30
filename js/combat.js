@@ -8,7 +8,7 @@ const Combat = (() => {
   function damageMonster(game, hero, mon, mult, opts = {}) {
     if (!mon || mon.dead) return 0;
     const st = hero.stats;
-    let raw = st.atk * mult * U.rand(0.9, 1.1);
+    let raw = st.atk * mult * D.HERO_DMG * U.rand(0.9, 1.1);
     const crit = Math.random() * 100 < (st.crit || 5) + (opts.critBonus || 0);
     if (crit) raw *= 1.6;
     let dmg = Math.max(1, Math.round(Math.max(raw * 0.15, raw - mon.def_ * 0.6)));
@@ -73,8 +73,7 @@ const Combat = (() => {
     p.s.gold += gold;
     p.s.kills++;
     setTimeout(() => { floatText(game, mon, `+${U.fmt(gold)} 아데나`, '#ffd76a'); U.sfx.coin(); }, 180);
-    // drops (auto-loot)
-    // items drop on the ground and fly to the player (see Game.updateDrops)
+    // drops: plain loot flies to the player; 희귀+ stays on the ground under a pillar of light (see Game.updateDrops)
     const table = [...D.DROPS.common, ...(D.DROPS[d.id] || [])];
     for (let [id, ch] of table) {
       if (Math.random() < ch) {
@@ -82,6 +81,7 @@ const Combat = (() => {
         const n = D.ITEMS[id].kind === 'potion' ? U.randi(1, 3) : 1;
         const a = Math.random() * Math.PI * 2, r = U.rand(20, 60);
         game.drops.push({ id, n, x: mon.x + Math.cos(a) * r, y: mon.y + Math.sin(a) * r * 0.6, sx: mon.x, sy: mon.y, t: 0 });
+        game.dropped(D.ITEMS[id]);
       }
     }
     if (d.boss && d.id !== 'dungeon') p.s.bossKills++;
@@ -540,7 +540,7 @@ const Combat = (() => {
   function petHit(game, mon, mult, color) {
     const p = game.player;
     if (!mon || mon.dead || !p) return 0;
-    const raw = p.stats.atk * mult * U.rand(0.9, 1.1);
+    const raw = p.stats.atk * mult * D.HERO_DMG * U.rand(0.9, 1.1);
     const crit = Math.random() * 100 < p.stats.crit;
     const dmg = Math.max(1, Math.round(Math.max(raw * 0.2, raw * (crit ? 1.6 : 1) - mon.def_ * 0.5)));
     mon.hp -= dmg; mon.flash = 0.12;

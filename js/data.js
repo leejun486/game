@@ -81,6 +81,11 @@ D.MONSTERS = {
   ice_troll: { name: '빙하 트롤', sheet: 'troll_frost', lv: 46, hp: 2600, atk: 96, def: 36, spd: 72, scale: 1.35, aggro: true, range: 62 },
   frost_giant: { name: '서리 거인 요툰', sheet: 'troll_giant', lv: 52, hp: 48000, atk: 150, def: 46, spd: 80, scale: 2.3, aggro: true, range: 92, boss: true, skill: 'frostStomp' },
 };
+// hunting pace: heroes hit a little softer and normal monsters carry more HP, most of it at low levels
+// where fights were over in two or three swings (bosses keep their HP)
+D.HERO_DMG = 0.85;
+D.MON_HP_MUL = (lv) => Math.max(1, 1.6 - lv * 0.018);
+for (const m of Object.values(D.MONSTERS)) if (!m.boss) m.hp = Math.round(m.hp * D.MON_HP_MUL(m.lv));
 // recoloured copies of loaded sheets: name -> [base sheet, canvas filter]
 D.SHEET_VARIANTS = {
   wolfman_frost: ['wolfman', 'hue-rotate(185deg) saturate(0.55) brightness(1.45)'],

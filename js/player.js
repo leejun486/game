@@ -390,6 +390,12 @@ class Player extends Hero {
   autoThink(game) {
     if (this.inTown && !this.target && !this.moveTo) return;
     if (!this.target || this.target.dead) {
+      // pick up 희귀+ loot first, unless something is already attacking us
+      const loot = game.nearestLoot(this, 500);
+      if (loot && !game.monsters.some((m) => !m.dead && m.target === this)) {
+        this.target = null; this.moveTo = { x: loot.x, y: loot.y }; this.waypoints = [];
+        return;
+      }
       this.target = game.nearestMonster(this, 650, (m) => !(this.ignore[m.id] > game.time) && ((m.def.boss ? this.s.lv >= m.lv - 6 : m.lv <= this.s.lv + 5) || m.target === this));
       if (this.questTravel) this.target = null; // riding to the quest spot: don't stop for fights
       if (!this.target && !this.moveTo && !World.zoneAt(this.x, this.y).dungeon) {

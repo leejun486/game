@@ -110,18 +110,39 @@ const Game = {
     return U.clamp((-f - 0.05) * 1.1, 0, 0.72);
   },
   dayPhase() { return ((this.time + 30) % 480) / 480; },
+  // 희귀+ loot waits on the ground (pillar of light) until the player walks over it or clicks it;
+  // anything plainer flies to a nearby player after a moment
+  isGroundLoot(d) { return D.ITEMS[d.id].grade >= 2; },
+  dropped(it) {
+    if (it.grade < 2) return;
+    const g = D.GRADES[it.grade];
+    UI.chat(`[${g.name}] ${it.name}이(가) 바닥에 떨어졌습니다!`, 'drop');
+    if (it.grade >= 4) { U.sfx.legend(); this.shake = Math.max(this.shake, 6); }
+    else if (it.grade >= 3) U.sfx.success();
+    else U.sfx.magic();
+  },
+  nearestLoot(from, maxD) {
+    let best = null, bd = maxD;
+    for (const d of this.drops) {
+      if (d.picked || !this.isGroundLoot(d) || d.t < 0.5) continue;
+      const k = Math.hypot(d.x - from.x, d.y - from.y);
+      if (k < bd) { bd = k; best = d; }
+    }
+    return best;
+  },
   updateDrops(dt) {
     const p = this.player;
     for (const d of this.drops) {
       d.t += dt;
       if (!p || p.dead || d.t < 0.9) continue;
       const dist = Math.hypot(p.x - d.x, p.y - d.y);
+      if (this.isGroundLoot(d)) { if (dist < 40) { d.picked = true; this.pickup(d); } continue; }
       if (dist > 700) continue;
       const sp = (420 + d.t * 400) * dt;
       if (dist < 24 || sp >= dist) { d.picked = true; this.pickup(d); }
       else { d.x += ((p.x - d.x) / dist) * sp; d.y += ((p.y - d.y) / dist) * sp; }
     }
-    this.drops = this.drops.filter((d) => !d.picked && d.t < 90);
+    this.drops = this.drops.filter((d) => !d.picked && d.t < (this.isGroundLoot(d) ? 300 : 90));
   },
   pickup(d) {
     const p = this.player, it = D.ITEMS[d.id];
@@ -145,17 +166,65 @@ const Game = {
       else h = 4 + Math.sin(d.t * 5) * 3;
       const sx = x - cam.x, sy = y - cam.y;
       const col = D.GRADES[it.grade].color;
+      const landed = d.t >= 0.45;
+      if (it.grade >= 2 && landed) this.drawLootPillar(ctx, sx, sy, it.grade, col, d.t);
       ctx.save();
       ctx.globalAlpha = 0.5; ctx.fillStyle = col;
       ctx.beginPath(); ctx.ellipse(sx, sy, 14, 5, 0, 0, Math.PI * 2); ctx.fill();
-      if (it.grade >= 2) {
-        ctx.globalAlpha = 0.35 + Math.sin(d.t * 6) * 0.15; ctx.globalCompositeOperation = 'lighter';
-        ctx.fillRect(sx - 2, sy - 70, 4, 70);
-      }
       ctx.restore();
       const img = UI.iconImg(it.icon);
       if (img.complete) ctx.drawImage(img, sx - 13, sy - 26 - h, 26, 26);
+      if (it.grade >= 2 && landed) {
+        ctx.save();
+        ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'center';
+        const label = `[${D.GRADES[it.grade].name}] ${it.name}`, w = ctx.measureText(label).width + 10;
+        ctx.fillStyle = 'rgba(0,0,0,0.65)'; ctx.fillRect(sx - w / 2, sy - 50 - h, w, 17);
+        ctx.fillStyle = col; ctx.fillText(label, sx, sy - 37 - h);
+        ctx.restore();
+      }
     }
+  },
+  // column of light over 희귀+ loot: blue / red / gold, taller and busier with the grade
+  drawLootPillar(ctx, sx, sy, grade, col, t) {
+    const H = { 2: 150, 3: 220, 4: 320 }[grade], W = { 2: 16, 3: 22, 4: 30 }[grade];
+    const pulse = 0.75 + Math.sin(t * 4) * 0.25, rise = Math.min(1, (t - 0.45) / 0.35);
+    const hexA = (a) => { const n = parseInt(col.slice(1), 16); return `rgba(${n >> 16},${(n >> 8) & 255},${n & 255},${a})`; };
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    const top = sy - H * rise;
+    // soft outer beam, then a bright core
+    let g = ctx.createLinearGradient(0, sy, 0, top);
+    g.addColorStop(0, hexA(0.55 * pulse)); g.addColorStop(0.6, hexA(0.25 * pulse)); g.addColorStop(1, hexA(0));
+    ctx.fillStyle = g; ctx.fillRect(sx - W, top, W * 2, sy - top);
+    g = ctx.createLinearGradient(0, sy, 0, top);
+    g.addColorStop(0, `rgba(255,255,255,${0.7 * pulse})`); g.addColorStop(0.5, hexA(0.5 * pulse)); g.addColorStop(1, hexA(0));
+    ctx.fillStyle = g; ctx.fillRect(sx - W * 0.28, top, W * 0.56, sy - top);
+    // ground glow and an expanding ring
+    const rg = ctx.createRadialGradient(sx, sy, 2, sx, sy, W * 2.4);
+    rg.addColorStop(0, hexA(0.6)); rg.addColorStop(1, hexA(0));
+    ctx.fillStyle = rg; ctx.beginPath(); ctx.ellipse(sx, sy, W * 2.4, W * 0.9, 0, 0, Math.PI * 2); ctx.fill();
+    const ring = (t * 0.8) % 1;
+    ctx.strokeStyle = hexA(0.8 * (1 - ring)); ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.ellipse(sx, sy, 10 + ring * W * 2.2, (10 + ring * W * 2.2) * 0.38, 0, 0, Math.PI * 2); ctx.stroke();
+    // motes drifting up the column
+    const n = { 2: 6, 3: 9, 4: 14 }[grade];
+    for (let i = 0; i < n; i++) {
+      const ph = (t * 0.5 + i / n) % 1;
+      const px = sx + Math.sin(t * 2 + i * 2.1) * W * 0.8, py = sy - ph * H * rise;
+      ctx.fillStyle = i % 3 ? hexA(1 - ph) : `rgba(255,255,255,${1 - ph})`;
+      ctx.fillRect(px - 1.5, py - 1.5, 3, 3);
+    }
+    // 전설: slow rays turning at the base
+    if (grade >= 4) {
+      ctx.translate(sx, sy - 14);
+      ctx.rotate(t * 0.6);
+      for (let i = 0; i < 8; i++) {
+        ctx.rotate(Math.PI / 4);
+        ctx.fillStyle = hexA(0.12 * pulse);
+        ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-7, -70); ctx.lineTo(7, -70); ctx.closePath(); ctx.fill();
+      }
+    }
+    ctx.restore();
   },
   snapCamera() {
     const vw = innerWidth / this.zoom, vh = innerHeight / this.zoom;
@@ -347,6 +416,8 @@ const Game = {
     const w = toWorld(sx, sy);
     const e = entityAt(w.x, w.y);
     p.stopAll();
+    const loot = Game.drops.find((d) => Game.isGroundLoot(d) && Math.abs(w.x - d.x) < 26 && w.y > d.y - 60 && w.y < d.y + 14);
+    if (loot && !(e instanceof Monster)) { p.moveTo = { x: loot.x, y: loot.y }; return; }
     if (e instanceof Monster) { p.target = e; }
     else if (e instanceof NPC) { p.talkTo = e; }
     else {
