@@ -360,7 +360,7 @@ const UI = (() => {
     const dots = Content.menuDots(game.player);
     const top = [['shop', 'shop', '상점'], ['summon', 'summon', '소환'], ['event', 'event', '이벤트'], ['pass', 'pass', '시즌 패스'], ['skills', 'skill', '스킬'], ['inventory', 'inventory', '인벤토리']];
     const grid = [
-      ['character', 'character', '캐릭터'], ['stats', 'star', '잠재력'], ['skills', 'blade', '전투 특성'], ['transcend', 'transcend', '초월', 1], ['weaponlook', 'sword', '무기 외형'], ['collection', 'collection', '결속'], ['skin', 'wings', '스킨'],
+      ['character', 'character', '캐릭터'], ['stats', 'star', '잠재력'], ['skills', 'blade', '전투 특성'], ['transcend', 'transcend', '초월', 1], ['weaponlook', 'sword', '무기 외형'], ['skin', 'wings', '스킨'],
       ['teleport', 'teleport', '권능'], ['summon', 'summon', '서판 조합'], ['quests', 'quest', '퀘스트', 1], ['event', 'bell', '의뢰'], ['craft', 'craft', '제작'], ['achievement', 'achievement', '업적', 1], ['collection', 'spellbook', '수집', 1],
       ['pet', 'pet', '펫', 1], ['mount', 'mount', '탈것', 1], ['guild', 'guild', '혈맹', 1], ['ranking', 'ranking', '순위'], ['relation', 'trade', '관계'], ['exchange', 'exchange', '거래소'], ['siege', 'crown', '공성전'], ['ranking', 'skull', '원수'], ['auto', 'auto', 'AI 모드'],
       ['map', 'compass', '위치 저장'],

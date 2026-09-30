@@ -93,7 +93,7 @@ const Transcend = (() => {
           <button class="on">${ico('transcend')}초월</button>
           <button data-wl>${ico('sword')}무기 외형</button>
           <button data-soon>${ico('wings')}스킨</button>
-          <button data-soon>${ico('collection')}결속</button>
+          <button data-coll>${ico('collection')}수집</button>
         </div>
         <div class="tr-main">
           <div class="tr-head"><h3>초월 <span title="카드를 장착하면 외형이 변하고 능력치가 오릅니다." style="display:inline-flex;width:20px;height:20px;border-radius:50%;background:#333;font-size:12px;align-items:center;justify-content:center">?</span></h3>
@@ -142,6 +142,7 @@ const Transcend = (() => {
       const tb = t.closest('[data-tab]'); if (tb) { tab = tb.dataset.tab; return render(); }
       const f = t.closest('[data-filter]'); if (f) { filter = +f.dataset.filter; return render(); }
       if (t.closest('[data-close]')) { cancelAnimationFrame(raf); UI.close(); return; }
+      if (t.closest('[data-coll]')) return UI.open('collection');
       if (t.closest('[data-soon]')) return UI.toast('업데이트 예정입니다.');
       if (t.closest('[data-wl]')) { cancelAnimationFrame(raf); return UI.open('weaponlook'); }
       if (t.closest('[data-summon]')) return UI.open('summon');

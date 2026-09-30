@@ -358,7 +358,7 @@ const Pets = (() => {
           <button data-go="transcend">${ico('transcend')}초월</button>
           <button data-go="weaponlook">${ico('sword')}무기 외형</button>
           <button class="on">${ico('pet')}펫</button>
-          <button data-go="collection">${ico('collection')}결속</button>
+          <button data-go="collection">${ico('collection')}수집</button>
         </div>
         <div class="tr-main">
           <div class="tr-head"><h3>펫</h3>
