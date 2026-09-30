@@ -461,7 +461,7 @@ class Player extends Hero {
     this.aura(ctx, x, y);
     const id = Looks.current(this), look = Looks.BY_ID[id];
     if (this.mounted) {
-      const rrow = this.rideFace > 0 ? 11 : 9;
+      const rrow = this.rideVert < 0 ? 8 : this.rideVert > 0 ? 10 : this.rideFace > 0 ? 11 : 9; // back / front / side
       Mounts.drawEntity(ctx, cam, this, (g, fx, fy) => { g.imageSmoothingEnabled = false; Looks.drawComposite(g, this.sheet, id, rrow, 0, fx, fy, 1, { flash: this.flash, t: now }); });
       this.weaponPt = null; ctx.globalAlpha = 1;
       return;

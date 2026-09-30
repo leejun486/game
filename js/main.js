@@ -113,11 +113,16 @@ const Game = {
   // 희귀+ loot waits on the ground (pillar of light) until the player walks over it or clicks it;
   // anything plainer flies to a nearby player after a moment
   isGroundLoot(d) { return D.ITEMS[d.id].grade >= 2; },
-  dropped(it) {
+  dropped(it, drop) {
     if (it.grade < 2) return;
     const g = D.GRADES[it.grade];
     UI.chat(`[${g.name}] ${it.name}이(가) 바닥에 떨어졌습니다!`, 'drop');
-    if (it.grade >= 4) { U.sfx.legend(); this.shake = Math.max(this.shake, 6); }
+    if (it.grade >= 4) {
+      // 전설: a spear of light lands on the spot, shockwaves, a golden flash and a server-wide style banner
+      U.sfx.legend();
+      if (drop) this.fx.push(Combat.makeFx('legendfall', drop.x, drop.y));
+      UI.announce(`<em class="legend">[전설] ${UI.esc(it.name)}</em>이(가) 떨어졌습니다!`);
+    }
     else if (it.grade >= 3) U.sfx.success();
     else U.sfx.magic();
   },
@@ -136,7 +141,11 @@ const Game = {
       d.t += dt;
       if (!p || p.dead || d.t < 0.9) continue;
       const dist = Math.hypot(p.x - d.x, p.y - d.y);
-      if (this.isGroundLoot(d)) { if (dist < 40) { d.picked = true; this.pickup(d); } continue; }
+      if (this.isGroundLoot(d)) {
+        if (D.ITEMS[d.id].grade >= 4 && d.t > 0.5 && Math.random() < dt * 24) VFX.sparkle(d.x + U.rand(-40, 40), d.y + U.rand(-12, 12), U.rand(0, 200), '#ffd86a');
+        if (dist < 40) { d.picked = true; this.pickup(d); }
+        continue;
+      }
       if (dist > 700) continue;
       const sp = (420 + d.t * 400) * dt;
       if (dist < 24 || sp >= dist) { d.picked = true; this.pickup(d); }
@@ -186,7 +195,7 @@ const Game = {
   },
   // column of light over 희귀+ loot: blue / red / gold, taller and busier with the grade
   drawLootPillar(ctx, sx, sy, grade, col, t) {
-    const H = { 2: 150, 3: 220, 4: 320 }[grade], W = { 2: 16, 3: 22, 4: 30 }[grade];
+    const H = { 2: 150, 3: 220, 4: 480 }[grade], W = { 2: 16, 3: 22, 4: 36 }[grade];
     const pulse = 0.75 + Math.sin(t * 4) * 0.25, rise = Math.min(1, (t - 0.45) / 0.35);
     const hexA = (a) => { const n = parseInt(col.slice(1), 16); return `rgba(${n >> 16},${(n >> 8) & 255},${n & 255},${a})`; };
     ctx.save();
@@ -214,14 +223,41 @@ const Game = {
       ctx.fillStyle = i % 3 ? hexA(1 - ph) : `rgba(255,255,255,${1 - ph})`;
       ctx.fillRect(px - 1.5, py - 1.5, 3, 3);
     }
-    // 전설: slow rays turning at the base
     if (grade >= 4) {
+      // two ribbons of light winding up the column
+      for (const ph of [0, Math.PI]) {
+        ctx.strokeStyle = 'rgba(255,240,190,0.75)'; ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        for (let i = 0; i <= 40; i++) {
+          const q = i / 40, yy = sy - q * H * rise, xx = sx + Math.sin(q * 14 - t * 5 + ph) * W * (1.1 - q * 0.5);
+          ctx[i ? 'lineTo' : 'moveTo'](xx, yy);
+        }
+        ctx.stroke();
+      }
+      // twinkling four-point stars around the column
+      for (let i = 0; i < 7; i++) {
+        const tw = Math.max(0, Math.sin(t * 3 + i * 1.7));
+        if (tw < 0.2) continue;
+        const px = sx + Math.sin(i * 2.3) * W * 2.2, py = sy - (0.15 + ((i * 0.13 + t * 0.05) % 0.8)) * H * rise, L = 5 + tw * 7;
+        ctx.fillStyle = `rgba(255,248,210,${tw})`;
+        ctx.fillRect(px - L, py - 1, L * 2, 2); ctx.fillRect(px - 1, py - L, 2, L * 2);
+      }
+      // rune circle turning on the ground
+      ctx.save(); ctx.translate(sx, sy); ctx.scale(1, 0.4); ctx.rotate(t * 0.9);
+      ctx.strokeStyle = `rgba(255,215,110,${0.8 * pulse})`; ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.arc(0, 0, W * 2.1, 0, Math.PI * 2); ctx.stroke();
+      ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(0, 0, W * 1.6, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath();
+      for (let i = 0; i <= 5; i++) { const q = (i * 2 / 5) * Math.PI * 2; ctx[i ? 'lineTo' : 'moveTo'](Math.cos(q) * W * 1.6, Math.sin(q) * W * 1.6); }
+      ctx.stroke();
+      ctx.restore();
+      // slow rays turning at the base
       ctx.translate(sx, sy - 14);
       ctx.rotate(t * 0.6);
       for (let i = 0; i < 8; i++) {
         ctx.rotate(Math.PI / 4);
-        ctx.fillStyle = hexA(0.12 * pulse);
-        ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-7, -70); ctx.lineTo(7, -70); ctx.closePath(); ctx.fill();
+        ctx.fillStyle = hexA(0.16 * pulse);
+        ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-9, -110); ctx.lineTo(9, -110); ctx.closePath(); ctx.fill();
       }
     }
     ctx.restore();

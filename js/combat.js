@@ -81,7 +81,7 @@ const Combat = (() => {
         const n = D.ITEMS[id].kind === 'potion' ? U.randi(1, 3) : 1;
         const a = Math.random() * Math.PI * 2, r = U.rand(20, 60);
         game.drops.push({ id, n, x: mon.x + Math.cos(a) * r, y: mon.y + Math.sin(a) * r * 0.6, sx: mon.x, sy: mon.y, t: 0 });
-        game.dropped(D.ITEMS[id]);
+        game.dropped(D.ITEMS[id], game.drops[game.drops.length - 1]);
       }
     }
     if (d.boss && d.id !== 'dungeon') p.s.bossKills++;
@@ -247,17 +247,54 @@ const Combat = (() => {
   // ---------------------------------------------------------------- effects
   function makeFx(type, x, y, o = {}) {
     const dur = { spark: 0.25, slash: 0.22, bigslash: 0.35, doom: 0.5, whirl: 0.45, explode: 0.55, ice: 0.6, meteor: 1.25, rain: 0.9,
-      heal: 1.0, buff: 0.9, levelup: 1.8, teleport: 0.8, tpcast: 1.0, tparrive: 0.75, mote: 0.7, glint: 0.45, rune: 1.2, breath: 0.5, petbolt: 0.35, dash: 0.3, zap: 0.25, burst: 0.3, loot: 0.9 }[type] || 0.5;
+      heal: 1.0, buff: 0.9, levelup: 1.8, teleport: 0.8, tpcast: 1.0, tparrive: 0.75, mote: 0.7, glint: 0.45, rune: 1.2, breath: 0.5, petbolt: 0.35, dash: 0.3, zap: 0.25, burst: 0.3, loot: 0.9, castcircle: 0.75, shock: 0.5, pillar: 0.65, legendfall: 1.6 }[type] || 0.5;
     return Object.assign({ type, x, y, t: 0, dur }, o);
+  }
+  // extra punch layered on skill effects the frame they appear: shockwave rings, light, sparks, shake
+  function boost(game, f) {
+    const near = game.player && Math.hypot(f.x - game.player.x, f.y - game.player.y) < 900;
+    if (!near) return;
+    const ring = (r, color, dur) => game.fx.push(makeFx('shock', f.x, f.y, { r, color, dur }));
+    switch (f.type) {
+      case 'bigslash': ring(80, f.color || '#fff6d8'); VFX.sparkBurst(f.x, f.y + 26, 'spark', 10); break;
+      case 'doom': ring(150, f.color || '#ff4a2e'); ring(90, '#ffffff', 0.35); VFX.flash(f.x, f.y + 26, 220, f.color || '#ff4a2e', 0.4); VFX.sparkBurst(f.x, f.y + 26, 'ember', 20); game.shake = Math.max(game.shake, 7); break;
+      case 'whirl': ring((f.r || 120) * 1.15, '#fff2c4'); VFX.sparkBurst(f.x, f.y, 'spark', 14); break;
+      case 'explode': case 'burst': {
+        const r = f.r || 40;
+        ring(r * 1.5, f.color || '#ff8a2e'); if (r > 80) ring(r * 0.9, '#ffffff', 0.35);
+        VFX.flash(f.x, f.y, r * 2, f.color || '#ff8a2e', 0.35);
+        if (r > 60) { VFX.sparkBurst(f.x, f.y, 'ember', 16); game.shake = Math.max(game.shake, 5); }
+        break;
+      }
+      case 'dash': VFX.sparkBurst(f.to[0], f.to[1], 'spark', 12); ring(70, f.color || '#fff3c0'); break;
+      case 'zap': VFX.flash(f.to[0], f.to[1], 90, f.color || '#aee6ff', 0.25); break;
+      case 'heal': case 'buff': if (!f.small) game.fx.push(makeFx('pillar', f.x, f.y, { color: f.color, follow: f.follow })); break;
+      case 'legendfall': break;
+    }
   }
   function updateFx(game, dt) {
     for (const f of game.fx) {
+      if (!f.boosted) { f.boosted = true; boost(game, f); }
       f.t += dt;
       if (f.follow) { f.x = f.follow.x; f.y = f.follow.y; }
+      if (f.type === 'legendfall' && !f.landed && f.t >= 0.35) {
+        f.landed = true;
+        for (const [r, c, d] of [[260, '#ffd86a', 0.7], [160, '#ffffff', 0.45], [380, '#ffb13a', 0.9]]) game.fx.push(makeFx('shock', f.x, f.y, { r, color: c, dur: d }));
+        VFX.flash(f.x, f.y, 520, '#ffd86a', 0.9);
+        VFX.sparkBurst(f.x, f.y, 'ember', 40);
+        for (let i = 0; i < 24; i++) VFX.sparkle(f.x + U.rand(-90, 90), f.y + U.rand(-30, 30), U.rand(0, 120), '#ffe9a0');
+        game.shake = Math.max(game.shake, 14);
+        U.sfx.boom();
+      }
       if (f.type === 'meteor' && !f.landed) {
         const q = Math.min(1, f.t / 0.7);
         VFX.trail('fire', f.x + (1 - q) * 260, f.y - (1 - q) * 520 - 20, dt, true);
-        if (f.t >= 0.7) { f.landed = true; VFX.fireBurst(f.x, f.y, f.r || 90, (f.r || 90) > 120 ? 1.6 : 0.9); VFX.debris(f.x, f.y, 12); f.onLand && f.onLand(); }
+        if (f.t >= 0.7) {
+          f.landed = true; VFX.fireBurst(f.x, f.y, f.r || 90, (f.r || 90) > 120 ? 1.6 : 0.9); VFX.debris(f.x, f.y, 12);
+          game.fx.push(makeFx('shock', f.x, f.y, { r: (f.r || 90) * 1.7, color: '#ff8a2e', dur: 0.6 }), makeFx('shock', f.x, f.y, { r: (f.r || 90) * 1.1, color: '#fff2c4', dur: 0.4 }));
+          VFX.sparkBurst(f.x, f.y, 'ember', 24);
+          f.onLand && f.onLand();
+        }
       }
     }
     game.fx = game.fx.filter((f) => f.t < f.dur);
@@ -506,6 +543,71 @@ const Combat = (() => {
           ctx.font = 'bold 22px Georgia, serif'; ctx.textAlign = 'center';
           ctx.lineWidth = 4; ctx.strokeStyle = '#3a2400'; ctx.strokeText('LEVEL UP!', x, y - 110 - k * 30);
           ctx.fillStyle = '#ffe38a'; ctx.fillText('LEVEL UP!', x, y - 110 - k * 30);
+        }
+        break;
+      }
+      case 'castcircle': { // rotating magic circle under the caster with a burst of light
+        const a = k < 0.15 ? k / 0.15 : 1 - (k - 0.15) / 0.85, R = 44 + k * 18, col = f.color || '#ffd86a';
+        ctx.globalCompositeOperation = 'lighter';
+        const col2 = ctx.createLinearGradient(0, y, 0, y - 150);
+        col2.addColorStop(0, hexA(col, 0.45 * a)); col2.addColorStop(1, hexA(col, 0));
+        ctx.fillStyle = col2; ctx.fillRect(x - 22, y - 150, 44, 150);
+        ctx.translate(x, y); ctx.scale(1, 0.42); ctx.rotate(f.t * 2.4);
+        ctx.strokeStyle = hexA(col, 0.9 * a); ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.arc(0, 0, R, 0, Math.PI * 2); ctx.stroke();
+        ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, 0, R * 0.72, 0, Math.PI * 2); ctx.stroke();
+        ctx.strokeStyle = hexA('#ffffff', 0.7 * a); ctx.lineWidth = 1.5;
+        for (let tri = 0; tri < 2; tri++) {
+          ctx.beginPath();
+          for (let i = 0; i <= 3; i++) { const q = (i / 3) * Math.PI * 2 + tri * Math.PI / 3; ctx[i ? 'lineTo' : 'moveTo'](Math.cos(q) * R * 0.72, Math.sin(q) * R * 0.72); }
+          ctx.stroke();
+        }
+        ctx.fillStyle = hexA(col, a);
+        for (let i = 0; i < 12; i++) { const q = (i / 12) * Math.PI * 2; ctx.fillRect(Math.cos(q) * R * 0.86 - 2, Math.sin(q) * R * 0.86 - 2, 4, 4); }
+        const g = ctx.createRadialGradient(0, 0, 0, 0, 0, R);
+        g.addColorStop(0, hexA(col, 0.35 * a)); g.addColorStop(1, hexA(col, 0));
+        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, R, 0, Math.PI * 2); ctx.fill();
+        break;
+      }
+      case 'shock': { // expanding ground ring
+        const q = 1 - Math.pow(1 - k, 2), R = (f.r || 100) * (0.15 + q * 0.95);
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.translate(x, y); ctx.scale(1, 0.45);
+        ctx.strokeStyle = hexA(f.color || '#ffffff', 0.9 * (1 - k)); ctx.lineWidth = 10 * (1 - k) + 1.5;
+        ctx.beginPath(); ctx.arc(0, 0, R, 0, Math.PI * 2); ctx.stroke();
+        ctx.strokeStyle = hexA('#ffffff', 0.6 * (1 - k)); ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(0, 0, R * 0.92, 0, Math.PI * 2); ctx.stroke();
+        break;
+      }
+      case 'pillar': { // column of light for buffs and heals
+        const a = (1 - k) * Math.min(1, k * 6), W = 26 * (1 - k * 0.4), col = f.color || '#ffffff';
+        ctx.globalCompositeOperation = 'lighter';
+        const g = ctx.createLinearGradient(0, y, 0, y - 200);
+        g.addColorStop(0, hexA(col, 0.6 * a)); g.addColorStop(0.7, hexA(col, 0.2 * a)); g.addColorStop(1, hexA(col, 0));
+        ctx.fillStyle = g; ctx.fillRect(x - W, y - 200, W * 2, 200);
+        ctx.fillStyle = hexA('#ffffff', 0.5 * a); ctx.fillRect(x - W * 0.2, y - 200, W * 0.4, 200);
+        break;
+      }
+      case 'legendfall': { // a spear of gold light drops from the sky onto a 전설 drop, then radiates
+        ctx.globalCompositeOperation = 'lighter';
+        if (f.t < 0.35) {
+          const q = f.t / 0.35, top = y - 900, bot = top + (900 * q);
+          const g = ctx.createLinearGradient(0, top, 0, bot);
+          g.addColorStop(0, 'rgba(255,220,120,0)'); g.addColorStop(1, 'rgba(255,240,190,0.95)');
+          ctx.fillStyle = g; ctx.fillRect(x - 26, top, 52, bot - top);
+          ctx.fillStyle = 'rgba(255,255,255,0.9)'; ctx.fillRect(x - 6, top, 12, bot - top);
+        } else {
+          const q = (f.t - 0.35) / (f.dur - 0.35), a = 1 - q;
+          const g = ctx.createRadialGradient(x, y - 30, 0, x, y - 30, 240 * (0.4 + q));
+          g.addColorStop(0, `rgba(255,250,220,${0.9 * a})`); g.addColorStop(0.3, `rgba(255,200,80,${0.55 * a})`); g.addColorStop(1, 'rgba(255,150,0,0)');
+          ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y - 30, 240 * (0.4 + q), 0, Math.PI * 2); ctx.fill();
+          ctx.translate(x, y - 30); ctx.rotate(f.t * 1.2);
+          for (let i = 0; i < 16; i++) {
+            ctx.rotate(Math.PI / 8);
+            ctx.fillStyle = `rgba(255,225,130,${0.28 * a})`;
+            const L = 180 + q * 260;
+            ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-10 - q * 10, -L); ctx.lineTo(10 + q * 10, -L); ctx.closePath(); ctx.fill();
+          }
         }
         break;
       }

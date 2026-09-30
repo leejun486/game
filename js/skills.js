@@ -272,6 +272,7 @@ const Skills = (() => {
     if (target) p.face(target);
     p.combatT = 5;
     UI.skillName(displayName(p, id));
+    if (p === game.player) game.fx.push(Combat.makeFx('castcircle', p.x, p.y, { follow: p, color: { knight: '#ff8a3a', elf: '#6dffb0', mage: '#a88bff' }[p.cls] }));
     const R = (r) => r * (1 + (m.radius || 0));
     const doIt = IMPL[id];
     p.act(sk.anim, dur, () => doIt(p, sk, m, target, game, R, base));

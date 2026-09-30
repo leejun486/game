@@ -843,8 +843,10 @@ const Mounts = (() => {
   function tick(e, dt, game) {
     if (!e.mounted) return;
     const d = BY_ID[e.mountId];
-    const dxm = e.x - (e.rideLX ?? e.x);
+    const dxm = e.x - (e.rideLX ?? e.x), dym = e.y - (e.rideLY ?? e.y);
     if (Math.abs(dxm) > 0.25) e.rideFace = dxm > 0 ? 1 : -1;
+    // mostly up or down: the mount turns away from / toward the camera (see drawRidden)
+    if (Math.hypot(dxm, dym) > 0.3) e.rideVert = Math.abs(dym) > Math.abs(dxm) * 1.15 ? Math.sign(dym) : 0;
     else if (e.rideFace === undefined) e.rideFace = e.dir === 1 ? -1 : 1;
     const moved = Math.hypot(e.x - (e.rideLX ?? e.x), e.y - (e.rideLY ?? e.y));
     e.rideLX = e.x; e.rideLY = e.y;
@@ -927,8 +929,9 @@ const Mounts = (() => {
     return f.saddle;
   }
   // riderFn(g, feetX, feetY) draws the rider standing with feet at the given point
-  function drawRidden(ctx, id, x, y, face, st, riderFn, scaleMul = 1) {
+  function drawRidden(ctx, id, x, y, face, st, riderFn, scaleMul = 1, vert = 0) {
     const d = BY_ID[id], sc = d.scale * scaleMul, direct = scaleMul !== 1 || !riderFn;
+    if (vert && !direct) return drawRiddenVertical(ctx, d, x, y, face, st, riderFn, sc, vert);
     ctx.fillStyle = 'rgba(0,0,0,0.3)';
     ctx.beginPath(); ctx.ellipse(x, y, d.w * 0.42 * sc * (d.fly ? 0.7 : 1), 5.5 * sc, 0, 0, Math.PI * 2); ctx.fill();
     const saddle = drawLayer(ctx, d, 'back', x, y, face, st, sc, direct, !riderFn);
@@ -947,6 +950,32 @@ const Mounts = (() => {
     drawLayer(ctx, d, 'front', x, y, face, st, sc, direct, !riderFn);
     return { saddleY: saddle[1] * sc };
   }
+  // riding up (vert -1) or down (+1) the screen: the side-view mount is foreshortened and tipped so its head
+  // points into the distance or toward the camera, and the rider (drawn from the back or front row) sits
+  // square on the saddle, behind the head when coming closer and in front of it when riding away
+  function drawRiddenVertical(ctx, d, x, y, face, st, riderFn, sc, vert) {
+    const SX = 0.56, SH = vert * 0.42 * face;
+    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+    ctx.beginPath(); ctx.ellipse(x, y, d.w * 0.42 * sc * SX * (d.fly ? 0.7 : 1), 9 * sc, 0, 0, Math.PI * 2); ctx.fill();
+    const layer = (name) => {
+      ctx.save(); ctx.translate(Math.round(x), Math.round(y)); ctx.transform(SX, SH, 0, 1, 0, 0);
+      const s = drawLayer(ctx, d, name, 0, 0, face, st, sc, false, false);
+      ctx.restore();
+      return s;
+    };
+    const saddle = layer('back');
+    const px = saddle[0] * sc * face;
+    const sx = Math.round(x + px * SX), sy = Math.round(y + saddle[1] * sc + px * SH);
+    const rider = () => {
+      rg.setTransform(1, 0, 0, 1, 0, 0); rg.clearRect(0, 0, rc.width, rc.height);
+      riderFn(rg, 96, RIDER_FEET);
+      ctx.save(); ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(rc, 0, 0, 192, RIDER_FEET - 6, sx - 96, sy - RIDER_HIP, 192, RIDER_FEET - 6);
+      ctx.restore();
+    };
+    if (vert < 0) { layer('front'); rider(); } else { rider(); layer('front'); }
+    return { saddleY: saddle[1] * sc };
+  }
   // draw an entity riding its mount (player or bot)
   function drawEntity(ctx, cam, e, riderFn) {
     let y = e.y - cam.y;
@@ -954,7 +983,7 @@ const Mounts = (() => {
     const st = { t: e.rideT || 0, ph: e.ridePh || 0, moving: e.rideMoving, atk: 0 };
     if (em && em.kind === 'hop') y -= Math.abs(Math.sin(em.t * 8)) * 8;
     if (em && em.kind === 'rear') st.atk = 1;
-    const r = drawRidden(ctx, e.mountId, e.x - cam.x, y, e.rideFace, st, riderFn);
+    const r = drawRidden(ctx, e.mountId, e.x - cam.x, y, e.rideFace, st, riderFn, 1, e.rideVert || 0);
     if (em && em.kind === 'hearts') {
       const k = em.t / em.dur;
       ctx.save(); ctx.globalAlpha = 1 - k; ctx.fillStyle = '#ff6f9a'; ctx.font = 'bold 13px sans-serif'; ctx.textAlign = 'center';

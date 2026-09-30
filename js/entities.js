@@ -11,7 +11,9 @@ const ANIMS = {
 };
 // direction indices in LPC sheets: 0 up, 1 left, 2 down, 3 right
 function dirFromVec(dx, dy) {
-  if (Math.abs(dx) > Math.abs(dy)) return dx < 0 ? 1 : 3;
+  // heading upward shows the back until the path is well over toward sideways (~60° off vertical);
+  // a plain 45° split made climbing paths read as a sideways shuffle
+  if (Math.abs(dx) > Math.abs(dy) * (dy < 0 ? 1.7 : 1)) return dx < 0 ? 1 : 3;
   return dy < 0 ? 0 : 2;
 }
 // diagonal facing for sheets that carry diagonal rows (21-40): 0 up-left, 1 down-left, 2 down-right, 3 up-right, -1 none
@@ -476,7 +478,7 @@ class Bot extends Hero {
   }
   draw(ctx, cam) {
     if (!this.mounted || this.dead) return super.draw(ctx, cam);
-    const img = Sprites[this.sheet], row = this.rideFace > 0 ? 11 : 9;
+    const img = Sprites[this.sheet], row = this.rideVert < 0 ? 8 : this.rideVert > 0 ? 10 : this.rideFace > 0 ? 11 : 9;
     if (this.fadeIn > 0) ctx.globalAlpha = 1 - this.fadeIn / 0.45;
     Mounts.drawEntity(ctx, cam, this, (g, fx, fy) => { g.imageSmoothingEnabled = false; if (img) { const F = window.SPRITE_FRAME[this.sheet] || 64; g.drawImage(img, 0, row * F, F, F, fx - F / 2, fy - F + 8, F, F); } });
     ctx.globalAlpha = 1;
