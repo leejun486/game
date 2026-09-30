@@ -174,7 +174,7 @@ class Entity {
     }
     ctx.globalAlpha = 1;
   }
-  get headY() { return this.y - 58 * this.scale; }
+  get headY() { return this.def && this.def.height ? this.y - this.def.height : this.y - 58 * this.scale; }
 }
 Entity.nextId = 1;
 
@@ -196,7 +196,7 @@ class Monster extends Entity {
     this.def = def; this.spawn = spawn; this.home = { x: p.x, y: p.y };
     this.atk = def.atk; this.def_ = def.def; this.lv = def.lv;
     this.target = null; this.atkCd = U.rand(0, 1); this.wanderT = U.rand(1, 4); this.wanderTo = null;
-    this.radius = 14 * def.scale; this.team = 'mob';
+    this.radius = def.radius || 14 * def.scale; this.team = 'mob';
     this.damagedBy = new Map();
   }
   static spawnPoint(s) {
@@ -217,16 +217,20 @@ class Monster extends Entity {
     ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y - 40 * this.scale, 60 * this.scale, 0, Math.PI * 2); ctx.fill();
     ctx.restore();
   }
-  draw(ctx, cam) { super.draw(ctx, cam); if (!this.dead && (this.frozenT > 0 || this.chillT > 0)) VFX.status(ctx, cam, this); }
+  draw(ctx, cam) {
+    if (this.def.structure) return Siege.drawStructure(ctx, cam, this); // castle gate / guardian tower
+    super.draw(ctx, cam); if (!this.dead && (this.frozenT > 0 || this.chillT > 0)) VFX.status(ctx, cam, this);
+  }
   aggroOn(e) { if (!this.dead && e && !e.dead) this.target = e; }
   update(dt, game) {
     super.update(dt);
     if (this.dead) return;
+    if (this.def.structure) { this.moving = false; this.action = null; this.stunT = 0; return Siege.structureTick(this, dt, game); }
     if (this.chillT > 0) this.chillT -= dt;
     if (this.frozenT > 0) this.frozenT -= dt;
     if (this.stunT > 0) { this.stunT -= dt; this.moving = false; this.action = null; return; }
     this.atkCd -= dt;
-    const leash = !this.inDungeon && Math.hypot(this.x - this.home.x, this.y - this.home.y) > 950;
+    const leash = !this.inDungeon && !this.siege && Math.hypot(this.x - this.home.x, this.y - this.home.y) > 950;
     if (this.target && (this.target.dead || leash || this.target.inTown || U.dist(this, this.target) > 900)) {
       this.target = null; this.returning = leash;
     }
@@ -265,7 +269,9 @@ class Monster extends Entity {
           this.atkCd = this.def.boss ? 1.6 : 1.5;
           const tgt = this.target;
           const heavy = this.def.boss && Math.random() < 0.25;
-          this.act(heavy ? 'thrust' : 'slash', 0.5, () => Combat.monsterHit(this, tgt, heavy));
+          if (this.def.ranged) { // castle archers: an arrow flies, then the hit lands
+            this.act('shoot', 0.5, () => { game.fx.push(Combat.makeFx('mobarrow', this.x, this.y - 34, { tx: tgt.x, ty: tgt.y - 26, dur: 0.22 })); setTimeout(() => Combat.monsterHit(this, tgt, false), 220); });
+          } else this.act(heavy ? 'thrust' : 'slash', 0.5, () => Combat.monsterHit(this, tgt, heavy));
         }
       }
       return;
@@ -348,9 +354,10 @@ class Monster extends Entity {
       const t = performance.now() / 1000;
       for (let i = 0; i < 3; i++) { const a = t * 5 + (i / 3) * Math.PI * 2; drawLabel(ctx, '★', x + Math.cos(a) * 14, y - 14 + Math.sin(a) * 4, '#ffe28a', '11px sans-serif'); }
     }
-    const col = this.def.boss ? '#ff6b5e' : this.def.aggro ? '#ffb3a8' : '#f0f0f0';
-    drawLabel(ctx, (this.def.boss ? '[보스] ' : '') + this.name, x, y - 4, col, this.def.boss ? 'bold 13px sans-serif' : '12px sans-serif');
-    if (isTarget || this.hp < this.maxHp) drawHpBar(ctx, x, y, this.def.boss ? 90 : 44, this.hp / this.maxHp);
+    const big = this.def.boss || this.def.structure;
+    const col = big ? '#ff6b5e' : this.def.aggro ? '#ffb3a8' : '#f0f0f0';
+    drawLabel(ctx, (this.def.boss ? '[보스] ' : '') + this.name, x, y - 4, col, big ? 'bold 13px sans-serif' : '12px sans-serif');
+    if (isTarget || this.hp < this.maxHp || this.def.structure) drawHpBar(ctx, x, y, this.def.structure ? 150 : big ? 90 : 44, this.hp / this.maxHp);
     if (isTarget) {
       ctx.strokeStyle = 'rgba(255,80,60,0.9)'; ctx.lineWidth = 2;
       ctx.beginPath(); ctx.ellipse(this.x - cam.x, this.y - cam.y, 22 * this.scale, 9 * this.scale, 0, 0, Math.PI * 2); ctx.stroke();

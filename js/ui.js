@@ -349,7 +349,7 @@ const UI = (() => {
     const grid = [
       ['character', 'character', '캐릭터'], ['stats', 'star', '잠재력'], ['skills', 'blade', '전투 특성'], ['transcend', 'transcend', '초월', 1], ['weaponlook', 'sword', '무기 외형'], ['collection', 'collection', '결속'], ['skin', 'wings', '스킨'],
       ['teleport', 'teleport', '권능'], ['summon', 'summon', '서판 조합'], ['quests', 'quest', '퀘스트', 1], ['event', 'bell', '의뢰'], ['craft', 'craft', '제작'], ['achievement', 'achievement', '업적', 1], ['collection', 'spellbook', '수집', 1],
-      ['pet', 'pet', '펫', 1], ['mount', 'mount', '탈것', 1], ['guild', 'guild', '길드', 1], ['ranking', 'ranking', '순위'], ['relation', 'trade', '관계'], ['exchange', 'exchange', '거래소'], ['pvp', 'pvp', 'PvP'], ['ranking', 'skull', '원수'], ['auto', 'auto', 'AI 모드'],
+      ['pet', 'pet', '펫', 1], ['mount', 'mount', '탈것', 1], ['guild', 'guild', '혈맹', 1], ['ranking', 'ranking', '순위'], ['relation', 'trade', '관계'], ['exchange', 'exchange', '거래소'], ['siege', 'crown', '공성전'], ['ranking', 'skull', '원수'], ['auto', 'auto', 'AI 모드'],
       ['map', 'compass', '위치 저장'],
     ];
     el.innerHTML = `
@@ -360,7 +360,7 @@ const UI = (() => {
         <button data-a="transcend" style="background:linear-gradient(90deg,rgba(0,0,0,.6),rgba(0,0,0,.1)),linear-gradient(120deg,#5a4630,#2a2016)">성소<small>초월 · 영혼의 성소</small></button>
         <button data-a="bosstime" style="background:linear-gradient(90deg,rgba(0,0,0,.5),rgba(0,0,0,.1)),radial-gradient(circle at 70% 60%,#d9a24a,#1a1206 60%)">이클립스 타임<small>보스 출현 정보</small></button>
         <button data-a="dungeon" style="background:linear-gradient(90deg,rgba(0,0,0,.6),rgba(0,0,0,.1)),radial-gradient(circle at 75% 50%,#7a3ad0,#150a24 65%)">던전<small>이클립스 균열 · 일일 3회</small></button>
-        <button data-a="pvp" style="background:linear-gradient(90deg,rgba(0,0,0,.6),rgba(0,0,0,.1)),linear-gradient(120deg,#6a4a3a,#1d1410)">전장<small>업데이트 예정</small></button>
+        <button data-a="siege" style="background:linear-gradient(90deg,rgba(0,0,0,.6),rgba(0,0,0,.1)),linear-gradient(120deg,#6a4a3a,#1d1410)">공성전<small>아스텔라 성 · 혈맹 전쟁</small></button>
       </div>
       <div class="icon-grid">${grid.map(([a, i, t, dot]) => `<button data-a="${a}">${ico(i)}<span>${t}</span>${dot ? '<i class="dot"></i>' : ''}</button>`).join('')}</div>
       <div class="menu-side">

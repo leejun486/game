@@ -8,6 +8,8 @@ D.MAP_H = 180;
 D.DUNGEON_RECT = { x0: 148, y0: 4, x1: 177, y1: 32 };
 D.DUNGEON_CENTER = { x: 162.5, y: 18 };
 D.TOWN = { x: 90 * 64, y: 90 * 64, r: 15 * 64 };
+// 아스텔라 성 (공성전, js/siege.js): outer wall rect, the gate gap in its south wall, the inner keep and its tower
+D.CASTLE = { x0: 114, y0: 6, x1: 142, y1: 30, gate: [127, 129], keep: { x0: 121, y0: 9, x1: 135, y1: 18 }, tower: { x: 128, y: 13 } };
 
 D.GRADES = [
   { name: '일반', cls: 'g0', color: '#b8b8b8' },
@@ -134,6 +136,7 @@ D.MAX_LV = 80;
 D.ZONES = [
   { id: 'town', name: '라스카노 마을', safe: true, test: (tx, ty) => Math.abs(tx - 90) <= 15 && Math.abs(ty - 90) <= 15 },
   { id: 'dungeon', name: '이클립스 균열', dungeon: true, test: (tx, ty) => tx >= 148 && tx <= 177 && ty >= 4 && ty <= 32 },
+  { id: 'castle', name: '아스텔라 성', test: (tx, ty) => tx >= 111 && tx <= 145 && ty >= 3 && ty <= 40 },
   { id: 'snow', name: '서리 설원', test: (tx, ty) => tx < 52 && ty < 58 },
   { id: 'field', name: '바람의 초원', test: (tx, ty) => ty < 75 && tx >= 50 && tx <= 130 },
   { id: 'volcano', name: '화염의 용암지대', test: (tx, ty) => tx >= 128 && ty >= 118 },
@@ -192,6 +195,7 @@ D.TELEPORTS = [
   { name: '트롤 서식지', x: 100, y: 144, cost: 1500, lv: 'Lv.30~' },
   { name: '서리 설원', x: 46, y: 54, cost: 2500, lv: 'Lv.40~' },
   { name: '화염의 용암지대', x: 134, y: 122, cost: 4000, lv: 'Lv.55~' },
+  { name: '아스텔라 성 (공성전)', x: 128, y: 37, cost: 1500, lv: '혈맹' },
   { name: '녹스의 성채', x: 45, y: 125, cost: 6000, lv: 'Lv.70~' },
 ];
 

@@ -79,6 +79,7 @@ const Combat = (() => {
   function kill(game, mon, killer) {
     mon.dead = true; mon.deadT = 0; mon.action = null; mon.target = null;
     game.scheduleRespawn(mon);
+    Siege.onKill(game, mon);
     const byPlayer = killer === game.player || mon.damagedBy.has('player');
     if (!byPlayer) return;
     const p = game.player;
@@ -107,6 +108,7 @@ const Combat = (() => {
     }
     if (d.boss && d.id !== 'dungeon') p.s.bossKills++;
     Content.passXp(p, d.boss ? 30 : 1);
+    Content.clanXp(p, d.boss ? 60 : 1);
     if (Math.random() < (d.boss ? 1 : 0.004)) { const dia = d.boss ? U.randi(80, 200) : U.randi(1, 5); p.s.dia += dia; UI.chat(`다이아 ${dia}개를 획득했습니다.`, 'drop'); }
     if (d.boss) UI.announce(`<b>${p.name}</b>님이 <em>${d.name}</em>을(를) 처치했습니다!`);
     Quests.onKill(game, d.id);
@@ -342,6 +344,13 @@ const Combat = (() => {
         const r = big ? 46 : 30, st = -2.4 + (f.dir || 0) * 0.6;
         ctx.beginPath(); ctx.arc(x, y, r, st + k * 1.2, st + 1.8 + k * 1.2); ctx.stroke();
         if (big) { ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(x, y, r * 0.7, st + 0.6 + k * 1.5, st + 2.4 + k * 1.5); ctx.stroke(); }
+        break;
+      }
+      case 'mobarrow': { // enemy archer's arrow, (x, y) -> (tx, ty)
+        const ax = U.lerp(f.x, f.tx, k) - cam.x, ay = U.lerp(f.y, f.ty, k) - cam.y, an = Math.atan2(f.ty - f.y, f.tx - f.x);
+        ctx.translate(ax, ay); ctx.rotate(an);
+        ctx.strokeStyle = '#d8c8a0'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-18, 0); ctx.lineTo(6, 0); ctx.stroke();
+        ctx.fillStyle = '#eee'; ctx.beginPath(); ctx.moveTo(8, 0); ctx.lineTo(2, -3); ctx.lineTo(2, 3); ctx.fill();
         break;
       }
       case 'stompwarn': { // ground ring that fills up until the stomp lands

@@ -129,6 +129,9 @@ const Content = (() => {
     s.ach = s.ach || {};
     s.coll = s.coll || {};
     s.guild = s.guild || '';
+    s.clans = s.clans || {}; // clan level per clan name: { lv, xp, day, don }
+    s.myClan = s.myClan || null; // { name, color } of a clan the player founded
+    s.clanBots = s.clanBots || []; // bots recruited into it (their clan isn't saved on the bots)
     s.dungeon = s.dungeon || { day: '', used: 0, clears: 0 };
     s.bossKills = s.bossKills || 0;
     // v2 quest list removed the old #3 (초월 카드 장착) quest: shift saves past it
@@ -136,12 +139,45 @@ const Content = (() => {
     // v3: story chapters added report quests between chapters
     if (s.qv === 2) { s.quest = s.quest >= 23 ? D.QUESTS.length : D.QUEST_V2_TO_V3(s.quest); s.qv = 3; s.introSeen = true; }
   }
+  // ---------------------------------------------------------------- clans
+  // clan level (1~10) grows from kills, bosses, donations and sieges; each level adds attack and HP.
+  // A founded clan has its own name and colour and recruits bots; holding 아스텔라 성 adds the castle buff.
+  const CLAN_MAX = 10, DONATE = { gold: 10000, xp: 150, perDay: 5 }, FOUND = { gold: 100000, lv: 20 };
+  const clanNeed = (lv) => 300 * lv * lv;
+  const CASTLE_BONUS = { atk: 12, hp: 400, def: 6 };
+  function allGuilds(p) {
+    const own = p.s.myClan && { name: p.s.myClan.name, desc: '내가 세운 혈맹', bonus: { atk: 3, hp: 80 }, label: '공격력 +3, 최대 HP +80', own: true };
+    return own ? [own, ...GUILDS] : GUILDS;
+  }
+  function clanInfo(p) {
+    if (!p.s.guild) return null;
+    const c = p.s.clans[p.s.guild] = p.s.clans[p.s.guild] || { lv: 1, xp: 0, day: '', don: 0 };
+    return c;
+  }
+  const clanLvBonus = (lv) => ({ atk: (lv - 1) * 2, hp: (lv - 1) * 40 });
+  function clanXp(p, n) {
+    const c = clanInfo(p);
+    if (!c || c.lv >= CLAN_MAX) return;
+    c.xp += n;
+    let up = false;
+    while (c.lv < CLAN_MAX && c.xp >= clanNeed(c.lv)) { c.xp -= clanNeed(c.lv); c.lv++; up = true; }
+    if (up) {
+      UI.announce(`<b>[${esc(p.s.guild)}]</b> 혈맹이 <em>${c.lv}레벨</em>이 되었습니다!`);
+      U.sfx.success(); p.recalc(); UI.refreshHud();
+    }
+  }
+  // bots don't save their clan: put recruited ones back into the player's founded clan
+  function syncClanBots(p) {
+    if (!p.s.myClan) return;
+    for (const b of Game.bots) if (p.s.clanBots.includes(b.name)) b.guild = p.s.myClan.name;
+  }
   // extra stats from collections + guild, consumed by Player.recalc
   function bonuses(p) {
     const out = [];
     for (const c of COLL) if (complete(p, c)) out.push(c.bonus);
-    const g = GUILDS.find((x) => x.name === p.s.guild);
-    if (g) out.push(g.bonus);
+    const g = allGuilds(p).find((x) => x.name === p.s.guild);
+    if (g) { out.push(g.bonus); out.push(clanLvBonus(clanInfo(p).lv)); }
+    if (g && Siege.isOwner(p)) out.push(CASTLE_BONUS);
     return out;
   }
   function give(p, r) {
@@ -357,23 +393,106 @@ const Content = (() => {
     const { body } = UI.makePanel('혈맹');
     const render = () => {
       const p = Game.player;
-      const members = (g) => Game.bots.filter((b) => b.guild === g).length + (p.s.guild === g ? 1 : 0);
-      body.innerHTML = `<p style="margin-top:0;color:#a39a88">${p.s.guild ? `현재 <b style="color:#ffd76a">[${esc(p.s.guild)}]</b> 혈맹 소속입니다.` : '가입할 혈맹을 선택하세요. 혈맹마다 고유한 혈맹 버프가 있습니다.'}</p>` +
-        GUILDS.map((g) => `<div class="list-row ${p.s.guild === g.name ? 'me' : ''}"><div style="display:flex;gap:10px;align-items:center">${ico('guild')}<div><b>${g.name}</b> <span class="sub">멤버 ${members(g.name)}명</span><div class="sub">${g.desc} · 혈맹 버프: <span style="color:#7ee07e">${g.label}</span></div></div></div>
-          ${p.s.guild === g.name ? '<button class="red-btn" data-leave>탈퇴</button>' : `<button class="dark-btn" data-join="${g.name}" ${p.s.guild ? 'disabled' : ''}>가입</button>`}</div>`).join('');
-      body.querySelectorAll('.list-row img').forEach((i) => { i.style.width = '34px'; });
+      syncClanBots(p);
+      const members = (g) => Game.bots.filter((b) => b.guild === g);
+      const list = allGuilds(p);
+      const cur = list.find((g) => g.name === p.s.guild);
+      let html = '';
+      if (cur) {
+        const c = clanInfo(p), need = clanNeed(c.lv), lb = clanLvBonus(c.lv), own = cur.own;
+        const donLeft = c.day === new Date().toDateString() ? DONATE.perDay - c.don : DONATE.perDay;
+        const mem = members(cur.name);
+        const castle = Siege.isOwner(p);
+        html += `<div class="clan-card"><div style="display:flex;gap:12px;align-items:center">
+            <div class="castle-card" style="margin:0;padding:0;border:0;background:none"><div class="flag" style="background:${Siege.colorOf(cur.name)}"></div></div>
+            <div style="flex:1"><b style="font-size:17px;color:var(--gold)">[${esc(cur.name)}]</b> <span class="sub">Lv.${c.lv}${castle ? ' · 🏰 아스텔라 성주' : ''} · 멤버 ${mem.length + 1}명</span>
+              <div class="xp"><i style="width:${c.lv >= CLAN_MAX ? 100 : Math.round((c.xp / need) * 100)}%"></i></div>
+              <div class="sub">${c.lv >= CLAN_MAX ? '최대 레벨' : `혈맹 경험치 ${U.fmt(c.xp)} / ${U.fmt(need)} (사냥 1, 보스 60, 기부 ${DONATE.xp}, 공성 승리 800)`}</div>
+              <div class="sub" style="color:#7ee07e">혈맹 버프: ${cur.label}${c.lv > 1 ? `, 레벨 보너스 공격력 +${lb.atk} · HP +${lb.hp}` : ''}${castle ? `, 성주 버프 공격력 +${CASTLE_BONUS.atk} · HP +${CASTLE_BONUS.hp} · 방어력 +${CASTLE_BONUS.def}` : ''}</div></div></div>
+          <div class="btns">
+            <button class="gold-btn" data-donate ${donLeft > 0 ? '' : 'disabled'}>기부 ${U.fmt(DONATE.gold)} 아데나 (오늘 ${donLeft}회)</button>
+            ${own ? `<button class="dark-btn" data-recruit>혈맹원 모집 (5,000 아데나)</button>` : ''}
+            <button class="dark-btn" data-siege>공성전</button>
+            ${own ? '<button class="red-btn" data-disband>해산</button>' : '<button class="red-btn" data-leave>탈퇴</button>'}
+          </div>
+          <div class="clan-members"><div><b style="color:#ffd76a">${own ? '군주' : '혈맹원'}</b> ${esc(p.name)} <span class="sub">Lv.${p.s.lv}</span></div>
+            ${mem.slice(0, 15).map((b, i) => `<div>${!own && i === 0 ? '<b style="color:#ffd76a">군주</b> ' : ''}${esc(b.name)} <span class="sub">${b.classDef.name} Lv.${b.lv}</span></div>`).join('')}</div></div>`;
+      } else {
+        html += `<p style="margin-top:0;color:#a39a88">가입할 혈맹을 고르거나 새 혈맹을 세우세요. 혈맹마다 버프가 있고, 혈맹 레벨이 오를수록 강해집니다. 혈맹이 있어야 공성전에 참여할 수 있습니다.</p>`;
+      }
+      html += list.filter((g) => g.name !== p.s.guild).map((g) => `<div class="list-row"><div style="display:flex;gap:10px;align-items:center"><div style="width:14px;height:18px;background:${Siege.colorOf(g.name)};clip-path:polygon(0 0,100% 0,100% 80%,50% 100%,0 80%)"></div><div><b>${esc(g.name)}</b> <span class="sub">멤버 ${members(g.name).length}명${Siege.castle(p).owner === g.name ? ' · 🏰 성주 혈맹' : ''}</span><div class="sub">${g.desc} · 혈맹 버프: <span style="color:#7ee07e">${g.label}</span></div></div></div>
+          <button class="dark-btn" data-join="${esc(g.name)}" ${p.s.guild ? 'disabled' : ''}>가입</button></div>`).join('');
+      if (!p.s.guild && !p.s.myClan) html += `<div class="clan-card"><b>혈맹 창설</b> <span class="sub">Lv.${FOUND.lv} 이상 · ${U.fmt(FOUND.gold)} 아데나</span>
+        <div class="clan-form"><input type="text" maxlength="6" placeholder="혈맹 이름 (2~6자)" data-cname><input type="color" value="#c0392b" data-ccolor><button class="gold-btn" data-found>창설</button></div></div>`;
+      body.innerHTML = html;
     };
     body.onclick = (e) => {
-      const p = Game.player;
-      const j = e.target.closest('[data-join]');
-      if (j && !p.s.guild) {
-        p.s.guild = j.dataset.join; p.recalc(); U.sfx.success();
+      const p = Game.player, t = (sel) => e.target.closest(sel);
+      if (t('[data-join]') && !p.s.guild) {
+        p.s.guild = t('[data-join]').dataset.join; p.recalc(); U.sfx.success();
         UI.toast(`[${p.s.guild}] 혈맹에 가입했습니다!`, '#ffd76a');
         const mate = Game.bots.find((b) => b.guild === p.s.guild);
         if (mate) setTimeout(() => Game.say(mate, `${p.name}님 환영합니다~!`), 1200);
-        render(); UI.refreshHud(); return;
-      }
-      if (e.target.closest('[data-leave]') && confirm('혈맹을 탈퇴할까요?')) { p.s.guild = ''; p.recalc(); render(); UI.refreshHud(); }
+      } else if (t('[data-leave]') && confirm('혈맹을 탈퇴할까요?')) { p.s.guild = ''; p.recalc(); }
+      else if (t('[data-disband]') && confirm('혈맹을 해산할까요? 모집한 혈맹원도 흩어집니다.')) {
+        for (const b of Game.bots) if (b.guild === p.s.myClan.name) b.guild = U.pick(D.GUILDS);
+        delete p.s.clans[p.s.myClan.name]; p.s.myClan = null; p.s.clanBots = []; p.s.guild = ''; p.recalc();
+      } else if (t('[data-donate]')) {
+        const c = clanInfo(p), today = new Date().toDateString();
+        if (c.day !== today) { c.day = today; c.don = 0; }
+        if (c.don >= DONATE.perDay) return UI.toast('오늘은 더 기부할 수 없습니다.');
+        if (p.s.gold < DONATE.gold) return UI.toast('아데나가 부족합니다.', '#ff8a80');
+        p.s.gold -= DONATE.gold; c.don++; U.sfx.coin();
+        UI.toast(`혈맹 경험치 +${DONATE.xp}`, '#ffd76a'); clanXp(p, DONATE.xp);
+      } else if (t('[data-recruit]')) {
+        if (p.s.gold < 5000) return UI.toast('아데나가 부족합니다.', '#ff8a80');
+        const cand = Game.bots.filter((b) => b.guild !== p.s.myClan.name);
+        if (!cand.length) return UI.toast('더 모집할 사람이 없습니다.');
+        const b = U.pick(cand);
+        p.s.gold -= 5000; b.guild = p.s.myClan.name; p.s.clanBots.push(b.name); U.sfx.success();
+        UI.toast(`${b.name}님이 혈맹에 합류했습니다!`, '#ffd76a');
+        setTimeout(() => Game.say(b, U.pick(['잘 부탁드립니다 군주님!', '공성 언제 가요?', '열심히 하겠습니다 ㅎㅎ'])), 800);
+      } else if (t('[data-found]')) {
+        const name = body.querySelector('[data-cname]').value.trim(), color = body.querySelector('[data-ccolor]').value;
+        if (p.s.lv < FOUND.lv) return UI.toast(`레벨 ${FOUND.lv} 이상부터 창설할 수 있습니다.`, '#ff8a80');
+        if (name.length < 2 || /[<>&"']/.test(name)) return UI.toast('혈맹 이름은 2~6자로 정해 주세요.', '#ff8a80');
+        if (GUILDS.some((g) => g.name === name)) return UI.toast('이미 있는 혈맹 이름입니다.', '#ff8a80');
+        if (p.s.gold < FOUND.gold) return UI.toast('아데나가 부족합니다.', '#ff8a80');
+        p.s.gold -= FOUND.gold; p.s.myClan = { name, color }; p.s.guild = name; p.recalc(); U.sfx.legend();
+        UI.announce(`<b>${esc(p.name)}</b>님이 <em>[${esc(name)}]</em> 혈맹을 창설했습니다!`);
+      } else if (t('[data-siege]')) return UI.open('siege');
+      else return;
+      render(); UI.refreshHud();
+    };
+    render();
+    return { rerender: render };
+  };
+
+  O.siege = () => {
+    const { body } = UI.makePanel('공성전 · 아스텔라 성', 'center dialog');
+    const render = () => {
+      const p = Game.player, cs = Siege.castle(p), own = Siege.isOwner(p);
+      const taxed = cs.taxDay === new Date().toDateString();
+      body.innerHTML = `<div class="castle-card"><div class="flag" style="background:${Siege.ownerColor()}"></div>
+          <div><h4>아스텔라 성</h4><div>성주 혈맹 <b style="color:#ffd76a">[${esc(cs.owner)}]</b>${own ? ' <span style="color:#7ee07e">(우리 혈맹)</span>' : ''}</div>
+          <div class="sub">바람의 초원 북동쪽 성채 · 우리 혈맹 공성 승리 ${cs.wins}회</div></div></div>
+        <div class="stat-list">
+          <div>참여 조건 <b>혈맹 소속 · Lv.${Siege.MIN_LV} 이상</b></div><div>선전포고 비용 <b>${U.fmt(Siege.COST)} 아데나</b></div>
+          <div>제한 시간 <b>${Siege.TIME / 60}분</b></div><div>목표 <b>성문 → 수호탑 파괴</b></div>
+          <div>수비 <b>수비대 · 궁수 · 성주 혈맹 용사 4명</b></div><div>아군 <b>우리 혈맹원 최대 8명 합류</b></div></div>
+        <p class="sub" style="color:#a39a88;font-size:12px;line-height:1.6">승리하면 우리 혈맹이 성주가 됩니다: 매일 세금(아데나·다이아·초월 소환권), 성주 버프(공격력 +12, HP +400, 방어력 +6), 성 깃발이 우리 혈맹 색으로 바뀝니다. 적의 레벨은 캐릭터 레벨에 맞춰집니다. 공성 중 사망하면 여기서 전장으로 복귀할 수 있습니다.</p>
+        <div class="dialog-btns">
+          ${Siege.active ? '<button class="gold-btn" data-rejoin>전장 복귀</button>' : own ? `<button class="gold-btn" data-tax ${taxed ? 'disabled' : ''}>${taxed ? '오늘 세금 수령 완료' : '세금 걷기'}</button>` : `<button class="gold-btn" data-declare ${p.s.guild ? '' : 'disabled'}>선전포고</button>`}
+          ${p.s.guild ? '' : '<button class="dark-btn" data-guild>혈맹 가입하기</button>'}
+          <button class="dark-btn" data-x>닫기</button></div>`;
+    };
+    body.onclick = (e) => {
+      const t = (sel) => e.target.closest(sel);
+      if (t('[data-declare]')) return Siege.declare(Game);
+      if (t('[data-rejoin]')) return Siege.rejoin(Game);
+      if (t('[data-tax]')) { Siege.claimTax(Game); return render(); }
+      if (t('[data-guild]')) return UI.open('guild');
+      if (t('[data-x]')) UI.close();
     };
     render();
     return { rerender: render };
@@ -424,5 +543,5 @@ const Content = (() => {
     return {};
   };
 
-  return { migrate, bonuses, passXp, badges, give, GUILDS };
+  return { migrate, bonuses, passXp, badges, give, GUILDS, clanXp, syncClanBots };
 })();

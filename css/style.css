@@ -742,3 +742,19 @@ body.touch #chat { bottom: 150px; }
   body.touch #currency { top: 176px; }
   body.touch #left-buttons { top: 226px; }
 }
+
+/* 공성전 */
+#siege-hud { position: absolute; top: 44px; left: 50%; transform: translateX(-50%); padding: 5px 14px; background: linear-gradient(90deg, rgba(0,0,0,0), rgba(40,10,10,.8), rgba(0,0,0,0)); font-size: 13px; white-space: nowrap; pointer-events: none; z-index: 5; }
+#siege-hud b { color: #ffcf8a; }
+.castle-card { display: flex; gap: 14px; align-items: center; padding: 14px; border: 1px solid var(--line); background: linear-gradient(120deg, rgba(90,60,30,.35), rgba(10,8,6,.6)); margin-bottom: 10px; }
+.castle-card .flag { width: 46px; height: 58px; clip-path: polygon(0 0, 100% 0, 100% 80%, 50% 100%, 0 80%); box-shadow: inset 0 0 0 2px rgba(255,230,150,.6); }
+.castle-card h4 { margin: 0 0 4px; color: var(--gold); font-size: 17px; }
+.clan-card { padding: 12px; border: 1px solid var(--line); background: rgba(255,255,255,.03); margin-bottom: 10px; }
+.clan-card .xp { height: 8px; background: rgba(0,0,0,.6); border: 1px solid rgba(255,255,255,.15); margin: 6px 0; }
+.clan-card .xp i { display: block; height: 100%; background: linear-gradient(90deg, #b8902e, #ffd76a); }
+.clan-card .btns { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+.clan-members { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 4px; margin-top: 8px; font-size: 12px; }
+.clan-members div { padding: 4px 8px; background: rgba(0,0,0,.3); border: 1px solid rgba(255,255,255,.06); }
+.clan-form { display: flex; gap: 6px; margin-top: 10px; align-items: center; flex-wrap: wrap; }
+.clan-form input[type=text] { flex: 1; min-width: 120px; background: rgba(0,0,0,.5); border: 1px solid var(--line); color: #fff; padding: 6px 8px; }
+.clan-form input[type=color] { width: 36px; height: 30px; border: 1px solid var(--line); background: none; padding: 0; }

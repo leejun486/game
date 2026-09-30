@@ -9,6 +9,11 @@ const Nav = (() => {
     walk = new Uint8Array(W * H);
     for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) walk[y * W + x] = World.blocked(x * C + C / 2, y * C + C / 2, R) ? 0 : 1;
   }
+  // recompute the cells over a world-px rect (the castle gate opening and closing)
+  function refresh(x0, y0, x1, y1) {
+    for (let y = Math.max(0, Math.floor(y0 / C)); y <= Math.min(H - 1, Math.floor(y1 / C)); y++)
+      for (let x = Math.max(0, Math.floor(x0 / C)); x <= Math.min(W - 1, Math.floor(x1 / C)); x++) walk[y * W + x] = World.blocked(x * C + C / 2, y * C + C / 2, R) ? 0 : 1;
+  }
   const cellOf = (px, py) => [U.clamp(Math.floor(px / C), 0, W - 1), U.clamp(Math.floor(py / C), 0, H - 1)];
   const ok = (x, y) => x >= 0 && y >= 0 && x < W && y < H && walk[y * W + x] === 1;
   // nearest walkable cell to (cx, cy) within a small ring search
@@ -98,5 +103,5 @@ const Nav = (() => {
     budget -= maxNodes;
     return find(ax, ay, bx, by, maxNodes);
   }
-  return { build, find, findBudget, frame, lineClear, get ready() { return !!walk; } };
+  return { build, refresh, find, findBudget, frame, lineClear, get ready() { return !!walk; } };
 })();

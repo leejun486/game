@@ -395,6 +395,7 @@ const Game = {
   function start(save) {
     U.audio();
     Game.player = new Player(save);
+    Content.syncClanBots(Game.player);
     Pets.spawn(Game);
     const f = World.findFree(Game.player.x, Game.player.y, 16);
     Game.player.x = f.x; Game.player.y = f.y;
@@ -568,6 +569,7 @@ const Game = {
       if (p.talkAfterNav && !p.moveTo) { p.talkTo = p.talkAfterNav; p.talkAfterNav = null; }
     }
     Dungeon.update(Game, dt);
+    Siege.update(Game, dt);
     Skills.update(Game, dt);
     VFX.update(dt);
     BotChat.update(dt);

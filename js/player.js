@@ -410,6 +410,8 @@ class Player extends Hero {
       }
       this.target = game.nearestMonster(this, 650, (m) => !(this.ignore[m.id] > game.time) && ((m.def.boss ? this.s.lv >= m.lv - 6 : m.lv <= this.s.lv + 5) || m.target === this));
       if (this.questTravel) this.target = null; // riding to the quest spot: don't stop for fights
+      // siege: with no defender close by, go for the gate (then the tower)
+      if (!this.target && Siege.active && World.zoneAt(this.x, this.y).id === 'castle') this.target = Siege.objective();
       if (!this.target && !this.moveTo && !World.zoneAt(this.x, this.y).dungeon) {
         // drift toward the centre of the closest suitable spawn
         const sp = game.bestSpawnNear(this);

@@ -32,6 +32,7 @@ const World = (() => {
         else if (z === 'snow') t = SNOW;
         else if (z === 'volcano') t = BASALT;
         else if (z === 'void') t = VOID;
+        else if (z === 'castle') { const c = D.CASTLE; t = tx >= c.x0 && tx <= c.x1 && ty >= c.y0 && ty <= c.y1 ? STONE : GRASS; }
         tiles[ty * W + tx] = t;
       }
     }
@@ -62,6 +63,7 @@ const World = (() => {
     road(90, 74, 92, 8, 1); road(106, 90, 172, 86, 1); road(90, 106, 90, 172, 1); road(74, 90, 52, 94, 1);
     road(90, 60, 60, 72, 1);
     road(60, 72, 44, 52, 1); road(44, 52, 24, 12, 1); // trail up into the snowfield
+    road(92, 36, 128, 38, 1); // north road branch to the castle gate
     road(52, 94, 48, 116, 1); road(48, 116, 38, 132, 1); road(38, 132, 28, 150, 1); road(28, 150, 18, 166, 1); // rune path down into Nox's citadel
     road(124, 88, 134, 122, 1); road(134, 122, 150, 140, 1); road(150, 140, 162, 162, 1); // ash road down into the volcano
     // lava pools (impassable) scattered through the volcano, clear of the camps and the boss arena
@@ -105,6 +107,7 @@ const World = (() => {
     for (let i = 0; i < W * H; i++) solid[i] = tiles[i] === WATER || tiles[i] === LAVA || tiles[i] === CHASM ? 1 : 0;
     placeProps();
     buildDungeon();
+    buildCastle();
   }
 
   function addProp(type, x, y, r = 0, extra = {}) {
@@ -256,6 +259,25 @@ const World = (() => {
     for (const [dx, dy] of [[-8, -6], [8, -6], [-8, 6], [8, 6], [-12, 0], [12, 0]]) addProp('pillar', cx + dx * T, cy + dy * T, 22);
     for (const [dx, dy] of [[-12, -10], [12, -10], [-12, 10], [12, 10]]) addProp('brazier', cx + dx * T, cy + dy * T, 16);
   }
+  // 아스텔라 성: outer walls with a gate gap in the south wall, corner towers, an inner keep open to the south
+  function buildCastle() {
+    const c = D.CASTLE, k = c.keep;
+    for (let i = props.length - 1; i >= 0; i--) {
+      const p = props[i], tx = p.x / T, ty = p.y / T;
+      if (tx > c.x0 - 3 && tx < c.x1 + 3 && ty > c.y0 - 3 && ty < c.y1 + 5) props.splice(i, 1);
+    }
+    for (const [key, list] of buckets) buckets.set(key, list.filter((p) => props.includes(p)));
+    for (let tx = c.x0; tx <= c.x1; tx++) { addWall(tx, c.y0); if (tx < c.gate[0] || tx > c.gate[1]) addWall(tx, c.y1); }
+    for (let ty = c.y0 + 1; ty < c.y1; ty++) { addWall(c.x0, ty); addWall(c.x1, ty); }
+    for (let tx = k.x0; tx <= k.x1; tx++) { addWall(tx, k.y0); if (tx < c.gate[0] || tx > c.gate[1]) addWall(tx, k.y1); }
+    for (let ty = k.y0 + 1; ty < k.y1; ty++) { addWall(k.x0, ty); addWall(k.x1, ty); }
+    for (const [tx, ty] of [[c.x0, c.y0], [c.x1, c.y0], [c.x0, c.y1], [c.x1, c.y1]]) addProp('pillar', tx * T + 32, ty * T + 40, 0);
+    for (const tx of [c.gate[0] - 1, c.gate[1] + 1]) { addProp('banner', tx * T + 32, (c.y1 + 1) * T + 20, 0); addProp('torch', tx * T + 32, (c.y1 + 1) * T + 50, 0); }
+    for (const tx of [c.gate[0] - 1, c.gate[1] + 1]) addProp('banner', tx * T + 32, (k.y1 + 1) * T + 20, 0);
+    for (const [dx, dy] of [[-4, -2], [4, -2], [-4, 2], [4, 2]]) addProp('brazier', (c.tower.x + dx) * T, (c.tower.y + dy) * T, 16);
+  }
+  // castle gate: closed (solid) while a siege is on
+  function setSolid(tx, ty, v) { solid[ty * W + tx] = v ? 1 : 0; }
   const NPC_SPOTS = D.NPCS.map((n) => [n.dx, n.dy]);
 
   function addWall(tx, ty) {
@@ -737,6 +759,14 @@ const World = (() => {
       ctx.fillStyle = `rgba(150,70,255,${a * 0.35})`; ctx.beginPath(); ctx.arc(0, 0, 26, 0, Math.PI * 2); ctx.fill();
       ctx.restore(); return;
     }
+    if (p.type === 'banner') { // the castle owner's colours
+      const col = typeof Siege !== 'undefined' ? Siege.ownerColor() : '#8a2a2a';
+      ctx.fillStyle = '#3a2c20'; ctx.fillRect(sx - 2, sy - 96, 4, 96);
+      const wave = Math.sin(t * 2.5 + p.x) * 4;
+      ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(sx + 2, sy - 94); ctx.lineTo(sx + 34, sy - 90 + wave); ctx.lineTo(sx + 30, sy - 64 + wave); ctx.lineTo(sx + 2, sy - 60); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = 'rgba(255,230,150,0.85)'; ctx.beginPath(); ctx.arc(sx + 17, sy - 77 + wave / 2, 5, 0, Math.PI * 2); ctx.fill();
+      return;
+    }
     if (p.type === 'rift') return drawRift(ctx, sx, sy, t);
     if (p.type === 'brazier') { ctx.fillStyle = '#3a3440'; ctx.fillRect(sx - 12, sy - 30, 24, 30); ctx.fillStyle = '#56505e'; ctx.fillRect(sx - 16, sy - 34, 32, 6); return flame(ctx, sx, sy - 36, 1.2, t, sx, true); }
     if (p.type === 'torch') return drawTorch(ctx, sx, sy, t, p);
@@ -830,6 +860,7 @@ const World = (() => {
 
   return {
     GRASS, DIRT, STONE, GRAVE, SAND, WATER, FOREST, ROAD, DUNGEON, SNOW, ICE,
+    setSolid,
     tiles, props, tileAt, zoneAt, blocked, findFree,
     init() { generate(); buildArt(); buildMini(); },
     drawGround, drawProp,
