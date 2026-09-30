@@ -209,32 +209,52 @@ const UI = (() => {
     box.onclick = advance;
     show();
   }
-  // new characters: the intro video if one ships (assets/intro.mp4), otherwise the prologue as a title crawl
+  // new characters: the intro, cut by cut. Each cut plays its clip with its prologue lines as subtitles;
+  // a cut whose clip is missing shows those lines as a text crawl instead, then the title card closes it.
   function intro(then) {
     const el = document.createElement('div');
     el.id = 'intro';
-    el.innerHTML = '<video playsinline preload="auto"></video><div class="intro-text"></div><button class="intro-skip">건너뛰기 ▶</button>';
+    el.innerHTML = '<video playsinline preload="auto"></video><div class="intro-text"></div><div class="intro-sub"></div><button class="intro-skip">건너뛰기 ▶</button>';
     document.body.appendChild(el);
-    const v = el.querySelector('video'), tx = el.querySelector('.intro-text');
-    let done = false, crawlT = 0;
-    const finish = () => { if (done) return; done = true; clearTimeout(crawlT); v.pause(); el.classList.add('out'); setTimeout(() => { el.remove(); then && then(); }, 600); };
+    const v = el.querySelector('video'), tx = el.querySelector('.intro-text'), sub = el.querySelector('.intro-sub');
+    let done = false, timer = 0, ci = 0;
+    const finish = () => {
+      if (done) return; done = true; clearTimeout(timer); v.pause(); v.removeAttribute('src');
+      el.classList.add('out'); setTimeout(() => { el.remove(); then && then(); }, 600);
+    };
     el.querySelector('.intro-skip').onclick = finish;
-    const crawl = () => {
-      v.remove();
+    const textLines = (lines, next) => {
+      v.style.opacity = 0; sub.textContent = '';
       let k = 0;
       const step = () => {
         if (done) return;
-        if (k >= D.PROLOGUE.length) { crawlT = setTimeout(finish, 1800); return; }
-        const line = D.PROLOGUE[k++];
-        tx.innerHTML = `<p class="${k === D.PROLOGUE.length ? 'title' : ''}">${esc(line)}</p>`;
-        crawlT = setTimeout(step, k === D.PROLOGUE.length ? 3200 : 3600);
+        if (k >= lines.length) { tx.innerHTML = ''; return next(); }
+        const line = lines[k++], title = line === D.PROLOGUE[D.PROLOGUE.length - 1];
+        tx.innerHTML = `<p class="${title ? 'title' : ''}">${esc(line)}</p>`;
+        timer = setTimeout(step, title ? 3400 : 3600);
       };
       step();
     };
-    v.onended = finish;
-    v.onerror = crawl;
-    v.src = 'assets/intro.mp4';
-    v.play().catch(() => { if (!done && !v.currentTime) crawl(); });
+    const playCut = () => {
+      if (done) return;
+      const cut = D.INTRO_CUTS[ci++];
+      if (!cut) return textLines([D.PROLOGUE[D.PROLOGUE.length - 1]], () => { timer = setTimeout(finish, 400); });
+      const lines = cut.lines.map((i) => D.PROLOGUE[i]);
+      let started = false;
+      v.ontimeupdate = null; sub.textContent = ''; // drop the previous clip's subtitle timing
+      v.onerror = () => { if (!started) textLines(lines, playCut); };
+      v.onended = () => { sub.textContent = ''; playCut(); };
+      v.onloadedmetadata = () => {
+        started = true; v.style.opacity = 1; tx.innerHTML = '';
+        // spread the lines over the clip as subtitles
+        const per = (v.duration || 8) / lines.length;
+        v.ontimeupdate = () => { const k = Math.min(lines.length - 1, Math.floor(v.currentTime / per)); if (sub.dataset.k !== String(ci * 10 + k)) { sub.dataset.k = String(ci * 10 + k); sub.innerHTML = `<span>${esc(lines[k])}</span>`; } };
+      };
+      v.muted = !!Game.muted;
+      v.src = cut.src;
+      v.play().catch(() => { v.muted = true; v.play().catch(() => { if (!started) textLines(lines, playCut); }); });
+    };
+    playCut();
   }
   function refreshAll() { refreshHud(); refreshQuest(); if (panel && panel.rerender) panel.rerender(); }
 
@@ -608,6 +628,7 @@ const UI = (() => {
     const p = game.player;
     body.innerHTML = `<div class="list-row"><span>효과음</span><button class="dark-btn" data-do="snd">${game.muted ? '꺼짐' : '켜짐'}</button></div>
       <div class="list-row"><span>자동 물약 (HP 55% 이하)</span><button class="dark-btn" data-do="pot">${p.s.autoPotion ? '켜짐' : '꺼짐'}</button></div>
+      <div class="list-row"><span>인트로 영상</span><button class="dark-btn" data-do="intro">다시 보기</button></div>
       <div class="list-row"><span>운영자 모드 (F2)</span><button class="gold-btn" data-do="gm">열기</button></div>
       <div class="list-row"><span>게임 저장</span><button class="dark-btn" data-do="save">저장</button></div>
       <div class="list-row"><span>저장 삭제 후 처음부터</span><button class="red-btn" data-do="reset">초기화</button></div>
@@ -618,6 +639,7 @@ const UI = (() => {
       if (a === 'snd') { game.muted = !game.muted; U.setMuted(game.muted); }
       if (a === 'pot') p.s.autoPotion = !p.s.autoPotion;
       if (a === 'gm') return open('admin');
+      if (a === 'intro') { close(); return intro(); }
       if (a === 'save') { game.save(); toast('저장되었습니다.'); }
       if (a === 'reset' && confirm('정말 모든 진행 상황을 삭제할까요?')) { game.wipe(); return; }
       OPENERS.settings();

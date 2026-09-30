@@ -380,6 +380,13 @@ D.PROLOGUE = [
   '라스카노 마을의 오래된 제단 앞에서, 일식의 문양을 새긴 한 사람이 눈을 뜬다.',
   '— 이클립스: 어웨이크닝 —',
 ];
+// intro cuts (Gemini/Veo clips, docs/STORY.md): each plays with its prologue lines as subtitles; a missing clip falls back to text
+D.INTRO_CUTS = [
+  { src: 'assets/intro/cut1.mp4', lines: [0, 1] },
+  { src: 'assets/intro/cut2.mp4', lines: [2] },
+  { src: 'assets/intro/cut3.mp4', lines: [3] },
+  { src: 'assets/intro/cut4.mp4', lines: [4] },
+];
 // quests: ch = chapter shown in the quest list; by = who speaks; story = lines when the quest begins, end = lines when it is handed in
 D.QUESTS = [
   { ch: '1장 · 각성', title: '1-1. 제단의 각성자', desc: '현자 엘로아와 대화', type: 'talk', npc: 'eloa', by: '현자 엘로아',
