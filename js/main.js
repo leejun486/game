@@ -112,7 +112,7 @@ const Game = {
   dayPhase() { return ((this.time + 30) % 480) / 480; },
   // 희귀+ loot waits on the ground (pillar of light) until the player walks over it or clicks it;
   // anything plainer flies to a nearby player after a moment
-  isGroundLoot(d) { return D.ITEMS[d.id].grade >= 2; },
+  isGroundLoot(d) { const it = D.ITEMS[d.id]; return it.grade >= 2 && it.kind !== 'potion'; },
   dropped(it, drop) {
     if (it.grade < 2) return;
     const g = D.GRADES[it.grade];
@@ -698,7 +698,7 @@ const Game = {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     const W = innerWidth, H = innerHeight;
     const zone = p ? World.zoneAt(p.x, p.y).id : 'town';
-    const tint = { grave: 'rgba(20,30,70,0.28)', orc: 'rgba(90,40,10,0.14)', forest: 'rgba(0,40,20,0.12)', snow: 'rgba(160,200,255,0.10)', field: 'rgba(255,220,150,0.04)', town: 'rgba(255,200,120,0.05)' }[zone];
+    const tint = { grave: 'rgba(20,30,70,0.28)', orc: 'rgba(90,40,10,0.14)', forest: 'rgba(0,40,20,0.12)', snow: 'rgba(160,200,255,0.10)', volcano: 'rgba(255,70,10,0.13)', field: 'rgba(255,220,150,0.04)', town: 'rgba(255,200,120,0.05)' }[zone];
     if (tint) { ctx.fillStyle = tint; ctx.fillRect(0, 0, W, H); }
     if (zone === 'snow') { // falling snow drifting in the wind
       const tt = performance.now() / 1000;
@@ -707,6 +707,16 @@ const Game = {
         const sp = 30 + (i % 7) * 12, sz = 1 + (i % 3);
         const px = ((i * 97.3 + tt * 22 + Math.sin(tt * 0.8 + i) * 18) % (W + 40) + W + 40) % (W + 40) - 20;
         const py = ((i * 57.1 + tt * sp) % (H + 20)) - 10;
+        ctx.fillRect(px, py, sz, sz);
+      }
+    }
+    if (zone === 'volcano') { // embers rising on the heat
+      const tt = performance.now() / 1000;
+      for (let i = 0; i < 70; i++) {
+        const sp = 24 + (i % 5) * 14, sz = 1 + (i % 3);
+        const px = ((i * 83.7 + Math.sin(tt * 0.9 + i) * 24) % (W + 40) + W + 40) % (W + 40) - 20;
+        const py = H - (((i * 61.3 + tt * sp) % (H + 20)) - 10);
+        ctx.fillStyle = i % 4 ? 'rgba(255,140,40,0.85)' : 'rgba(255,230,150,0.9)';
         ctx.fillRect(px, py, sz, sz);
       }
     }

@@ -80,6 +80,12 @@ D.MONSTERS = {
   frost_skel: { name: '얼어붙은 망자', sheet: 'skeleton_frost', lv: 43, hp: 1900, atk: 88, def: 32, spd: 85, scale: 1.05, aggro: true, range: 58 },
   ice_troll: { name: '빙하 트롤', sheet: 'troll_frost', lv: 46, hp: 2600, atk: 96, def: 36, spd: 72, scale: 1.35, aggro: true, range: 62 },
   frost_giant: { name: '서리 거인 요툰', sheet: 'troll_giant', lv: 52, hp: 48000, atk: 150, def: 46, spd: 80, scale: 2.3, aggro: true, range: 92, boss: true, skill: 'frostStomp' },
+  // 화염의 용암지대 (Lv.55+): fire-tinted variants
+  flame_orc: { name: '화염 오크 광전사', sheet: 'orc_flame', lv: 55, hp: 3400, atk: 96, def: 44, spd: 88, scale: 1.1, aggro: true, range: 58 },
+  magma_lizard: { name: '마그마 리자드맨', sheet: 'lizardman_magma', lv: 58, hp: 3900, atk: 102, def: 47, spd: 92, scale: 1.1, aggro: true, range: 58 },
+  hell_wolf: { name: '지옥 늑대인간', sheet: 'wolfman_hell', lv: 61, hp: 4300, atk: 110, def: 50, spd: 108, scale: 1.1, aggro: true, range: 56 },
+  lava_troll: { name: '용암 트롤', sheet: 'troll_lava', lv: 64, hp: 5600, atk: 120, def: 55, spd: 74, scale: 1.45, aggro: true, range: 64 },
+  ignis: { name: '화염 군주 이그니스', sheet: 'minotaur_ignis', lv: 70, hp: 110000, atk: 230, def: 64, spd: 86, scale: 2.4, aggro: true, range: 96, boss: true, skill: 'fireStomp' },
 };
 // hunting pace: heroes hit a little softer and normal monsters carry more HP, most of it at low levels
 // where fights were over in two or three swings (bosses keep their HP)
@@ -92,6 +98,11 @@ D.SHEET_VARIANTS = {
   skeleton_frost: ['skeleton', 'sepia(0.4) hue-rotate(160deg) saturate(2.2) brightness(1.05)'],
   troll_frost: ['troll', 'hue-rotate(150deg) saturate(1.4) brightness(1.1)'],
   troll_giant: ['troll', 'hue-rotate(175deg) saturate(1.9) brightness(1.3) contrast(1.1)'],
+  orc_flame: ['orc', 'sepia(0.6) hue-rotate(-30deg) saturate(3) brightness(0.95)'],
+  lizardman_magma: ['lizardman', 'sepia(0.8) hue-rotate(-25deg) saturate(3.2) brightness(0.9) contrast(1.15)'],
+  wolfman_hell: ['wolfman', 'sepia(1) hue-rotate(-40deg) saturate(4) brightness(0.8) contrast(1.3)'],
+  troll_lava: ['troll', 'sepia(0.7) hue-rotate(-20deg) saturate(2.6) brightness(0.85) contrast(1.2)'],
+  minotaur_ignis: ['minotaur', 'sepia(0.9) hue-rotate(-35deg) saturate(3.5) brightness(1.05) contrast(1.2)'],
 };
 for (const k in D.MONSTERS) {
   const m = D.MONSTERS[k];
@@ -101,7 +112,7 @@ for (const k in D.MONSTERS) {
 }
 
 D.expToNext = (lv) => Math.round(80 * Math.pow(lv, 1.8) + 20);
-D.MAX_LV = 60;
+D.MAX_LV = 80;
 
 // ---------------- zones ----------------
 // Evaluated in order; the first match wins.
@@ -110,6 +121,7 @@ D.ZONES = [
   { id: 'dungeon', name: '이클립스 균열', dungeon: true, test: (tx, ty) => tx >= 148 && tx <= 177 && ty >= 4 && ty <= 32 },
   { id: 'snow', name: '서리 설원', test: (tx, ty) => tx < 52 && ty < 58 },
   { id: 'field', name: '바람의 초원', test: (tx, ty) => ty < 75 && tx >= 50 && tx <= 130 },
+  { id: 'volcano', name: '화염의 용암지대', test: (tx, ty) => tx >= 128 && ty >= 118 },
   { id: 'grave', name: '망자의 묘지', test: (tx, ty) => tx > 105 },
   { id: 'orc', name: '오크 요새', test: (tx, ty) => ty > 105 },
   { id: 'forest', name: '고요한 숲', test: () => true },
@@ -134,10 +146,15 @@ D.SPAWNS = [
   { m: 'frost_skel', x: 16, y: 22, r: 8, n: 14 },
   { m: 'ice_troll', x: 40, y: 18, r: 8, n: 12 },
   { m: 'frost_giant', x: 22, y: 8, r: 3, n: 1, respawn: 420 },
+  { m: 'flame_orc', x: 147, y: 131, r: 8, n: 14 },
+  { m: 'magma_lizard', x: 170, y: 128, r: 7, n: 14 },
+  { m: 'hell_wolf', x: 142, y: 152, r: 8, n: 14 },
+  { m: 'lava_troll', x: 160, y: 146, r: 7, n: 12 },
+  { m: 'ignis', x: 164, y: 168, r: 3, n: 1, respawn: 480 },
 ];
 // dense fields for area hunting: every normal spawn carries about twice the monsters over a slightly
 // wider patch (bosses untouched); respawns come back quicker too (Game.scheduleRespawn)
-D.SPAWN_DENSITY = 2.2;
+D.SPAWN_DENSITY = 3.4;
 for (const s of D.SPAWNS) if (!D.MONSTERS[s.m].boss) { s.n = Math.round(s.n * D.SPAWN_DENSITY); s.r = Math.round(s.r * 1.15); }
 
 // teleport destinations (tile coords)
@@ -152,6 +169,7 @@ D.TELEPORTS = [
   { name: '리자드맨 늪지', x: 66, y: 136, cost: 1200, lv: 'Lv.25~' },
   { name: '트롤 서식지', x: 100, y: 144, cost: 1500, lv: 'Lv.30~' },
   { name: '서리 설원', x: 46, y: 54, cost: 2500, lv: 'Lv.40~' },
+  { name: '화염의 용암지대', x: 134, y: 122, cost: 4000, lv: 'Lv.55~' },
 ];
 
 // ---------------- items ----------------
@@ -183,11 +201,15 @@ D.ITEMS = {
   w_staff3: { name: '수정 지팡이', icon: 'staff2', kind: 'weapon', cls: 'mage', atk: 23, lv: 20, price: 40000, grade: 2 },
   w_staff4: { name: '고대림의 마법구', icon: 'staff2', kind: 'weapon', cls: 'mage', atk: 37, lv: 30, price: 0, grade: 3 },
   w_staff5: { name: '바포메트의 지팡이', icon: 'staff3', kind: 'weapon', cls: 'mage', atk: 56, lv: 35, price: 0, grade: 4 },
+  w_sword6: { name: '이그니스의 멸화검', icon: 'sword3', kind: 'weapon', cls: 'knight', atk: 84, lv: 55, price: 0, grade: 4 },
+  w_bow6: { name: '용암심장 장궁', icon: 'bow3', kind: 'weapon', cls: 'elf', atk: 80, lv: 55, price: 0, grade: 4 },
+  w_staff6: { name: '화염 군주의 홀', icon: 'staff3', kind: 'weapon', cls: 'mage', atk: 86, lv: 55, price: 0, grade: 4 },
 
   a_1: { name: '가죽 갑옷', icon: 'armor1', kind: 'armor', def: 2, hp: 10, lv: 1, price: 300, grade: 0 },
   a_2: { name: '사슬 갑옷', icon: 'armor2', kind: 'armor', def: 6, hp: 40, lv: 10, price: 7000, grade: 1 },
   a_3: { name: '판금 갑옷', icon: 'armor3', kind: 'armor', def: 11, hp: 90, lv: 20, price: 45000, grade: 2 },
   a_4: { name: '용 비늘 갑옷', icon: 'armor4', kind: 'armor', def: 19, hp: 180, lv: 30, price: 0, grade: 3 },
+  a_5: { name: '흑요석 용암 갑주', icon: 'armor4', kind: 'armor', def: 30, hp: 340, lv: 55, price: 0, grade: 4 },
 
   r_1: { name: '힘의 반지', icon: 'ring1', kind: 'ring', atk: 4, lv: 5, price: 5000, grade: 1 },
   r_2: { name: '체력의 반지', icon: 'ring2', kind: 'ring', hp: 120, def: 2, lv: 15, price: 20000, grade: 2 },
@@ -221,6 +243,11 @@ D.DROPS = {
   frost_skel: [['hp_l', 0.08], ['r_3', 0.002], ['sc_weapon', 0.015], ['ticket', 0.004]],
   ice_troll: [['hp_l', 0.1], ['a_4', 0.002], ['w_sword5', 0.001], ['w_bow5', 0.001], ['w_staff5', 0.001], ['ticket', 0.006]],
   frost_giant: [['ticket', 1], ['ticket', 1], ['ticket', 1], ['sc_weapon', 1], ['sc_armor', 1], ['w_sword5', 0.3], ['w_bow5', 0.3], ['w_staff5', 0.3], ['a_4', 0.4], ['r_3', 0.4]],
+  flame_orc: [['hp_l', 0.1], ['sc_weapon', 0.018], ['sc_armor', 0.018]],
+  magma_lizard: [['hp_l', 0.1], ['sc_weapon', 0.02], ['ticket', 0.006], ['a_4', 0.003]],
+  hell_wolf: [['hp_l', 0.1], ['r_3', 0.004], ['sc_armor', 0.02], ['ticket', 0.007]],
+  lava_troll: [['hp_l', 0.12], ['a_5', 0.0015], ['w_sword6', 0.0008], ['w_bow6', 0.0008], ['w_staff6', 0.0008], ['ticket', 0.009]],
+  ignis: [['ticket', 1], ['ticket', 1], ['ticket', 1], ['ticket', 1], ['sc_weapon', 1], ['sc_weapon', 1], ['sc_armor', 1], ['w_sword6', 0.3], ['w_bow6', 0.3], ['w_staff6', 0.3], ['a_5', 0.35], ['r_3', 0.5]],
   minotaur: [['ticket', 1], ['ticket', 1], ['sc_weapon', 1], ['w_sword5', 0.15], ['w_bow5', 0.15], ['w_staff5', 0.15], ['a_4', 0.3], ['r_3', 0.3]],
 };
 
@@ -314,6 +341,11 @@ D.QUESTS = [
   { title: '16. 얼음 무덤', desc: '얼어붙은 망자 처치', type: 'kill', m: 'frost_skel', n: 50, reward: { gold: 40000, items: { sc_armor: 4 } } },
   { title: '17. 빙하의 파수꾼', desc: '빙하 트롤 처치', type: 'kill', m: 'ice_troll', n: 60, reward: { dia: 1000, items: { ticket: 5 } } },
   { title: '18. 거인의 몰락', desc: '서리 거인 요툰 처치', type: 'kill', m: 'frost_giant', n: 1, reward: { dia: 3000, items: { ticket: 15 } } },
+  { title: '19. 불타는 대지', desc: '화염 오크 광전사 처치', type: 'kill', m: 'flame_orc', n: 60, reward: { gold: 60000, items: { hp_l: 40, sc_weapon: 4 } } },
+  { title: '20. 마그마 늪', desc: '마그마 리자드맨 처치', type: 'kill', m: 'magma_lizard', n: 70, reward: { gold: 80000, items: { sc_armor: 5 } } },
+  { title: '21. 지옥의 사냥개', desc: '지옥 늑대인간 처치', type: 'kill', m: 'hell_wolf', n: 80, reward: { dia: 1500, items: { ticket: 6 } } },
+  { title: '22. 용암의 거인들', desc: '용암 트롤 처치', type: 'kill', m: 'lava_troll', n: 90, reward: { dia: 2000, items: { ticket: 8, sc_weapon: 5 } } },
+  { title: '23. 화염 군주', desc: '화염 군주 이그니스 처치', type: 'kill', m: 'ignis', n: 1, reward: { dia: 5000, items: { ticket: 20 } } },
 ];
 D.DAILY_QUEST = { title: '일일 토벌', desc: '아무 몬스터 처치', type: 'killAny', n: 100, reward: { dia: 100, gold: 5000 } };
 
@@ -327,7 +359,7 @@ D.NPCS = [
   { id: 'guard1', name: '경비병', sheet: 'npc_guard', dx: -1.5, dy: -15.5, dir: 2, talk: '북쪽은 바람의 초원이다. 고블린부터 상대하도록.' },
   { id: 'guard2', name: '경비병', sheet: 'npc_guard', dx: 15.5, dy: -1.5, dir: 1, talk: '동쪽은 망자의 묘지... 밤이 되면 뱀파이어가 나타난다더군.' },
   { id: 'guard3', name: '경비병', sheet: 'npc_guard', dx: 1.5, dy: 15.5, dir: 2, talk: '남쪽 오크 요새는 레벨 20 이상만 가도록.' },
-  { id: 'guard4', name: '경비병', sheet: 'npc_guard', dx: -15.5, dy: 1.5, dir: 3, talk: '서쪽은 고요한 숲이다. 북서쪽 끝 서리 설원에는 거인이 잠들어 있다더군.' },
+  { id: 'guard4', name: '경비병', sheet: 'npc_guard', dx: -15.5, dy: 1.5, dir: 3, talk: '서쪽은 고요한 숲이다. 북서쪽 끝 서리 설원에는 거인이 잠들어 있다더군. 남동쪽 끝 용암지대에는 화염 군주가 있다는 소문도 있지.' },
 ];
 
 // ---------------- other players (bots) ----------------

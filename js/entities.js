@@ -246,7 +246,7 @@ class Monster extends Entity {
       else if (this.trackStuck(dt, sp) > 3) { this.x = this.home.x; this.y = this.home.y; this.returning = false; this.hp = this.maxHp; this.stuckT = 0; }
       return;
     }
-    if (this.target && this.def.skill === 'frostStomp' && this.bossSkill(dt, game)) return;
+    if (this.target && (this.def.skill === 'frostStomp' || this.def.skill === 'fireStomp') && this.bossSkill(dt, game)) return;
     if (this.target) {
       const d = U.dist(this, this.target);
       const reach = this.def.range + (this.target.radius || 14);
@@ -286,9 +286,10 @@ class Monster extends Entity {
     this.skillCd = (this.skillCd ?? 4) - dt;
     if (!this.summoned && this.hp < this.maxHp * 0.5) {
       this.summoned = true;
-      UI.announce(`<em>${this.name}</em>이(가) 서리 늑대를 불러냅니다!`);
+      const fire = this.def.skill === 'fireStomp';
+      UI.announce(`<em>${this.name}</em>이(가) ${fire ? '지옥 늑대' : '서리 늑대'}를 불러냅니다!`);
       for (let i = 0; i < 4; i++) {
-        const a = (i / 4) * Math.PI * 2, m = new Monster(D.MONSTERS.frost_wolf, { x: this.x / D.TILE + Math.cos(a) * 2.5, y: this.y / D.TILE + Math.sin(a) * 2, r: 1, noRespawn: true });
+        const a = (i / 4) * Math.PI * 2, m = new Monster(D.MONSTERS[fire ? 'hell_wolf' : 'frost_wolf'], { x: this.x / D.TILE + Math.cos(a) * 2.5, y: this.y / D.TILE + Math.sin(a) * 2, r: 1, noRespawn: true });
         m.summon = true; m.target = this.target; m.home = { x: this.home.x, y: this.home.y };
         game.monsters.push(m); game.fx.push(Combat.makeFx('teleport', m.x, m.y));
       }
@@ -300,12 +301,13 @@ class Monster extends Entity {
     this.act('thrust', 1.3, () => {
       const near = game.player && Math.hypot(game.player.x - x, game.player.y - y) < 700;
       if (near) { game.shake = 12; U.sfx.boom(); }
-      VFX.iceBurst(x, y, R, 1.8);
-      game.fx.push(Combat.makeFx('explode', x, y, { color: '#9fe0ff', r: R }));
+      const fire = this.def.skill === 'fireStomp';
+      if (fire) { VFX.fireBurst(x, y, R, 2); VFX.debris(x, y, 16); } else VFX.iceBurst(x, y, R, 1.8);
+      game.fx.push(Combat.makeFx('explode', x, y, { color: fire ? '#ff6a1a' : '#9fe0ff', r: R }));
       for (const e of game.fighters()) {
         if (e.dead || Math.hypot(e.x - x, e.y - y) > R + (e.radius || 14)) continue;
         Combat.monsterHit(this, e, true, true);
-        e.slowT = 3;
+        if (!fire) e.slowT = 3;
       }
     }, true);
     this.moving = false;
