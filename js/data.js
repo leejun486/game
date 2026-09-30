@@ -15,6 +15,7 @@ D.GRADES = [
   { name: '희귀', cls: 'g2', color: '#3f8cff' },
   { name: '영웅', cls: 'g3', color: '#e8423a' },
   { name: '전설', cls: 'g4', color: '#f3b53a' },
+  { name: '신화', cls: 'g5', color: '#d77bff' }, // only from 어둠의 군주 녹스 (6장)
 ];
 
 // ---------------- classes & skills ----------------
@@ -85,6 +86,13 @@ D.MONSTERS = {
   magma_lizard: { name: '마그마 리자드맨', sheet: 'lizardman_magma', lv: 58, hp: 3900, atk: 102, def: 47, spd: 92, scale: 1.1, aggro: true, range: 58 },
   hell_wolf: { name: '지옥 늑대인간', sheet: 'wolfman_hell', lv: 61, hp: 4300, atk: 110, def: 50, spd: 108, scale: 1.1, aggro: true, range: 56 },
   lava_troll: { name: '용암 트롤', sheet: 'troll_lava', lv: 64, hp: 5600, atk: 120, def: 55, spd: 74, scale: 1.45, aggro: true, range: 64 },
+  // 녹스의 성채 (Lv.70+, 6장): shadow-tinted variants
+  shadow_knight: { name: '그림자 기사', sheet: 'skeleton_void', lv: 70, hp: 6400, atk: 128, def: 60, spd: 90, scale: 1.15, aggro: true, range: 60 },
+  nox_hound: { name: '녹스의 사냥개', sheet: 'wolfman_void', lv: 72, hp: 6800, atk: 134, def: 62, spd: 112, scale: 1.15, aggro: true, range: 56 },
+  hollow: { name: '공허에 삼켜진 자', sheet: 'zombie_void', lv: 74, hp: 7600, atk: 140, def: 66, spd: 64, scale: 1.2, aggro: true, range: 56 },
+  abyss_troll: { name: '심연의 거신', sheet: 'troll_void', lv: 77, hp: 9400, atk: 150, def: 72, spd: 76, scale: 1.55, aggro: true, range: 66 },
+  nox_apostle: { name: '녹스의 사도', sheet: 'vampire_void', lv: 76, hp: 190000, atk: 250, def: 70, spd: 96, scale: 1.9, aggro: true, range: 80, boss: true, skill: 'voidNova' },
+  nox: { name: '어둠의 군주 녹스', sheet: 'knight_nox', lv: 80, hp: 420000, atk: 290, def: 80, spd: 90, scale: 2.7, aggro: true, range: 100, boss: true, skill: 'nox' },
   ignis: { name: '화염 군주 이그니스', sheet: 'minotaur_ignis', lv: 70, hp: 110000, atk: 230, def: 64, spd: 86, scale: 2.4, aggro: true, range: 96, boss: true, skill: 'fireStomp' },
 };
 // hunting pace: heroes hit a little softer and normal monsters carry more HP, most of it at low levels
@@ -102,6 +110,13 @@ D.SHEET_VARIANTS = {
   lizardman_magma: ['lizardman', 'sepia(0.8) hue-rotate(-25deg) saturate(3.2) brightness(0.9) contrast(1.15)'],
   wolfman_hell: ['wolfman', 'sepia(1) hue-rotate(-40deg) saturate(4) brightness(0.8) contrast(1.3)'],
   troll_lava: ['troll', 'sepia(0.7) hue-rotate(-20deg) saturate(2.6) brightness(0.85) contrast(1.2)'],
+  skeleton_void: ['skeleton', 'grayscale(1) brightness(0.55) sepia(1) hue-rotate(225deg) saturate(3) contrast(1.3)'],
+  wolfman_void: ['wolfman', 'grayscale(1) brightness(0.5) sepia(1) hue-rotate(235deg) saturate(4) contrast(1.4)'],
+  zombie_void: ['zombie', 'hue-rotate(200deg) saturate(1.6) brightness(0.7) contrast(1.2)'],
+  troll_void: ['troll', 'grayscale(0.6) sepia(0.9) hue-rotate(220deg) saturate(3) brightness(0.7) contrast(1.25)'],
+  vampire_void: ['vampire', 'grayscale(1) sepia(1) hue-rotate(230deg) saturate(4) brightness(0.75) contrast(1.4)'],
+  knight_nox: ['knight_dark', 'grayscale(1) brightness(0.4) sepia(1) hue-rotate(225deg) saturate(3) contrast(1.8)'],
+  knight_nox2: ['knight_dark', 'grayscale(1) brightness(0.5) sepia(1) hue-rotate(245deg) saturate(5) contrast(2)'], // 녹스 2페이즈
   minotaur_ignis: ['minotaur', 'sepia(0.9) hue-rotate(-35deg) saturate(3.5) brightness(1.05) contrast(1.2)'],
 };
 for (const k in D.MONSTERS) {
@@ -122,6 +137,7 @@ D.ZONES = [
   { id: 'snow', name: '서리 설원', test: (tx, ty) => tx < 52 && ty < 58 },
   { id: 'field', name: '바람의 초원', test: (tx, ty) => ty < 75 && tx >= 50 && tx <= 130 },
   { id: 'volcano', name: '화염의 용암지대', test: (tx, ty) => tx >= 128 && ty >= 118 },
+  { id: 'void', name: '녹스의 성채', test: (tx, ty) => tx < 50 && ty >= 120 },
   { id: 'grave', name: '망자의 묘지', test: (tx, ty) => tx > 105 },
   { id: 'orc', name: '오크 요새', test: (tx, ty) => ty > 105 },
   { id: 'forest', name: '고요한 숲', test: () => true },
@@ -151,6 +167,12 @@ D.SPAWNS = [
   { m: 'hell_wolf', x: 142, y: 152, r: 8, n: 14 },
   { m: 'lava_troll', x: 160, y: 146, r: 7, n: 12 },
   { m: 'ignis', x: 164, y: 168, r: 3, n: 1, respawn: 480 },
+  { m: 'shadow_knight', x: 40, y: 132, r: 7, n: 14 },
+  { m: 'nox_hound', x: 16, y: 136, r: 7, n: 14 },
+  { m: 'hollow', x: 34, y: 152, r: 6, n: 12 },
+  { m: 'abyss_troll', x: 12, y: 156, r: 6, n: 12 },
+  { m: 'nox_apostle', x: 44, y: 160, r: 2, n: 1, respawn: 540 },
+  { m: 'nox', x: 16, y: 170, r: 2, n: 1, respawn: 900 },
 ];
 // dense fields for area hunting: every normal spawn carries about twice the monsters over a slightly
 // wider patch (bosses untouched); respawns come back quicker too (Game.scheduleRespawn)
@@ -170,6 +192,7 @@ D.TELEPORTS = [
   { name: '트롤 서식지', x: 100, y: 144, cost: 1500, lv: 'Lv.30~' },
   { name: '서리 설원', x: 46, y: 54, cost: 2500, lv: 'Lv.40~' },
   { name: '화염의 용암지대', x: 134, y: 122, cost: 4000, lv: 'Lv.55~' },
+  { name: '녹스의 성채', x: 45, y: 125, cost: 6000, lv: 'Lv.70~' },
 ];
 
 // ---------------- items ----------------
@@ -224,6 +247,11 @@ D.ITEMS = {
   w_bow_l1: { name: '천상의 심판궁', icon: 'bow3', kind: 'weapon', cls: 'elf', atk: 92, lv: 62, price: 0, grade: 4, set: 'judge' },
   w_staff_l1: { name: '천상의 심판봉', icon: 'staff3', kind: 'weapon', cls: 'mage', atk: 100, lv: 62, price: 0, grade: 4, set: 'judge' },
 
+  // 신화: 일식의 각성자 (Lv.75) — only 어둠의 군주 녹스 drops these
+  w_sword_m1: { name: '일식의 종언검', icon: 'sword3', kind: 'weapon', cls: 'knight', atk: 128, lv: 75, price: 0, grade: 5, set: 'eclipse' },
+  w_bow_m1: { name: '일식의 종언궁', icon: 'bow3', kind: 'weapon', cls: 'elf', atk: 122, lv: 75, price: 0, grade: 5, set: 'eclipse' },
+  w_staff_m1: { name: '일식의 종언봉', icon: 'staff3', kind: 'weapon', cls: 'mage', atk: 132, lv: 75, price: 0, grade: 5, set: 'eclipse' },
+
   a_1: { name: '가죽 갑옷', icon: 'armor1', kind: 'armor', def: 2, hp: 10, lv: 1, price: 300, grade: 0 },
   a_2: { name: '사슬 갑옷', icon: 'armor2', kind: 'armor', def: 6, hp: 40, lv: 10, price: 7000, grade: 1 },
   a_3: { name: '판금 갑옷', icon: 'armor3', kind: 'armor', def: 11, hp: 90, lv: 20, price: 45000, grade: 2 },
@@ -233,10 +261,12 @@ D.ITEMS = {
   a_r2: { name: '폭풍 추적자의 갑옷', icon: 'armor3', kind: 'armor', def: 15, hp: 130, lv: 27, price: 0, grade: 2, set: 'storm' },
   a_h1: { name: '핏빛 군단 갑주', icon: 'armor4', kind: 'armor', def: 21, hp: 200, lv: 36, price: 0, grade: 3, set: 'blood' },
   a_h2: { name: '심연 파수꾼의 갑주', icon: 'armor4', kind: 'armor', def: 25, hp: 250, lv: 44, price: 0, grade: 3, set: 'abyss' },
+  a_m1: { name: '일식의 각성자 갑주', icon: 'armor4', kind: 'armor', def: 48, hp: 600, lv: 75, price: 0, grade: 5, set: 'eclipse' },
   a_l1: { name: '천상의 심판 갑주', icon: 'armor4', kind: 'armor', def: 36, hp: 420, lv: 62, price: 0, grade: 4, set: 'judge' },
   // accessories, one per grade
   r_r: { name: '맹공의 반지', icon: 'ring1', kind: 'ring', atk: 7, crit: 4, lv: 24, price: 0, grade: 2 },
   r_h: { name: '군주의 목걸이', icon: 'ring3', kind: 'ring', atk: 10, hp: 150, crit: 6, lv: 40, price: 0, grade: 3 },
+  r_m: { name: '녹스의 인장', icon: 'ring2', kind: 'ring', atk: 24, def: 10, hp: 500, crit: 14, atkSpd: 14, lv: 75, price: 0, grade: 5 },
   r_l: { name: '심판자의 인장', icon: 'ring2', kind: 'ring', atk: 16, def: 6, hp: 300, crit: 10, atkSpd: 10, lv: 60, price: 0, grade: 4 },
 
   r_1: { name: '힘의 반지', icon: 'ring1', kind: 'ring', atk: 4, lv: 5, price: 5000, grade: 1 },
@@ -268,6 +298,7 @@ D.SETS = {
   blood: { name: '핏빛 군단', bonus: { atkPct: 12, hp: 450, crit: 4 } },
   abyss: { name: '심연의 파수꾼', bonus: { atkPct: 12, def: 25, dmgRed: 6 } },
   judge: { name: '천상의 심판', bonus: { atkPct: 18, hp: 900, crit: 8, atkSpd: 10 } },
+  eclipse: { name: '일식의 각성자', bonus: { atkPct: 26, hp: 1500, crit: 12, atkSpd: 12, dmgRed: 8 } },
 };
 D.setBonusText = (b) => [b.atkPct && `공격력 +${b.atkPct}%`, b.hp && `최대 HP +${b.hp}`, b.def && `방어력 +${b.def}`, b.atkSpd && `공격 속도 +${b.atkSpd}%`, b.crit && `치명타 +${b.crit}%`, b.dmgRed && `받는 피해 -${b.dmgRed}`].filter(Boolean).join(', ');
 D.SAFE_ENCHANT = { weapon: 6, armor: 4 };
@@ -294,6 +325,12 @@ D.DROPS = {
   hell_wolf: [['hp_l', 0.1], ['r_3', 0.004], ['sc_armor', 0.02], ['ticket', 0.007], ['r_h', 0.001], ['w_sword_l1', 0.00012]],
   lava_troll: [['hp_l', 0.12], ['a_5', 0.0015], ['w_sword6', 0.0008], ['w_bow6', 0.0008], ['w_staff6', 0.0008], ['ticket', 0.009], ['w_sword_l1', 0.00015], ['a_l1', 0.00015], ['r_l', 0.00012]],
   ignis: [['ticket', 1], ['ticket', 1], ['ticket', 1], ['ticket', 1], ['sc_weapon', 1], ['sc_weapon', 1], ['sc_armor', 1], ['w_sword6', 0.3], ['w_bow6', 0.3], ['w_staff6', 0.3], ['a_5', 0.35], ['r_3', 0.5], ['w_sword_l1', 0.25], ['a_l1', 0.25], ['r_l', 0.2]],
+  shadow_knight: [['hp_l', 0.12], ['sc_weapon', 0.022], ['sc_armor', 0.022], ['a_5', 0.002], ['w_sword_l1', 0.0002], ['a_l1', 0.0002]],
+  nox_hound: [['hp_l', 0.12], ['sc_weapon', 0.024], ['ticket', 0.01], ['r_h', 0.002], ['r_l', 0.00018]],
+  hollow: [['hp_l', 0.14], ['sc_armor', 0.026], ['ticket', 0.01], ['w_sword6', 0.0012], ['w_bow6', 0.0012], ['w_staff6', 0.0012], ['a_l1', 0.00022]],
+  abyss_troll: [['hp_l', 0.15], ['sc_weapon', 0.03], ['ticket', 0.012], ['w_sword_l1', 0.0003], ['a_l1', 0.0003], ['r_l', 0.00025]],
+  nox_apostle: [['ticket', 1], ['ticket', 1], ['ticket', 1], ['ticket', 1], ['ticket', 1], ['sc_weapon', 1], ['sc_weapon', 1], ['sc_armor', 1], ['sc_armor', 1], ['w_sword_l1', 0.4], ['a_l1', 0.4], ['r_l', 0.3]],
+  nox: [['ticket', 1], ['ticket', 1], ['ticket', 1], ['ticket', 1], ['ticket', 1], ['ticket', 1], ['sc_weapon', 1], ['sc_weapon', 1], ['sc_armor', 1], ['sc_armor', 1], ['w_sword_l1', 0.5], ['a_l1', 0.5], ['w_sword_m1', 0.18], ['a_m1', 0.18], ['r_m', 0.12]],
   minotaur: [['ticket', 1], ['ticket', 1], ['sc_weapon', 1], ['w_sword5', 0.15], ['w_bow5', 0.15], ['w_staff5', 0.15], ['a_4', 0.3], ['r_3', 0.3], ['w_sword_h2', 0.3], ['a_h2', 0.3], ['r_h', 0.3]],
 };
 
@@ -494,9 +531,61 @@ D.QUESTS = [
     reward: { dia: 5000, items: { ticket: 20 } } },
   { ch: '5장 · 화염의 봉인', title: '5-6. 일식의 진실', desc: '현자 엘로아에게 보고', type: 'talk', npc: 'eloa', by: '현자 엘로아',
     story: ['네 번째 봉인석을 가지고 돌아오게. 그리고… 이그니스가 남긴 말을 들려주게.'],
-    end: ['…그랬군. 일식의 인장은 녹스가 자신의 그릇을 찾으려 뿌린 씨앗이었어.', '하지만 자네는 그 힘으로 네 봉인을 되살렸네. 인장의 주인이 누구든, 자네의 선택이 자네를 만드는 걸세.', '봉인은 되살아났지만 이클립스 균열은 아직 열려 있네. 녹스의 그림자가 스며드는 그곳을… 매일 막아 주게. (다음 이야기로 계속)'],
+    end: ['…그랬군. 일식의 인장은 녹스가 자신의 그릇을 찾으려 뿌린 씨앗이었어.', '하지만 자네는 그 힘으로 네 봉인을 되살렸네. 인장의 주인이 누구든, 자네의 선택이 자네를 만드는 걸세.', '봉인은 되살아났지만 이클립스 균열은 아직 열려 있네. 녹스의 그림자가 스며드는 그곳을… 매일 막아 주게.'],
     reward: { dia: 5000, items: { ticket: 20 } } },
+  // 6장: the seals hold, but Nox reaches through the sigil itself — the citadel beyond the south-west rune path
+  { ch: '6장 · 녹스의 그림자', title: '6-1. 인장의 부름', desc: '현자 엘로아와 대화', type: 'talk', npc: 'eloa', by: '현자 엘로아',
+    story: ['각성자여, 손등의 인장이 밤마다 타오른다고 했지? 광장으로 오게. 수호회의 마지막 기록을 찾았네.'],
+    end: ['기록에 따르면 녹스는 봉인 너머에 성채를 쌓았네. 네 봉인이 되살아나자, 녹스는 인장을 통해 이 땅에 직접 손을 뻗고 있어.', '서쪽 문을 나가 남서쪽 룬의 길을 따라가게. 그 끝에 녹스의 성채가 열려 있네. 카심에게 부탁하면 입구까지 보내 줄 걸세.'],
+    reward: { gold: 100000, items: { hp_l: 60 } } },
+  { ch: '6장 · 녹스의 그림자', title: '6-2. 그림자 기사단', desc: '그림자 기사 처치', type: 'kill', m: 'shadow_knight', n: 80, by: '현자 엘로아',
+    story: ['성채 입구는 그림자 기사들이 지키고 있네. 천 년 전 녹스를 따랐던 기사들의 망령이지.'],
+    end: ['쓰러진 기사의 투구 아래에서 속삭임이 새어 나온다. "그릇이… 왔다…"'],
+    reward: { gold: 120000, items: { sc_weapon: 6, sc_armor: 6 } } },
+  { ch: '6장 · 녹스의 그림자', title: '6-3. 녹스의 사냥개', desc: '녹스의 사냥개 처치', type: 'kill', m: 'nox_hound', n: 90, by: '현자 엘로아',
+    story: ['인장의 냄새를 맡은 사냥개들이 몰려오고 있네. 녹스는 자네를 찾고 있어.'],
+    end: ['사냥개들의 울음이 멎자, 인장이 차갑게 식는다. 무언가 자네를 지켜보고 있다.'],
+    reward: { dia: 2500, items: { ticket: 10 } } },
+  { ch: '6장 · 녹스의 그림자', title: '6-4. 공허에 삼켜진 자들', desc: '공허에 삼켜진 자 처치', type: 'kill', m: 'hollow', n: 90, by: '현자 엘로아',
+    story: ['저들은… 인장을 받았지만 녹스에게 삼켜진 옛 각성자들일세. 자네가 걸을 수도 있었던 길이지.', '그들을 쉬게 해 주게.'],
+    end: ['마지막 한 명이 쓰러지며 중얼거린다. "너는… 우리와 다른 길을… 골라라…"'],
+    reward: { gold: 150000, items: { sc_weapon: 6, hp_l: 60 } } },
+  { ch: '6장 · 녹스의 그림자', title: '6-5. 심연의 거신', desc: '심연의 거신 처치', type: 'kill', m: 'abyss_troll', n: 100, by: '현자 엘로아',
+    story: ['성채의 심장부는 심연의 거신들이 떠받치고 있네. 저들을 무너뜨리면 사도의 제단이 드러날 걸세.'],
+    end: ['거신들이 무너지자 보랏빛 제단 위로 긴 그림자가 일어선다.'],
+    reward: { dia: 3000, items: { ticket: 12, sc_armor: 8 } } },
+  { ch: '6장 · 녹스의 그림자', title: '6-6. 녹스의 사도', desc: '녹스의 사도 처치', type: 'kill', m: 'nox_apostle', n: 1, by: '현자 엘로아',
+    story: ['녹스의 사도는 군주의 목소리를 대신 전하는 자일세. 저것이 그림자 기사들을 다시 불러내면, 흩어지기 전에 끝내게.'],
+    end: ['"어리석은 그릇이여… 군주께서 직접… 너를 맞이하시리라…"', '사도가 재가 되어 흩어지고, 성채 가장 깊은 곳의 문이 열린다.'],
+    reward: { dia: 5000, items: { ticket: 20 } } },
+  { ch: '6장 · 녹스의 그림자', title: '6-7. 어둠의 군주', desc: '어둠의 군주 녹스 처치', type: 'kill', m: 'nox', n: 1, by: '현자 엘로아',
+    story: ['마침내 녹스일세. 천 년 전 네 수호자가 목숨을 걸고 가둔 어둠의 군주.', '체력이 절반이 되면 진짜 모습을 드러낼 걸세. 그때부터는 하늘에서 어둠이 쏟아지니, 보랏빛 원을 피하게. 부디… 살아서 돌아오게.'],
+    end: ['"…그릇이… 나를 거부하는가…"', '녹스의 형체가 보랏빛 연기로 부서지고, 검은 태양이 처음으로 흔들린다.'],
+    reward: { dia: 10000, items: { ticket: 30 } } },
+  { ch: '6장 · 녹스의 그림자', title: '6-8. 각성자의 선택', desc: '현자 엘로아에게 보고', type: 'talk', npc: 'eloa', by: '현자 엘로아', ending: true,
+    story: ['돌아왔군! 하늘을 보게, 검은 태양이 갈라지고 있어. 광장으로 오게. 마지막으로 할 이야기가 있네.'],
+    end: ['녹스는 쓰러졌지만, 그 힘은 아직 자네의 인장 속에 남아 있네.', '인장을 받아들여 그 힘을 다스릴 수도, 인장을 봉인하고 평범한 빛으로 살아갈 수도 있지.', '어느 쪽이든 자네의 선택일세, 각성자.'],
+    reward: { dia: 10000, gold: 500000, items: { ticket: 30 } } },
 ];
+// 6-8: the awakened one's choice. Each path gives a permanent title bonus (Player.recalc) and its own epilogue line
+D.ENDINGS = {
+  dark: { title: '일식의 군주', pick: '인장을 받아들여 녹스의 힘을 다스린다', bonus: { atkPct: 6, crit: 4 },
+    line: '각성자는 인장을 받아들여, 녹스의 힘을 스스로 다스리는 일식의 군주가 되었다.',
+    after: ['…그 길을 택했군. 녹스의 힘은 자네를 끝없이 시험할 걸세.', '하지만 자네라면 그 어둠마저 다스리리라 믿네. 일식의 군주여, 아스텔라를 부탁하네.'] },
+  light: { title: '빛의 수호자', pick: '인장을 봉인하고 빛의 수호자가 된다', bonus: { hp: 1200, def: 20, dmgRed: 4 },
+    line: '각성자는 인장을 봉인하고, 빛의 수호자로서 아스텔라를 지키기로 했다.',
+    after: ['인장의 빛이 잔잔해졌군. 이제 그것은 녹스의 씨앗이 아니라, 자네의 맹세일세.', '빛의 수호자여, 수호회는 오늘부터 자네의 이름으로 다시 시작하네.'] },
+};
+// ending film (docs/STORY.md): same timing as the intro; line 3 follows the player's choice
+D.EPILOGUE = [
+  '녹스가 쓰러진 날, 검은 태양이 처음으로 흔들렸다.',
+  '네 봉인의 빛이 다시 하나로 모여, 균열 너머의 어둠을 밀어냈다.',
+  '각성자의 손등에서 일식의 인장이 마지막으로 타올랐다.',
+  '', // D.ENDINGS[choice].line
+  '그리고 라스카노의 광장에는, 다시 아침이 찾아왔다.',
+  '— 이클립스: 어웨이크닝 · 완 —',
+];
+D.OUTRO = { src: 'assets/intro/ending.mp4', cues: [[0.6, 0], [4.8, 1], [9.5, 2], [18.5, 3], [27.5, 4]] };
 // saves before the story rewrite (quest version 2) point at the old list: map them onto the new one
 D.QUEST_V2_TO_V3 = (i) => (i <= 8 ? i : i <= 13 ? i + 1 : i <= 17 ? i + 2 : i + 3);
 D.DAILY_QUEST = { title: '일일 토벌', desc: '아무 몬스터 처치', type: 'killAny', n: 100, reward: { dia: 100, gold: 5000 } };
@@ -512,7 +601,7 @@ D.NPCS = [
   { id: 'guard1', name: '경비병', sheet: 'npc_guard', dx: -1.5, dy: -15.5, dir: 2, talk: '북쪽은 바람의 초원이다. 고블린부터 상대하도록.' },
   { id: 'guard2', name: '경비병', sheet: 'npc_guard', dx: 15.5, dy: -1.5, dir: 1, talk: '동쪽은 망자의 묘지... 밤이 되면 뱀파이어가 나타난다더군.' },
   { id: 'guard3', name: '경비병', sheet: 'npc_guard', dx: 1.5, dy: 15.5, dir: 2, talk: '남쪽 오크 요새는 레벨 20 이상만 가도록.' },
-  { id: 'guard4', name: '경비병', sheet: 'npc_guard', dx: -15.5, dy: 1.5, dir: 3, talk: '서쪽은 고요한 숲이다. 북서쪽 끝 서리 설원에는 거인이 잠들어 있다더군. 남동쪽 끝 용암지대에는 화염 군주가 있다는 소문도 있지.' },
+  { id: 'guard4', name: '경비병', sheet: 'npc_guard', dx: -15.5, dy: 1.5, dir: 3, talk: '서쪽은 고요한 숲이다. 북서쪽 끝 서리 설원에는 거인이 잠들어 있다더군. 남동쪽 끝 용암지대에는 화염 군주가, 남서쪽 룬의 길 끝에는 녹스의 성채가 있다더군.' },
 ];
 
 // ---------------- other players (bots) ----------------

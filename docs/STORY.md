@@ -11,6 +11,7 @@
 | 미궁의 봉인 | 길 잃은 자를 인도하던 왕 | 오크 요새 너머 미궁 (남쪽) | 미노타우르스 킹 |
 | 서리의 봉인 | 가장 오래 버틴 거인 | 서리 설원 (북서쪽) | 서리 거인 요툰 |
 | 화염의 봉인 | 가장 강했던 불꽃 | 화염의 용암지대 (남동쪽) | 화염 군주 이그니스 |
+| — | 봉인 너머의 군주 | 녹스의 성채 (남서쪽, 룬의 길 끝) | 녹스의 사도 → 어둠의 군주 녹스 |
 
 해와 달이 겹치는 **이클립스(일식)** 가 오면 봉인이 약해진다. 이번 이클립스에 녹스의 목소리가 봉인 너머에서
 수호자들을 불렀고, 넷 모두 **검은 빛**에 타락했다. 그 기운은 짐승과 망자, 오크와 트롤까지 물들이고 있다.
@@ -35,11 +36,19 @@
 | **3장 · 미궁의 봉인** | 검은 부적을 받은 오크 요새를 뚫고, 늪지에서 봉인석 조각을 되찾아 미노타우르스 킹과 싸운다. | 3-1 ~ 3-5 |
 | **4장 · 서리의 봉인** | 얼어붙은 설원을 지나 서리 거인 요툰을 쓰러뜨린다. 거인의 경고: "화염의 형제가… 이미 문을 열었다…" | 4-1 ~ 4-5 |
 | **5장 · 화염의 봉인** | 용암지대에서 녹스의 땅에서 넘어온 지옥 늑대까지 상대하고 화염 군주 이그니스를 쓰러뜨린다. | 5-1 ~ 5-6 |
+| **6장 · 녹스의 그림자** | 녹스가 인장을 통해 손을 뻗는다. 남서쪽 녹스의 성채 (Lv.70~80)에서 그림자 기사, 사냥개, 옛 각성자들, 심연의 거신을 넘어 사도와 녹스를 쓰러뜨리고, 인장을 어떻게 할지 고른다. | 6-1 ~ 6-8 |
 
 **반전 (5-5 ~ 5-6).** 이그니스의 마지막 말: "각성자여… 너의 인장은… 녹스가 남긴 것이다."
 일식의 인장은 녹스가 자신의 그릇을 찾으려 뿌린 씨앗이었다. 엘로아는 말한다. "인장의 주인이 누구든,
-자네의 선택이 자네를 만드는 걸세." 네 봉인은 되살아났지만 **이클립스 균열** (일일 던전)은 여전히 열려 있다.
-녹스의 그림자가 스며드는 그곳을 매일 막는 것이 각성자의 다음 임무다. (다음 이야기로 이어짐)
+자네의 선택이 자네를 만드는 걸세."
+
+**6장.** 봉인이 되살아나자 녹스는 인장을 통해 이 땅에 직접 손을 뻗는다. 성채에서는 인장을 받았지만 녹스에게 삼켜진
+옛 각성자들 (공허에 삼켜진 자)이 "우리와 다른 길을 골라라"고 말한다. 녹스는 체력이 절반이 되면 진짜 모습을 드러내
+(2페이즈: 더 커지고 강해지며, 사냥개 6마리를 부르고, 하늘에서 어둠의 비를 내린다) 쓰러진다.
+
+**엔딩 (6-8 각성자의 선택).** 인장을 받아들이면 칭호 **일식의 군주** (공격력 +6%, 치명타 +4%),
+봉인하면 **빛의 수호자** (HP +1200, 방어력 +20, 받는 피해 -4). 선택 뒤 엔딩 영상이 나오고, 네 번째 자막이 선택에 따라 바뀐다.
+녹스는 계속 다시 나타나며 **신화** 등급 장비 세트 **일식의 각성자** (무기, 갑주, 녹스의 인장)를 떨어뜨린다.
 
 ## 게임에 적용된 곳
 
@@ -47,7 +56,8 @@
 - **퀘스트**: 장(章)별로 묶이고, 시작할 때 의뢰인의 대사, 보상을 받을 때 결과 대사가 대화창으로 나온다.
   퀘스트 창에서 현재 퀘스트의 대사를 다시 볼 수 있다.
 - **현자 엘로아**: 마을 광장의 새 NPC. 장이 끝날 때 보고 퀘스트가 있다.
-- 데이터는 `js/data.js` 의 `D.PROLOGUE`, `D.QUESTS` (`ch`, `by`, `story`, `end`).
+- **엔딩**: 6-8에서 고른 뒤 `assets/intro/ending.mp4` 를 재생한다 (없으면 문장만). 설정 → 엔딩 다시 보기.
+- 데이터는 `js/data.js` 의 `D.PROLOGUE`, `D.QUESTS` (`ch`, `by`, `story`, `end`), `D.ENDINGS`, `D.EPILOGUE`, `D.OUTRO`.
 
 ## 인트로 영상 프롬프트 (Gemini / Veo)
 
@@ -96,4 +106,37 @@ Epic dark-fantasy cinematic, hand-painted 2D animation look, 16:9, 8 seconds. A 
 town. Four corrupted guardians — a vampire lord, a minotaur king, a frost giant and a fire lord — appear as giant ghostly
 silhouettes around the eclipse, their eyes glowing purple. In the town plaza a young adventurer awakens before a glowing
 altar, a golden eclipse sigil burning on the back of the hand, and looks up at the black sun. No text.
+```
+
+## 엔딩 영상 프롬프트 (Gemini / Veo)
+
+인트로와 같은 방식: 8초 컷 4개, 모든 컷 앞에 위의 **공통 스타일** 문단을 붙인다. 완성된 컷을 올려 주면
+1초 크로스페이드로 이어 `assets/intro/ending.mp4` 로 넣는다 (자막 시간표는 인트로와 같다).
+
+**엔딩 컷 1 — 군주의 몰락**
+```
+Inside a black citadel of jagged violet crystal, a towering dark knight lord made of shadow and purple fire staggers,
+cracks of golden light splitting across his armor. He shatters into a storm of violet smoke and embers that spirals up
+into the sky. Above, the black sun of the eclipse trembles for the first time.
+```
+
+**엔딩 컷 2 — 네 봉인의 빛**
+```
+Four distant beams of light rise from four corners of a medieval continent — crimson from a graveyard, bronze from a
+labyrinth, ice blue from a frozen peak, orange from a lava field — and converge high in the sky into one blinding pillar
+that pierces the black eclipse. Dark mist is pushed back across the land like a receding tide.
+```
+
+**엔딩 컷 3 — 마지막 인장**
+```
+Close-up of a young adventurer's hand in the ruins of the citadel. The golden eclipse sigil on the back of the hand
+flares one last time, bright gold and violet light swirling around it, then slowly calms to a soft steady glow.
+The adventurer closes the hand into a fist and looks up.
+```
+
+**엔딩 컷 4 — 다시 찾아온 아침**
+```
+Dawn over a peaceful medieval stone town with a round plaza and a fountain. The moon slides away from the sun and warm
+golden sunlight floods the streets. Townsfolk step out and cheer, an old sage in robes smiles on the plaza steps,
+and a lone adventurer stands on the town wall watching the sunrise. The camera slowly rises into a clear bright sky.
 ```

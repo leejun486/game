@@ -209,34 +209,33 @@ const UI = (() => {
     box.onclick = advance;
     show();
   }
-  // new characters: the intro clip with its prologue lines as timed subtitles, then the title card.
-  // If the clip can't play, the lines are shown as a text crawl instead.
-  function intro(then) {
+  // a film with timed subtitles: lines[cue[1]] shows from cue[0] seconds, then the title card.
+  // If the clip can't play (or isn't there yet), the lines are shown as a text crawl instead.
+  function cinema({ src, cues, lines, title }, then) {
     const el = document.createElement('div');
     el.id = 'intro';
     el.innerHTML = '<video playsinline webkit-playsinline preload="auto" disablepictureinpicture disableremoteplayback controlslist="nodownload nofullscreen noremoteplayback"></video><div class="intro-text"></div><div class="intro-sub"></div><button class="intro-skip">건너뛰기 ▶</button>';
     document.body.appendChild(el);
     const v = el.querySelector('video'), tx = el.querySelector('.intro-text'), sub = el.querySelector('.intro-sub');
-    const cues = D.INTRO.cues, title = D.PROLOGUE[D.PROLOGUE.length - 1];
     let done = false, timer = 0, started = false, shown = -1;
     const finish = () => {
       if (done) return; done = true; clearTimeout(timer); v.pause(); v.removeAttribute('src');
       el.classList.add('out'); setTimeout(() => { el.remove(); then && then(); }, 600);
     };
     el.querySelector('.intro-skip').onclick = finish;
-    const textLines = (lines, next) => {
+    const textLines = (list, next) => {
       v.style.opacity = 0; sub.textContent = '';
       let k = 0;
       const step = () => {
         if (done) return;
-        if (k >= lines.length) { tx.innerHTML = ''; return next(); }
-        const line = lines[k++];
+        if (k >= list.length) { tx.innerHTML = ''; return next(); }
+        const line = list[k++];
         tx.innerHTML = `<p class="${line === title ? 'title' : ''}">${esc(line)}</p>`;
         timer = setTimeout(step, line === title ? 3400 : 3600);
       };
       step();
     };
-    const fallback = () => { if (!started && !done) { started = true; textLines(D.PROLOGUE, () => { timer = setTimeout(finish, 400); }); } };
+    const fallback = () => { if (!started && !done) { started = true; textLines(cues.map((c) => lines[c[1]]).concat(title), () => { timer = setTimeout(finish, 400); }); } };
     v.onerror = fallback;
     // keep the player hidden until real frames are moving, so its idle/play-button state never shows
     v.onplaying = () => { started = true; };
@@ -246,12 +245,33 @@ const UI = (() => {
       for (let i = 0; i < cues.length; i++) if (v.currentTime >= cues[i][0]) k = i;
       if (k === shown) return;
       shown = k;
-      sub.innerHTML = k < 0 ? '' : `<span>${esc(D.PROLOGUE[cues[k][1]])}</span>`;
+      sub.innerHTML = k < 0 ? '' : `<span>${esc(lines[cues[k][1]])}</span>`;
     };
     v.onended = () => { sub.textContent = ''; textLines([title], () => { timer = setTimeout(finish, 400); }); };
     v.muted = !!Game.muted;
-    v.src = D.INTRO.src;
+    v.src = src;
     v.play().catch(() => { v.muted = true; v.play().catch(fallback); });
+  }
+  // new characters: the prologue film
+  function intro(then) {
+    cinema({ src: D.INTRO.src, cues: D.INTRO.cues, lines: D.PROLOGUE, title: D.PROLOGUE[D.PROLOGUE.length - 1] }, then);
+  }
+  // after Nox: the epilogue film, its fourth line following the player's choice
+  function ending(choice, then) {
+    const lines = D.EPILOGUE.slice();
+    lines[3] = D.ENDINGS[choice].line;
+    cinema({ src: D.OUTRO.src, cues: D.OUTRO.cues, lines, title: lines[lines.length - 1] }, then);
+  }
+  // a centred question with a button per option; cb(value)
+  function choice(title, opts, cb) {
+    const el = document.createElement('div');
+    el.id = 'choice-box';
+    el.innerHTML = `<div class="ch-in"><div class="ch-title">${esc(title)}</div>${opts.map((o, i) => `<button class="ch-opt" data-i="${i}">${esc(o.label)}${o.sub ? `<small>${esc(o.sub)}</small>` : ''}</button>`).join('')}</div>`;
+    document.body.appendChild(el);
+    el.onclick = (e) => {
+      const b = e.target.closest('[data-i]'); if (!b) return;
+      el.remove(); U.sfx.success(); cb(opts[+b.dataset.i].value);
+    };
   }
   function refreshAll() { refreshHud(); refreshQuest(); if (panel && panel.rerender) panel.rerender(); }
 
@@ -626,6 +646,7 @@ const UI = (() => {
     body.innerHTML = `<div class="list-row"><span>효과음</span><button class="dark-btn" data-do="snd">${game.muted ? '꺼짐' : '켜짐'}</button></div>
       <div class="list-row"><span>자동 물약 (HP 55% 이하)</span><button class="dark-btn" data-do="pot">${p.s.autoPotion ? '켜짐' : '꺼짐'}</button></div>
       <div class="list-row"><span>인트로 영상</span><button class="dark-btn" data-do="intro">다시 보기</button></div>
+      ${p.s.ending ? `<div class="list-row"><span>엔딩 영상 <small class="sub">(${esc(D.ENDINGS[p.s.ending].title)})</small></span><button class="dark-btn" data-do="ending">다시 보기</button></div>` : ''}
       <div class="list-row"><span>운영자 모드 (F2)</span><button class="gold-btn" data-do="gm">열기</button></div>
       <div class="list-row"><span>게임 저장</span><button class="dark-btn" data-do="save">저장</button></div>
       <div class="list-row"><span>저장 삭제 후 처음부터</span><button class="red-btn" data-do="reset">초기화</button></div>
@@ -637,6 +658,7 @@ const UI = (() => {
       if (a === 'pot') p.s.autoPotion = !p.s.autoPotion;
       if (a === 'gm') return open('admin');
       if (a === 'intro') { close(); return intro(); }
+      if (a === 'ending') { close(); return ending(p.s.ending); }
       if (a === 'save') { game.save(); toast('저장되었습니다.'); }
       if (a === 'reset' && confirm('정말 모든 진행 상황을 삭제할까요?')) { game.wipe(); return; }
       OPENERS.settings();
@@ -778,7 +800,7 @@ const UI = (() => {
   }
 
   return {
-    story, intro,
+    story, intro, ending, choice,
     toggleRide, init, iconImg, spriteCanvas, drawSprite, chat, announce, toast, skillName, refreshHud, refreshQuest, refreshAll, markInv,
     flashSlot, drawMinimap, open, close, isOpen, openEnchant, toggleAuto, useSlotItem, esc, ico, makePanel, OPENERS,
     get panelName() { return panel && panel.name; },

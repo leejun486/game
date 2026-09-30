@@ -121,7 +121,7 @@ const Game = {
       // 전설: a spear of light lands on the spot, shockwaves, a golden flash and a server-wide style banner
       U.sfx.legend();
       if (drop) this.fx.push(Combat.makeFx('legendfall', drop.x, drop.y));
-      UI.announce(`<em class="legend">[전설] ${UI.esc(it.name)}</em>이(가) 떨어졌습니다!`);
+      UI.announce(`<em class="${it.grade >= 5 ? 'mythic' : 'legend'}">[${g.name}] ${UI.esc(it.name)}</em>이(가) 떨어졌습니다!`);
     }
     else if (it.grade >= 3) U.sfx.success();
     else U.sfx.magic();
@@ -163,7 +163,7 @@ const Game = {
       else p.autoEquipBest();
     }
     this.fx.push(Combat.makeFx('loot', p.x, p.y, { color: D.GRADES[it.grade].color }));
-    if (it.grade >= 3) UI.announce(`<b>${UI.esc(p.name)}</b>님이 <em class="${it.grade >= 4 ? 'legend' : ''}">${UI.esc(it.name)}</em>을(를) 획득했습니다.`);
+    if (it.grade >= 3) UI.announce(`<b>${UI.esc(p.name)}</b>님이 <em class="${it.grade >= 5 ? 'mythic' : it.grade >= 4 ? 'legend' : ''}">${UI.esc(it.name)}</em>을(를) 획득했습니다.`);
     U.sfx.coin();
     UI.markInv();
   },
@@ -703,7 +703,7 @@ const Game = {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     const W = innerWidth, H = innerHeight;
     const zone = p ? World.zoneAt(p.x, p.y).id : 'town';
-    const tint = { grave: 'rgba(20,30,70,0.28)', orc: 'rgba(90,40,10,0.14)', forest: 'rgba(0,40,20,0.12)', snow: 'rgba(160,200,255,0.10)', volcano: 'rgba(255,70,10,0.13)', field: 'rgba(255,220,150,0.04)', town: 'rgba(255,200,120,0.05)' }[zone];
+    const tint = { grave: 'rgba(20,30,70,0.28)', orc: 'rgba(90,40,10,0.14)', forest: 'rgba(0,40,20,0.12)', snow: 'rgba(160,200,255,0.10)', volcano: 'rgba(255,70,10,0.13)', void: 'rgba(50,0,80,0.24)', field: 'rgba(255,220,150,0.04)', town: 'rgba(255,200,120,0.05)' }[zone];
     if (tint) { ctx.fillStyle = tint; ctx.fillRect(0, 0, W, H); }
     if (zone === 'snow') { // falling snow drifting in the wind
       const tt = performance.now() / 1000;
@@ -722,6 +722,16 @@ const Game = {
         const px = ((i * 83.7 + Math.sin(tt * 0.9 + i) * 24) % (W + 40) + W + 40) % (W + 40) - 20;
         const py = H - (((i * 61.3 + tt * sp) % (H + 20)) - 10);
         ctx.fillStyle = i % 4 ? 'rgba(255,140,40,0.85)' : 'rgba(255,230,150,0.9)';
+        ctx.fillRect(px, py, sz, sz);
+      }
+    }
+    if (zone === 'void') { // violet motes sinking from the black sun
+      const tt = performance.now() / 1000;
+      for (let i = 0; i < 80; i++) {
+        const sp = 10 + (i % 5) * 8, sz = 1 + (i % 3);
+        const px = ((i * 71.9 + Math.sin(tt * 0.6 + i) * 30) % (W + 40) + W + 40) % (W + 40) - 20;
+        const py = ((i * 47.7 + tt * sp) % (H + 20)) - 10;
+        ctx.fillStyle = i % 3 ? `rgba(190,120,255,${0.5 + Math.sin(tt * 2 + i) * 0.3})` : 'rgba(20,0,30,0.8)';
         ctx.fillRect(px, py, sz, sz);
       }
     }

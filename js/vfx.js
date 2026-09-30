@@ -100,6 +100,18 @@ const VFX = (() => {
     decal('frost', x, y, r * 0.9, 4);
     flash(x, y, r * 1.8, '#9fdcff', 0.4);
   }
+  // 녹스: violet flare with black smoke
+  function voidBurst(x, y, r = 90, strength = 1) {
+    const n = Math.round(22 * strength + r * 0.2);
+    for (let i = 0; i < n; i++) {
+      const a = Math.random() * Math.PI * 2, sp = R(40, 200) * (r / 90);
+      add({ tex: TEX.arcane, x, y, z: R(4, 20), vx: Math.cos(a) * sp, vy: Math.sin(a) * sp * 0.55, vz: R(40, 170), drag: 2.2, life: R(0.4, 0.8), s0: R(22, 40) * strength, s1: 4 });
+    }
+    for (let i = 0; i < 10 * strength; i++) add({ tex: TEX.smoke, x: x + R(-r, r) * 0.5, y: y + R(-r, r) * 0.3, z: R(10, 30), vx: R(-20, 20), vz: R(20, 50), life: R(0.9, 1.6), s0: 26, s1: 76, a: 0.9, add: false, fadeIn: 0.1 });
+    add({ tex: TEX.arcane, x, y, z: 20, life: 0.45, s0: r * 2, s1: r * 2.6, a: 0.8 });
+    decal('scorch', x, y, r * 0.7, 4);
+    flash(x, y, r * 2.2, '#b46bff', 0.5);
+  }
   function sparkBurst(x, y, color = 'zap', n = 12) {
     for (let i = 0; i < n; i++) { const a = Math.random() * Math.PI * 2, sp = R(80, 240); add({ tex: TEX[color] || TEX.zap, x, y, z: 30, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp * 0.6, vz: R(-60, 80), drag: 3, life: R(0.2, 0.4), s0: 10, s1: 1 }); }
     flash(x, y, 120, '#aee6ff', 0.2);
@@ -330,5 +342,5 @@ const VFX = (() => {
     ctx.restore();
   }
 
-  return { dust, sparkle, trail, fireBurst, iceBurst, sparkBurst, debris, hazard, burning, poisoned, decal, flash, update, drawGround, draw, status, lights, drawFireball, drawIceLance, drawFrostArrow, drawFireArrow, get count() { return parts.length; } };
+  return { dust, sparkle, trail, fireBurst, iceBurst, voidBurst, sparkBurst, debris, hazard, burning, poisoned, decal, flash, update, drawGround, draw, status, lights, drawFireball, drawIceLance, drawFrostArrow, drawFireArrow, get count() { return parts.length; } };
 })();

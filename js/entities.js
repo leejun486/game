@@ -212,7 +212,8 @@ class Monster extends Entity {
     const t = performance.now() / 1000;
     ctx.save(); ctx.globalAlpha *= 0.5 + Math.sin(t * 3) * 0.2;
     const g = ctx.createRadialGradient(x, y - 40 * this.scale, 5, x, y - 40 * this.scale, 60 * this.scale);
-    g.addColorStop(0, 'rgba(255,40,40,0.55)'); g.addColorStop(1, 'rgba(255,0,0,0)');
+    const dark = this.def.skill === 'nox' || this.def.skill === 'voidNova';
+    g.addColorStop(0, dark ? (this.phase2 ? 'rgba(220,120,255,0.75)' : 'rgba(150,60,255,0.6)') : 'rgba(255,40,40,0.55)'); g.addColorStop(1, dark ? 'rgba(60,0,120,0)' : 'rgba(255,0,0,0)');
     ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y - 40 * this.scale, 60 * this.scale, 0, Math.PI * 2); ctx.fill();
     ctx.restore();
   }
@@ -246,7 +247,7 @@ class Monster extends Entity {
       else if (this.trackStuck(dt, sp) > 3) { this.x = this.home.x; this.y = this.home.y; this.returning = false; this.hp = this.maxHp; this.stuckT = 0; }
       return;
     }
-    if (this.target && (this.def.skill === 'frostStomp' || this.def.skill === 'fireStomp') && this.bossSkill(dt, game)) return;
+    if (this.target && this.def.skill && this.bossSkill(dt, game)) return;
     if (this.target) {
       const d = U.dist(this, this.target);
       const reach = this.def.range + (this.target.radius || 14);
@@ -280,34 +281,61 @@ class Monster extends Entity {
       if (Math.hypot(nx - this.home.x, ny - this.home.y) < this.spawn.r * D.TILE + 50 && Nav.lineClear(this.x, this.y, nx, ny, 12)) this.wanderTo = { x: nx, y: ny };
     }
   }
-  // 서리 거인: every few seconds a telegraphed frost stomp (big ring, then damage + slow);
-  // below half health it also calls frost wolves once
+  // boss skills: every few seconds a telegraphed stomp (big ring, then damage); below half health each boss
+  // calls its pack once. 녹스 also wakes into a second phase there: bigger, harder, faster, and it alternates
+  // the stomp with a rain of darkness (several small rings around the target)
   bossSkill(dt, game) {
+    const sk = this.def.skill, fire = sk === 'fireStomp', dark = sk === 'voidNova' || sk === 'nox';
     this.skillCd = (this.skillCd ?? 4) - dt;
     if (!this.summoned && this.hp < this.maxHp * 0.5) {
       this.summoned = true;
-      const fire = this.def.skill === 'fireStomp';
-      UI.announce(`<em>${this.name}</em>이(가) ${fire ? '지옥 늑대' : '서리 늑대'}를 불러냅니다!`);
-      for (let i = 0; i < 4; i++) {
-        const a = (i / 4) * Math.PI * 2, m = new Monster(D.MONSTERS[fire ? 'hell_wolf' : 'frost_wolf'], { x: this.x / D.TILE + Math.cos(a) * 2.5, y: this.y / D.TILE + Math.sin(a) * 2, r: 1, noRespawn: true });
+      if (sk === 'nox') this.awaken(game);
+      const pack = { frostStomp: ['frost_wolf', 4], fireStomp: ['hell_wolf', 4], voidNova: ['shadow_knight', 4], nox: ['nox_hound', 6] }[sk];
+      UI.announce(`<em>${this.name}</em>이(가) ${D.MONSTERS[pack[0]].name}을(를) 불러냅니다!`);
+      for (let i = 0; i < pack[1]; i++) {
+        const a = (i / pack[1]) * Math.PI * 2, m = new Monster(D.MONSTERS[pack[0]], { x: this.x / D.TILE + Math.cos(a) * 2.5, y: this.y / D.TILE + Math.sin(a) * 2, r: 1, noRespawn: true });
         m.summon = true; m.target = this.target; m.home = { x: this.home.x, y: this.home.y };
         game.monsters.push(m); game.fx.push(Combat.makeFx('teleport', m.x, m.y));
       }
     }
     if (this.skillCd > 0 || U.dist(this, this.target) > 420) return false;
-    this.skillCd = U.rand(7, 9);
-    const R = 190, x = this.x, y = this.y;
-    game.fx.push(Combat.makeFx('stompwarn', x, y, { r: R, dur: 1.3 }));
+    this.skillCd = this.phase2 ? U.rand(4.5, 6) : U.rand(7, 9);
+    if (this.phase2 && (this.rainNext = !this.rainNext)) return this.shadowRain(game);
+    const R = dark ? 220 : 190, x = this.x, y = this.y;
+    game.fx.push(Combat.makeFx('stompwarn', x, y, { r: R, dur: 1.3, dark, fire }));
     this.act('thrust', 1.3, () => {
       const near = game.player && Math.hypot(game.player.x - x, game.player.y - y) < 700;
       if (near) { game.shake = 12; U.sfx.boom(); }
-      const fire = this.def.skill === 'fireStomp';
-      if (fire) { VFX.fireBurst(x, y, R, 2); VFX.debris(x, y, 16); } else VFX.iceBurst(x, y, R, 1.8);
-      game.fx.push(Combat.makeFx('explode', x, y, { color: fire ? '#ff6a1a' : '#9fe0ff', r: R }));
+      if (dark) { VFX.voidBurst(x, y, R, 2); VFX.debris(x, y, 10); } else if (fire) { VFX.fireBurst(x, y, R, 2); VFX.debris(x, y, 16); } else VFX.iceBurst(x, y, R, 1.8);
+      game.fx.push(Combat.makeFx('explode', x, y, { color: dark ? '#b46bff' : fire ? '#ff6a1a' : '#9fe0ff', r: R }));
       for (const e of game.fighters()) {
         if (e.dead || Math.hypot(e.x - x, e.y - y) > R + (e.radius || 14)) continue;
         Combat.monsterHit(this, e, true, true);
-        if (!fire) e.slowT = 3;
+        if (sk === 'frostStomp' || dark) e.slowT = dark ? 2 : 3;
+      }
+    }, true);
+    this.moving = false;
+    return true;
+  }
+  awaken(game) {
+    this.phase2 = true;
+    this.sheet = 'knight_nox2'; this.scale *= 1.15; this.radius *= 1.15;
+    this.atk = Math.round(this.atk * 1.3);
+    game.shake = 22; U.sfx.boom();
+    VFX.voidBurst(this.x, this.y, 260, 2.5);
+    game.fx.push(Combat.makeFx('shock', this.x, this.y, { r: 320, color: '#c78bff', dur: 0.8 }));
+    UI.announce('<em>어둠의 군주 녹스</em>가 진정한 모습을 드러냅니다! 하늘에서 어둠이 쏟아집니다!');
+  }
+  shadowRain(game) {
+    const t = this.target, spots = [[t.x, t.y]];
+    for (let i = 0; i < 5; i++) { const a = Math.random() * Math.PI * 2, d = U.rand(90, 260); spots.push([t.x + Math.cos(a) * d, t.y + Math.sin(a) * d * 0.7]); }
+    const R = 105;
+    for (const [x, y] of spots) game.fx.push(Combat.makeFx('stompwarn', x, y, { r: R, dur: 1.2, dark: true }));
+    this.act('thrust', 1.2, () => {
+      if (game.player && U.dist(game.player, this) < 800) { game.shake = 10; U.sfx.boom(); }
+      for (const [x, y] of spots) {
+        VFX.voidBurst(x, y, R, 1.1);
+        for (const e of game.fighters()) if (!e.dead && Math.hypot(e.x - x, e.y - y) < R + (e.radius || 14)) Combat.monsterHit(this, e, false, true);
       }
     }, true);
     this.moving = false;

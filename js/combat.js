@@ -347,9 +347,10 @@ const Combat = (() => {
       case 'stompwarn': { // ground ring that fills up until the stomp lands
         ctx.translate(x, y); ctx.scale(1, 0.55);
         const R = f.r || 180;
-        ctx.fillStyle = `rgba(90,180,255,${0.12 + k * 0.18})`; ctx.beginPath(); ctx.arc(0, 0, R, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = 'rgba(160,225,255,0.35)'; ctx.beginPath(); ctx.arc(0, 0, R * k, 0, Math.PI * 2); ctx.fill();
-        ctx.strokeStyle = `rgba(200,240,255,${0.6 + Math.sin(f.t * 30) * 0.3})`; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(0, 0, R, 0, Math.PI * 2); ctx.stroke();
+        const rgb = f.dark ? ['150,60,230', '200,120,255', '235,200,255'] : f.fire ? ['255,110,30', '255,170,80', '255,225,170'] : ['90,180,255', '160,225,255', '200,240,255'];
+        ctx.fillStyle = `rgba(${rgb[0]},${0.12 + k * 0.18})`; ctx.beginPath(); ctx.arc(0, 0, R, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = `rgba(${rgb[1]},0.35)`; ctx.beginPath(); ctx.arc(0, 0, R * k, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = `rgba(${rgb[2]},${0.6 + Math.sin(f.t * 30) * 0.3})`; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(0, 0, R, 0, Math.PI * 2); ctx.stroke();
         break;
       }
       case 'doom': {
@@ -736,6 +737,7 @@ const Quests = {
     U.sfx.coin();
     this.check(game);
     UI.refreshAll();
+    if (q.ending) return this.finale(game, q), true;
     if (!wasDaily) {
       const next = this.current(p);
       UI.story(q.by || '', q.end);
@@ -745,6 +747,18 @@ const Quests = {
       }
     }
     return true;
+  },
+  // 6-8: Eloa's last words, the choice, the ending film, then her answer to that choice
+  finale(game, q) {
+    const p = game.player;
+    UI.story(q.by, q.end, () => UI.choice('인장을 어떻게 하겠는가?', ['dark', 'light'].map((k) => ({ value: k, label: D.ENDINGS[k].pick, sub: `칭호 「${D.ENDINGS[k].title}」 · ${D.setBonusText(D.ENDINGS[k].bonus)}` })), (k) => {
+      p.s.ending = k; p.recalc(); game.save();
+      UI.ending(k, () => {
+        UI.announce(`<b>${UI.esc(p.name)}</b>님이 칭호 <em class="mythic">「${D.ENDINGS[k].title}」</em>을(를) 얻었습니다!`);
+        UI.story(q.by, D.ENDINGS[k].after);
+        UI.story('', ['— 이클립스: 어웨이크닝 · 완 —', '이클립스 균열과 녹스의 성채는 계속 열려 있습니다. 신화 장비 「일식의 각성자」를 모아 보세요.']);
+      });
+    }));
   },
   // where to go for the current quest
   destination(p) {

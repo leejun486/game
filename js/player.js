@@ -144,6 +144,9 @@ class Player extends Hero {
     const setId = this.activeSet();
     let setAtkPct = 0;
     if (setId) { const b = D.SETS[setId].bonus; add({ hp: b.hp || 0, def: b.def || 0, atkSpd: b.atkSpd || 0, crit: b.crit || 0, dmgRed: b.dmgRed || 0 }); setAtkPct = b.atkPct || 0; }
+    // 6-8 ending title
+    const end = this.s.ending && D.ENDINGS[this.s.ending];
+    if (end) { const { atkPct: ep = 0, ...rest } = end.bonus; add(rest); setAtkPct += ep; }
     // transcend card
     const card = this.s.card && D.CARD_BY_ID[this.s.card];
     if (card) add(D.cardStats(card, (this.s.cards[card.id] || { lv: 1 }).lv));

@@ -390,7 +390,7 @@ const Gacha = (() => {
             <button class="gold-btn" data-pull="11">${costLabel(sp, p, 11)}</button></div>
         </div>
         <div class="rates">보유: 다이아 <b style="color:#9fe0ff">${U.fmt(p.s.dia)}</b>${curTab === 'transcend' ? ` · 소환권 <b style="color:#c79cff">${p.count('ticket')}</b>` : ''}<br>
-        확률 — ${D.GRADES.map((g, i) => `<span class="${g.cls}">${g.name} ${(D.SUMMON_RATES[i] * 100).toFixed(1)}%</span>`).join(' · ')}</div>`;
+        확률 — ${D.GRADES.slice(0, D.SUMMON_RATES.length).map((g, i) => `<span class="${g.cls}">${g.name} ${(D.SUMMON_RATES[i] * 100).toFixed(1)}%</span>`).join(' · ')}</div>`;
       body.querySelectorAll('.summon-box canvas').forEach((cv, i) => { const x = show[i % Math.max(1, show.length)] || pool[0]; if (x) try { sp.thumb(cv, x); } catch (e) { /* preview only */ } });
       body.querySelectorAll('button img').forEach((i) => { i.style.width = '16px'; i.style.verticalAlign = '-3px'; });
     };

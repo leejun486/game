@@ -2,7 +2,7 @@
 // World: tile map generation, terrain rendering (chunked), props, collision, minimap.
 const World = (() => {
   const T = D.TILE, W = D.MAP_W, H = D.MAP_H;
-  const GRASS = 0, DIRT = 1, STONE = 2, GRAVE = 3, SAND = 4, WATER = 5, FOREST = 6, ROAD = 7, CLIFF = 8, DUNGEON = 9, SNOW = 10, ICE = 11, TRAIL = 12, BASALT = 13, LAVA = 14, ASH = 15;
+  const GRASS = 0, DIRT = 1, STONE = 2, GRAVE = 3, SAND = 4, WATER = 5, FOREST = 6, ROAD = 7, CLIFF = 8, DUNGEON = 9, SNOW = 10, ICE = 11, TRAIL = 12, BASALT = 13, LAVA = 14, ASH = 15, VOID = 16, CHASM = 17, RUNEPATH = 18;
   const tiles = new Uint8Array(W * H);
   const solid = new Uint8Array(W * H);
   const props = [];
@@ -31,6 +31,7 @@ const World = (() => {
         else if (z === 'orc') t = n > 0.64 ? DIRT : SAND;
         else if (z === 'snow') t = SNOW;
         else if (z === 'volcano') t = BASALT;
+        else if (z === 'void') t = VOID;
         tiles[ty * W + tx] = t;
       }
     }
@@ -61,6 +62,7 @@ const World = (() => {
     road(90, 74, 92, 8, 1); road(106, 90, 172, 86, 1); road(90, 106, 90, 172, 1); road(74, 90, 52, 94, 1);
     road(90, 60, 60, 72, 1);
     road(60, 72, 44, 52, 1); road(44, 52, 24, 12, 1); // trail up into the snowfield
+    road(52, 94, 48, 116, 1); road(48, 116, 38, 132, 1); road(38, 132, 28, 150, 1); road(28, 150, 18, 166, 1); // rune path down into Nox's citadel
     road(124, 88, 134, 122, 1); road(134, 122, 150, 140, 1); road(150, 140, 162, 162, 1); // ash road down into the volcano
     // lava pools (impassable) scattered through the volcano, clear of the camps and the boss arena
     const lavaPool = (cx, cy, rx, ry) => {
@@ -70,6 +72,18 @@ const World = (() => {
       }
     };
     lavaPool(155, 128, 5, 3); lavaPool(174, 150, 4, 6); lavaPool(132, 140, 3, 4); lavaPool(150, 172, 6, 3); lavaPool(176, 176, 4, 3);
+    // 녹스의 성채: bottomless chasms (impassable) torn through the black stone, clear of the camps and arenas
+    const chasm = (cx, cy, rx, ry) => {
+      for (let ty = cy - ry - 3; ty <= cy + ry + 3; ty++) for (let tx = cx - rx - 3; tx <= cx + rx + 3; tx++) {
+        const d = Math.hypot((tx - cx) / rx, (ty - cy) / ry) + (U.fbm(tx * 0.3, ty * 0.3, SEED + 23, 2) - 0.5) * 0.7;
+        if (d < 1 && tx >= 0 && ty >= 0 && tx < W && ty < H && zoneAt(tx * T + 32, ty * T + 32).id === 'void' && tiles[ty * W + tx] !== DIRT) tiles[ty * W + tx] = CHASM;
+      }
+    };
+    chasm(6, 126, 4, 3); chasm(26, 124, 5, 2); chasm(4, 146, 3, 5); chasm(46, 144, 3, 4); chasm(30, 174, 5, 3); chasm(46, 172, 3, 3);
+    for (let ty = 0; ty < H; ty++) for (let tx = 0; tx < W; tx++) {
+      const i = ty * W + tx;
+      if ((tiles[i] === DIRT || tiles[i] === WATER) && zoneAt(tx * T + 32, ty * T + 32).id === 'void') tiles[i] = tiles[i] === DIRT ? RUNEPATH : CHASM;
+    }
     // snowfield: lakes freeze over (walkable ice), the trail is packed snow
     for (let ty = 0; ty < H; ty++) for (let tx = 0; tx < W; tx++) {
       if (zoneAt(tx * T + 32, ty * T + 32).id !== 'snow') continue;
@@ -88,7 +102,7 @@ const World = (() => {
         if (Math.hypot(tx - 90, ty - 90) > 6) tiles[ty * W + tx] = ROAD;
       }
     }
-    for (let i = 0; i < W * H; i++) solid[i] = tiles[i] === WATER || tiles[i] === LAVA ? 1 : 0;
+    for (let i = 0; i < W * H; i++) solid[i] = tiles[i] === WATER || tiles[i] === LAVA || tiles[i] === CHASM ? 1 : 0;
     placeProps();
     buildDungeon();
   }
@@ -108,7 +122,7 @@ const World = (() => {
   function freeTile(tx, ty, margin = 0) {
     for (let oy = -margin; oy <= margin; oy++) for (let ox = -margin; ox <= margin; ox++) {
       const t = tileAt(tx + ox, ty + oy);
-      if (t === WATER || t === CLIFF || t === DIRT || t === ROAD || t === STONE || t === TRAIL || t === LAVA || t === ASH) return false;
+      if (t === WATER || t === CLIFF || t === DIRT || t === ROAD || t === STONE || t === TRAIL || t === LAVA || t === ASH || t === CHASM || t === RUNEPATH) return false;
     }
     return true;
   }
@@ -188,6 +202,12 @@ const World = (() => {
           else if (roll < (spawnArea ? 0.02 : 0.08)) addProp('burnttree', x, y, 16);
           else if (roll < 0.1) addProp('lavavent', x, y, 0, { ground: true });
           else if (roll < 0.11) addProp('bones', x, y, 0, { ground: true });
+        } else if (z === 'void') {
+          if (Math.hypot(tx - 16, ty - 170) < 10 || Math.hypot(tx - 44, ty - 160) < 7) continue; // Nox's and the apostle's arenas stay open
+          if (roll < (spawnArea ? 0.012 : 0.05)) addProp('voidspire', x, y, 16);
+          else if (roll < (spawnArea ? 0.02 : 0.075)) addProp('deadtree', x, y, 16);
+          else if (roll < 0.095) addProp('voidrune', x, y, 0, { ground: true });
+          else if (roll < 0.105) addProp('bones', x, y, 0, { ground: true });
         } else if (z === 'orc') {
           if (roll < 0.012) addProp('tent', x, y, 40);
           else if (roll < 0.02) addProp('bonfire', x, y, 18);
@@ -212,6 +232,9 @@ const World = (() => {
     addProp('altar', 90 * T, 168 * T, 0, { ground: true });
     addProp('altar', 22 * T, 8 * T, 0, { ground: true, frost: true });
     addProp('altar', 164 * T, 168 * T, 0, { ground: true, fire: true });
+    addProp('altar', 44 * T, 160 * T, 0, { ground: true, dark: true });
+    addProp('altar', 16 * T, 170 * T, 0, { ground: true, dark: true });
+    for (let a = 0; a < 8; a++) { const ang = (a / 8) * Math.PI * 2 + 0.2; addProp('voidspire', (16 + Math.cos(ang) * 8) * T, (170 + Math.sin(ang) * 6) * T, 16); }
     for (let a = 0; a < 6; a++) { const ang = (a / 6) * Math.PI * 2 + 0.5; addProp('obsidian', (164 + Math.cos(ang) * 7) * T, (168 + Math.sin(ang) * 5) * T, 16); }
     for (let a = 0; a < 6; a++) { const ang = (a / 6) * Math.PI * 2; addProp('icecrystal', (22 + Math.cos(ang) * 6) * T, (8 + Math.sin(ang) * 4.5) * T, 16); }
   }
@@ -278,7 +301,7 @@ const World = (() => {
 
   const PAL = {
     [GRASS]: [78, 112, 54], [FOREST]: [50, 82, 42], [DIRT]: [124, 100, 70], [STONE]: [170, 154, 130],
-    [ROAD]: [140, 128, 110], [DUNGEON]: [58, 52, 66], [GRAVE]: [74, 70, 64], [SAND]: [178, 148, 100], [WATER]: [38, 78, 112], [CLIFF]: [30, 30, 30], [SNOW]: [214, 224, 236], [ICE]: [150, 196, 226], [TRAIL]: [176, 182, 192], [BASALT]: [58, 46, 44], [LAVA]: [236, 96, 26], [ASH]: [104, 96, 92],
+    [ROAD]: [140, 128, 110], [DUNGEON]: [58, 52, 66], [GRAVE]: [74, 70, 64], [SAND]: [178, 148, 100], [WATER]: [38, 78, 112], [CLIFF]: [30, 30, 30], [SNOW]: [214, 224, 236], [ICE]: [150, 196, 226], [TRAIL]: [176, 182, 192], [BASALT]: [58, 46, 44], [LAVA]: [236, 96, 26], [ASH]: [104, 96, 92], [VOID]: [44, 38, 56], [CHASM]: [8, 4, 14], [RUNEPATH]: [70, 62, 86],
   };
 
   function texel(wx, wy) {
@@ -289,7 +312,7 @@ const World = (() => {
     let t = tileAt(tx, ty);
     const trueT = tileAt(Math.floor(wx / T), Math.floor(wy / T));
     if (trueT === STONE || trueT === ROAD) t = trueT; // keep crisp town edges
-    if ((t === WATER) !== (trueT === WATER) || (t === LAVA) !== (trueT === LAVA)) t = trueT; // collision must match visuals
+    if ((t === WATER) !== (trueT === WATER) || (t === LAVA) !== (trueT === LAVA) || (t === CHASM) !== (trueT === CHASM)) t = trueT; // collision must match visuals
     let [r, g, b] = PAL[t];
     const n = U.fbm(wx * 0.012, wy * 0.012, 7, 3);
     const fine = U.hash(Math.floor(wx / RES), Math.floor(wy / RES), 5);
@@ -371,6 +394,23 @@ const World = (() => {
     } else if (t === ASH) {
       k = 0.9 + n * 0.14 + (fine - 0.5) * 0.08;
       if (fine > 0.97) { r = 255; g = 120; b = 40; k = 0.8; } // stray embers
+    } else if (t === VOID) { // black flagstone split by faint violet veins
+      const plate = U.fbm(wx * 0.009, wy * 0.009, 151, 3);
+      k = 0.75 + plate * 0.4 + (fine - 0.5) * 0.08;
+      const vein = Math.abs(U.fbm(wx * 0.011, wy * 0.011, 157, 3) - 0.5);
+      if (vein < 0.003) { r = 190; g = 110; b = 255; k = 0.9; } else if (vein < 0.007) { r += 30; b += 40; k *= 0.95; }
+    } else if (t === CHASM) {
+      const swirl = U.fbm(wx * 0.006 + Math.sin(wy * 0.01), wy * 0.006, 161, 3);
+      k = 0.7 + swirl * 0.6;
+      if (swirl > 0.66) { r = 60; g = 20; b = 90; k = 1; }
+      let rim = false;
+      for (const [ox, oy] of [[16, 0], [-16, 0], [0, 16], [0, -16]]) if (tileAt(Math.floor((wx + ox) / T), Math.floor((wy + oy) / T)) !== CHASM) rim = true;
+      if (rim) { r = 150; g = 70; b = 220; k = 0.9; }
+    } else if (t === RUNEPATH) {
+      k = 0.88 + n * 0.14 + (fine - 0.5) * 0.06;
+      const sz = 36, row = Math.floor(wy / sz), off = (row % 2) * (sz / 2);
+      if ((wx + off) % sz < 2 || wy % sz < 2) k *= 0.7;
+      if (U.hash(Math.floor((wx + off) / sz), row, 171) > 0.9 && fine > 0.6) { r = 200; g = 140; b = 255; k = 0.8; }
     } else if (t === SAND) {
       if (fine > 0.95) { r -= 25; g -= 25; b -= 20; }
     }
@@ -653,6 +693,19 @@ const World = (() => {
         g.fillStyle = 'rgba(255,120,40,0.8)'; g.fillRect(w / 2 - 1, h - 40, 2, 6);
       });
     }
+    for (let v = 0; v < 4; v++) {
+      const rr = U.rng(700 + v);
+      art['voidspire' + v] = mk(80, 120, (g, w, h) => {
+        shadow(g, w / 2 + 4, h - 10, 26, 8, 0.4);
+        for (let i = 0; i < 2 + (v % 3); i++) {
+          const x = w / 2 + (rr() - 0.5) * 30, len = 50 + rr() * 50, lean = (rr() - 0.5) * 0.45, bw = 7 + rr() * 6;
+          const tx = x + Math.sin(lean) * len, ty = h - 10 - Math.cos(lean) * len;
+          const gr = g.createLinearGradient(x, h - 10, tx, ty); gr.addColorStop(0, '#120c1a'); gr.addColorStop(0.7, '#2c1f3e'); gr.addColorStop(1, '#6a44a0');
+          g.fillStyle = gr; g.beginPath(); g.moveTo(x - bw, h - 10); g.lineTo(tx, ty); g.lineTo(x + bw, h - 10); g.closePath(); g.fill();
+          g.strokeStyle = 'rgba(200,140,255,0.85)'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(x + bw * 0.2, h - 14); g.lineTo(U.lerp(x, tx, 0.75), U.lerp(h - 10, ty, 0.75)); g.stroke();
+        }
+      });
+    }
     art.woodpile = mk(50, 30, (g) => { g.fillStyle = '#4a3020'; g.fillRect(8, 16, 34, 6); g.fillRect(12, 11, 26, 6); g.fillStyle = '#2b2b2b'; blob(g, 25, 16, 10, 'rgba(30,30,30,0.6)'); });
   }
 
@@ -660,12 +713,12 @@ const World = (() => {
     let a;
     switch (p.type) {
       case 'tree': case 'pine': case 'deadtree': case 'rock': case 'bush': case 'flowers': case 'tomb': case 'stall':
-      case 'snowpine': case 'icecrystal': case 'snowrock': case 'snowdrift': case 'obsidian': case 'burnttree': a = art[p.type + p.v % 4]; break;
+      case 'snowpine': case 'icecrystal': case 'snowrock': case 'snowdrift': case 'obsidian': case 'burnttree': case 'voidspire': a = art[p.type + p.v % 4]; break;
       case 'house': a = art['house' + (p.v % 3)]; break;
       default: a = art[p.type];
     }
     if (p.type === 'portal') return drawPortal(ctx, sx, sy, t);
-    if (p.type === 'altar') return drawAltar(ctx, sx, sy, t, p.frost, p.fire);
+    if (p.type === 'altar') return drawAltar(ctx, sx, sy, t, p.frost, p.fire, p.dark);
     if (p.type === 'lavavent') { // glowing crack that breathes
       const a = 0.45 + Math.sin(t * 2.2 + p.x * 0.01) * 0.25;
       const gr = ctx.createRadialGradient(sx, sy, 0, sx, sy, 34);
@@ -674,6 +727,15 @@ const World = (() => {
       ctx.strokeStyle = `rgba(255,220,140,${a + 0.2})`; ctx.lineWidth = 2;
       ctx.beginPath(); ctx.moveTo(sx - 16, sy + 2); ctx.lineTo(sx - 4, sy - 3); ctx.lineTo(sx + 6, sy + 1); ctx.lineTo(sx + 15, sy - 4); ctx.stroke();
       return;
+    }
+    if (p.type === 'voidrune') { // a violet sigil that pulses on the ground
+      const a = 0.35 + Math.sin(t * 1.8 + p.x * 0.013) * 0.2;
+      ctx.save(); ctx.translate(sx, sy); ctx.scale(1, 0.5); ctx.rotate(t * 0.3 + p.x);
+      ctx.strokeStyle = `rgba(190,120,255,${a + 0.15})`; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(0, 0, 26, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); for (let i = 0; i <= 3; i++) { const q = (i / 3) * Math.PI * 2; i ? ctx.lineTo(Math.cos(q) * 22, Math.sin(q) * 22) : ctx.moveTo(Math.cos(q) * 22, Math.sin(q) * 22); } ctx.stroke();
+      ctx.fillStyle = `rgba(150,70,255,${a * 0.35})`; ctx.beginPath(); ctx.arc(0, 0, 26, 0, Math.PI * 2); ctx.fill();
+      ctx.restore(); return;
     }
     if (p.type === 'rift') return drawRift(ctx, sx, sy, t);
     if (p.type === 'brazier') { ctx.fillStyle = '#3a3440'; ctx.fillRect(sx - 12, sy - 30, 24, 30); ctx.fillStyle = '#56505e'; ctx.fillRect(sx - 16, sy - 34, 32, 6); return flame(ctx, sx, sy - 36, 1.2, t, sx, true); }
@@ -738,10 +800,10 @@ const World = (() => {
     ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, 110, 0, Math.PI * 2); ctx.fill();
     ctx.restore();
   }
-  function drawAltar(ctx, x, y, t, frost, fire) {
+  function drawAltar(ctx, x, y, t, frost, fire, dark) {
     ctx.save(); ctx.translate(x, y); ctx.scale(1, 0.6);
-    ctx.fillStyle = frost ? 'rgba(20,60,110,0.45)' : fire ? 'rgba(120,30,0,0.55)' : 'rgba(60,10,10,0.55)'; ctx.beginPath(); ctx.arc(0, 0, 170, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = frost ? `rgba(120,210,255,${0.5 + Math.sin(t * 2) * 0.2})` : fire ? `rgba(255,140,40,${0.55 + Math.sin(t * 2) * 0.25})` : `rgba(220,40,40,${0.45 + Math.sin(t * 2) * 0.2})`; ctx.lineWidth = 4;
+    ctx.fillStyle = dark ? 'rgba(40,0,70,0.6)' : frost ? 'rgba(20,60,110,0.45)' : fire ? 'rgba(120,30,0,0.55)' : 'rgba(60,10,10,0.55)'; ctx.beginPath(); ctx.arc(0, 0, 170, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = dark ? `rgba(190,110,255,${0.55 + Math.sin(t * 2) * 0.25})` : frost ? `rgba(120,210,255,${0.5 + Math.sin(t * 2) * 0.2})` : fire ? `rgba(255,140,40,${0.55 + Math.sin(t * 2) * 0.25})` : `rgba(220,40,40,${0.45 + Math.sin(t * 2) * 0.2})`; ctx.lineWidth = 4;
     ctx.beginPath(); ctx.arc(0, 0, 150, 0, Math.PI * 2); ctx.stroke();
     ctx.beginPath();
     for (let i = 0; i <= 5; i++) { const a = (i * 2 * Math.PI * 2) / 5 - Math.PI / 2; const px = Math.cos(a) * 150, py = Math.sin(a) * 150; i ? ctx.lineTo(px, py) : ctx.moveTo(px, py); }
@@ -755,7 +817,7 @@ const World = (() => {
     const g = c.getContext('2d'); const img = g.createImageData(W, H);
     for (let i = 0; i < W * H; i++) {
       let [r, gg, b] = PAL[tiles[i]];
-      if (solid[i] && tiles[i] !== WATER && tiles[i] !== LAVA) { r = 60; gg = 55; b = 50; }
+      if (solid[i] && tiles[i] !== WATER && tiles[i] !== LAVA && tiles[i] !== CHASM) { r = 60; gg = 55; b = 50; }
       img.data[i * 4] = r; img.data[i * 4 + 1] = gg; img.data[i * 4 + 2] = b; img.data[i * 4 + 3] = 255;
     }
     g.putImageData(img, 0, 0);
