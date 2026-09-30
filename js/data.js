@@ -135,6 +135,10 @@ D.SPAWNS = [
   { m: 'ice_troll', x: 40, y: 18, r: 8, n: 12 },
   { m: 'frost_giant', x: 22, y: 8, r: 3, n: 1, respawn: 420 },
 ];
+// dense fields for area hunting: every normal spawn carries about twice the monsters over a slightly
+// wider patch (bosses untouched); respawns come back quicker too (Game.scheduleRespawn)
+D.SPAWN_DENSITY = 2.2;
+for (const s of D.SPAWNS) if (!D.MONSTERS[s.m].boss) { s.n = Math.round(s.n * D.SPAWN_DENSITY); s.r = Math.round(s.r * 1.15); }
 
 // teleport destinations (tile coords)
 D.TELEPORTS = [

@@ -40,7 +40,7 @@ const Game = {
   scheduleRespawn(mon) {
     const s = mon.spawn;
     if (s.noRespawn) return;
-    this.respawns.push({ t: s.respawn || U.rand(5, 11), spawn: s });
+    this.respawns.push({ t: s.respawn || U.rand(3, 6), spawn: s });
   },
   // Teleport with a cast motion: charge (spellcast + magic circle) -> vanish -> arrive.
   // opts.instant skips the cast (used when reviving); opts.then runs after arrival.
