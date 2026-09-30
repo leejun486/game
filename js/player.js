@@ -33,7 +33,7 @@ class Player extends Hero {
       ],
       equip: { weapon: 1, armor: 2, ring: null },
       cards: {}, card: null,
-      quest: 0, qprog: 0, qv: 2, daily: { day: '', prog: 0, done: false },
+      quest: 0, qprog: 0, qv: 3, daily: { day: '', prog: 0, done: false },
       autoPotion: true, kills: 0, playTime: 0,
     };
     return s;

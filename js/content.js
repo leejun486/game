@@ -133,6 +133,8 @@ const Content = (() => {
     s.bossKills = s.bossKills || 0;
     // v2 quest list removed the old #3 (초월 카드 장착) quest: shift saves past it
     if (!s.qv) { if (s.quest > 2) s.quest--; else if (s.quest === 2) s.qprog = 0; s.qv = 2; }
+    // v3: story chapters added report quests between chapters
+    if (s.qv === 2) { s.quest = s.quest >= 23 ? D.QUESTS.length : D.QUEST_V2_TO_V3(s.quest); s.qv = 3; s.introSeen = true; }
   }
   // extra stats from collections + guild, consumed by Player.recalc
   function bonuses(p) {

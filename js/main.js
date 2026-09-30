@@ -405,6 +405,11 @@ const Game = {
     document.getElementById('hud').classList.remove('hidden');
     UI.init(Game);
     Quests.check(Game);
+    const q0 = Quests.isDaily(Game.player) ? null : Quests.current(Game.player);
+    if (!save.introSeen) {
+      save.introSeen = Game.player.s.introSeen = true;
+      UI.intro(() => { if (q0) { UI.story('', [`— ${q0.ch} —`]); UI.story(q0.by || '', q0.story); } });
+    }
     UI.chat('이클립스: 어웨이크닝에 오신 것을 환영합니다!', 'sys');
     UI.chat('퀘스트 창(오른쪽 위)을 클릭하면 자동으로 이동합니다. AI 모드로 자동 사냥!', 'sys');
     if (!save.mailClaimed) UI.chat('[우편] 오픈 기념 선물이 도착했습니다. (메뉴 → 우편)', 'whisper');

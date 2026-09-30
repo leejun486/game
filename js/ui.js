@@ -171,6 +171,71 @@ const UI = (() => {
     $('quest-tracker').classList.toggle('done', pr.done && !pr.claimed);
   }
   function markInv() { $('inv-dot').classList.remove('hidden'); }
+  // ------- story dialogue: a bottom box with the speaker's name, typed out line by line.
+  // It never blocks play; click (or wait) to advance. Queued so chained scenes play in order.
+  const storyQ = [];
+  let storyBox = null;
+  function story(who, lines, then) {
+    if (!lines || !lines.length) { if (then) then(); return; }
+    storyQ.push({ who, lines: lines.slice(), then });
+    if (!storyBox) nextStory();
+    else { const m = storyBox.querySelector('.st-more'); if (m) m.textContent = '▼ 클릭'; }
+  }
+  function nextStory() {
+    const sc = storyQ.shift();
+    if (!sc) { if (storyBox) { storyBox.remove(); storyBox = null; } return; }
+    if (!storyBox) { storyBox = document.createElement('div'); storyBox.id = 'story-box'; $('hud').appendChild(storyBox); }
+    let i = 0, typed = 0, full = '', timer = 0, hold = 0;
+    const box = storyBox;
+    const show = () => {
+      full = sc.lines[i]; typed = 0;
+      box.innerHTML = `<div class="st-who">${esc(sc.who)}</div><div class="st-text"></div><div class="st-more">${i < sc.lines.length - 1 || storyQ.length ? '▼ 클릭' : '✕ 닫기'}</div>`;
+      clearInterval(timer);
+      timer = setInterval(() => {
+        typed = Math.min(full.length, typed + 2);
+        const t = box.querySelector('.st-text'); if (t) t.textContent = full.slice(0, typed);
+        if (typed >= full.length) { clearInterval(timer); hold = setTimeout(advance, 4200 + full.length * 45); }
+      }, 28);
+    };
+    const advance = () => {
+      clearTimeout(hold);
+      if (typed < full.length) { typed = full.length; box.querySelector('.st-text').textContent = full; clearInterval(timer); hold = setTimeout(advance, 3500); return; }
+      i++;
+      if (i < sc.lines.length) return show();
+      clearInterval(timer);
+      if (sc.then) sc.then();
+      nextStory();
+    };
+    box.onclick = advance;
+    show();
+  }
+  // new characters: the intro video if one ships (assets/intro.mp4), otherwise the prologue as a title crawl
+  function intro(then) {
+    const el = document.createElement('div');
+    el.id = 'intro';
+    el.innerHTML = '<video playsinline preload="auto"></video><div class="intro-text"></div><button class="intro-skip">건너뛰기 ▶</button>';
+    document.body.appendChild(el);
+    const v = el.querySelector('video'), tx = el.querySelector('.intro-text');
+    let done = false, crawlT = 0;
+    const finish = () => { if (done) return; done = true; clearTimeout(crawlT); v.pause(); el.classList.add('out'); setTimeout(() => { el.remove(); then && then(); }, 600); };
+    el.querySelector('.intro-skip').onclick = finish;
+    const crawl = () => {
+      v.remove();
+      let k = 0;
+      const step = () => {
+        if (done) return;
+        if (k >= D.PROLOGUE.length) { crawlT = setTimeout(finish, 1800); return; }
+        const line = D.PROLOGUE[k++];
+        tx.innerHTML = `<p class="${k === D.PROLOGUE.length ? 'title' : ''}">${esc(line)}</p>`;
+        crawlT = setTimeout(step, k === D.PROLOGUE.length ? 3200 : 3600);
+      };
+      step();
+    };
+    v.onended = finish;
+    v.onerror = crawl;
+    v.src = 'assets/intro.mp4';
+    v.play().catch(() => { if (!done && !v.currentTime) crawl(); });
+  }
   function refreshAll() { refreshHud(); refreshQuest(); if (panel && panel.rerender) panel.rerender(); }
 
   // ---------------------------------------------------------------- minimap
@@ -451,13 +516,17 @@ const UI = (() => {
       const pr = Quests.progress(p);
       body.innerHTML = D.QUESTS.map((q, i) => {
         const cur = i === p.s.quest, done = i < p.s.quest;
+        const head = q.ch && (i === 0 || D.QUESTS[i - 1].ch !== q.ch) ? `<div class="q-chapter">${esc(q.ch)}</div>` : '';
         const r = q.reward;
         const rw = [r.gold ? `아데나 ${U.fmt(r.gold)}` : '', r.dia ? `다이아 ${r.dia}` : '', ...(r.items ? Object.keys(r.items).map((k) => `${D.ITEMS[k].name} x${r.items[k]}`) : [])].filter(Boolean).join(', ');
-        return `<div class="list-row ${cur ? 'cur' : ''} ${done ? 'done' : ''}"><div><b>${q.title}</b><div class="sub">${q.desc}${q.n ? ` (${q.n})` : ''} · 보상: ${rw}</div></div>
+        return head + `<div class="list-row ${cur ? 'cur' : ''} ${done ? 'done' : ''}"><div><b>${q.title}</b><div class="sub">${q.desc}${q.n ? ` (${q.n})` : ''} · 보상: ${rw}</div>${cur && q.story ? `<div class="q-story" data-replay="${i}">“${esc(q.story[0])}” <span>— ${esc(q.by || '')} · 다시 보기</span></div>` : ''}</div>
           <div>${done ? '완료' : cur ? (pr.done ? '<button class="gold-btn" data-claim>보상 받기</button>' : `${pr.cur}/${pr.need}`) : '🔒'}</div></div>`;
       }).join('') + (Quests.isDaily(p) ? `<div class="list-row cur"><div><b>${D.DAILY_QUEST.title}</b><div class="sub">${D.DAILY_QUEST.desc} · 매일 초기화</div></div><div>${pr.claimed ? '완료' : pr.done ? '<button class="gold-btn" data-claim>보상 받기</button>' : `${pr.cur}/${pr.need}`}</div></div>` : '');
     };
-    body.onclick = (e) => { if (e.target.closest('[data-claim]')) { Quests.claim(game); render(); } };
+    body.onclick = (e) => {
+      if (e.target.closest('[data-claim]')) { Quests.claim(game); render(); }
+      const rp = e.target.closest('[data-replay]'); if (rp) { const q = D.QUESTS[+rp.dataset.replay]; story(q.by || '', q.story); }
+    };
     render();
     return { rerender: render };
   };
@@ -690,6 +759,7 @@ const UI = (() => {
   }
 
   return {
+    story, intro,
     toggleRide, init, iconImg, spriteCanvas, drawSprite, chat, announce, toast, skillName, refreshHud, refreshQuest, refreshAll, markInv,
     flashSlot, drawMinimap, open, close, isOpen, openEnchant, toggleAuto, useSlotItem, esc, ico, makePanel, OPENERS,
     get panelName() { return panel && panel.name; },

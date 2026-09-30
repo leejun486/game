@@ -722,6 +722,7 @@ const Quests = {
     const pr = this.progress(p);
     if (!pr.done || pr.claimed) return false;
     const q = this.current(p), r = q.reward;
+    const wasDaily = this.isDaily(p);
     const parts = [];
     if (r.gold) { p.s.gold += r.gold; parts.push(`아데나 ${U.fmt(r.gold)}`); }
     if (r.dia) { p.s.dia += r.dia; parts.push(`다이아 ${r.dia}`); }
@@ -735,6 +736,14 @@ const Quests = {
     U.sfx.coin();
     this.check(game);
     UI.refreshAll();
+    if (!wasDaily) {
+      const next = this.current(p);
+      UI.story(q.by || '', q.end);
+      if (!this.isDaily(p)) {
+        if (next.ch !== q.ch) UI.story('', [`— ${next.ch} —`]);
+        UI.story(next.by || '', next.story);
+      }
+    }
     return true;
   },
   // where to go for the current quest
