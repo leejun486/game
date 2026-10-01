@@ -1,0 +1,4 @@
+496 pixel art icons for medieval/fantasy RPG
+by Henrique Lazarini (7Soul1) - https://opengameart.org/node/39455
+License: CC0 (public domain)
+Used for: skill icons (sk_*), rings/necklaces (r_*), skill books (sb_*), scrolls, ticket, gold, diamond.
