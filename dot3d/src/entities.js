@@ -145,6 +145,9 @@ export class Player {
         g.world.move(this.pos, this.dashDir.x * s * dt, this.dashDir.z * s * dt, this.radius);
         speed = s;
         if (Math.random() < 0.8) g.fx.add.emit({ x: this.pos.x + rand(-0.2, 0.2), y: this.pos.y + rand(0.3, 1.1), z: this.pos.z + rand(-0.2, 0.2), life: 0.25, size: 2, color: '#bfe8ff' });
+        // 잔상
+        this.ghostT = (this.ghostT ?? 0) - dt;
+        if (this.ghostT <= 0) { this.ghostT = 0.045; g.fx.ghost(this.rig); }
       } else {
         const slow = this.attack ? (this.attack.skill ? 0.1 : 0.22) : 1;
         const sp = 4.6 * slow;

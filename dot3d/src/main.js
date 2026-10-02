@@ -378,7 +378,17 @@ class Game {
     const half = kind === 2 ? 0.95 : 1.35;
     const yaw = pl.yaw;
     const origin = V(pl.pos.x, pl.y + 0.72, pl.pos.z);
-    this.fx.slash(origin, yaw, kind, { dur: 0.16, outer: range, color: kind === 2 ? '#fff6d0' : '#e8fbff' });
+    this.fx.slash(origin, yaw, kind, { dur: 0.16, outer: range, color: kind === 2 ? '#fff6d0' : '#a8e4ff' });
+    // 칼날 궤적의 얇고 하얀 심
+    this.fx.slash(origin, yaw, kind, { dur: 0.16, inner: range - 0.32, outer: range - 0.05, color: '#ffffff' });
+    if (kind === 2) {
+      // 내려찍기: 앞쪽 바닥 충격
+      const f = V(pl.pos.x + Math.sin(yaw) * 1.4, pl.y, pl.pos.z + Math.cos(yaw) * 1.4);
+      this.fx.ring(f, 1.9, '#fff2c0', 0.3);
+      this.fx.dust(f.x, f.y, f.z, 10);
+      for (let i = 0; i < 14; i++) this.fx.norm.emit({ x: f.x + rand(-0.4, 0.4), y: f.y + 0.1, z: f.z + rand(-0.4, 0.4), vx: rand(-2, 2), vy: rand(3, 6), vz: rand(-2, 2), g: 18, life: 0.8, size: 2, color: '#9a9284', floor: f.y });
+      this.audio.play('impact');
+    }
     let hitAny = false;
     for (const e of this.enemies) {
       if (e.dead || e.spawning) continue;
@@ -443,13 +453,66 @@ class Game {
     }
   }
 
+  // 검기: 발밑 충격파 + 칼끝 섬광 → 3겹 초승달 검기가 잔상·빛가루·바닥 서리를 남기며 날아감
   spawnSwordWave(pl) {
     const dir = V(Math.sin(pl.yaw), 0, Math.cos(pl.yaw));
+    const feet = V(pl.pos.x, pl.y, pl.pos.z);
     const pos = V(pl.pos.x, pl.y + 0.75, pl.pos.z).addScaledVector(dir, 0.6);
-    const pr = { owner: 'player', kind: 'wave', pos, dir, speed: 15, life: 0.55, dmg: 34, hitSet: new Set(), radius: 1.2 };
-    pr.vis = this.fx.slash(pos, pl.yaw, 0, { inner: 0.3, outer: 1.5, len: 2.3, dur: 0.55, color: '#9fe8ff', static: true, move: (a) => a.g.position.copy(pr.pos) });
+    const pr = { owner: 'player', kind: 'wave', pos, dir, yaw: pl.yaw, speed: 16, life: 0.6, dmg: 34, hitSet: new Set(), radius: 1.3, trailT: 0 };
+    const follow = (a) => a.g.position.copy(pr.pos);
+    pr.vis = [
+      this.fx.slash(pos, pl.yaw, 0, { inner: 0.25, outer: 2.0, len: 2.4, dur: 0.6, color: '#2f7dff', static: true, move: follow }),
+      this.fx.slash(pos, pl.yaw, 0, { inner: 0.9, outer: 1.85, len: 2.2, dur: 0.6, color: '#8fe4ff', static: true, move: follow }),
+      this.fx.slash(pos, pl.yaw, 0, { inner: 1.55, outer: 1.8, len: 2.0, dur: 0.6, color: '#ffffff', static: true, move: follow }),
+    ];
     this.projectiles.push(pr);
-    this.shake(0.1);
+    // 시전 연출
+    this.audio.play('skill');
+    this.fx.ring(feet, 2.6, '#7fd8ff', 0.4);
+    this.fx.ring(feet, 1.3, '#ffffff', 0.22);
+    this.fx.spark(pos.x, pos.y, pos.z, 18, '#d8f6ff', 7);
+    for (let i = 0; i < 24; i++) {
+      const a = (i / 24) * Math.PI * 2;
+      this.fx.add.emit({ x: feet.x + Math.cos(a) * 0.4, y: feet.y + 0.08, z: feet.z + Math.sin(a) * 0.4, vx: Math.cos(a) * 5, vy: rand(0.2, 1.2), vz: Math.sin(a) * 5, drag: 4, life: rand(0.25, 0.45), size: 3, endSize: 1, color: '#bff4ff', color2: '#2050ff' });
+    }
+    this.ui.flash('#3a8cff', 0.18);
+    this.hitstop = Math.max(this.hitstop, 0.05);
+    this.shake(0.22);
+  }
+
+  // 검기 비행 중 연출
+  swordWaveTrail(pr, dt) {
+    const fx = this.fx;
+    pr.trailT -= dt;
+    if (pr.trailT <= 0) {
+      pr.trailT = 0.03;
+      fx.slash(pr.pos.clone(), pr.yaw, 0, { inner: 0.6, outer: 1.95, len: 2.3, dur: 0.18, color: '#2a5cff', static: true, fadeAll: true });
+    }
+    const side = V(pr.dir.z, 0, -pr.dir.x);
+    for (let k = 0; k < 5; k++) {
+      const a = rand(-1.1, 1.1);
+      const r = rand(1.2, 1.9);
+      const x = pr.pos.x + (pr.dir.x * Math.cos(a) + side.x * Math.sin(a)) * r;
+      const z = pr.pos.z + (pr.dir.z * Math.cos(a) + side.z * Math.sin(a)) * r;
+      fx.add.emit({ x, y: pr.pos.y + rand(-0.15, 0.25), z, vx: -pr.dir.x * rand(2, 5), vy: rand(0, 1.2), vz: -pr.dir.z * rand(2, 5), drag: 3, life: rand(0.25, 0.5), size: rand(2, 4), endSize: 1, color: '#e0faff', color2: '#2050ff' });
+    }
+    // 바닥에 남는 서리 자국
+    const h = this.world.heightAt(pr.pos.x, pr.pos.z);
+    for (let k = 0; k < 3; k++) {
+      const l = rand(-1.3, 1.3);
+      fx.add.emit({ x: pr.pos.x + side.x * l, y: h + 0.06, z: pr.pos.z + side.z * l, life: rand(0.5, 0.9), size: 2, color: '#7fd8ff', alpha: 0.8 });
+    }
+  }
+
+  swordWaveEnd(pr) {
+    const fx = this.fx;
+    for (const a of pr.vis) a.kill = true;
+    this.audio.play('burst');
+    fx.ring(V(pr.pos.x, this.world.heightAt(pr.pos.x, pr.pos.z), pr.pos.z), 2.2, '#7fd8ff', 0.35);
+    for (let i = 0; i < 36; i++) {
+      const a = Math.random() * Math.PI * 2, e = rand(-0.3, 1);
+      fx.add.emit({ x: pr.pos.x, y: pr.pos.y, z: pr.pos.z, vx: Math.cos(a) * rand(2, 6), vy: e * 4, vz: Math.sin(a) * rand(2, 6), g: 6, drag: 2.5, life: rand(0.3, 0.7), size: rand(2, 4), endSize: 1, color: '#e0faff', color2: '#1a40ff' });
+    }
   }
 
   spawnOrb(w) {
@@ -553,7 +616,7 @@ class Game {
         const h = this.world.heightAt(pr.pos.x, pr.pos.z);
         if (h > pr.pos.y - 0.4 || this.world.isBlocked(pr.pos.x, pr.pos.z, 0.05, h) && h > pr.pos.y - 1) pr.life = 0;
       } else if (pr.kind === 'wave') {
-        if (Math.random() < 0.9) this.fx.add.emit({ x: pr.pos.x + rand(-0.6, 0.6), y: pr.pos.y + rand(-0.1, 0.1), z: pr.pos.z + rand(-0.6, 0.6), vx: 0, vy: 0.3, vz: 0, life: 0.3, size: 2, color: '#bff4ff' });
+        this.swordWaveTrail(pr, dt);
       }
       if (pr.owner === 'player') {
         for (const e of this.enemies) {
@@ -563,6 +626,14 @@ class Game {
             pr.hitSet.add(e);
             const crit = Math.random() < 0.2;
             this.damageEnemy(e, Math.round(pr.dmg * (crit ? 1.8 : 1) * rand(0.9, 1.1)), crit, 7, 0.35);
+            if (pr.kind === 'wave') {
+              const c = e.center().clone();
+              this.fx.cross(c, '#9fe8ff', e.type === 'boss' ? 5.5 : 3.8);
+              this.fx.ring(V(e.pos.x, e.y, e.pos.z), e.type === 'boss' ? 3 : 1.8, '#9fe8ff', 0.3);
+              this.fx.spark(c.x, c.y, c.z, 14, '#d8f6ff', 7);
+              this.audio.play('skillhit');
+              this.hitstop = Math.max(this.hitstop, 0.07);
+            }
             if (pr.kind === 'orb') pr.life = 0;
           }
         }
@@ -573,6 +644,7 @@ class Game {
         }
       }
       if (pr.life <= 0) {
+        if (pr.kind === 'wave') this.swordWaveEnd(pr);
         if (pr.mesh) { this.scene.remove(pr.mesh); this.fx.blueFire(pr.pos.x, pr.pos.y - 0.2, pr.pos.z, 10, 0.2); }
         this.projectiles.splice(i, 1);
       }

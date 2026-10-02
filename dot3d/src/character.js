@@ -223,6 +223,8 @@ export class Rig {
   buildWeapon(kind) {
     const hand = this.handR;
     const w = new THREE.Group();
+    // 주의: Object3D.add()는 부모를 반환하므로, 자식 회전은 붙이기 전에 지정
+    const rot = (m, ax, v) => { m.rotation[ax] = v; return m; };
     // 무기는 팔의 연장선(-y) 방향으로
     if (kind === 'sword') {
       // 일본도풍: 긴 손잡이(엮은 끈 무늬), 둥근 코등이, 가늘고 길게 휜 칼날
@@ -239,7 +241,7 @@ export class Rig {
       w.add(mesh(new THREE.CylinderGeometry(0.026, 0.026, 0.03, 6), gold, 0, 0.16, 0)); // 칼자루 끝 장식
       const tsuba = mesh(new THREE.CylinderGeometry(0.075, 0.075, 0.022, 10), black, 0, -0.13, 0);
       w.add(tsuba);
-      w.add(mesh(new THREE.TorusGeometry(0.072, 0.008, 4, 12), gold, 0, -0.13, 0)).rotation.x = Math.PI / 2;
+      w.add(rot(mesh(new THREE.TorusGeometry(0.072, 0.008, 4, 12), gold, 0, -0.13, 0), 'x', Math.PI / 2));
       w.add(mesh(new THREE.BoxGeometry(0.03, 0.05, 0.045), gold, 0, -0.165, 0)); // 하바키
       // 칼날: 여러 마디를 살짝씩 휘어 이어 붙임 (등 쪽으로 곡선), 끝으로 갈수록 가늘게
       const N = 7, L = 1.08;
@@ -285,7 +287,7 @@ export class Rig {
       w.add(g);
       for (let i = 0; i < 6; i++) {
         const a = (i / 6) * Math.PI * 2;
-        w.add(mesh(new THREE.ConeGeometry(0.03, 0.07, 4), stud, Math.cos(a) * 0.1, -0.55 + (i % 2) * 0.1, Math.sin(a) * 0.1)).rotation.z = -Math.cos(a) * 1.5;
+        w.add(rot(mesh(new THREE.ConeGeometry(0.03, 0.07, 4), stud, Math.cos(a) * 0.1, -0.55 + (i % 2) * 0.1, Math.sin(a) * 0.1), 'z', -Math.cos(a) * 1.5));
       }
     } else if (kind === 'goldclub') {
       const gold = this.mat({ color: C('#e0b040'), emissive: C('#000') });
@@ -294,7 +296,7 @@ export class Rig {
       w.add(g);
       for (let i = 0; i < 8; i++) {
         const a = (i / 8) * Math.PI * 2;
-        w.add(mesh(new THREE.ConeGeometry(0.035, 0.09, 4), gold, Math.cos(a) * 0.13, -0.62 + (i % 2) * 0.12, Math.sin(a) * 0.13)).rotation.z = -Math.cos(a) * 1.5;
+        w.add(rot(mesh(new THREE.ConeGeometry(0.035, 0.09, 4), gold, Math.cos(a) * 0.13, -0.62 + (i % 2) * 0.12, Math.sin(a) * 0.13), 'z', -Math.cos(a) * 1.5));
       }
     } else if (kind === 'spear') {
       const wood = this.mat({ color: C('#6a4a32') });
@@ -302,7 +304,7 @@ export class Rig {
       const shaft = mesh(new THREE.CylinderGeometry(0.025, 0.025, 2.0, 5), wood, 0, 0.2, 0);
       w.add(shaft);
       w.add(mesh(new THREE.ConeGeometry(0.05, 0.25, 4), steel, 0, 1.3, 0));
-      w.add(mesh(new THREE.ConeGeometry(0.06, 0.1, 6), this.mat({ color: C('#c8302c') }), 0, 1.13, 0)).rotation.x = Math.PI;
+      w.add(rot(mesh(new THREE.ConeGeometry(0.06, 0.1, 6), this.mat({ color: C('#c8302c') }), 0, 1.13, 0), 'x', Math.PI));
     }
     w.traverse((o) => { if (o.isMesh) o.castShadow = true; });
     hand.add(w);
@@ -340,8 +342,11 @@ export class Rig {
     let wristX = 0;
 
     if (this.cfg.weapon === 'spear') { armRx = -0.35; armRz = 0.25; wristX = -1.2; }
+    // 긴 칼: 평소엔 칼끝을 앞쪽 아래로 겨누고, 뛸 때 오른팔은 조금만 흔듦
+    if (this.cfg.weapon === 'sword') { armRx = -sw * 0.18 - 0.2; wristX = -1.2; }
 
     if (p.attack) {
+      wristX = 0; // 벨 때는 칼이 팔의 연장선
       const t = p.attack.t;
       const k = p.attack.kind;
       // 0: 오른→왼 가로베기, 1: 왼→오른, 2: 내려찍기
@@ -371,7 +376,8 @@ export class Rig {
     if (p.dash) {
       chestPitch = 0.45;
       legL = 0.9; legR = -0.7;
-      armRx = 0.9; armLx = 0.9;
+      armRx = this.cfg.weapon === 'sword' ? 1.3 : 0.9; armLx = 0.9;
+      wristX = 0; // 회피 때는 칼을 뒤로 끌며 달림
       bob = 0.02;
     }
     if (p.hurt > 0) {

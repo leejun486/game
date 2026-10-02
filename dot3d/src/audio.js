@@ -93,6 +93,24 @@ export class Audio {
         this.tone(0.6, { f0: 180, f1: 70, gain: 0.3 });
         this.noise(0.35, { type: 'lowpass', f0: 900, f1: 120, gain: 0.5 });
         break;
+      case 'skill':
+        this.noise(0.5, { f0: 300, f1: 5000, q: 1.8, gain: 0.32, attack: 0.02 });
+        this.tone(0.45, { type: 'sawtooth', f0: 220, f1: 1760, gain: 0.05, attack: 0.02 });
+        this.tone(0.6, { type: 'triangle', f0: 1320, f1: 2640, gain: 0.07, at: 0.05 });
+        this.tone(0.3, { f0: 120, f1: 50, gain: 0.4 });
+        break;
+      case 'skillhit':
+        this.tone(0.25, { type: 'square', f0: 1800, f1: 600, gain: 0.05 });
+        this.noise(0.18, { type: 'highpass', f0: 4000, f1: 1500, gain: 0.25 });
+        break;
+      case 'burst':
+        this.noise(0.5, { type: 'lowpass', f0: 3000, f1: 200, gain: 0.25 });
+        this.tone(0.4, { type: 'triangle', f0: 1760, f1: 440, gain: 0.05 });
+        break;
+      case 'impact':
+        this.tone(0.3, { f0: 110, f1: 40, gain: 0.45 });
+        this.noise(0.2, { type: 'lowpass', f0: 1200, f1: 150, gain: 0.3 });
+        break;
       case 'dash': this.noise(0.25, { type: 'lowpass', f0: 2400, f1: 300, gain: 0.25, attack: 0.03 }); break;
       case 'wave':
         this.noise(0.45, { f0: 400, f1: 4000, q: 1.2, gain: 0.25, attack: 0.05 });

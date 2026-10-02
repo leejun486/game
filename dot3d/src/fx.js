@@ -142,6 +142,19 @@ void main(){
   gl_FragColor = vec4(uColor * a, a);
 }`;
 
+const flashFrag = /* glsl */`
+uniform vec3 uColor; uniform float uAlpha;
+varying vec2 vL;
+void main(){
+  float x = abs(vL.x), y = abs(vL.y);
+  float a = (1.0 - x * x) * (1.0 - y);
+  float core = step(y, 0.35) * (1.0 - x);
+  vec3 c = mix(uColor, vec3(1.0), core);
+  a = floor(a * uAlpha * 4.0 + 0.5) / 4.0;
+  if (a <= 0.0) discard;
+  gl_FragColor = vec4(c * a, a);
+}`;
+
 export class FX {
   constructor(scene, pixel) {
     this.scene = scene;
@@ -151,6 +164,8 @@ export class FX {
     this.arcs = [];
     this.rings = [];
     this.numbers = [];
+    this.flashes = [];
+    this.ghosts = [];
     this.numLayer = document.getElementById('numbers');
     this.time = 0;
   }
@@ -217,8 +232,41 @@ export class FX {
     if (kind === 2) { m.rotation.set(0, 0, 0); m.rotation.y = Math.PI / 2; m.rotation.z = -Math.PI / 2 + 0.0; g.position.y += 0.2; }
     m.renderOrder = 30;
     this.scene.add(g);
-    this.arcs.push({ g, mat, t: 0, dur: opts.dur ?? 0.2, move: opts.move || null, static: !!opts.static });
+    if (opts.scale) g.scale.setScalar(opts.scale);
+    this.arcs.push({ g, mat, t: 0, dur: opts.dur ?? 0.2, move: opts.move || null, static: !!opts.static, fadeAll: !!opts.fadeAll, kill: false });
     return g;
+  }
+
+  // X자 섬광 (카메라 쪽으로 기울여 세운 두 줄기 빛)
+  cross(pos, color = '#bff4ff', size = 2.2, dur = 0.38) {
+    const g = new THREE.Group();
+    g.position.copy(pos);
+    g.rotation.x = -Math.PI / 4;
+    const mats = [];
+    for (const [rz, w] of [[0.75, 1], [-0.75, 0.8]]) {
+      const mat = new THREE.ShaderMaterial({
+        vertexShader: arcVert, fragmentShader: flashFrag,
+        uniforms: { uColor: { value: new THREE.Color(color) }, uAlpha: { value: 1 } },
+        transparent: true, depthWrite: false, depthTest: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
+      });
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), mat);
+      m.rotation.z = rz;
+      m.scale.set(size * 0.5 * w, 0.14, 1);
+      m.renderOrder = 40;
+      g.add(m);
+      mats.push(mat);
+    }
+    this.scene.add(g);
+    this.flashes.push({ g, mats, t: 0, dur, size });
+  }
+
+  // 잔상: 캐릭터를 통째로 복제해 푸른 빛으로 칠한 뒤 서서히 사라지게
+  ghost(rig, color = '#5ab8ff', dur = 0.28) {
+    const mat = new THREE.MeshBasicMaterial({ color: new THREE.Color(color), transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false });
+    const c = rig.root.clone(true);
+    c.traverse((o) => { if (o.isMesh) { o.material = mat; o.castShadow = false; o.receiveShadow = false; } });
+    this.scene.add(c);
+    this.ghosts.push({ c, mat, t: 0, dur });
   }
 
   ring(pos, radius, color = '#ffffff', dur = 0.35, mode = 0) {
@@ -261,9 +309,9 @@ export class FX {
       a.t += dt;
       const k = a.t / a.dur;
       a.mat.uniforms.uProg.value = a.static ? 1.0 : Math.min(1.55, k * 1.55);
-      a.mat.uniforms.uFade.value = k > 0.7 ? Math.max(0, 1 - (k - 0.7) / 0.3) : 1;
+      a.mat.uniforms.uFade.value = a.fadeAll ? Math.max(0, 1 - k) * (a.alpha ?? 1) : k > 0.7 ? Math.max(0, 1 - (k - 0.7) / 0.3) : 1;
       if (a.move) a.move(a, dt);
-      if (k >= 1) { this.scene.remove(a.g); a.mat.dispose(); a.g.children[0].geometry.dispose(); this.arcs.splice(i, 1); }
+      if (k >= 1 || a.kill) { this.scene.remove(a.g); a.mat.dispose(); a.g.children[0].geometry.dispose(); this.arcs.splice(i, 1); }
     }
     for (let i = this.rings.length - 1; i >= 0; i--) {
       const r = this.rings[i];
@@ -275,6 +323,22 @@ export class FX {
         if (k >= 1) r.dead = true;
       }
       if (r.dead) { this.scene.remove(r.m); r.mat.dispose(); r.m.geometry.dispose(); this.rings.splice(i, 1); }
+    }
+    for (let i = this.flashes.length - 1; i >= 0; i--) {
+      const fl = this.flashes[i];
+      fl.t += dt;
+      const k = fl.t / fl.dur;
+      const grow = Math.min(1, fl.t / 0.06);
+      fl.g.children.forEach((m, j) => { m.scale.x = fl.size * 0.5 * (j ? 0.8 : 1) * (0.3 + 0.7 * grow); m.scale.y = 0.14 * (1 - k * 0.7); });
+      for (const m of fl.mats) m.uniforms.uAlpha.value = Math.max(0, 1 - k * k);
+      if (k >= 1) { this.scene.remove(fl.g); for (const m of fl.mats) m.dispose(); fl.g.children.forEach((m) => m.geometry.dispose()); this.flashes.splice(i, 1); }
+    }
+    for (let i = this.ghosts.length - 1; i >= 0; i--) {
+      const gh = this.ghosts[i];
+      gh.t += dt;
+      const k = gh.t / gh.dur;
+      gh.mat.opacity = 0.55 * Math.max(0, 1 - k);
+      if (k >= 1) { this.scene.remove(gh.c); gh.mat.dispose(); this.ghosts.splice(i, 1); }
     }
     for (let i = this.numbers.length - 1; i >= 0; i--) {
       const n = this.numbers[i];
