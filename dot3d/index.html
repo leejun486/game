@@ -18,12 +18,12 @@
     <div id="status" class="panel">
       <div id="portrait"><canvas id="portrait-cv" width="20" height="20"></canvas></div>
       <div class="col">
-        <div class="name">검객 <b>이랑</b><span class="lv">Lv.7</span></div>
+        <div class="name" id="hero-name">검객 <b>이랑</b><span class="lv">Lv.7</span></div>
         <div class="bar hp"><i id="hp-lag"></i><i id="hp-fill"></i><span id="hp-text"></span></div>
         <div class="skills">
-          <div class="sk"><span class="key">J</span><em>베기</em></div>
-          <div class="sk"><span class="key">␣</span><em>회피</em><i class="cd" id="cd-dash"></i></div>
-          <div class="sk"><span class="key">K</span><em>검기</em><i class="cd" id="cd-skill"></i></div>
+          <div class="sk"><span class="key">J</span><em id="sk-atk">베기</em></div>
+          <div class="sk"><span class="key">␣</span><em id="sk-dash">회피</em><i class="cd" id="cd-dash"></i></div>
+          <div class="sk"><span class="key">K</span><em id="sk-skill">검기</em><i class="cd" id="cd-skill"></i></div>
         </div>
       </div>
     </div>
@@ -41,7 +41,7 @@
     <div id="combo"><b id="combo-n">0</b><span>연속 베기</span></div>
 
     <div id="help">
-      <span><b>WASD</b> 이동</span><span><b>J</b>/<b>클릭</b> 베기</span><span><b>Space</b> 회피</span><span><b>K</b>/<b>우클릭</b> 검기</span>
+      <span><b>WASD</b> 이동</span><span><b>J</b>/<b>클릭</b> <i class="lbl-atk">베기</i></span><span><b>Space</b> <i class="lbl-dash">회피</i></span><span><b>K</b>/<b>우클릭</b> <i class="lbl-skill">검기</i></span>
       <span><b>E</b> 대화·북</span><span><b>N</b> 낮/밤</span><span><b>휠</b> 확대</span><span><b>O</b> 외곽선</span><span><b>M</b> 음악</span>
     </div>
   </div>
@@ -54,8 +54,13 @@
 
   <div id="title">
     <div class="logo-big"><span class="han">月下宮</span><span class="kr">월하궁</span><span class="sub">— 도깨비 야행 —</span></div>
+    <div id="classes">
+      <div class="cls" data-cls="sword"><canvas width="20" height="20"></canvas><b>검객</b><span class="role"></span><span class="desc"></span><span class="num">1</span></div>
+      <div class="cls" data-cls="mage"><canvas width="20" height="20"></canvas><b>도사</b><span class="role"></span><span class="desc"></span><span class="num">2</span></div>
+      <div class="cls" data-cls="elf"><canvas width="20" height="20"></canvas><b>요정</b><span class="role"></span><span class="desc"></span><span class="num">3</span></div>
+    </div>
     <div id="title-save"></div>
-    <div class="press">아무 키나 눌러 시작</div>
+    <div class="press"><span class="kb">← → 직업 선택 · Enter 시작 <small>(카드를 눌러도 시작)</small></span><span class="tp">직업 카드를 눌러 시작</span></div>
     <div class="credit">도트 3D 액션 · Three.js</div>
   </div>
 
@@ -69,9 +74,9 @@
     <div id="stick"><i></i></div>
     <div class="btns">
       <button data-k="act">E</button>
-      <button data-k="skill">검기</button>
-      <button data-k="dash">회피</button>
-      <button data-k="atk" class="big">베기</button>
+      <button data-k="skill" class="lbl-skill">검기</button>
+      <button data-k="dash" class="lbl-dash">회피</button>
+      <button data-k="atk" class="big lbl-atk">베기</button>
     </div>
   </div>
 </div>

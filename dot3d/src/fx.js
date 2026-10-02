@@ -166,6 +166,7 @@ export class FX {
     this.numbers = [];
     this.flashes = [];
     this.ghosts = [];
+    this.bolts = [];
     this.numLayer = document.getElementById('numbers');
     this.time = 0;
   }
@@ -260,6 +261,45 @@ export class FX {
     this.flashes.push({ g, mats, t: 0, dur, size });
   }
 
+  // 하늘에서 내리치는 번개 줄기: 지그재그 마디 (흰 심 + 보랏빛 테두리), 깜빡이며 사라짐
+  bolt(ground, width = 1) {
+    const g = new THREE.Group();
+    const core = new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, blending: THREE.AdditiveBlending, depthWrite: false });
+    const glow = new THREE.MeshBasicMaterial({ color: '#8a6aff', transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false });
+    let p = new THREE.Vector3(ground.x + rand(-1.5, 1.5), ground.y + 13, ground.z + rand(-1.5, 1.5));
+    const N = 9;
+    for (let i = 1; i <= N; i++) {
+      const t = i / N;
+      const q = new THREE.Vector3(
+        ground.x + (p.x - ground.x) * 0 + (i < N ? rand(-0.7, 0.7) * (1 - t) : 0),
+        ground.y + 13 * (1 - t),
+        ground.z + (i < N ? rand(-0.7, 0.7) * (1 - t) : 0));
+      const mid = p.clone().add(q).multiplyScalar(0.5);
+      const len = p.distanceTo(q);
+      const dir = q.clone().sub(p).normalize();
+      const quat = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
+      for (const [m, w] of [[glow, 0.42 * width], [core, 0.16 * width]]) {
+        const s = new THREE.Mesh(new THREE.BoxGeometry(w, len + 0.05, w), m);
+        s.position.copy(mid); s.quaternion.copy(quat); s.renderOrder = 45;
+        g.add(s);
+      }
+      // 곁가지
+      if (i > 2 && i < N - 1 && Math.random() < 0.45) {
+        const bl = rand(0.6, 1.4);
+        const bd = new THREE.Vector3(rand(-1, 1), -rand(0.3, 1), rand(-1, 1)).normalize();
+        const b = new THREE.Mesh(new THREE.BoxGeometry(0.1 * width, bl, 0.1 * width), core);
+        b.position.copy(q).addScaledVector(bd, bl / 2);
+        b.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), bd);
+        g.add(b);
+      }
+      p = q;
+    }
+    this.scene.add(g);
+    this.bolts.push({ g, mats: [core, glow], t: 0, dur: 0.32 });
+    // 땅에 닿은 지점 섬광
+    this.ring(ground, 1.2 * width, '#ffffff', 0.25);
+  }
+
   // 잔상: 캐릭터를 통째로 복제해 푸른 빛으로 칠한 뒤 서서히 사라지게
   ghost(rig, color = '#5ab8ff', dur = 0.28) {
     const mat = new THREE.MeshBasicMaterial({ color: new THREE.Color(color), transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false });
@@ -332,6 +372,15 @@ export class FX {
       fl.g.children.forEach((m, j) => { m.scale.x = fl.size * 0.5 * (j ? 0.8 : 1) * (0.3 + 0.7 * grow); m.scale.y = 0.14 * (1 - k * 0.7); });
       for (const m of fl.mats) m.uniforms.uAlpha.value = Math.max(0, 1 - k * k);
       if (k >= 1) { this.scene.remove(fl.g); for (const m of fl.mats) m.dispose(); fl.g.children.forEach((m) => m.geometry.dispose()); this.flashes.splice(i, 1); }
+    }
+    for (let i = this.bolts.length - 1; i >= 0; i--) {
+      const b = this.bolts[i];
+      b.t += dt;
+      const k = b.t / b.dur;
+      b.g.visible = k < 0.35 || Math.floor(b.t * 40) % 2 === 0;
+      b.mats[0].opacity = Math.max(0, 1 - k);
+      b.mats[1].opacity = 0.55 * Math.max(0, 1 - k);
+      if (k >= 1) { this.scene.remove(b.g); b.g.traverse((o) => o.geometry && o.geometry.dispose()); b.mats.forEach((m) => m.dispose()); this.bolts.splice(i, 1); }
     }
     for (let i = this.ghosts.length - 1; i >= 0; i--) {
       const gh = this.ghosts[i];

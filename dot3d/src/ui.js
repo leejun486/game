@@ -19,10 +19,21 @@ export class UI {
     this.bars = new Map();
     this.bannerT = 0;
     this.toastT = 0;
-    drawPortrait(document.getElementById('portrait-cv'));
   }
 
   showHud(v) { this.el.hud.classList.toggle('hidden', !v); }
+
+  // 직업에 맞게 이름·초상화·버튼 이름을 바꿈
+  setClass(cfg) {
+    drawPortrait(document.getElementById('portrait-cv'), cfg.id);
+    document.getElementById('hero-name').innerHTML = `${cfg.title} <b>${cfg.name}</b><span class="lv">Lv.7</span>`;
+    for (const k of ['atk', 'dash', 'skill']) {
+      const t = cfg.labels[k];
+      document.getElementById('sk-' + k).textContent = t;
+      document.querySelectorAll('.lbl-' + k).forEach((el) => (el.textContent = t));
+    }
+    document.querySelector('#combo span').textContent = cfg.hitWord;
+  }
 
   setQuest(title, text) {
     const key = title + '|' + text;
@@ -106,7 +117,7 @@ export class UI {
     el.hpLag.style.width = (this.hpLag * 100).toFixed(1) + '%';
     el.hpText.textContent = `${Math.ceil(p.hp)} / ${p.maxHp}`;
     el.hpFill.classList.toggle('low', hp < 0.3);
-    el.dashCd.style.height = (p.dashCd / 0.5) * 100 + '%';
+    el.dashCd.style.height = (p.dashCd / (p.dashMax || 0.5)) * 100 + '%';
     el.skillCd.style.height = (p.skillCd / p.skillMax) * 100 + '%';
     el.kills.textContent = g.kills;
     if (el.best) el.best.textContent = g.bestCombo;
@@ -177,34 +188,93 @@ export class UI {
   }
 }
 
-// 20x20 도트 초상화
-function drawPortrait(cv) {
+// 20x20 도트 초상화 (직업별)
+const PORTRAITS = {
+  sword: {
+    bg: '#3a4878',
+    rows: [
+      '....................',
+      '.......hhhhhh.......',
+      '.....hhhhhhhhhh.....',
+      '....hhhhhhhhhhhh....',
+      '...hhhhhhhhhhhhhh...',
+      '...rrrrrrrrrrrrrr...',
+      '...hhhhsssshhhhhh...',
+      '...hhsssssssssshh...',
+      '...hssssssssssssh...',
+      '...hsseessssseessh..',
+      '...hsseWsssseeWsh...',
+      '...hsseessssseessh..',
+      '...hspssssssssspsh..',
+      '....ssssssmmsssss...',
+      '.....ssssssssssss...',
+      '......ssssssssss....',
+      '.......cwwwwwwc.....',
+      '.....wwwcwwwwcwww...',
+      '....wwwwwcwwcwwwwww.',
+      '...wwwwwwwccwwwwwwww',
+    ],
+    col: { h: '#2a2024', r: '#c8302c', s: '#f6d6b6', e: '#1b1416', W: '#ffffff', p: '#f0a0a0', m: '#b85a50', w: '#eeeae0', c: '#2e4f8f' },
+  },
+  mage: {
+    bg: '#4a3a78',
+    rows: [
+      '.......kkkkkk.......',
+      '.......kkkkkk.......',
+      '.......kkkkkk.......',
+      '.......vvvvvv.......',
+      'kkkkkkkkkkkkkkkkkkkk',
+      '...hhhhhhhhhhhhhh...',
+      '...hhhhsssshhhhhh...',
+      '...hhsssssssssshh...',
+      '...hssssssssssssh...',
+      '..bhsseessssseesshb.',
+      '...hsseWsssseeWsh...',
+      '..bhsseessssseesshb.',
+      '...hspssssssssspsh..',
+      '..b.ssssssmmsssss.b.',
+      '.....ssssssssssss...',
+      '......ssssssssss....',
+      '.......gnnnnnng.....',
+      '.....nnngnnnngnnn...',
+      '....nnnnngnngnnnnnn.',
+      '...nnnnnnnggnnnnnnnn',
+    ],
+    col: { k: '#16141c', v: '#6a5ad8', h: '#1e1a24', s: '#f4d4b2', e: '#1b1416', W: '#ffffff', p: '#f0a0a0', m: '#b85a50', n: '#3a3a7a', g: '#e0b040', b: '#e0a84a' },
+  },
+  elf: {
+    bg: '#2e5a3a',
+    rows: [
+      '....................',
+      '.......hhhhhh.......',
+      '.....hhhhhhhhhhff...',
+      '....hhhhhhhhhhhfFf..',
+      '...hhhhhhhhhhhhhf...',
+      '...hhhhhhhhhhhhhh...',
+      '...hhhhsssshhhhhh...',
+      '..hhhsssssssssshhh..',
+      's.hhssssssssssssh.s.',
+      'sshhsseessssseesshss',
+      '..hhsseWsssseeWshh..',
+      '..hhsseessssseesshh.',
+      '..hhspssssssssspshh.',
+      '..hh.ssssssmmssss.hh',
+      '..hh..ssssssssss..hh',
+      '..hh...ssssssss...hh',
+      '..hh...lgggggl....hh',
+      '..h..gggglgglggg...h',
+      '....ggggggllgggggg..',
+      '...gggggggggggggggg.',
+    ],
+    col: { h: '#e8e4c8', s: '#fbe2cc', e: '#2a6a4a', W: '#ffffff', p: '#f8a8b8', m: '#c86a60', g: '#5aa84e', l: '#bfe07a', f: '#ff9ac0', F: '#fff0a0' },
+  },
+};
+
+export function drawPortrait(cv, cls = 'sword') {
   if (!cv) return;
+  const P = PORTRAITS[cls] || PORTRAITS.sword;
   const g = cv.getContext('2d');
-  const rows = [
-    '....................',
-    '.......hhhhhh.......',
-    '.....hhhhhhhhhh.....',
-    '....hhhhhhhhhhhh....',
-    '...hhhhhhhhhhhhhh...',
-    '...rrrrrrrrrrrrrr...',
-    '...hhhhsssshhhhhh...',
-    '...hhsssssssssshh...',
-    '...hssssssssssssh...',
-    '...hsseessssseessh..',
-    '...hsseWsssseeWsh...',
-    '...hsseessssseessh..',
-    '...hspssssssssspsh..',
-    '....ssssssmmsssss...',
-    '.....ssssssssssss...',
-    '......ssssssssss....',
-    '.......cwwwwwwc.....',
-    '.....wwwcwwwwcwww...',
-    '....wwwwwcwwcwwwwww.',
-    '...wwwwwwwccwwwwwwww',
-  ];
-  const col = { h: '#2a2024', r: '#c8302c', s: '#f6d6b6', e: '#1b1416', W: '#ffffff', p: '#f0a0a0', m: '#b85a50', w: '#eeeae0', c: '#2e4f8f' };
-  g.fillStyle = '#3a4878';
+  g.fillStyle = P.bg;
   g.fillRect(0, 0, 20, 20);
-  rows.forEach((row, y) => [...row].forEach((ch, x) => { if (col[ch]) { g.fillStyle = col[ch]; g.fillRect(x, y, 1, 1); } }));
+  P.rows.forEach((row, y) => [...row].forEach((ch, x) => { if (P.col[ch]) { g.fillStyle = P.col[ch]; g.fillRect(x, y, 1, 1); } }));
 }

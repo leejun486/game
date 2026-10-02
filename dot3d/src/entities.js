@@ -1,5 +1,6 @@
 import * as THREE from 'three';
-import { makeHero, makeDokkaebi, makeGuard, makeLady } from './character.js';
+import { makeDokkaebi, makeGuard, makeLady } from './character.js';
+import { CLASSES } from './classes.js';
 import { toon } from './materials.js';
 import { NAV_R } from './world.js';
 import { clamp, angleDiff, dampAngle, rand, lerp, smooth } from './util.js';
@@ -8,10 +9,8 @@ const tmp = new THREE.Vector3();
 
 // ===================== 플레이어 =====================
 export class Player {
-  constructor(game) {
+  constructor(game, cls = 'sword') {
     this.game = game;
-    this.rig = makeHero();
-    game.scene.add(this.rig.root);
     this.pos = new THREE.Vector3(0, 0.12, 16);
     this.yaw = Math.PI;
     this.vel = new THREE.Vector3();
@@ -33,6 +32,25 @@ export class Player {
     this.stepAcc = 0;
     this.y = this.pos.y;
     this.lastCombat = 0;
+    this.moveR = this.radius;
+    this.setClass(cls);
+  }
+
+  // 직업을 바꾸면 캐릭터 모델과 능력치를 새로 만듦
+  setClass(cls) {
+    const C = CLASSES[cls] || CLASSES.sword;
+    if (this.rig) this.game.scene.remove(this.rig.root);
+    this.cls = C.id;
+    this.cfg = C;
+    this.rig = C.make();
+    this.game.scene.add(this.rig.root);
+    this.maxHp = C.hp;
+    this.hp = this.maxHp;
+    this.skillMax = C.skillCd;
+    this.dashMax = C.dashCd;
+    this.attack = null;
+    this.combo = 0;
+    this.sheatheT = 0;
   }
 
   reset() {
@@ -43,19 +61,19 @@ export class Player {
     this.rig.deadT = 0;
   }
 
-  aimYaw(input) {
+  aimYaw(input, range = this.cls === 'sword' ? 3.6 : 11) {
     const g = this.game;
-    // 1) 근처 적 자동 조준
+    // 1) 근처 적 자동 조준 (원거리 직업은 더 멀리)
     let best = null, bd = 1e9;
     const baseYaw = input.moveLen > 0.1 ? Math.atan2(input.mx, input.mz) : this.yaw;
     for (const e of g.enemies) {
       if (e.dead || e.spawning) continue;
       const dx = e.pos.x - this.pos.x, dz = e.pos.z - this.pos.z;
       const d = Math.hypot(dx, dz);
-      if (d > 3.6) continue;
+      if (d > range) continue;
       const a = Math.abs(angleDiff(baseYaw, Math.atan2(dx, dz)));
-      const score = d + a * 1.5;
-      if (a < 1.7 && score < bd) { bd = score; best = Math.atan2(dx, dz); }
+      const score = d + a * (range > 4 ? 4 : 1.5);
+      if (a < (range > 4 ? 0.9 : 1.7) && score < bd) { bd = score; best = Math.atan2(dx, dz); }
     }
     if (best !== null) return best;
     // 2) 마우스 방향
@@ -69,6 +87,18 @@ export class Player {
     if (this.dead || this.dashT > 0) return;
     if (this.attack) {
       if (this.attack.t > 0.4) this.buffered = true;
+      return;
+    }
+    if (this.cls !== 'sword') {
+      // 도사: 불부적 → 불부적 → 세 장 부채꼴 / 요정: 사격 → 사격 → 세 발 동시
+      const base = this.cls === 'mage' ? 10 : 20;
+      const kind = base + [0, 0, 2][this.combo % 3];
+      this.combo++;
+      this.yaw = this.aimYaw(input);
+      const third = kind % 10 === 2;
+      this.attack = { t: 0, kind, dur: this.cls === 'mage' ? (third ? 0.46 : 0.36) : (third ? 0.42 : 0.32), hit: false, hitAt: this.cls === 'mage' ? 0.42 : 0.47 };
+      if (this.cls === 'elf') this.game.audio.play('bowdraw');
+      this.lastCombat = this.game.time;
       return;
     }
     // 칼집에 있으면 발도베기(3)로 시작 → 가로베기(0) → 내려찍기(2).
@@ -106,8 +136,9 @@ export class Player {
     const dir = input.moveLen > 0.1 ? tmp.set(input.mx, 0, input.mz).normalize() : tmp.set(Math.sin(this.yaw), 0, Math.cos(this.yaw));
     this.dashDir.copy(dir);
     this.yaw = Math.atan2(dir.x, dir.z);
+    if (this.cls === 'mage') { this.blink(dir); return; }
     this.dashT = 0.2;
-    this.dashCd = 0.5;
+    this.dashCd = this.dashMax ?? 0.5;
     this.invuln = Math.max(this.invuln, 0.3);
     this.attack = null;
     this.buffered = false;
@@ -115,8 +146,44 @@ export class Player {
     this.game.fx.dust(this.pos.x, this.pos.y, this.pos.z, 8);
   }
 
+  // 도사의 축지법: 순식간에 몇 걸음 앞으로 이동 (벽은 못 뚫음)
+  blink(dir) {
+    const g = this.game;
+    const from = this.pos.clone();
+    g.fx.ghost(this.rig, '#9a7aff', 0.4);
+    g.fx.smoke(from.x, from.y + 0.2, from.z, 10);
+    g.world.move(this.pos, dir.x * 3.6, dir.z * 3.6, this.moveR);
+    this.vel.set(0, 0, 0);
+    this.dashCd = this.dashMax;
+    this.invuln = Math.max(this.invuln, 0.35);
+    this.attack = null;
+    this.buffered = false;
+    g.audio.play('blink');
+    const to = this.pos;
+    for (let i = 0; i < 14; i++) {
+      const t = i / 13;
+      g.fx.add.emit({ x: from.x + (to.x - from.x) * t, y: from.y + 0.8 + rand(-0.4, 0.4), z: from.z + (to.z - from.z) * t, vx: rand(-0.5, 0.5), vy: rand(0, 1), vz: rand(-0.5, 0.5), life: rand(0.25, 0.5), size: 3, endSize: 1, color: '#d8c8ff', color2: '#5a3aff' });
+    }
+    g.fx.ring(new THREE.Vector3(to.x, g.world.heightAt(to.x, to.z), to.z), 1.6, '#b8a0ff', 0.35);
+    g.fx.smoke(to.x, to.y + 0.2, to.z, 8);
+  }
+
   startSkill(input) {
     if (this.dead || this.skillCd > 0 || this.dashT > 0) return;
+    if (this.cls !== 'sword') {
+      this.skillCd = this.skillMax;
+      this.yaw = this.aimYaw(input);
+      this.combo = 0;
+      if (this.cls === 'mage') {
+        this.attack = { t: 0, kind: 11, dur: 0.62, hit: false, hitAt: 0.5, skill: true };
+        this.game.audio.play('chant');
+      } else {
+        this.attack = { t: 0, kind: 21, dur: 0.5, hit: false, hitAt: 0.47, skill: true };
+        this.game.audio.play('bowdraw');
+      }
+      this.lastCombat = this.game.time;
+      return;
+    }
     this.skillCd = this.skillMax;
     this.yaw = this.aimYaw(input);
     const fromSheath = this.rig.sheathed;
@@ -173,9 +240,10 @@ export class Player {
         if (Math.random() < 0.8) g.fx.add.emit({ x: this.pos.x + rand(-0.2, 0.2), y: this.pos.y + rand(0.3, 1.1), z: this.pos.z + rand(-0.2, 0.2), life: 0.25, size: 2, color: '#bfe8ff' });
         // 잔상
         this.ghostT = (this.ghostT ?? 0) - dt;
-        if (this.ghostT <= 0) { this.ghostT = 0.045; g.fx.ghost(this.rig); }
+        if (this.ghostT <= 0) { this.ghostT = 0.045; g.fx.ghost(this.rig, this.cls === 'elf' ? '#7ad86a' : '#5ab8ff'); }
+        if (this.cls === 'elf' && Math.random() < 0.6) g.fx.norm.emit({ x: this.pos.x + rand(-0.3, 0.3), y: this.pos.y + rand(0.2, 0.9), z: this.pos.z + rand(-0.3, 0.3), vx: rand(-1, 1), vy: rand(0.5, 1.5), vz: rand(-1, 1), wob: 1.5, life: rand(0.5, 0.9), size: 2, color: Math.random() < 0.5 ? '#8ad06a' : '#c8e88a' });
       } else {
-        const slow = this.attack ? (this.attack.skill ? 0.1 : 0.22) : 1;
+        const slow = this.attack ? (this.attack.skill ? (this.cls === 'sword' ? 0.1 : 0.25) : this.cls === 'sword' ? 0.22 : 0.45) : 1;
         const sp = 4.6 * slow;
         if (input.moveLen > 0.1) {
           mv = 1;
@@ -188,7 +256,7 @@ export class Player {
           this.vel.z = lerp(this.vel.z, 0, 1 - Math.exp(-14 * dt));
         }
         // 공격 중 전진 스텝
-        if (this.attack && !this.attack.skill) {
+        if (this.attack && !this.attack.skill && this.cls === 'sword') {
           const a = this.attack;
           if (a.t > 0.25 && a.t < 0.5) {
             const lunge = a.kind === 2 ? 3.5 : 2.6;
@@ -209,7 +277,9 @@ export class Player {
         a.t += dt / a.dur;
         if (!a.hit && a.t >= (a.hitAt ?? 0.38)) {
           a.hit = true;
-          g.playerSwingHit(this, a.kind);
+          if (a.skill) g.playerSkillHit(this, a);
+          else if (this.cls === 'sword') g.playerSwingHit(this, a.kind);
+          else g.playerShoot(this, a.kind);
         }
         if (a.t >= 1) {
           this.attack = null;

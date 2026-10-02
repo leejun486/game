@@ -7,6 +7,8 @@ import { UI } from './ui.js';
 import { Player, Enemy, NPC, Bird } from './entities.js';
 import { shared } from './materials.js';
 import { loadSave, writeSave, clearSave } from './save.js';
+import { CLASSES, CLASS_ORDER } from './classes.js';
+import { drawPortrait } from './ui.js';
 import { clamp, lerp, rand, angleDiff, damp } from './util.js';
 
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
@@ -28,6 +30,7 @@ class Game {
     this.alarm = 0;
     this.enemies = [];
     this.projectiles = [];
+    this.timers = [];
     this.spawnQueue = [];
     this.wave = 0;
     this.round = 0;
@@ -62,7 +65,10 @@ class Game {
     this.setupInput();
     this.bestCombo = 0;
     this.saveT = 15;
+    this.selectedCls = 'sword';
+    this.setupClassSelect();
     this.applySave(loadSave());
+    this.ui.setClass(this.player.cfg);
     this.updateQuest();
     // 탭을 닫거나 숨길 때 저장
     document.addEventListener('visibilitychange', () => { if (document.hidden) this.save(false); });
@@ -153,7 +159,7 @@ class Game {
     stage.addEventListener('mousemove', (e) => { this.mouse.x = e.clientX; this.mouse.y = e.clientY; this.mouse.t = this.time; });
     stage.addEventListener('mousedown', (e) => {
       this.mouse.x = e.clientX; this.mouse.y = e.clientY; this.mouse.t = this.time;
-      if (this.state === 'title') { this.start(); return; }
+      if (this.state === 'title') { const c = e.target.closest && e.target.closest('.cls'); if (c) this.selectClass(c.dataset.cls); this.start(); return; }
       this.audio.unlock();
       if (this.ui.inDialog) { this.ui.advance(); return; }
       if (this.state !== 'play') return;
@@ -229,6 +235,25 @@ class Game {
     return inp;
   }
 
+  // ---------- 직업 선택 ----------
+  setupClassSelect() {
+    for (const card of document.querySelectorAll('#classes .cls')) {
+      const C = CLASSES[card.dataset.cls];
+      drawPortrait(card.querySelector('canvas'), C.id);
+      card.querySelector('.role').textContent = C.role;
+      card.querySelector('.desc').textContent = C.desc;
+    }
+    this.selectClass(this.selectedCls);
+  }
+
+  selectClass(id) {
+    if (!CLASSES[id]) return;
+    this.selectedCls = id;
+    for (const card of document.querySelectorAll('#classes .cls')) card.classList.toggle('sel', card.dataset.cls === id);
+    // 타이틀 뒤 장면에서도 고른 직업 모습이 보이도록
+    if (this.player.cls !== id) { this.player.setClass(id); this.ui.setClass(this.player.cfg); }
+  }
+
   // ---------- 자동 저장 ----------
   applySave(d) {
     const info = document.getElementById('title-save');
@@ -242,6 +267,7 @@ class Game {
     if (d.outline === 0) this.pixel.compMat.uniforms.outline.value = 0;
     if (typeof d.zoom === 'number' && d.zoom !== this.pixel.userZoom) { this.pixel.userZoom = d.zoom; this.pixel.resize(); }
     if (d.night) { this.nightTarget = 1; this.night = 1; }
+    if (d.cls && CLASSES[d.cls]) this.selectClass(d.cls);
     if (info) {
       const when = new Date(d.savedAt || Date.now());
       const pad = (n) => String(n).padStart(2, '0');
@@ -256,6 +282,7 @@ class Game {
       round: this.round,
       stage: this.stage === 2 ? (this.round > 0 ? 3 : 1) : this.stage,
       bestCombo: this.bestCombo,
+      cls: this.player.cls,
       music: this.audio.musicOn,
       outline: this.pixel.compMat.uniforms.outline.value,
       zoom: this.pixel.userZoom,
@@ -276,6 +303,10 @@ class Game {
         if (info) info.textContent = '기록을 지웠습니다. 처음부터 시작합니다.';
         return;
       }
+      const i = CLASS_ORDER.indexOf(this.selectedCls);
+      if (code === 'ArrowLeft' || code === 'KeyA') { this.selectClass(CLASS_ORDER[(i + 2) % 3]); this.audio.unlock(); this.audio.play('talk'); return; }
+      if (code === 'ArrowRight' || code === 'KeyD') { this.selectClass(CLASS_ORDER[(i + 1) % 3]); this.audio.unlock(); this.audio.play('talk'); return; }
+      if (code === 'Digit1' || code === 'Digit2' || code === 'Digit3') { this.selectClass(CLASS_ORDER[+code.slice(-1) - 1]); return; }
       this.start();
       return;
     }
@@ -312,6 +343,10 @@ class Game {
   start() {
     this.audio.unlock();
     this.state = 'play';
+    if (this.player.cls !== this.selectedCls) this.player.setClass(this.selectedCls);
+    this.ui.setClass(this.player.cfg);
+    this.player.hp = this.player.maxHp;
+    this.save(false);
     document.getElementById('title').classList.add('hide');
     this.ui.showHud(true);
     this.ui.banner('月下宮', '도깨비 야행', 2.8, 'title-banner');
@@ -344,13 +379,15 @@ class Game {
       });
     } else if (it.kind === 'drum') {
       this.player.yaw = Math.atan2(it.drum.pos.x - this.player.pos.x, it.drum.pos.z - this.player.pos.z);
-      this.player.startAttack(this.readInput());
+      this.player.startAttack({ moveLen: 0, mx: 0, mz: 0 });
+      // 검객은 베기로 북을 침. 도사·요정은 바로 울림
+      if (this.player.cls !== 'sword') this.drumHit(it.drum);
     }
   }
 
   guardLines() {
     if (this.stage === 0) return [
-      '어이, 거기 젊은 검객! 마침 잘 왔소.',
+      `어이, 거기 젊은 ${this.player.cfg.title}! 마침 잘 왔소.`,
       '해만 지면 이 궁궐 마당에 도깨비 놈들이 떼로 몰려와 난장판을 친다오.',
       '저기 저 큰 북이 보이시오? 북을 둥— 하고 울리면 숨어 있던 놈들이 죄다 튀어나올 게요.',
       '놈들을 모조리 혼쭐내 주시오! 마지막엔 도깨비 대왕이 나온다는 소문이 있으니 조심하고.',
@@ -574,6 +611,161 @@ class Game {
     }
   }
 
+  // ---------- 도사 · 요정 공격 ----------
+  playerShoot(pl, kind) {
+    const third = kind % 10 === 2;
+    if (pl.cls === 'mage') {
+      const yaws = third ? [-0.28, 0, 0.28] : [0];
+      for (const o of yaws) this.spawnTalisman(pl, pl.yaw + o, third ? 15 : 19);
+      this.audio.play('cast');
+    } else {
+      const yaws = third ? [-0.14, 0, 0.14] : [0];
+      for (const o of yaws) this.spawnArrow(pl, pl.yaw + o, { dmg: third ? 14 : 16 });
+      this.audio.play('bow');
+    }
+  }
+
+  playerSkillHit(pl, a) {
+    if (pl.cls === 'mage') this.castLightning(pl);
+    else if (pl.cls === 'elf') this.windArrows(pl);
+  }
+
+  handPos(pl, out = V()) {
+    return out.set(pl.pos.x + Math.sin(pl.yaw) * 0.5, pl.y + 0.95, pl.pos.z + Math.cos(pl.yaw) * 0.5);
+  }
+
+  spawnTalisman(pl, yaw, dmg) {
+    const dir = V(Math.sin(yaw), 0, Math.cos(yaw));
+    const pos = this.handPos(pl);
+    const g = new THREE.Group();
+    const paper = new THREE.Mesh(new THREE.PlaneGeometry(0.24, 0.36), new THREE.MeshBasicMaterial({ color: '#f6d870', side: THREE.DoubleSide }));
+    const ink = new THREE.Mesh(new THREE.PlaneGeometry(0.06, 0.26), new THREE.MeshBasicMaterial({ color: '#c8302c', side: THREE.DoubleSide }));
+    ink.position.z = 0.002;
+    paper.add(ink);
+    g.add(paper);
+    g.position.copy(pos);
+    this.scene.add(g);
+    this.projectiles.push({ owner: 'player', kind: 'talisman', pos, dir, yaw, speed: 13, life: 0.8, dmg, mesh: g, paper, radius: 0.5, hitSet: new Set(), knock: 4, stun: 0.3 });
+  }
+
+  // 불부적 폭발: 맞은 적과 주변 적에게 불길
+  talismanBurst(pr) {
+    const fx = this.fx;
+    const p = pr.pos;
+    this.audio.play('fire');
+    fx.ring(V(p.x, this.world.heightAt(p.x, p.z), p.z), 1.7, '#ffb050', 0.3);
+    for (let i = 0; i < 26; i++) {
+      const a = Math.random() * Math.PI * 2, s = rand(1.5, 4.5);
+      fx.add.emit({ x: p.x, y: p.y, z: p.z, vx: Math.cos(a) * s, vy: rand(0.5, 3.5), vz: Math.sin(a) * s, g: 3, drag: 3, life: rand(0.25, 0.55), size: rand(2, 5), endSize: 1, color: '#fff2a0', color2: '#ff3a10', flicker: 0.3 });
+    }
+    fx.smoke(p.x, p.y - 0.2, p.z, 5);
+    for (const e of this.enemies) {
+      if (e.dead || e.spawning || e === pr.hitEnemy) continue;
+      if (Math.hypot(e.pos.x - p.x, e.pos.z - p.z) < 1.5 + e.radius) this.damageEnemy(e, Math.round(pr.dmg * 0.6), false, 3, 0.2);
+    }
+  }
+
+  spawnArrow(pl, yaw, { dmg = 16, pierce = false, glow = false, speed = 26, life = 0.55 } = {}) {
+    const dir = V(Math.sin(yaw), 0, Math.cos(yaw));
+    const pos = this.handPos(pl);
+    const g = new THREE.Group();
+    const shaftM = new THREE.MeshBasicMaterial({ color: glow ? '#c8ff9a' : '#9a7a52' });
+    const shaft = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.04, 0.78), shaftM);
+    const head = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.14, 4), new THREE.MeshBasicMaterial({ color: glow ? '#ffffff' : '#d8dde4' }));
+    head.rotation.x = Math.PI / 2;
+    head.position.z = 0.44;
+    const fl = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.02, 0.14), new THREE.MeshBasicMaterial({ color: glow ? '#8aff6a' : '#f0ece0' }));
+    fl.position.z = -0.32;
+    g.add(shaft, head, fl);
+    g.position.copy(pos);
+    g.rotation.y = yaw;
+    this.scene.add(g);
+    this.projectiles.push({ owner: 'player', kind: 'arrow', pos, dir, yaw, speed, life, dmg, mesh: g, radius: 0.4, hitSet: new Set(), pierce, glow, knock: pierce ? 5 : 3, stun: pierce ? 0.3 : 0.18 });
+  }
+
+  // 불부적·화살이 날아가는 동안
+  missileTrail(pr, dt) {
+    const fx = this.fx;
+    if (pr.kind === 'talisman') {
+      pr.paper.rotation.z += dt * 18;
+      pr.paper.rotation.y = Math.sin(this.time * 20) * 0.5;
+      pr.mesh.position.copy(pr.pos);
+      for (let k = 0; k < 2; k++) fx.add.emit({ x: pr.pos.x + rand(-0.1, 0.1), y: pr.pos.y + rand(-0.1, 0.1), z: pr.pos.z + rand(-0.1, 0.1), vx: -pr.dir.x * 2 + rand(-0.4, 0.4), vy: rand(0.4, 1.4), vz: -pr.dir.z * 2 + rand(-0.4, 0.4), life: rand(0.2, 0.4), size: rand(2, 4), endSize: 1, color: '#ffe080', color2: '#ff3010', flicker: 0.3 });
+    } else {
+      pr.mesh.position.copy(pr.pos);
+      if (pr.glow) {
+        for (let k = 0; k < 2; k++) fx.add.emit({ x: pr.pos.x + rand(-0.08, 0.08), y: pr.pos.y + rand(-0.08, 0.08), z: pr.pos.z + rand(-0.08, 0.08), vx: -pr.dir.x * 3, vy: rand(0, 0.6), vz: -pr.dir.z * 3, life: rand(0.2, 0.4), size: rand(2, 3), endSize: 1, color: '#e8ffc8', color2: '#3aa83a' });
+      } else if (Math.random() < 0.6) {
+        fx.add.emit({ x: pr.pos.x, y: pr.pos.y, z: pr.pos.z, life: 0.12, size: 2, color: '#fff8e0', alpha: 0.6 });
+      }
+    }
+    // 벽·높은 바닥에 부딪히면 끝
+    const h = this.world.heightAt(pr.pos.x, pr.pos.z);
+    if (h > pr.pos.y - 0.3) pr.life = 0;
+  }
+
+  // 도사 낙뢰: 조준한 지점에 경고 원 → 번개 다발이 내리쳐 광역 피해
+  castLightning(pl) {
+    // 바라보는 쪽 가까운 적, 없으면 5걸음 앞
+    let target = null, bd = 11;
+    for (const e of this.enemies) {
+      if (e.dead || e.spawning) continue;
+      const dx = e.pos.x - pl.pos.x, dz = e.pos.z - pl.pos.z;
+      const d = Math.hypot(dx, dz);
+      if (d < bd && Math.abs(angleDiff(pl.yaw, Math.atan2(dx, dz))) < 1.0) { bd = d; target = e; }
+    }
+    const c = target ? V(target.pos.x, 0, target.pos.z) : V(pl.pos.x + Math.sin(pl.yaw) * 5, 0, pl.pos.z + Math.cos(pl.yaw) * 5);
+    c.y = this.world.heightAt(c.x, c.z);
+    const R = 2.9;
+    const tele = this.fx.ring(c, R, '#b89aff', 1, 1);
+    this.fx.ring(this.handPos(pl), 1.2, '#d8c8ff', 0.3);
+    this.audio.play('charge');
+    this.shake(0.12);
+    this.timers.push({ at: this.time + 0.42, fn: () => {
+      this.fx.removeRing(tele);
+      const pts = [c, ...[0, 1, 2].map(() => V(c.x + rand(-1.8, 1.8), c.y, c.z + rand(-1.8, 1.8)))];
+      pts.forEach((p, i) => this.fx.bolt(p, i === 0 ? 1.4 : 0.9));
+      this.audio.play('thunder');
+      this.ui.flash('#e8e0ff', 0.55);
+      this.shake(0.6);
+      this.hitstop = Math.max(this.hitstop, 0.08);
+      this.fx.ring(c, R * 1.25, '#d8c8ff', 0.4);
+      this.fx.ring(c, R * 0.6, '#ffffff', 0.25);
+      for (let i = 0; i < 50; i++) {
+        const a = Math.random() * Math.PI * 2, s = rand(2, 8);
+        this.fx.add.emit({ x: c.x, y: c.y + 0.3, z: c.z, vx: Math.cos(a) * s, vy: rand(1, 6), vz: Math.sin(a) * s, g: 10, drag: 2, life: rand(0.3, 0.7), size: rand(2, 4), endSize: 1, color: '#ffffff', color2: '#7a5aff' });
+      }
+      for (let i = 0; i < 30; i++) {
+        const a = (i / 30) * Math.PI * 2, r = rand(0.5, R);
+        this.fx.add.emit({ x: c.x + Math.cos(a) * r, y: c.y + 0.06, z: c.z + Math.sin(a) * r, life: rand(0.6, 1.2), size: 2, color: '#b89aff', alpha: 0.8, flicker: 0.6 });
+      }
+      for (const e of this.enemies) {
+        if (e.dead || e.spawning) continue;
+        if (Math.hypot(e.pos.x - c.x, e.pos.z - c.z) < R + e.radius) {
+          const crit = Math.random() < 0.2;
+          this.damageEnemy(e, Math.round(rand(44, 54) * (crit ? 1.8 : 1)), crit, 3, 0.7);
+          const ec = e.center();
+          this.fx.spark(ec.x, ec.y, ec.z, 10, '#e8e0ff', 6);
+        }
+      }
+    } });
+  }
+
+  // 요정 바람화살: 부채꼴로 9발, 관통
+  windArrows(pl) {
+    for (let i = 0; i < 9; i++) this.spawnArrow(pl, pl.yaw + (i - 4) * 0.13, { dmg: 22, pierce: true, glow: true, speed: 24, life: 0.6 });
+    this.audio.play('bowskill');
+    const feet = V(pl.pos.x, pl.y, pl.pos.z);
+    this.fx.ring(feet, 2.4, '#a8ff8a', 0.4);
+    this.fx.ring(this.handPos(pl), 1.4, '#ffffff', 0.25);
+    for (let i = 0; i < 26; i++) {
+      const a = pl.yaw + rand(-0.7, 0.7);
+      this.fx.norm.emit({ x: feet.x, y: feet.y + rand(0.3, 1.2), z: feet.z, vx: Math.sin(a) * rand(3, 8), vy: rand(0, 1.5), vz: Math.cos(a) * rand(3, 8), drag: 2, wob: 1, life: rand(0.5, 1), size: 2, color: Math.random() < 0.5 ? '#8ad06a' : '#d8f0a0' });
+    }
+    this.ui.flash('#6aff7a', 0.15);
+    this.shake(0.18);
+  }
+
   spawnOrb(w) {
     const p = this.player;
     const pos = V(w.pos.x, w.y + 1.3, w.pos.z);
@@ -651,6 +843,7 @@ class Game {
     this.spawnQueue = [];
     for (const pr of this.projectiles) if (pr.mesh) this.scene.remove(pr.mesh);
     this.projectiles = [];
+    this.timers = [];
     this.ui.setBoss(null);
     this.waveClearing = false;
     if (this.waveActive) {
@@ -677,6 +870,14 @@ class Game {
         if (h > pr.pos.y - 0.4 || this.world.isBlocked(pr.pos.x, pr.pos.z, 0.05, h) && h > pr.pos.y - 1) pr.life = 0;
       } else if (pr.kind === 'wave') {
         this.swordWaveTrail(pr, dt);
+      } else if (pr.kind === 'talisman' || pr.kind === 'arrow') {
+        this.missileTrail(pr, dt);
+      }
+      if (pr.owner === 'player' && (pr.kind === 'talisman' || pr.kind === 'arrow')) {
+        // 부적·화살로 북을 맞혀도 울림
+        for (const dr of this.world.drums) {
+          if (Math.hypot(dr.pos.x - pr.pos.x, dr.pos.z - pr.pos.z) < 1.25) { this.drumHit(dr); pr.life = 0; }
+        }
       }
       if (pr.owner === 'player') {
         for (const e of this.enemies) {
@@ -684,8 +885,8 @@ class Game {
           const d = Math.hypot(e.pos.x - pr.pos.x, e.pos.z - pr.pos.z);
           if (d < pr.radius + e.radius) {
             pr.hitSet.add(e);
-            const crit = Math.random() < 0.2;
-            this.damageEnemy(e, Math.round(pr.dmg * (crit ? 1.8 : 1) * rand(0.9, 1.1)), crit, 7, 0.35);
+            const crit = Math.random() < (pr.kind === 'arrow' ? 0.25 : 0.2);
+            this.damageEnemy(e, Math.round(pr.dmg * (crit ? 1.8 : 1) * rand(0.9, 1.1)), crit, pr.knock ?? 7, pr.stun ?? 0.35);
             if (pr.kind === 'wave') {
               const c = e.center().clone();
               this.fx.cross(c, '#9fe8ff', e.type === 'boss' ? 5.5 : 3.8);
@@ -695,6 +896,15 @@ class Game {
               this.hitstop = Math.max(this.hitstop, 0.07);
             }
             if (pr.kind === 'orb') pr.life = 0;
+            if (pr.kind === 'talisman') { pr.hitEnemy = e; pr.life = 0; }
+            if (pr.kind === 'arrow') {
+              this.audio.play('arrowhit');
+              const c = e.center();
+              this.fx.spark(c.x, c.y, c.z, pr.pierce ? 10 : 6, pr.pierce ? '#c8ff9a' : '#ffffff', 5);
+              if (pr.pierce) this.fx.cross(c.clone(), '#a8ff8a', e.type === 'boss' ? 3.5 : 2.4, 0.25);
+              if (!pr.pierce) { pr.life = 0; pr.stuck = true; }
+            }
+            if (pr.life <= 0) break;
           }
         }
       } else {
@@ -705,7 +915,12 @@ class Game {
       }
       if (pr.life <= 0) {
         if (pr.kind === 'wave') this.swordWaveEnd(pr);
-        if (pr.mesh) { this.scene.remove(pr.mesh); this.fx.blueFire(pr.pos.x, pr.pos.y - 0.2, pr.pos.z, 10, 0.2); }
+        if (pr.kind === 'talisman') this.talismanBurst(pr);
+        if (pr.mesh) {
+          this.scene.remove(pr.mesh);
+          if (pr.kind === 'orb') this.fx.blueFire(pr.pos.x, pr.pos.y - 0.2, pr.pos.z, 10, 0.2);
+          if (pr.kind === 'arrow') this.fx.spark(pr.pos.x, pr.pos.y, pr.pos.z, 3, '#e8dcc0', 2);
+        }
         this.projectiles.splice(i, 1);
       }
     }
@@ -757,6 +972,7 @@ class Game {
     }
     this.separate();
     this.updateProjectiles(wdt);
+    for (let i = this.timers.length - 1; i >= 0; i--) if (this.timers[i].at <= this.time) { const t = this.timers[i]; this.timers.splice(i, 1); t.fn(); }
     while (this.spawnQueue.length && this.spawnQueue[0].at <= this.time) this.spawnEnemy(this.spawnQueue.shift().type);
     this.spawnQueue.sort((a, b) => a.at - b.at);
     this.checkWave();

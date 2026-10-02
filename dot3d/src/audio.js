@@ -103,6 +103,44 @@ export class Audio {
         this.noise(0.06, { type: 'highpass', f0: 3000, f1: 2000, gain: 0.2 });
         this.tone(0.08, { type: 'square', f0: 1300, f1: 900, gain: 0.04, at: 0.04 });
         break;
+      case 'bowdraw': // 시위 당기는 소리
+        this.noise(0.22, { f0: 300, f1: 900, q: 6, gain: 0.08, attack: 0.08 });
+        break;
+      case 'bow': // 활 쏘는 소리 "팅"
+        this.tone(0.18, { type: 'triangle', f0: 420, f1: 180, gain: 0.18 });
+        this.noise(0.12, { f0: 2500, f1: 800, q: 1.5, gain: 0.2 });
+        break;
+      case 'bowskill':
+        for (let i = 0; i < 4; i++) this.tone(0.16, { type: 'triangle', f0: 460 - i * 30, f1: 200, gain: 0.12, at: i * 0.04 });
+        this.noise(0.6, { f0: 400, f1: 4000, q: 1.2, gain: 0.25, attack: 0.03 });
+        break;
+      case 'arrowhit':
+        this.noise(0.06, { type: 'highpass', f0: 3000, f1: 1500, gain: 0.18 });
+        this.tone(0.07, { f0: 260, f1: 120, gain: 0.25 });
+        break;
+      case 'cast': // 부적 던지기
+        this.noise(0.18, { f0: 800, f1: 2400, q: 2, gain: 0.15 });
+        this.tone(0.25, { type: 'sine', f0: 880, f1: 1320, gain: 0.06 });
+        break;
+      case 'fire': // 부적 폭발
+        this.noise(0.4, { type: 'lowpass', f0: 2400, f1: 200, gain: 0.35, attack: 0.005 });
+        this.tone(0.2, { f0: 140, f1: 60, gain: 0.3 });
+        break;
+      case 'chant': // 낙뢰 주문
+        [523, 659, 784].forEach((f, i) => this.tone(0.35, { type: 'sine', f0: f, gain: 0.06, at: i * 0.08 }));
+        break;
+      case 'charge':
+        this.noise(0.4, { f0: 200, f1: 3000, q: 4, gain: 0.12, attack: 0.3 });
+        break;
+      case 'thunder': // 낙뢰: 날카로운 균열음 + 낮은 우르릉
+        this.noise(0.12, { type: 'highpass', f0: 5000, f1: 2000, gain: 0.4, attack: 0.002 });
+        this.noise(1.2, { type: 'lowpass', f0: 900, f1: 60, gain: 0.6, attack: 0.01 });
+        this.tone(0.9, { f0: 80, f1: 30, gain: 0.5 });
+        break;
+      case 'blink': // 축지법
+        this.tone(0.25, { type: 'sine', f0: 1600, f1: 400, gain: 0.08 });
+        this.noise(0.25, { f0: 3000, f1: 600, q: 3, gain: 0.15 });
+        break;
       case 'skill':
         this.noise(0.5, { f0: 300, f1: 5000, q: 1.8, gain: 0.32, attack: 0.02 });
         this.tone(0.45, { type: 'sawtooth', f0: 220, f1: 1760, gain: 0.05, attack: 0.02 });

@@ -73,6 +73,7 @@ canvas.view { position: absolute; left: 0; top: 0; image-rendering: pixelated; i
 
 #help { position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; font-size: 11px; color: #d8cfb8; text-shadow: 1px 1px 0 #000, -1px 0 #000; opacity: 0.85; max-width: 96vw; }
 #help b { color: var(--gold); font-weight: normal; }
+#help i { font-style: normal; }
 
 #banner { position: absolute; left: 0; right: 0; top: 30%; text-align: center; pointer-events: none; z-index: 9; opacity: 0; }
 #banner.show { animation: banner 0.5s steps(5) forwards; }
@@ -104,6 +105,16 @@ canvas.view { position: absolute; left: 0; top: 0; image-rendering: pixelated; i
 .logo-big .han { display: block; font-family: 'Noto Serif KR', 'Noto Serif CJK KR', serif; font-size: min(140px, 22vw); font-weight: 900; color: #fff6e2; -webkit-text-stroke: 4px #15121c; paint-order: stroke fill; letter-spacing: -4px; }
 .logo-big .kr { display: block; font-size: 22px; color: var(--gold); margin-top: 6px; letter-spacing: 12px; }
 .logo-big .sub { display: block; font-size: 18px; color: #bfe8ff; margin-top: 14px; letter-spacing: 4px; }
+#classes { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; max-width: 96vw; }
+.cls { position: relative; width: 168px; padding: 12px 12px 10px; background: rgba(16, 12, 24, 0.78); border: 2px solid #4a3e2a; box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.45); display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; transition: transform 0.12s steps(2); }
+.cls canvas { width: 72px; height: 72px; image-rendering: pixelated; border: 2px solid #0a0810; }
+.cls b { font-size: 17px; color: #fff6e2; font-weight: normal; margin-top: 2px; }
+.cls .role { font-size: 11px; color: var(--gold); }
+.cls .desc { font-size: 10.5px; color: #c8bea8; text-align: center; line-height: 1.45; min-height: 30px; }
+.cls .num { position: absolute; left: 6px; top: 4px; font-size: 10px; color: #8a7e6a; }
+.cls.sel { border-color: var(--gold); transform: translateY(-6px); box-shadow: 0 0 0 2px #fff3c0, 4px 10px 0 rgba(0, 0, 0, 0.45); }
+.cls.sel b { color: var(--gold); }
+#title .press small { font-size: 11px; color: #c8bea8; }
 #title-save { font-size: 14px; color: #f3ead6; text-align: center; background: rgba(16, 12, 24, 0.7); padding: 8px 18px; border: 2px solid var(--gold-dark); line-height: 1.6; }
 #title-save:empty { display: none; }
 #title-save b { color: var(--gold); font-weight: normal; }
@@ -147,6 +158,8 @@ canvas.view { position: absolute; left: 0; top: 0; image-rendering: pixelated; i
 
 /* ---------- 터치 기기 / 작은 화면 ---------- */
 body.touch #help, body.touch .skills { display: none; }
+#title .press .tp, body.touch #title .press .kb { display: none; }
+body.touch #title .press .tp { display: inline; }
 body.touch #gameover .s b::after { content: ' / 화면 탭'; }
 @media (max-height: 520px), (max-width: 600px) {
   #status { left: 8px; top: 8px; padding: 5px 7px 5px 5px; gap: 7px; }
@@ -177,9 +190,17 @@ body.touch #gameover .s b::after { content: ' / 화면 탭'; }
   #touch .btns { right: 12px; bottom: 14px; grid-template-columns: 56px 56px; gap: 8px; }
   #touch button { width: 56px; height: 56px; font-size: 12px; }
   .logo-big .kr { font-size: 16px; letter-spacing: 8px; }
+  #title { gap: 12px; }
+  .logo-big .han { font-size: 62px; }
+  .cls { width: 128px; padding: 6px; }
+  .cls canvas { width: 44px; height: 44px; }
+  .cls .desc { display: none; }
   .logo-big .sub { font-size: 14px; }
 }
 @media (max-width: 600px) {
+  .cls { width: 104px; padding: 8px 6px; }
+  .cls canvas { width: 48px; height: 48px; }
+  .cls .desc { display: none; }
   #quest { top: 66px; left: 8px; right: auto; width: 200px; }
   #boss { top: 132px; }
 }
