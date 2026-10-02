@@ -1,7 +1,7 @@
 // 2.5등신 로우폴리 캐릭터 + 절차적 애니메이션
 import * as THREE from 'three';
 import { toon } from './materials.js';
-import { tigerTex } from './textures.js';
+import { tigerTex, clothTex } from './textures.js';
 import { clamp, lerp, smooth } from './util.js';
 
 const C = (h) => new THREE.Color(h);
@@ -33,6 +33,15 @@ export class Rig {
     this.body.scale.setScalar(s);
     this.root.add(this.body);
 
+    // 무늬 옷감: 옷에 pattern이 있으면 바탕색 위에 무늬 텍스처 (h = 감싸는 높이, 세로 반복 맞춤)
+    const cloth = (color, h = 0.4, kind = cfg.pattern) => {
+      if (!kind) return mat({ color: C(color) });
+      const t = clothTex(kind, color, cfg.patA || '#ffffff', cfg.patB || '#ffd040').clone();
+      t.needsUpdate = true;
+      t.repeat.set(1, kind === 'saekdong' ? Math.max(0.25, h * 0.7) : Math.max(0.2, h * 0.45));
+      return mat({ map: t });
+    };
+    this.cloth = cloth;
     const skin = mat({ color: C(cfg.skin) });
     const legLen = cfg.legLen ?? 0.36;
     this.legLen = legLen;
@@ -63,10 +72,10 @@ export class Rig {
       this.hips.add(mesh(new THREE.CylinderGeometry(0.24, 0.42, 0.9, 12), robe, 0, -0.45, 0));
     } else if (cfg.type === 'mage' || cfg.type === 'jiangshi' || cfg.type === 'reaper') {
       // 도사: 발목까지 내려오는 도포 + 금색 띠
-      const robe = mat({ color: C(cfg.robe) });
+      const robe = cloth(cfg.robe, 0.46), robe2 = cloth(cfg.robe, 0.4);
       const trim = mat({ color: C(cfg.belt) });
       this.hips.add(mesh(new THREE.CylinderGeometry(0.17, 0.25, 0.46, 10), robe, 0, 0.2, 0));
-      this.hips.add(mesh(new THREE.CylinderGeometry(0.25, 0.36, 0.4, 12), robe, 0, -0.14, 0));
+      this.hips.add(mesh(new THREE.CylinderGeometry(0.25, 0.36, 0.4, 12), robe2, 0, -0.14, 0));
       this.hips.add(mesh(new THREE.CylinderGeometry(0.362, 0.37, 0.04, 12), trim, 0, -0.33, 0));
       this.hips.add(mesh(new THREE.CylinderGeometry(0.228, 0.235, 0.06, 10), trim, 0, 0.1, 0));
       const collar = mat({ color: C('#f0ead8') });
@@ -79,8 +88,8 @@ export class Rig {
       if (cfg.type === 'jiangshi') this.hips.add(mesh(new THREE.BoxGeometry(0.2, 0.18, 0.04), mat({ color: C('#e0b040') }), 0, 0.26, 0.2));
     } else if (cfg.type === 'elf') {
       // 요정: 잎사귀 빛 저고리 + 짧은 치마 + 가죽 띠
-      const top = mat({ color: C(cfg.robe) });
-      const skirt = mat({ color: C(cfg.skirt) });
+      const top = cloth(cfg.robe, 0.42);
+      const skirt = cloth(cfg.skirt, 0.2);
       const belt = mat({ color: C(cfg.belt) });
       this.hips.add(mesh(new THREE.CylinderGeometry(0.15, 0.21, 0.42, 10), top, 0, 0.2, 0));
       this.hips.add(mesh(new THREE.CylinderGeometry(0.21, 0.3, 0.2, 10), skirt, 0, -0.04, 0));
@@ -100,10 +109,10 @@ export class Rig {
       for (let i = 0; i < 4; i++) quiver.add(mesh(new THREE.BoxGeometry(0.03, 0.12, 0.05), feather, (i - 1.5) * 0.03, 0.27, (i % 2) * 0.03));
       this.hips.add(quiver);
     } else if (cfg.type === 'hero' || cfg.type === 'guard') {
-      const robe = mat({ color: C(cfg.robe) });
+      const robe = cloth(cfg.robe, 0.44), robe2 = cloth(cfg.robe, 0.24);
       const belt = mat({ color: C(cfg.belt) });
       this.hips.add(mesh(new THREE.CylinderGeometry(0.17, 0.235, 0.44, 10), robe, 0, 0.2, 0));
-      this.hips.add(mesh(new THREE.CylinderGeometry(0.24, 0.31, 0.24, 10), robe, 0, -0.04, 0));
+      this.hips.add(mesh(new THREE.CylinderGeometry(0.24, 0.31, 0.24, 10), robe2, 0, -0.04, 0));
       this.hips.add(mesh(new THREE.CylinderGeometry(0.215, 0.225, 0.07, 10), belt, 0, 0.1, 0));
       // 깃 (V자)
       const collar = mat({ color: C(cfg.collar || '#2a2a36') });
@@ -144,7 +153,7 @@ export class Rig {
 
     // 팔
     this.arms = [];
-    const sleeve = mat({ color: C(cfg.sleeve || cfg.robe || cfg.skin) });
+    const sleeve = cfg.sleevePat ? cloth(cfg.sleeve || cfg.robe, 0.5, cfg.sleevePat) : cfg.pattern && cfg.sleeve === cfg.robe ? cloth(cfg.robe, 0.3) : mat({ color: C(cfg.sleeve || cfg.robe || cfg.skin) });
     for (const side of [-1, 1]) {
       const g = new THREE.Group();
       g.position.set(side * (cfg.shoulder ?? 0.21), -0.03, 0);
@@ -167,6 +176,8 @@ export class Rig {
 
     if (cfg.armor) this.buildArmor(cfg);
     if (cfg.acc) this.buildAccessory(cfg.acc, hr, cfg);
+    this.flutter = [];
+    if (cfg.deco) for (const d of cfg.deco) this.buildDeco(d, hr, cfg);
     if (cfg.weapon) this.buildWeapon(cfg.weapon);
 
     this.root.traverse((o) => { if (o.isMesh) o.castShadow = true; });
@@ -346,6 +357,82 @@ export class Rig {
     if (heavy) {
       this.hips.add(mesh(new THREE.BoxGeometry(0.42, 0.14, 0.06), dark, 0, -0.06, 0.24));
       this.head.add(mesh(new THREE.BoxGeometry(0.06, 0.12, 0.03), plate, 0, 0.2, 0.28));
+    }
+  }
+
+  // 옷 장식: 망토·목도리·고름 띠·피백(선녀 띠)·흉배·팔찌·화관·꽃비녀
+  // 흔들리는 부분은 this.flutter에 넣어 animate에서 바람·달리기에 따라 나부낌
+  buildDeco(d, hr, cfg) {
+    const A = this.mat({ color: C(cfg.decoA || cfg.trim || '#c8302c') });
+    const T = this.mat({ color: C(cfg.decoB || cfg.belt || '#e0b040') });
+    const torsoZ = cfg.type === 'elf' ? 0.175 : cfg.type === 'mage' ? 0.205 : 0.2;
+    const flap = (parent, x, y, z, w, len, m, base, amp, run, rz = 0) => {
+      const g = new THREE.Group();
+      g.position.set(x, y, z);
+      g.rotation.z = rz;
+      g.add(mesh(new THREE.BoxGeometry(w, len, 0.02), m, 0, -len / 2, 0));
+      parent.add(g);
+      this.flutter.push({ g, base, amp, run, ph: Math.random() * 6 });
+      return g;
+    };
+    if (d === 'cape') {
+      // 어깨에서 등으로 떨어지는 망토 (겉감 + 안감 테두리)
+      const g = flap(this.chest, 0, 0.0, -0.17, 0.44, 0.62, A, 0.12, 0.06, 0.6);
+      g.add(mesh(new THREE.BoxGeometry(0.46, 0.04, 0.024), T, 0, -0.6, 0));
+      g.add(mesh(new THREE.BoxGeometry(0.46, 0.05, 0.05), T, 0, 0, 0.01));
+      for (const sx of [-1, 1]) this.chest.add(mesh(new THREE.SphereGeometry(0.035, 5, 4), T, sx * 0.13, -0.02, 0.15));
+    } else if (d === 'scarf') {
+      const ring = mesh(new THREE.TorusGeometry(0.13, 0.045, 5, 12), A, 0, 0.01, 0);
+      ring.rotation.x = Math.PI / 2;
+      this.chest.add(ring);
+      flap(this.chest, 0.07, 0.0, -0.13, 0.08, 0.42, A, 0.35, 0.12, 1.0, 0.15);
+      flap(this.chest, 0.12, -0.01, -0.11, 0.07, 0.3, A, 0.3, 0.14, 0.9, 0.3);
+    } else if (d === 'sash') {
+      // 허리 뒤로 늘어진 긴 고름 띠
+      this.hips.add(mesh(new THREE.TorusGeometry(0.06, 0.025, 4, 8), A, 0.06, 0.12, -0.22));
+      flap(this.hips, 0.04, 0.1, -0.22, 0.06, 0.46, A, 0.2, 0.1, 0.8, 0.1);
+      flap(this.hips, 0.1, 0.1, -0.21, 0.06, 0.38, T, 0.18, 0.12, 0.8, 0.25);
+    } else if (d === 'ribbon') {
+      // 피백: 등 뒤로 둥글게 걸친 선녀의 띠 + 양 끝이 나부낌
+      const glow = this.mat({ color: C(cfg.decoA || '#e8d0ff'), emissive: C(cfg.decoGlow || '#3a2a6a') });
+      const arc = mesh(new THREE.TorusGeometry(0.4, 0.024, 4, 20, Math.PI), glow, 0, -0.02, -0.2);
+      arc.rotation.x = -0.35;
+      this.chest.add(arc);
+      this.ribbonArc = arc;
+      flap(this.chest, 0.4, -0.02, -0.2, 0.05, 0.55, glow, 0.25, 0.15, 0.9);
+      flap(this.chest, -0.4, -0.02, -0.2, 0.05, 0.55, glow, 0.25, 0.15, 0.9);
+    } else if (d === 'badge') {
+      // 흉배: 가슴의 네모 수놓은 판
+      this.hips.add(mesh(new THREE.BoxGeometry(0.17, 0.16, 0.02), T, 0, 0.27, torsoZ));
+      this.hips.add(mesh(new THREE.BoxGeometry(0.1, 0.09, 0.02), A, 0, 0.27, torsoZ + 0.008));
+      this.hips.add(mesh(new THREE.BoxGeometry(0.04, 0.04, 0.02), T, 0, 0.27, torsoZ + 0.014));
+    } else if (d === 'bracers') {
+      for (const arm of this.arms) {
+        arm.add(mesh(new THREE.CylinderGeometry(0.084, 0.09, 0.11, 8), T, 0, -0.2, 0));
+        arm.add(mesh(new THREE.CylinderGeometry(0.092, 0.092, 0.02, 8), A, 0, -0.17, 0));
+      }
+    } else if (d === 'crown') {
+      if (cfg.type === 'mage') return; // 갓 위에는 생략
+      const gold = this.mat({ color: C('#ffd040'), emissive: C('#3a2600') });
+      const y = hr * 0.88;
+      for (let i = 0; i < 7; i++) {
+        const a = (i / 7) * Math.PI * 2;
+        const c = mesh(new THREE.ConeGeometry(0.03, i % 2 ? 0.07 : 0.11, 4), gold, Math.cos(a) * 0.13, y + 0.04, Math.sin(a) * 0.13);
+        this.head.add(c);
+      }
+      const band = mesh(new THREE.TorusGeometry(0.13, 0.022, 4, 14), gold, 0, y, 0);
+      band.rotation.x = Math.PI / 2;
+      this.head.add(band);
+      this.head.add(mesh(new THREE.IcosahedronGeometry(0.035, 0), this.mat({ color: C(cfg.decoA || '#ff4a6a'), emissive: C('#4a0a1a') }), 0, y + 0.03, 0.13));
+    } else if (d === 'flowerPin') {
+      const pet = this.mat({ color: C(cfg.decoA || '#ff9ac0') });
+      const mid = this.mat({ color: C('#fff0a0') });
+      for (const [x, y, z, r] of [[-0.22, 0.12, 0.02, 0.06], [-0.2, 0.2, -0.08, 0.045], [-0.26, 0.04, -0.06, 0.04]]) {
+        this.head.add(mesh(new THREE.IcosahedronGeometry(r, 0), pet, x, y, z));
+        this.head.add(mesh(new THREE.IcosahedronGeometry(r * 0.45, 0), mid, x - 0.02, y + 0.01, z + r * 0.6));
+      }
+      // 떨잠 구슬 줄
+      flap(this.head, -0.24, 0.02, 0.0, 0.015, 0.16, T, 0.0, 0.2, 0.3);
     }
   }
 
@@ -796,6 +883,11 @@ export class Rig {
     if (this.tail) {
       this.tail.rotation.x = 0.25 + run * 0.6 + Math.sin(this.idleT * 7) * 0.08 * run;
     }
+    // 망토·띠 나부낌: 달릴수록 뒤로 들리고, 가만히 있어도 바람에 살랑
+    for (const f of this.flutter) {
+      f.g.rotation.x = f.base + run * f.run + Math.sin(this.idleT * (2.4 + run * 4) + f.ph) * f.amp * (0.6 + run);
+    }
+    if (this.ribbonArc) this.ribbonArc.position.y = -0.02 + Math.sin(this.idleT * 1.8) * 0.025;
     if (this.foxTails) {
       this.foxTails.forEach((t, i) => {
         t.rotation.x = 1.0 + run * 0.5 + Math.sin(this.idleT * 3 + i) * 0.12;
@@ -824,6 +916,17 @@ export function makeHero(o = {}) {
 }
 
 // 옷 팔레트를 직업별 리그 색 설정으로 바꿈
+// 옷 아이템 → 리그 설정 (색, 갑옷, 무늬, 장식)
+export function outfitLook(type, o) {
+  if (!o || !o.pal) return {};
+  const c = outfitColors(type, o.pal, o.armor, o.acc);
+  if (o.pattern) { c.pattern = o.pattern; c.patA = o.pal.patA || o.pal.trim; c.patB = o.pal.patB || o.pal.accent; }
+  if (o.sleevePat) c.sleevePat = o.sleevePat;
+  if (o.deco) { c.deco = o.deco; c.decoA = o.pal.decoA || o.pal.accent; c.decoB = o.pal.decoB || o.pal.trim; c.decoGlow = o.pal.decoGlow; }
+  if (o.pal.hair) c.hair = o.pal.hair;
+  return c;
+}
+
 export function outfitColors(type, pal, armor, acc) {
   if (!pal) return {};
   if (acc) return { ...outfitColors(type, pal, armor), acc };

@@ -533,3 +533,66 @@ export function forestPathTex() {
 
 // 숲 바닥 풀 (어두운 초록 + 이끼)
 export function forestGrassTex() { return grassTex([70, 112, 58]); }
+
+// 옷감 무늬 (32x32, 반복). base 바탕색, a 무늬색, b 포인트색
+const hex = (h) => { const n = parseInt(h.slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
+export function clothTex(kind, base, a, b) {
+  return cached(`cloth-${kind}-${base}-${a}-${b}`, () => {
+    const p = painter(32, 32);
+    const B = hex(base), A = hex(a), P = hex(b);
+    const shade = B.map((v) => Math.round(v * 0.86));
+    p.rect(0, 0, 32, 32, B);
+    // 잔잔한 결
+    for (let y = 0; y < 32; y += 2) for (let x = (y / 2) % 4; x < 32; x += 4) p.set(x, y, shade);
+    if (kind === 'saekdong') {
+      // 색동: 무지개 줄무늬 (세로 방향 = 팔 길이 방향)
+      const cols = ['#e8423a', '#f4c43a', '#4aa84e', '#3a6ad8', '#e86aa8', '#f4f0e4'].map(hex);
+      for (let y = 0; y < 32; y++) for (let x = 0; x < 32; x++) p.set(x, y, cols[Math.floor(y / 4) % 6]);
+      for (let x = 0; x < 32; x++) for (let y = 3; y < 32; y += 4) p.set(x, y, cols[Math.floor(y / 4) % 6].map((v) => Math.round(v * 0.8)));
+    } else if (kind === 'flower') {
+      // 다섯 잎 꽃
+      for (const [cx, cy] of [[6, 7], [22, 4], [14, 19], [29, 22], [4, 28]]) {
+        for (const [dx, dy] of [[0, -2], [2, -1], [1, 2], [-1, 2], [-2, -1]]) { p.set(cx + dx, cy + dy, A); p.set(cx + dx * 0.5, cy + dy * 0.5, A); }
+        p.set(cx, cy, P);
+      }
+      for (const [x, y] of [[12, 9], [26, 13], [8, 16], [20, 28]]) p.set(x, y, A);
+    } else if (kind === 'plum') {
+      // 매화 가지
+      const tw = B.map((v) => Math.round(v * 0.55));
+      for (let i = 0; i < 32; i++) { p.set(i, 24 - Math.round(i * 0.5) + Math.round(Math.sin(i * 0.7)), tw); }
+      for (let i = 0; i < 10; i++) p.set(12 + i, 16 - i, tw);
+      for (const [cx, cy] of [[5, 21], [14, 15], [20, 8], [27, 11], [30, 3]]) {
+        for (const [dx, dy] of [[0, -1], [1, 0], [0, 1], [-1, 0]]) p.set(cx + dx, cy + dy, A);
+        p.set(cx, cy, P);
+      }
+    } else if (kind === 'cloud') {
+      // 구름무늬: 말린 소용돌이
+      for (const [cx, cy] of [[8, 8], [24, 22]]) {
+        for (let t = 0; t < 14; t++) { const r = 1 + t * 0.32, ang = t * 0.75; p.set(cx + Math.cos(ang) * r, cy + Math.sin(ang) * r * 0.7, A); }
+        for (let i = -6; i <= 6; i++) p.set(cx + i, cy + 4, A);
+        p.set(cx, cy, P);
+      }
+      for (const [x, y] of [[20, 6], [4, 22], [28, 30]]) { p.set(x, y, A); p.set(x + 1, y, A); }
+    } else if (kind === 'star') {
+      // 별빛: 작은 반짝임과 십자
+      for (const [cx, cy] of [[6, 5], [21, 12], [11, 25], [28, 27]]) {
+        p.set(cx, cy, P);
+        for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) p.set(cx + dx, cy + dy, A);
+      }
+      for (const [x, y] of [[15, 3], [2, 15], [26, 4], [18, 20], [6, 30], [30, 17]]) p.set(x, y, A);
+    } else if (kind === 'dragon') {
+      // 둥근 용무늬 원과 구름 띠
+      for (const [cx, cy] of [[9, 10], [25, 26]]) {
+        for (let t = 0; t < 24; t++) { const ang = (t / 24) * Math.PI * 2; p.set(cx + Math.cos(ang) * 5, cy + Math.sin(ang) * 5, A); }
+        p.rect(cx - 1, cy - 1, 3, 3, P);
+        p.set(cx - 3, cy, A); p.set(cx + 3, cy, A); p.set(cx, cy - 3, A); p.set(cx, cy + 3, A);
+      }
+      for (let x = 0; x < 32; x++) p.set(x, 18 + Math.round(Math.sin(x * 0.6) * 1.5), A);
+    } else if (kind === 'wave') {
+      // 물결
+      for (let row = 0; row < 32; row += 8) for (let x = 0; x < 32; x++) p.set(x, row + 3 + Math.round(Math.sin((x / 32) * Math.PI * 4) * 2), A);
+      for (let x = 0; x < 32; x += 8) p.set(x + 4, 1, P);
+    }
+    return toTexture(p);
+  });
+}

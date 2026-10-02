@@ -65,6 +65,15 @@ export const OUTFITS = [
   { id: 'ot2', name: '자운 비단옷', tier: 2, hp: 35, def: 0.08, pal: { main: '#6a3a8a', accent: '#e0b040', trim: '#f0e0a0', dark: '#2a1a3a' } },
   { id: 'ot3', name: '백호 전포', tier: 3, hp: 55, def: 0.12, pal: { main: '#eeeae2', accent: '#e08a2a', trim: '#2a2a2a', dark: '#4a4a52' }, armor: 'light' },
   { id: 'ot4', name: '흑월 갑주', tier: 4, hp: 80, def: 0.18, pal: { main: '#2a2a34', accent: '#b02a2a', trim: '#d9a83a', dark: '#18181e' }, armor: 'heavy' },
+  // 무늬·장식이 있는 고운 옷 (pattern: 옷감 무늬, sleevePat: 소매 무늬, deco: 망토·띠 같은 장식)
+  { id: 'ot5', name: '색동 저고리', tier: 1, hp: 18, def: 0.04, sleevePat: 'saekdong', deco: ['sash'], pal: { main: '#f4f0e4', accent: '#c8302c', trim: '#3a6ad8', dark: '#3a2a4a', decoA: '#c8302c', decoB: '#f4c43a' } },
+  { id: 'ot6', name: '벚꽃 한복', tier: 2, hp: 32, def: 0.07, pattern: 'flower', deco: ['flowerPin', 'sash'], pal: { main: '#f8c8d8', accent: '#e86aa8', trim: '#fff4f8', dark: '#8a3a5a', patA: '#ffffff', patB: '#e8427a', decoA: '#ff7aa8', decoB: '#ffffff' } },
+  { id: 'ot7', name: '구름학 창의', tier: 2, hp: 34, def: 0.08, pattern: 'cloud', deco: ['cape'], pal: { main: '#f4f4ee', accent: '#1a1a24', trim: '#1a1a24', dark: '#2a2a34', patA: '#9aa8c8', patB: '#1a1a24', decoA: '#22222c', decoB: '#e8e8f0' } },
+  { id: 'ot8', name: '쪽빛 물결 무사복', tier: 3, hp: 50, def: 0.11, pattern: 'wave', deco: ['scarf', 'bracers'], pal: { main: '#2a3a7a', accent: '#e0b040', trim: '#e0b040', dark: '#1a2040', patA: '#6a8ae8', patB: '#e0b040', decoA: '#eee6d6', decoB: '#e0b040' } },
+  { id: 'ot9', name: '홍매 궁중예복', tier: 3, hp: 52, def: 0.1, pattern: 'plum', deco: ['badge', 'crown', 'sash'], pal: { main: '#b0283a', accent: '#2a6a4a', trim: '#ffd040', dark: '#3a1a2a', patA: '#ffb0c0', patB: '#ffe080', decoA: '#2a7a5a', decoB: '#ffd040' } },
+  { id: 'ot10', name: '흑매 자객복', tier: 3, hp: 45, def: 0.12, pattern: 'plum', deco: ['scarf', 'bracers'], pal: { main: '#221e28', accent: '#c8302c', trim: '#c8302c', dark: '#121016', patA: '#e8405a', patB: '#ffb0c0', decoA: '#c8302c', decoB: '#4a4450' } },
+  { id: 'ot11', name: '월하 선녀옷', tier: 4, hp: 75, def: 0.16, pattern: 'star', deco: ['ribbon', 'crown', 'flowerPin'], pal: { main: '#e8e0ff', accent: '#9a7ad8', trim: '#fff6c0', dark: '#6a5aa8', patA: '#ffffff', patB: '#ffe080', decoA: '#f4e8ff', decoB: '#ffe080', decoGlow: '#5a4aa8' } },
+  { id: 'ot12', name: '청룡 곤룡포', tier: 4, hp: 85, def: 0.17, pattern: 'dragon', deco: ['badge', 'cape', 'crown'], pal: { main: '#1e6a5a', accent: '#ffd040', trim: '#ffd040', dark: '#123a34', patA: '#ffd040', patB: '#ff6a3a', decoA: '#a82030', decoB: '#ffd040' } },
   { id: 'otB1', name: '두억시니 뿔갑주', tier: 5, hp: 110, def: 0.2, from: 'boss', perk: 'rage', acc: 'horns', pal: { main: '#8a2a24', accent: '#2a3a7a', trim: '#ffd040', dark: '#2a1a18' }, armor: 'heavy' },
   { id: 'otB2', name: '구미호 털옷', tier: 5, hp: 95, def: 0.16, from: 'gumiho', perk: 'swift', acc: 'fox', pal: { main: '#f4ece4', accent: '#ff7a2a', trim: '#ffb070', dark: '#c8a890' }, armor: 'light' },
   { id: 'otB3', name: '저승사자 도포', tier: 5, hp: 120, def: 0.22, from: 'reaper', perk: 'soul', acc: 'gat', pal: { main: '#18141e', accent: '#5a3a8a', trim: '#c8b0ff', dark: '#0c0a10' } },
@@ -116,7 +125,8 @@ export function rollDrop(enemyType, round, cls) {
     const pool = Math.random() < 0.8 ? cls : ['sword', 'mage', 'elf'][Math.floor(Math.random() * 3)];
     return WEAPONS[pool][tier].id;
   }
-  return OUTFITS[tier].id;
+  const pool = OUTFITS.filter((o) => o.tier === tier && !o.from);
+  return pool[Math.floor(Math.random() * pool.length)].id;
 }
 
 // 작은 도트 아이콘 (16x16)
@@ -154,6 +164,10 @@ export function drawItemIcon(cv, id) {
     g.fillStyle = p.accent; g.fillRect(4, 8, 8, 1); g.fillRect(7, 3, 2, 5);
     g.fillStyle = p.trim; g.fillRect(2, 9, 2, 1); g.fillRect(12, 9, 2, 1);
     if (it.armor) { g.fillStyle = p.trim; g.fillRect(3, 3, 3, 2); g.fillRect(10, 3, 3, 2); }
+    if (it.pattern) { g.fillStyle = p.patA || p.trim; for (const [x, y] of [[5, 5], [9, 7], [6, 10], [10, 11]]) g.fillRect(x, y, 1, 1); }
+    if (it.sleevePat) { const sd = ['#e8423a', '#f4c43a', '#4aa84e', '#3a6ad8', '#e86aa8', '#f4f0e4']; for (let i = 0; i < 6; i++) { g.fillStyle = sd[i]; g.fillRect(2, 4 + i, 2, 1); g.fillRect(12, 4 + i, 2, 1); } }
+    if (it.deco?.includes('cape')) { g.fillStyle = p.decoA || p.accent; g.fillRect(1, 3, 1, 11); g.fillRect(14, 3, 1, 11); }
+    if (it.deco?.includes('crown') || it.deco?.includes('flowerPin')) { g.fillStyle = it.deco.includes('crown') ? '#ffd040' : (p.decoA || '#ff9ac0'); g.fillRect(6, 0, 1, 2); g.fillRect(8, 0, 1, 2); g.fillRect(10, 0, 1, 2); }
     if (it.acc === 'horns') { g.fillStyle = '#ffd040'; g.fillRect(5, 0, 1, 3); g.fillRect(10, 0, 1, 3); }
     if (it.acc === 'fox') { g.fillStyle = '#ff7a2a'; g.fillRect(12, 11, 3, 2); g.fillRect(14, 9, 1, 2); g.fillStyle = '#f4ece4'; g.fillRect(5, 1, 2, 2); g.fillRect(9, 1, 2, 2); }
     if (it.acc === 'gat') { g.fillStyle = '#0c0a10'; g.fillRect(3, 2, 10, 1); g.fillRect(6, 0, 4, 2); g.fillStyle = '#c8b0ff'; g.fillRect(4, 3, 1, 3); g.fillRect(11, 3, 1, 3); }

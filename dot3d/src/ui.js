@@ -136,7 +136,7 @@ export class UI {
         wl.append(this.itemRow(w.id, (pr.weapon === w.id ? 'on' : '') + (mine ? '' : ' other'), mine ? () => g.equipItem(w.id) : null));
       }
     }
-    for (const o of OUTFITS) {
+    for (const o of [...OUTFITS].sort((a, b) => a.tier - b.tier)) {
       if (!g.inv.has(o.id)) { ol.append(this.itemRow(o.id, 'locked-it')); continue; }
       ol.append(this.itemRow(o.id, pr.outfit === o.id ? 'on' : '', () => g.equipItem(o.id)));
     }

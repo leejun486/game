@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { makeDokkaebi, makeGuard, makeLady, makeFox, makeJiangshi, makeGhost, makeReaper } from './character.js';
 import { CLASSES } from './classes.js';
-import { outfitColors } from './character.js';
+import { outfitLook } from './character.js';
 import { item, WEAPONS, perksOf } from './items.js';
 
 // 스킬 해금 레벨
@@ -70,7 +70,7 @@ export class Player {
     const w = item(pr.weapon), o = item(pr.outfit);
     const type = { sword: 'hero', mage: 'mage', elf: 'elf' }[this.cls];
     const old = this.rig;
-    this.rig = this.cfg.make({ wstyle: w?.style, ...outfitColors(type, o?.pal, o?.armor, o?.acc) });
+    this.rig = this.cfg.make({ wstyle: w?.style, ...outfitLook(type, o) });
     if (old) {
       this.game.scene.remove(old.root);
       this.rig.root.position.copy(old.root.position);
