@@ -13,7 +13,7 @@ function extraMaterials(W) {
   const M = W.M;
   M.bamboo = toon({ map: T.bambooTex() });
   M.snow = toon({ map: T.snowTex() });
-  M.fpath = toon({ map: T.forestPathTex(), polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 });
+  M.fpath = toon({ map: T.forestPathTex() });
   M.fgrass = toon({ map: T.forestGrassTex() });
   M.bambooLeaf = toon({ color: C('#6aa84a') });
   M.bambooLeaf2 = toon({ color: C('#4a8a3e') });
@@ -45,7 +45,7 @@ function pathStrip(W, mat, pts, width) {
     m.rotation.order = 'YXZ';
     m.rotation.y = Math.atan2(x1 - x0, z1 - z0);
     m.rotation.x = -Math.PI / 2;
-    m.position.set((x0 + x1) / 2, 0.012 + i * 0.0005, (z0 + z1) / 2);
+    m.position.set((x0 + x1) / 2, 0.012 + (i % 2) * 0.002, (z0 + z1) / 2); // 높이를 쌓지 않음: 바닥 효과가 길 아래로 묻히지 않게
     m.receiveShadow = true;
     W.root.add(m);
   }
