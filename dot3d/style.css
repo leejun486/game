@@ -254,7 +254,29 @@ body.touch #gameover .s b::after { content: ' / 화면 탭'; }
   .bag-left { width: 100%; }
 }
 @media (max-width: 600px) { #bag-btn { top: 66px; left: auto; right: 8px; } }
-#fade { position: absolute; inset: 0; background: #000; opacity: 0; pointer-events: none; transition: opacity 0.4s steps(6); z-index: 30; }
-#fade.on { opacity: 1; }
 .eq small em, .it small em { font-style: normal; color: #ff9a7a; }
 #title:not(.hide) ~ #touch .btns { display: none; }
+
+/* 기술 수련 (파생 기술) */
+#evo-btn { position: absolute; left: 16px; top: 168px; pointer-events: auto; cursor: pointer; padding: 6px 10px; color: #fff; font-family: var(--font); font-size: 12px; }
+#evo-btn span { margin-left: 6px; font-size: 10px; color: var(--gold); }
+#evo-btn .dot { position: absolute; right: -4px; top: -4px; width: 10px; height: 10px; background: #ff4a3a; border: 2px solid #000; animation: blink 0.8s steps(2) infinite; }
+#skills { position: absolute; right: 16px; top: 50%; transform: translateY(-50%); width: min(620px, 94vw); max-height: 88vh; overflow: auto; z-index: 14; display: none; padding: 12px; pointer-events: auto; }
+#skills.show { display: block; }
+#skills-close { background: #2a2230; color: #fff; border: 2px solid var(--gold-dark); font-family: var(--font); width: 28px; height: 28px; cursor: pointer; }
+.evo-row { margin-bottom: 10px; background: rgba(0, 0, 0, 0.25); border: 1px solid #3a3020; padding: 8px; }
+.evo-head { font-size: 12px; color: #e8dcc0; margin-bottom: 6px; display: flex; gap: 8px; align-items: baseline; }
+.evo-head .key { color: #14101c; background: var(--gold); padding: 0 5px; font-size: 11px; }
+.evo-head small { color: #a89e8a; font-size: 10px; margin-left: auto; }
+.evo-opts { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.evo-opt { padding: 7px 8px; background: rgba(20, 14, 30, 0.8); border: 2px solid #3a3020; cursor: pointer; }
+.evo-opt b { display: block; font-size: 13px; color: #fff3d0; font-weight: normal; margin-bottom: 3px; }
+.evo-opt span { font-size: 10.5px; color: #c8bea8; line-height: 1.45; }
+.evo-opt:hover { border-color: var(--gold); }
+.evo-opt.on { border-color: #ffd76a; box-shadow: 0 0 0 1px #ffd76a inset; background: rgba(60, 44, 20, 0.85); }
+.evo-opt.on b::after { content: ' · 수련 중'; font-size: 10px; color: #ffd76a; }
+.evo-row.locked .evo-opt { opacity: 0.35; cursor: default; filter: grayscale(0.8); }
+@media (max-width: 600px) { #evo-btn { top: 100px; left: auto; right: 8px; } .evo-opts { grid-template-columns: 1fr; } }
+@media (max-height: 520px) { #evo-btn { top: 64px; left: 78px; padding: 4px 8px; font-size: 11px; } }
+.dmg.alert { color: #ffe040; font-size: 20px; }
+#skills.show ~ #touch .btns, #bag.show ~ #touch .btns { display: none; }

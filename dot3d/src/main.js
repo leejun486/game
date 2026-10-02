@@ -9,6 +9,7 @@ import { shared } from './materials.js';
 import { loadSave, writeSave, clearSave } from './save.js';
 import { CLASSES, CLASS_ORDER } from './classes.js';
 import { ClassPreview } from './preview.js';
+import { EVOS, branchOf } from './evolve.js';
 import { item, rollDrop, bossDrop, RARITY, itemDesc, WEAPONS, OUTFITS } from './items.js';
 import { expNeed, SKILL_LEVEL } from './entities.js';
 import { MAPS, BOSS_TYPES } from './maps.js';
@@ -36,6 +37,10 @@ class Game {
     this.timers = [];
     this.rains = [];
     this.tornados = [];
+    this.storms = [];   // 뇌운
+    this.fires = [];    // 폭염룡이 남긴 불길
+    this.orbits = [];   // 검무 결계 칼날
+    this.marks = [];    // 낙인섬 낙인
     this.spawnQueue = [];
     this.wave = 0;
     this.round = 0;
@@ -58,14 +63,16 @@ class Game {
     this.player = new Player(this);
     this.buildTargetMarker();
 
+    // 오픈월드: 지금 서 있는 지역(싸우는 동안엔 싸움이 시작된 지역으로 고정)
     this.mapId = 'palace';
     this.map = MAPS.palace;
     this.cleared = {};
-    this.portals = [];
+    this.regionBanner = {};
+    this.fieldT = 0;
+    this.themeCur = this.cloneTheme(MAPS.palace.theme);
     this.npcs = [];
     this.birds = [];
-    this.createPalaceActors();
-    this.buildPortals();
+    this.createActors();
 
     this.world.buildNav();
     this.flowT = 0;
@@ -112,14 +119,15 @@ class Game {
   updateLights(dt) {
     const n = this.night;
     shared.night.value = n;
-    const c = (a, b) => new THREE.Color(a).lerp(new THREE.Color(b), n);
-    const th = this.map.theme;
-    this.sun.color.copy(c(...th.sun));
+    this.blendTheme(dt);
+    const th = this.themeCur;
+    const c = (pair) => _e.copy(pair[0]).lerp(pair[1], n);
+    this.sun.color.copy(c(th.sun));
     this.sun.intensity = lerp(th.sunI[0], th.sunI[1], n);
-    this.hemi.color.copy(c(...th.sky));
-    this.hemi.groundColor.copy(c(...th.ground));
+    this.hemi.color.copy(c(th.sky));
+    this.hemi.groundColor.copy(c(th.ground));
     this.hemi.intensity = lerp(th.hemiI[0], th.hemiI[1], n);
-    this.scene.background.copy(c(...th.bg));
+    this.scene.background.copy(c(th.bg));
     this.world.setNight(n);
 
     // 그림자 카메라를 초점에 맞추되 섀도 텍셀 단위로 스냅 (그림자 지글거림 방지)
@@ -141,7 +149,7 @@ class Game {
     if (this.lightTimer <= 0) {
       this.lightTimer = 0.25;
       const L = [...this.world.lanterns].sort((a, b) => a.distanceToSquared(f) - b.distanceToSquared(f));
-      const hl = this.world.hallLightPos;
+      const hl = f.z < 12 ? this.world.hallLightPos : null; // 정전 창호 불빛은 궁궐 안에서만
       for (let i = 0; i < 8; i++) {
         const src = hl && i >= 6 ? hl[i - 6] : L[i];
         if (src) this.points[i].position.copy(src); else this.points[i].position.set(0, -50, 0);
@@ -173,7 +181,7 @@ class Game {
       this.mouse.x = e.clientX; this.mouse.y = e.clientY; this.mouse.t = this.time;
       if (this.state === 'title') { const c = e.target.closest && e.target.closest('.cls'); if (c) this.selectClass(c.dataset.cls); this.start(); return; }
       this.audio.unlock();
-      if (this.paused) { if (code === 'KeyB' || code === 'Escape' || code === 'Tab') this.toggleBag(false); return; }
+      if (this.paused) return;
     if (this.ui.inDialog) { this.ui.advance(); return; }
       if (this.state !== 'play') return;
       if (e.button === 0) this.player.startAttack(this.readInput());
@@ -181,13 +189,15 @@ class Game {
     });
     stage.addEventListener('contextmenu', (e) => e.preventDefault());
     // 가방 버튼·창: 클릭이 공격으로 새지 않게
-    for (const id of ['bag-btn', 'bag']) {
+    for (const id of ['bag-btn', 'bag', 'evo-btn', 'skills']) {
       const el = document.getElementById(id);
       el.addEventListener('mousedown', (e) => e.stopPropagation());
       el.addEventListener('touchstart', (e) => e.stopPropagation(), { passive: true });
     }
     document.getElementById('bag-btn').addEventListener('click', () => { if (this.state === 'play') this.toggleBag(); });
     document.getElementById('bag-close').addEventListener('click', () => this.toggleBag(false));
+    document.getElementById('evo-btn').addEventListener('click', () => { if (this.state === 'play') this.toggleSkills(); });
+    document.getElementById('skills-close').addEventListener('click', () => this.toggleSkills(false));
     stage.addEventListener('wheel', (e) => { this.pixel.zoom(e.deltaY > 0 ? -1 : 1); this.saveT = Math.min(this.saveT, 2); }, { passive: true });
     this.setupTouch();
   }
@@ -274,130 +284,93 @@ class Game {
     if (this.player.cls !== id) { this.player.setClass(id); this.ui.setClass(this.player.cfg); }
   }
 
-  // 궁궐에만 있는 수문장·나인·참새
-  createPalaceActors() {
+  // 지역 색감: 지금 카메라가 있는 지역의 하늘·햇빛 색으로 천천히 바뀜
+  cloneTheme(t) {
+    const pair = (a) => [new THREE.Color(a[0]), new THREE.Color(a[1])];
+    return { sun: pair(t.sun), sky: pair(t.sky), ground: pair(t.ground), bg: pair(t.bg), sunI: [...t.sunI], hemiI: [...t.hemiI], ambient: t.ambient };
+  }
+
+  blendTheme(dt, snap = false) {
+    const tgt = MAPS[this.world.regionAt(this.focus.x, this.focus.z).id].theme;
+    const cur = this.themeCur;
+    const k = snap ? 1 : 1 - Math.exp(-dt * 1.4);
+    for (const key of ['sun', 'sky', 'ground', 'bg']) for (let i = 0; i < 2; i++) cur[key][i].lerp(_e.set(tgt[key][i]), k);
+    for (const key of ['sunI', 'hemiI']) for (let i = 0; i < 2; i++) cur[key][i] = lerp(cur[key][i], tgt[key][i], k);
+    cur.ambient = tgt.ambient;
+  }
+
+  // 궁궐의 수문장·나인·참새, 죽림 입구의 약초꾼, 폐사찰 입구의 떠돌이 도사
+  createActors() {
     this.npcs = [
       new NPC(this, 'guard', -12.4, 6.4, 0.6, '수문장 박돌쇠', []),
       new NPC(this, 'lady', 19.2, 7.5, -0.9, '나인 연이', [
         '어머, 검객님. 이 궁은 밤만 되면 도깨비불이 떠다녀요.',
         '도깨비들은 장난이 심하지만, 혼쭐을 내주면 금방 달아난답니다.',
         '푸른 불덩이를 쏘는 녀석은 검으로 쳐내면 튕겨낼 수 있대요!',
+        '남문 밖으로 쭉 내려가면 대숲이에요. 더 가면 눈 덮인 옛 절터가 있고요.',
         '(N 키로 낮과 밤을 바꿔 볼 수 있어요. 싸우는 중엔 안 돼요.)',
+      ]),
+      new NPC(this, 'herb', 4.2, 35.5, -2.4, '약초꾼 분이', [
+        '어머나, 궁에서 내려오셨어요? 여기서부턴 죽림이에요.',
+        '숲속엔 여우들이 어슬렁거려요. 가까이 가면 달려드니 조심하세요.',
+        '숲 한가운데 서낭당 나무가 있는데, 거기 방울을 흔들면 여우 떼가 몰려온대요.',
+        '그 끝엔 천년 묵은 구미호가… 아이고, 생각만 해도 무서워라.',
+      ]),
+      new NPC(this, 'hermit', -4.2, 83.5, 2.6, '떠돌이 도사 청허', [
+        '허허, 대숲을 지나 여기까지 왔는가. 이곳은 버려진 옛 절터일세.',
+        '눈밭엔 강시와 원귀가 떠돈다네. 강시는 뛰어오를 때 피하게.',
+        '절 안쪽 종각의 범종을 울리면 망자들이 깨어나고, 저승사자가 명부를 들고 오지.',
+        '자네라면 해낼 걸세. 기술을 갈고닦게나 — 수련이 쌓이면 기술이 달라진다네.',
       ]),
     ];
     this.birds = [];
-    for (const [x, z] of [[-6, 6], [-5.4, 6.6], [6.5, 15], [7, 14.3], [-15, 9], [14, -0.5], [0.5, -9.5]]) {
+    for (const [x, z] of [[-6, 6], [-5.4, 6.6], [6.5, 15], [7, 14.3], [-15, 9], [14, -0.5], [0.5, -9.5], [-6, 40], [5.5, 47], [-3, 70]]) {
       this.birds.push(new Bird(this, V(x, this.world.heightAt(x, z), z)));
     }
   }
 
-  removeActors() {
-    for (const n of this.npcs) this.scene.remove(n.rig.root);
-    for (const b of this.birds) this.scene.remove(b.root);
-    this.npcs = [];
-    this.birds = [];
-  }
-
-  // ---------- 포탈 · 지역 이동 ----------
-  buildPortals() {
-    for (const pt of this.portals) this.scene.remove(pt.g);
-    this.portals = [];
-    const M = this.map;
-    const add = (spot, to, color) => {
-      if (!spot || !to) return;
-      const y = this.world.heightAt(spot.x, spot.z);
-      const g = new THREE.Group();
-      g.position.set(spot.x, y, spot.z);
-      const ring = new THREE.Mesh(new THREE.TorusGeometry(1.25, 0.13, 6, 24), new THREE.MeshBasicMaterial({ color }));
-      ring.position.y = 1.45;
-      const inner = new THREE.Mesh(new THREE.CircleGeometry(1.15, 24), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.35, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
-      inner.position.y = 1.45;
-      const base = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 1.5, 0.12, 16), this.world.M.stoneGrey);
-      base.position.y = 0.06;
-      base.receiveShadow = true;
-      g.add(ring, inner, base);
-      this.scene.add(g);
-      this.portals.push({ g, ring, inner, to, pos: V(spot.x, y, spot.z), color });
-    };
-    add(M.entry, M.prev, '#9ad0ff');
-    if (this.cleared[M.id]) add(M.exit, M.next, M.next === 'palace' ? '#ffd76a' : '#c890ff');
-  }
-
-  updatePortals(dt) {
-    const p = this.player;
-    for (const pt of this.portals) {
-      pt.ring.rotation.z += dt * 1.5;
-      pt.inner.rotation.z -= dt * 2;
-      pt.inner.material.opacity = 0.3 + Math.sin(this.time * 4) * 0.08;
-      pt.g.rotation.y = 0;
-      if (Math.random() < dt * 30) {
-        const a = Math.random() * Math.PI * 2;
-        this.fx.add.emit({ x: pt.pos.x + Math.cos(a) * 1.2, y: pt.pos.y + 1.45 + Math.sin(a) * 1.2, z: pt.pos.z, vx: -Math.cos(a) * 1.2, vy: -Math.sin(a) * 1.2, life: 0.8, size: 2, color: '#ffffff', color2: pt.color });
-      }
-      if (this.state === 'play' && !this.traveling && !this.waveActive && Math.hypot(p.pos.x - pt.pos.x, p.pos.z - pt.pos.z) < 1.0) this.travel(pt.to);
-    }
-  }
-
-  travel(to) {
-    if (this.traveling) return;
-    this.traveling = true;
-    this.audio.play('portal');
-    const fade = document.getElementById('fade');
-    fade.classList.add('on');
-    setTimeout(() => {
-      this.switchMap(to, this.mapId);
-      setTimeout(() => { fade.classList.remove('on'); this.traveling = false; }, 120);
-    }, 450);
-  }
-
-  // 지역을 통째로 바꿈: 맵 지오메트리, 적·투사체·드롭 정리, 길찾기, 조명, 임무
-  switchMap(to, from = null) {
-    for (const e of this.enemies) e.dispose();
-    this.enemies = [];
-    this.spawnQueue = [];
-    for (const pr of this.projectiles) if (pr.mesh) this.scene.remove(pr.mesh);
-    this.projectiles = [];
-    this.timers = [];
-    for (const r of this.rains) this.fx.removeRing(r.tele);
-    this.rains = [];
-    for (const T of this.tornados) for (const ring of T.rings) this.scene.remove(ring);
-    this.tornados = [];
-    for (const d of this.drops) this.scene.remove(d.g);
-    this.drops = [];
-    this.target = null;
-    this.ui.setBoss(null);
-    this.waveActive = false;
-    this.waveClearing = false;
-    this.wave = 0;
-    this.removeActors();
-    this.world.dispose();
-    this.mapId = to;
-    this.map = MAPS[to];
-    this.world = new World(this.scene, to);
-    if (to === 'palace') this.createPalaceActors();
-    this.world.buildNav();
-    this.flowT = 0;
-    this.lightTimer = 0;
-    this.buildPortals();
-    // 도착 위치: 앞 지역에서 왔으면 입구, 뒤 지역에서 돌아왔으면 출구 앞
-    const p = this.player;
-    const back = from && MAPS[to].next === from && this.map.exit;
-    const spot = back ? V(this.map.exit.x, 0, this.map.exit.z + (this.map.exit.z > 0 ? -2.5 : 2.5)) : this.world.spawn.clone();
-    if (to === 'temple' && back) spot.set(this.map.exit.x - 2.5, 0, this.map.exit.z);
-    p.pos.set(spot.x, this.world.heightAt(spot.x, spot.z), spot.z);
-    p.y = p.pos.y;
-    p.vel.set(0, 0, 0);
-    p.yaw = back ? 0 : Math.PI;
-    this.focus.copy(p.pos);
-    this.nightTarget = 0; this.night = 0;
-    this.audio.mood = 'day';
-    this.stage = to === 'palace' ? (this.round > 0 || this.cleared.palace ? 3 : Math.max(this.stage === 0 ? 0 : 1, 0)) : (this.cleared[to] ? 3 : 1);
-    if (to === 'palace' && this.stage !== 0 && !this.cleared.palace) this.stage = 1;
+  // 플레이어가 다른 지역으로 걸어 들어가면 이름을 띄우고 임무·색감을 바꿈 (싸우는 중엔 고정)
+  updateRegion(force = false) {
+    if (this.waveActive && !force) return;
+    const R = this.world.regionAt(this.player.pos.x, this.player.pos.z);
+    if (R.id === this.mapId && !force) return;
+    this.mapId = R.id;
+    this.map = MAPS[R.id];
     const logo = document.getElementById('logo');
     if (logo) logo.innerHTML = `<span class="han">${this.map.han}</span><span class="sub">${this.map.sub}</span>`;
-    this.ui.banner(this.map.name, this.map.sub, 2.6, 'title-banner');
+    if (!force && this.state === 'play' && this.time - (this.regionBanner[R.id] ?? -99) > 10) {
+      this.regionBanner[R.id] = this.time;
+      this.ui.banner(this.map.name, this.map.sub, 2.4, 'title-banner');
+    }
     this.updateQuest();
-    this.save(false);
+  }
+
+  // 필드 몬스터: 죽림·폐사찰을 돌아다니면 주변에 무리가 생겨남. 멀리 떨어지면 사라짐
+  updateField(dt) {
+    this.fieldT -= dt;
+    if (this.fieldT > 0) return;
+    this.fieldT = 1.2;
+    const p = this.player;
+    let removed = false;
+    for (const e of this.enemies) {
+      if (e.field && !e.dead && Math.hypot(e.pos.x - p.pos.x, e.pos.z - p.pos.z) > 40) { e.dispose(); e.removed = true; removed = true; if (this.target === e) this.target = null; }
+    }
+    if (removed) this.enemies = this.enemies.filter((e) => !e.removed);
+    if (this.state !== 'play' || p.dead || this.waveActive) return;
+    const R = this.world.regionAt(p.pos.x, p.pos.z);
+    const F = MAPS[R.id].field;
+    if (!F) return;
+    if (this.enemies.filter((e) => e.field && !e.dead).length >= F.cap) return;
+    const at = this.world.randomWalkable(p.pos.x, p.pos.z, 13, 22);
+    if (!at || this.world.regionAt(at.x, at.z) !== R) return;
+    let roll = Math.random() * F.types.reduce((a, t) => a + t[1], 0), type = F.types[0][0];
+    for (const [t, w] of F.types) { roll -= w; if (roll <= 0) { type = t; break; } }
+    const n = Math.min(1 + Math.floor(Math.random() * F.pack), F.cap - this.enemies.filter((e) => e.field && !e.dead).length);
+    const lv = 1 + MAPS[R.id].lvl + Math.floor((p.level - 1) / 3);
+    for (let i = 0; i < n; i++) {
+      const pos = (i && this.world.randomWalkable(at.x, at.z, 0.8, 2.5)) || at;
+      this.enemies.push(new Enemy(this, type, pos, lv, { field: true }));
+    }
   }
 
   progressOf(cls) {
@@ -492,6 +465,13 @@ class Game {
         setTimeout(() => this.ui.toast(`새 스킬 해금: ${name} (${slot === 2 ? 'L' : 'I'})`, 3), 900);
       }
     }
+    for (const slot of [1, 2, 3]) {
+      const E = EVOS[pl.cls][slot];
+      if (pl.level - n < E.lv && pl.level >= E.lv) {
+        setTimeout(() => this.ui.toast(`파생 기술 수련 가능: ${E.base} → ${E.a.name} / ${E.b.name} (T 키)`, 4), 1800);
+        document.getElementById('evo-dot').classList.remove('hidden');
+      }
+    }
     this.ui.setClass(pl.cfg, pl);
     this.save(false);
   }
@@ -571,10 +551,39 @@ class Game {
   }
 
   // ---------- 가방 ----------
-  toggleBag(open = !this.paused) {
-    this.paused = open;
+  toggleBag(open = !this.ui.bagOpen) {
+    if (open) this.toggleSkills(false);
+    this.ui.bagOpen = open;
+    this.paused = open || !!this.ui.skillsOpen;
     this.ui.showBag(open);
     if (open) this.ui.newItem = false;
+  }
+
+  // ---------- 기술 수련 ----------
+  toggleSkills(open = !this.ui.skillsOpen) {
+    if (open && this.ui.bagOpen) this.toggleBag(false);
+    this.ui.skillsOpen = open;
+    this.paused = open || !!this.ui.bagOpen;
+    this.ui.showSkills(open);
+    if (open) document.getElementById('evo-dot').classList.add('hidden');
+  }
+
+  chooseEvo(slot, b) {
+    const p = this.player;
+    const E = EVOS[p.cls][slot];
+    if (p.level < E.lv) return;
+    const pr = this.progressOf(p.cls);
+    pr.evo = { ...(pr.evo || {}), [slot]: b };
+    this.audio.play('levelup');
+    this.ui.toast(`${E.base} → ${E[b].name} 수련!`, 2);
+    this.ui.setClass(p.cfg, p);
+    this.ui.refreshSkills();
+    this.save(false);
+  }
+
+  // 파생 기술 갈래 (수련 안 했거나 레벨이 모자라면 null)
+  branch(pl, slot) {
+    return branchOf(this.progressOf(pl.cls), pl.cls, pl.level, slot);
   }
 
   equipItem(id) {
@@ -608,9 +617,16 @@ class Game {
     if (d.progress) for (const k of Object.keys(CLASSES)) if (d.progress[k]) Object.assign(this.progressOf(k), d.progress[k]);
     if (Array.isArray(d.inv)) for (const id of d.inv) if (item(id)) this.inv.add(id);
     if (d.cleared) this.cleared = { ...d.cleared };
-    else if (d.round > 0) this.cleared = { palace: true }; // 지역 추가 전 기록: 궁을 이미 지켰으면 포탈을 열어 둠
-    if (d.mapId && MAPS[d.mapId] && d.mapId !== this.mapId) this.switchMap(d.mapId);
-    else this.buildPortals();
+    else if (d.round > 0) this.cleared = { palace: true };
+    // 마지막 위치에서 이어서 (예전 기록은 그 지역 입구에서)
+    let at = null;
+    if (Array.isArray(d.pos) && this.world.inside(d.pos[0], d.pos[1], 0.4) && !this.world.isBlocked(d.pos[0], d.pos[1], 0.4, this.world.heightAt(d.pos[0], d.pos[1]))) at = d.pos;
+    else if (d.mapId && d.mapId !== 'palace') { const R = this.world.regions.find((r) => r.id === d.mapId); if (R) at = [R.spawn[0], R.spawn[2]]; }
+    if (at) {
+      this.player.pos.set(at[0], this.world.heightAt(at[0], at[1]), at[1]);
+      this.player.y = this.player.pos.y;
+      this.startPos = this.player.pos.clone();
+    }
     const cls = d.cls && CLASSES[d.cls] ? d.cls : this.player.cls;
     this.player.cls = null; // 강제로 다시 만들기
     this.selectClass(cls);
@@ -631,6 +647,7 @@ class Game {
       cls: this.player.cls,
       progress: this.progress,
       mapId: this.mapId,
+      pos: [+this.player.pos.x.toFixed(2), +this.player.pos.z.toFixed(2)],
       cleared: this.cleared,
       inv: [...this.inv],
       music: this.audio.musicOn,
@@ -649,7 +666,11 @@ class Game {
         this.kills = 0; this.round = 0; this.stage = 0; this.bestCombo = 0;
         this.progress = {}; this.inv = new Set(['sw0', 'mg0', 'bw0', 'ot0']);
         this.cleared = {};
-        if (this.mapId !== 'palace') this.switchMap('palace'); else this.buildPortals();
+        this.player.pos.copy(this.world.spawn); this.player.y = this.player.pos.y;
+        this.startPos = null;
+        for (const e of this.enemies) e.dispose();
+        this.enemies = [];
+        this.updateRegion(true);
         this.stage = 0;
         const c0 = this.player.cls; this.player.cls = null; this.selectClass(c0);
         this.applySave(null);
@@ -676,6 +697,13 @@ class Game {
       this.save(false);
       return;
     }
+    if (this.paused) {
+      // 가방·기술 창이 열려 있는 동안
+      if (code === 'KeyB' || code === 'bag') this.toggleBag();
+      else if (code === 'KeyT' || code === 'skills') this.toggleSkills();
+      else if (code === 'Escape' || code === 'Tab') { this.toggleBag(false); this.toggleSkills(false); }
+      return;
+    }
     if (this.state === 'dead') { if (code === 'KeyR' || code === 'Enter' || code === 'act') this.retry(); return; }
     if (this.ui.inDialog) {
       if (['KeyE', 'Space', 'Enter', 'KeyJ', 'KeyZ', 'act', 'atk'].includes(code)) this.ui.advance();
@@ -697,6 +725,7 @@ class Game {
         break;
       case 'Tab': this.updateTarget(true); break;
       case 'KeyB': this.toggleBag(); break;
+      case 'KeyT': case 'skills': this.toggleSkills(); break;
       case 'KeyG': this.godMode = !this.godMode; this.ui.toast(this.godMode ? '무적 (디버그)' : '무적 해제'); break;
     }
   }
@@ -742,10 +771,6 @@ class Game {
       const d = Math.hypot(dr.pos.x - p.x, dr.pos.z - p.z);
       if (d < (dr.reach || 2.9) && d - 0.5 < bd) { bd = d - 0.5; best = { kind: 'drum', drum: dr, label: `${dr.label || '북'} 울리기`, promptPos: dr.pos.clone().add(V(0, dr.promptY || 4.0, 0)) }; }
     }
-    for (const pt of this.portals) {
-      const d = Math.hypot(pt.pos.x - p.x, pt.pos.z - p.z);
-      if (d < 3.2 && d - 1 < bd) { bd = d - 1; best = { kind: 'portal', label: this.waveActive ? '싸우는 중엔 못 가요' : `${MAPS[pt.to].name}(으)로 · 들어가기`, promptPos: pt.pos.clone().add(V(0, 3.2, 0)) }; }
-    }
     return best;
   }
 
@@ -759,8 +784,6 @@ class Game {
       this.ui.dialog(n.name, lines, () => {
         if (n.name.startsWith('수문장') && this.stage === 0) { this.stage = 1; this.updateQuest(); this.save(); }
       });
-    } else if (it.kind === 'portal') {
-      // 걸어 들어가면 이동
     } else if (it.kind === 'drum') {
       this.player.yaw = Math.atan2(it.drum.pos.x - this.player.pos.x, it.drum.pos.z - this.player.pos.z);
       this.player.startAttack({ moveLen: 0, mx: 0, mz: 0 });
@@ -781,7 +804,7 @@ class Game {
     if (this.round >= 1) return [
       `허허, 대왕까지 쫓아내다니! 벌써 ${this.kills}마리나 혼쭐을 냈구려.`,
       '북을 다시 울리면 더 사나운 놈들이 올 거요. 각오가 되었다면 언제든.',
-      '참, 정문 밖에 보랏빛 문이 열렸소. 대숲 너머 여우들이 들끓는다니 가 보시겠소?',
+      '참, 남문 밖으로 쭉 내려가면 대숲이오. 여우들이 들끓는다니 가 보시겠소?',
     ];
     return ['북은 저기 있소. 둥— 하고 울려 보시오!'];
   }
@@ -789,14 +812,17 @@ class Game {
   updateQuest() {
     const ui = this.ui, M = this.map;
     const trig = { palace: '큰 북', bamboo: '서낭당 방울', temple: '종각의 범종' }[this.mapId];
-    if (this.stage === 0) ui.setQuest('임무', '왼쪽 북 옆의 <b>수문장</b>에게 말을 걸자');
-    else if (this.stage === 1) ui.setQuest(`${M.name} · 임무`, `<b>${trig}</b>을 울려 ${M.foe}들을 불러내자`);
+    const where = { palace: '남문 밖 <b>남쪽</b>', bamboo: '죽림 <b>남쪽 끝</b>', temple: '' };
+    if (this.stage === 0 && this.mapId === 'palace') ui.setQuest('임무', '왼쪽 북 옆의 <b>수문장</b>에게 말을 걸자');
     else if (this.stage === 2) {
-      const left = this.enemies.filter((e) => !e.dead).length + this.spawnQueue.length;
+      const left = this.enemies.filter((e) => !e.dead && !e.field).length + this.spawnQueue.length;
       ui.setQuest(`${M.night[0]} · 제 ${this.wave} 파`, `남은 ${M.foe} <b>${left}</b>`);
-    } else if (this.cleared[M.id] && M.next) {
-      const nx = MAPS[M.next];
-      ui.setQuest(`${M.name} 평정`, M.next === 'palace' ? `모든 지역 평정! <b>금빛 포탈</b>로 월하궁에 돌아가거나 ${trig}을 다시 울리자` : `<b>보랏빛 포탈</b>로 <b>${nx.name}</b>에 가자 · ${trig}을 다시 울리면 ${this.round + 1}회차`);
+    } else if (!this.cleared[M.id]) {
+      ui.setQuest(`${M.name} · 임무`, `<b>${trig}</b>을 울려 ${M.foe}들을 불러내자` + (M.field ? `<br><small>숲·눈밭을 돌아다니는 ${M.foe}도 사냥할 수 있다</small>` : ''));
+    } else if (M.next && M.next !== 'palace' && !this.cleared[M.next]) {
+      ui.setQuest(`${M.name} 평정`, `${where[M.id]}의 <b>${MAPS[M.next].name}</b>(으)로 가 보자 · ${trig}을 다시 울리면 ${this.round + 1}회차`);
+    } else if (['palace', 'bamboo', 'temple'].every((k) => this.cleared[k])) {
+      ui.setQuest('모든 지역 평정', `어느 지역에서든 다시 울리면 <b>${this.round + 1}회차</b> · 기술을 수련해 파생 기술을 열어 보자`);
     } else ui.setQuest('자유 탐방', `${trig}을 다시 울리면 <b>${this.round + 1}회차</b> ${M.foe}들이 몰려온다`);
   }
 
@@ -808,7 +834,11 @@ class Game {
     this.alarm = 3;
     this.fx.ring(V(drum.pos.x, 0, drum.pos.z), 5, '#fff2c0', 0.6);
     this.fx.spark(drum.pos.x, 2.2, drum.pos.z, 14, '#fff2c0', 5);
-    if (!this.waveActive && (this.stage === 1 || this.stage === 3 || this.stage === 0)) this.startNight();
+    if (!this.waveActive && this.stage !== 2) {
+      // 그 북(방울·범종)이 있는 지역의 싸움을 시작
+      if (drum.region && drum.region !== this.mapId) { this.mapId = drum.region; this.map = MAPS[drum.region]; }
+      this.startNight();
+    }
   }
 
   startNight() {
@@ -947,18 +977,38 @@ class Game {
   }
 
   // 검기: 발밑 충격파 + 칼끝 섬광 → 3겹 초승달 검기가 잔상·빛가루·바닥 서리를 남기며 날아감
-  spawnSwordWave(pl) {
-    const dir = V(Math.sin(pl.yaw), 0, Math.cos(pl.yaw));
+  // 검객 K: 검기 / 삼연 검기 / 천열참
+  skillSword1(pl) {
+    const br = this.branch(pl, 1);
+    if (br === 'a') {
+      for (const off of [-0.34, 0, 0.34]) this.spawnSwordWave(pl, { yawOff: off, dmgMul: 0.72, scale: 0.85, quiet: off !== 0 });
+    } else if (br === 'b') {
+      this.spawnSwordWave(pl, { scale: 1.75, dmgMul: 2.0, speed: 11, life: 0.9, knock: 13, stun: 0.6, color: ['#ff7a2a', '#ffd08a', '#ffffff'] });
+      const feet = V(pl.pos.x, pl.y, pl.pos.z);
+      this.fx.ring(feet, 4.2, '#ffb060', 0.5);
+      this.fx.scorch(feet.clone().add(V(Math.sin(pl.yaw) * 1.5, 0, Math.cos(pl.yaw) * 1.5)), 1.4, '#2a1a10', 2);
+      this.ui.flash('#ffa040', 0.3);
+      this.shake(0.45);
+    } else this.spawnSwordWave(pl);
+  }
+
+  spawnSwordWave(pl, o = {}) {
+    const yaw = pl.yaw + (o.yawOff || 0);
+    const sc = o.scale || 1;
+    const dir = V(Math.sin(yaw), 0, Math.cos(yaw));
     const feet = V(pl.pos.x, pl.y, pl.pos.z);
     const pos = V(pl.pos.x, pl.y + 0.75, pl.pos.z).addScaledVector(dir, 0.6);
-    const pr = { owner: 'player', kind: 'wave', pos, dir, yaw: pl.yaw, speed: 16, life: 0.6, dmg: 34, hitSet: new Set(), radius: 1.3, trailT: 0 };
+    const pr = { owner: 'player', kind: 'wave', pos, dir, yaw, speed: o.speed || 16, life: o.life || 0.6, dmg: Math.round(34 * (o.dmgMul || 1)), hitSet: new Set(), radius: 1.3 * sc, trailT: 0, scale: sc, knock: o.knock, stun: o.stun, cols: o.color };
     const follow = (a) => a.g.position.copy(pr.pos);
+    const [c1, c2, c3] = o.color || ['#2f7dff', '#8fe4ff', '#ffffff'];
+    const dur = pr.life;
     pr.vis = [
-      this.fx.slash(pos, pl.yaw, 0, { inner: 0.25, outer: 2.0, len: 2.4, dur: 0.6, color: '#2f7dff', static: true, move: follow }),
-      this.fx.slash(pos, pl.yaw, 0, { inner: 0.9, outer: 1.85, len: 2.2, dur: 0.6, color: '#8fe4ff', static: true, move: follow }),
-      this.fx.slash(pos, pl.yaw, 0, { inner: 1.55, outer: 1.8, len: 2.0, dur: 0.6, color: '#ffffff', static: true, move: follow }),
+      this.fx.slash(pos, yaw, 0, { inner: 0.25, outer: 2.0, len: 2.4, dur, color: c1, static: true, move: follow, scale: sc }),
+      this.fx.slash(pos, yaw, 0, { inner: 0.9, outer: 1.85, len: 2.2, dur, color: c2, static: true, move: follow, scale: sc }),
+      this.fx.slash(pos, yaw, 0, { inner: 1.55, outer: 1.8, len: 2.0, dur, color: c3, static: true, move: follow, scale: sc }),
     ];
     this.projectiles.push(pr);
+    if (o.quiet) return;
     // 시전 연출
     this.audio.play('skill');
     this.fx.ring(feet, 2.6, '#7fd8ff', 0.4);
@@ -979,7 +1029,7 @@ class Game {
     pr.trailT -= dt;
     if (pr.trailT <= 0) {
       pr.trailT = 0.03;
-      fx.slash(pr.pos.clone(), pr.yaw, 0, { inner: 0.6, outer: 1.95, len: 2.3, dur: 0.18, color: '#2a5cff', static: true, fadeAll: true });
+      fx.slash(pr.pos.clone(), pr.yaw, 0, { inner: 0.6, outer: 1.95, len: 2.3, dur: 0.18, color: pr.cols ? pr.cols[0] : '#2a5cff', static: true, fadeAll: true, scale: pr.scale || 1 });
     }
     const side = V(pr.dir.z, 0, -pr.dir.x);
     for (let k = 0; k < 5; k++) {
@@ -1023,8 +1073,33 @@ class Game {
   }
 
   playerSkillHit(pl, a) {
-    if (pl.cls === 'mage') this.castLightning(pl);
-    else if (pl.cls === 'elf') this.windArrows(pl);
+    const br = this.branch(pl, 1);
+    if (pl.cls === 'mage') {
+      if (br === 'a') this.castLightning(pl, { storm: true });
+      else if (br === 'b') this.castLightning(pl, { R: 3.9, mult: 1.9, stun: 1.3, big: true });
+      else this.castLightning(pl);
+    } else if (pl.cls === 'elf') {
+      if (br === 'a') {
+        // 폭풍 연사: 세 번 연달아
+        for (let k = 0; k < 3; k++) this.after(k * 0.17, () => { if (!pl.dead) this.windArrows(pl, { n: 7, spread: 0.11, dmg: 17, quiet: k > 0 }); });
+      } else if (br === 'b') this.bigArrow(pl);
+      else this.windArrows(pl);
+    }
+  }
+
+  // 요정 관통 극궁: 거대한 빛의 화살 한 대
+  bigArrow(pl) {
+    this.spawnArrow(pl, pl.yaw, { dmg: 140, pierce: true, glow: true, speed: 30, life: 0.95, big: true });
+    const feet = V(pl.pos.x, pl.y, pl.pos.z);
+    const hp = this.handPos(pl);
+    this.fx.circle(feet, 2.4, '#d8ffb0', 0.8, -3);
+    for (let k = 0; k < 4; k++) this.after(k * 0.05, () => this.fx.ring(hp.clone().add(V(Math.sin(pl.yaw) * k * 0.9, 0, Math.cos(pl.yaw) * k * 0.9)), 1.0 + k * 0.5, k ? '#e8ffc8' : '#ffffff', 0.3));
+    this.fx.spark(hp.x, hp.y, hp.z, 24, '#f0ffd8', 8);
+    this.audio.play('bowskill');
+    this.audio.play('thunder');
+    this.ui.flash('#c8ff9a', 0.3);
+    this.shake(0.45);
+    this.hitstop = Math.max(this.hitstop, 0.06);
   }
 
   handPos(pl, out = V()) {
@@ -1062,14 +1137,15 @@ class Game {
     }
   }
 
-  spawnArrow(pl, yaw, { dmg = 16, pierce = false, glow = false, speed = 26, life = 0.55 } = {}) {
+  spawnArrow(pl, yaw, { dmg = 16, pierce = false, glow = false, speed = 26, life = 0.55, big = false } = {}) {
     const dir = V(Math.sin(yaw), 0, Math.cos(yaw));
     const pos = this.handPos(pl);
     const g = this.makeArrowMesh(glow);
     g.position.copy(pos);
     g.rotation.y = yaw;
+    if (big) g.scale.set(3, 3, 2.6);
     this.scene.add(g);
-    this.projectiles.push({ owner: 'player', kind: 'arrow', pos, dir, yaw, speed, life, dmg, mesh: g, radius: 0.4, hitSet: new Set(), pierce, glow, knock: pierce ? 5 : 3, stun: pierce ? 0.3 : 0.18 });
+    this.projectiles.push({ owner: 'player', kind: 'arrow', pos, dir, yaw, speed, life, dmg, mesh: g, radius: big ? 1.2 : 0.4, hitSet: new Set(), pierce, glow, big, knock: big ? 10 : pierce ? 5 : 3, stun: big ? 0.6 : pierce ? 0.3 : 0.18 });
   }
 
   makeArrowMesh(glow) {
@@ -1095,7 +1171,9 @@ class Game {
       for (let k = 0; k < 2; k++) fx.add.emit({ x: pr.pos.x + rand(-0.1, 0.1), y: pr.pos.y + rand(-0.1, 0.1), z: pr.pos.z + rand(-0.1, 0.1), vx: -pr.dir.x * 2 + rand(-0.4, 0.4), vy: rand(0.4, 1.4), vz: -pr.dir.z * 2 + rand(-0.4, 0.4), life: rand(0.2, 0.4), size: rand(2, 4), endSize: 1, color: '#ffe080', color2: '#ff3010', flicker: 0.3 });
     } else {
       pr.mesh.position.copy(pr.pos);
-      if (pr.glow) {
+      if (pr.big) {
+        for (let k = 0; k < 8; k++) fx.add.emit({ x: pr.pos.x + rand(-0.3, 0.3), y: pr.pos.y + rand(-0.3, 0.3), z: pr.pos.z + rand(-0.3, 0.3), vx: -pr.dir.x * 4 + rand(-1, 1), vy: rand(-0.5, 1), vz: -pr.dir.z * 4 + rand(-1, 1), life: rand(0.3, 0.6), size: rand(3, 5), endSize: 1, color: '#ffffff', color2: '#7aff5a' });
+      } else if (pr.glow) {
         for (let k = 0; k < 2; k++) fx.add.emit({ x: pr.pos.x + rand(-0.08, 0.08), y: pr.pos.y + rand(-0.08, 0.08), z: pr.pos.z + rand(-0.08, 0.08), vx: -pr.dir.x * 3, vy: rand(0, 0.6), vz: -pr.dir.z * 3, life: rand(0.2, 0.4), size: rand(2, 3), endSize: 1, color: '#e8ffc8', color2: '#3aa83a' });
       } else if (Math.random() < 0.6) {
         fx.add.emit({ x: pr.pos.x, y: pr.pos.y, z: pr.pos.z, life: 0.12, size: 2, color: '#fff8e0', alpha: 0.6 });
@@ -1127,9 +1205,9 @@ class Game {
   }
 
   // 도사 낙뢰: 팔괘 마법진이 펼쳐지고 빛이 모여듦 → 번개 다발이 연달아 내리꽂히며 전기 사슬이 적들을 잇고, 바닥에 그을음
-  castLightning(pl) {
+  castLightning(pl, o = {}) {
     const c = this.aimPoint(pl);
-    const R = 2.9;
+    const R = o.R || 2.9;
     this.fx.circle(c, R * 1.15, '#b89aff', 1.3, 2.2);
     this.fx.circle(V(pl.pos.x, pl.y, pl.pos.z), 1.3, '#d8c8ff', 0.7, -3);
     const tele = this.fx.ring(c, R, '#b89aff', 1, 1);
@@ -1142,7 +1220,9 @@ class Game {
     this.shake(0.12);
     this.timers.push({ at: this.time + 0.42, fn: () => {
       this.fx.removeRing(tele);
-      this.fx.bolt(c, 1.7);
+      this.fx.bolt(c, o.big ? 3.2 : 1.7);
+      if (o.big) { this.fx.bolt(V(c.x + 0.4, c.y, c.z - 0.3), 1.6); this.fx.ring(c, R * 1.7, '#ffffff', 0.6); this.ui.flash('#ffffff', 0.8); this.shake(1.0); }
+      if (o.storm) this.storms.push({ c: c.clone(), R: 4.6, t: 0, dur: 4.2, tick: 0.5 });
       this.audio.play('thunder');
       this.ui.flash('#e8e0ff', 0.6);
       this.shake(0.7);
@@ -1164,7 +1244,7 @@ class Game {
       let prev = V(c.x, c.y + 1.2, c.z);
       for (const e of hit) {
         const crit = Math.random() < 0.2;
-        this.damageEnemy(e, Math.round(rand(44, 54) * (crit ? 1.8 : 1)), crit, 3, 0.7);
+        this.damageEnemy(e, Math.round(rand(44, 54) * (o.mult || 1) * (crit ? 1.8 : 1)), crit, o.big ? 6 : 3, o.stun || 0.7);
         const ec = e.center().clone();
         this.fx.arc(prev, ec, '#c8b0ff', 0.8);
         this.fx.spark(ec.x, ec.y, ec.z, 10, '#e8e0ff', 6);
@@ -1183,9 +1263,11 @@ class Game {
   }
 
   // 요정 바람화살: 발밑 마법진 + 소용돌이 고리 → 빛나는 관통 화살 9발
-  windArrows(pl) {
-    for (let i = 0; i < 9; i++) this.spawnArrow(pl, pl.yaw + (i - 4) * 0.13, { dmg: 22, pierce: true, glow: true, speed: 24, life: 0.6 });
+  windArrows(pl, o = {}) {
+    const n = o.n || 9, sp = o.spread || 0.13;
+    for (let i = 0; i < n; i++) this.spawnArrow(pl, pl.yaw + (i - (n - 1) / 2) * sp, { dmg: o.dmg || 22, pierce: true, glow: true, speed: 24, life: 0.6 });
     this.audio.play('bowskill');
+    if (o.quiet) { this.fx.ring(this.handPos(pl), 1.2, '#c8ffb0', 0.22); return; }
     const feet = V(pl.pos.x, pl.y, pl.pos.z);
     this.fx.circle(feet, 2.2, '#8aff7a', 0.7, 3);
     const hp = this.handPos(pl);
@@ -1211,17 +1293,35 @@ class Game {
   // ================= 추가 스킬 =================
   castSkill(pl, slot) {
     const k = pl.cls + slot;
-    if (k === 'sword2') this.skillIssen(pl);
-    else if (k === 'sword3') this.skillWhirl(pl);
-    else if (k === 'mage2') this.skillDragon(pl);
-    else if (k === 'mage3') this.skillFrost(pl);
-    else if (k === 'elf2') this.skillArrowRain(pl);
-    else if (k === 'elf3') this.skillTornado(pl);
+    const br = this.branch(pl, slot);
+    if (k === 'sword2') {
+      if (br === 'a') {
+        // 연섬: 꿰뚫고 곧바로 돌아서며 한 번 더
+        this.skillIssen(pl);
+        this.after(0.72, () => { if (pl.dead) return; pl.yaw += Math.PI; this.skillIssen(pl, { mult: 0.9, tint: '#ffd890' }); });
+      } else this.skillIssen(pl, br === 'b' ? { mark: true } : {});
+    } else if (k === 'sword3') {
+      if (br === 'a') this.skillWhirl(pl, { spins: 5, R: 0.8, pull: true });
+      else { this.skillWhirl(pl); if (br === 'b') this.after(0.8, () => this.startBladeRing(pl)); }
+    } else if (k === 'mage2') {
+      if (br === 'a') { this.skillDragon(pl, { phase: 0, dmg: 15 }); this.skillDragon(pl, { phase: Math.PI, dmg: 15, gold: true }); }
+      else this.skillDragon(pl, br === 'b' ? { trail: true, boom: 1.6 } : {});
+    } else if (k === 'mage3') {
+      if (br === 'a') this.skillFrost(pl, { shatter: true });
+      else this.skillFrost(pl, br === 'b' ? { R: 6.4, freeze: 3.4, mult: 1.25 } : {});
+    } else if (k === 'elf2') {
+      if (br === 'a') this.skillArrowRain(pl, { fire: true });
+      else if (br === 'b') this.skillMeteor(pl);
+      else this.skillArrowRain(pl);
+    } else if (k === 'elf3') {
+      if (br === 'a') { this.skillTornado(pl, { yawOff: -0.4 }); this.skillTornado(pl, { yawOff: 0.4, quiet: true }); }
+      else this.skillTornado(pl, br === 'b' ? { orbit: true } : {});
+    }
   }
 
   // 검객 일섬: 눈에 보이지 않을 만큼 빠르게 앞으로 돌진하며 지나간 자리에 빛줄기,
   // 칼을 칼집에 넣는 "착" 소리와 동시에 베인 적들이 한꺼번에 갈라짐
-  skillIssen(pl) {
+  skillIssen(pl, o = {}) {
     const dir = V(Math.sin(pl.yaw), 0, Math.cos(pl.yaw));
     const from = pl.pos.clone();
     this.fx.ghost(pl.rig, '#ffffff', 0.4);
@@ -1231,7 +1331,7 @@ class Game {
     const to = pl.pos.clone();
     const y = pl.y + 0.8;
     this.fx.streak(V(from.x, y, from.z), V(to.x, y, to.z), '#ffffff', 0.55, 0.5);
-    this.fx.streak(V(from.x, y, from.z), V(to.x, y, to.z), '#7fd8ff', 0.7, 1.2);
+    this.fx.streak(V(from.x, y, from.z), V(to.x, y, to.z), o.mark ? '#ff4a3a' : o.tint || '#7fd8ff', 0.7, 1.2);
     for (let i = 1; i < 5; i++) {
       const t = i / 5;
       const gp = from.clone().lerp(to, t);
@@ -1263,21 +1363,31 @@ class Game {
       for (const e of victims) {
         if (e.dead) continue;
         const crit = Math.random() < 0.3;
-        this.damageEnemy(e, Math.round(rand(40, 48) * (crit ? 1.8 : 1)), crit, 5, 0.6);
+        this.damageEnemy(e, Math.round(rand(40, 48) * (o.mult || 1) * (crit ? 1.8 : 1)), crit, 5, 0.6);
         const c = e.center().clone();
-        this.fx.cross(c, '#fff6d0', e.isBoss ? 6 : 4.2, 0.45);
+        this.fx.cross(c, o.mark ? '#ff8a6a' : '#fff6d0', e.isBoss ? 6 : 4.2, 0.45);
         this.fx.spark(c.x, c.y, c.z, 16, '#fff6d0', 8);
+        if (o.mark && !e.dead) this.markEnemy(e);
       }
     } });
   }
 
   // 검객 회오리베기: 세 바퀴 돌며 주변 전체를 벰 (마지막 바퀴가 가장 셈)
-  skillWhirl(pl) {
-    for (let k = 0; k < 3; k++) {
+  skillWhirl(pl, opt = {}) {
+    const spins = opt.spins || 3;
+    if (spins > 3) pl.attack && (pl.attack.dur = 0.27 * spins + 0.1);
+    for (let k = 0; k < spins; k++) {
       this.timers.push({ at: this.time + k * 0.27, fn: () => {
         if (pl.dead) return;
-        const last = k === 2;
-        const R = last ? 2.9 : 2.5;
+        const last = k === spins - 1;
+        const R = (last ? 2.9 : 2.5) + (opt.R || 0);
+        if (opt.pull) {
+          for (const e of this.enemiesIn(pl.pos, R + 2.5)) {
+            const dx = pl.pos.x - e.pos.x, dz = pl.pos.z - e.pos.z, d = Math.hypot(dx, dz) || 1;
+            if (d > 1.2) this.world.move(e.pos, (dx / d) * Math.min(1.1, d - 1.1) * (e.isBoss ? 0.25 : 1), (dz / d) * Math.min(1.1, d - 1.1) * (e.isBoss ? 0.25 : 1), e.moveR ?? e.radius);
+          }
+          for (let i = 0; i < 14; i++) { const a = Math.random() * Math.PI * 2, r = R + 1.5; this.fx.add.emit({ x: pl.pos.x + Math.cos(a) * r, y: pl.y + rand(0.2, 1.5), z: pl.pos.z + Math.sin(a) * r, vx: -Math.cos(a) * 7 - Math.sin(a) * 4, vy: 0.5, vz: -Math.sin(a) * 7 + Math.cos(a) * 4, life: 0.3, size: 2, color: '#e0f4ff', color2: '#5aa8ff' }); }
+        }
         const o = V(pl.pos.x, pl.y + 0.7, pl.pos.z);
         this.fx.slash(o, pl.yaw + k * 2.1, 0, { inner: 0.4, outer: R, len: 6.25, dur: 0.24, color: last ? '#fff6d0' : '#a8e4ff' });
         this.fx.slash(o, pl.yaw + k * 2.1, 0, { inner: R - 0.3, outer: R - 0.05, len: 6.25, dur: 0.24, color: '#ffffff' });
@@ -1299,7 +1409,7 @@ class Game {
   }
 
   // 도사 화룡부: 부적이 불뱀이 되어 꿈틀대며 날아감. 지나가는 적을 여러 번 태우고 끝에서 폭발
-  skillDragon(pl) {
+  skillDragon(pl, o = {}) {
     const dir = V(Math.sin(pl.yaw), 0, Math.cos(pl.yaw));
     const base = this.handPos(pl);
     const g = new THREE.Group();
@@ -1307,7 +1417,7 @@ class Game {
     const N = 12;
     for (let i = 0; i < N; i++) {
       const k = i / (N - 1);
-      const col = new THREE.Color('#fff2a0').lerp(new THREE.Color('#e8401a'), k);
+      const col = new THREE.Color(o.gold ? '#ffffff' : '#fff2a0').lerp(new THREE.Color(o.gold ? '#ffb020' : o.trail ? '#c81a0a' : '#e8401a'), k);
       const s = new THREE.Mesh(new THREE.IcosahedronGeometry(0.46 * (1 - k * 0.6), 1), new THREE.MeshBasicMaterial({ color: col }));
       g.add(s);
       segs.push(s);
@@ -1324,7 +1434,7 @@ class Game {
       head.add(eye);
     }
     this.scene.add(g);
-    const pr = { owner: 'fx', kind: 'dragon', pos: base.clone(), base: base.clone(), dir, yaw: pl.yaw, speed: 10, life: 1.6, t: 0, dmg: 20, mesh: g, segs, hist: [], hitAt: new Map() };
+    const pr = { owner: 'fx', kind: 'dragon', pos: base.clone(), base: base.clone(), dir, yaw: pl.yaw, speed: 10, life: 1.6, t: 0, dmg: o.dmg || 20, mesh: g, segs, hist: [], hitAt: new Map(), phase: o.phase || 0, trail: !!o.trail, boom: o.boom || 1, trailT: 0 };
     for (let i = 0; i < N * 3; i++) pr.hist.push(base.clone());
     this.projectiles.push(pr);
     this.audio.play('fire');
@@ -1339,7 +1449,9 @@ class Game {
     pr.t += dt;
     pr.base.addScaledVector(pr.dir, pr.speed * dt);
     const side = V(pr.dir.z, 0, -pr.dir.x);
-    const wave = Math.sin(pr.t * 9) * 0.9;
+    const wave = Math.sin(pr.t * 9 + pr.phase) * 0.9;
+    // 폭염룡: 지나간 자리에 불길
+    if (pr.trail) { pr.trailT -= dt; if (pr.trailT <= 0) { pr.trailT = 0.12; const gy = this.world.heightAt(pr.pos.x, pr.pos.z); this.fires.push({ pos: V(pr.pos.x, gy, pr.pos.z), t: 0, dur: 2.6, tick: 0 }); } }
     pr.pos.copy(pr.base).addScaledVector(side, wave);
     pr.pos.y = pr.base.y + Math.sin(pr.t * 6) * 0.25;
     pr.hist.unshift(pr.pos.clone());
@@ -1373,27 +1485,30 @@ class Game {
       const p = pr.pos;
       const gy = this.world.heightAt(p.x, p.z);
       this.audio.play('fire');
-      this.fx.ring(V(p.x, gy, p.z), 2.4, '#ffb050', 0.35);
-      this.fx.scorch(V(p.x, gy, p.z), 1.6, '#2a140a', 2.5);
+      const B = pr.boom;
+      this.fx.ring(V(p.x, gy, p.z), 2.4 * B, '#ffb050', 0.35);
+      if (B > 1) { this.fx.ring(V(p.x, gy, p.z), 1.4 * B, '#ffffff', 0.25); this.fx.circle(V(p.x, gy, p.z), 2 * B, '#ff6a2a', 0.8, 3); this.ui.flash('#ff7a30', 0.3); }
+      this.fx.scorch(V(p.x, gy, p.z), 1.6 * B, '#2a140a', 2.5);
       for (let i = 0; i < 40; i++) {
         const a = Math.random() * Math.PI * 2, s = rand(2, 6);
         this.fx.add.emit({ x: p.x, y: p.y, z: p.z, vx: Math.cos(a) * s, vy: rand(0.5, 5), vz: Math.sin(a) * s, g: 4, drag: 2.5, life: rand(0.3, 0.7), size: rand(2, 5), endSize: 1, color: '#fff2a0', color2: '#ff2a00', flicker: 0.3 });
       }
-      for (const e of this.enemiesIn(p, 2.2)) this.damageEnemy(e, Math.round(rand(24, 30)), false, 6, 0.35);
-      this.shake(0.35);
+      for (const e of this.enemiesIn(p, 2.2 * B)) this.damageEnemy(e, Math.round(rand(24, 30) * B), false, 6, 0.35);
+      this.shake(0.35 * B);
     }
   }
 
   // 도사 빙결진: 발밑에 얼음 마법진 → 세 겹의 얼음 가시가 퍼져 나가며 적을 얼림
-  skillFrost(pl) {
+  skillFrost(pl, o = {}) {
     const c = V(pl.pos.x, pl.y, pl.pos.z);
-    const R = 4.6;
+    const R = o.R || 4.6;
+    const sc = R / 4.6;
     this.fx.circle(c, R, '#8ad8ff', 1.6, 1.4);
     this.fx.scorch(c, R * 0.9, '#cfefff', 2.6);
     this.audio.play('freeze');
     this.ui.flash('#8ad8ff', 0.25);
     this.shake(0.35);
-    [1.4, 2.8, 4.2].forEach((r, k) => {
+    [1.4 * sc, 2.8 * sc, 4.2 * sc].forEach((r, k) => {
       this.timers.push({ at: this.time + k * 0.09, fn: () => {
         const n = Math.round(r * 5);
         for (let i = 0; i < n; i++) {
@@ -1411,29 +1526,47 @@ class Game {
         this.shake(0.15);
       } });
     });
+    const frozen = [];
     for (const e of this.enemiesIn(c, R)) {
       const crit = Math.random() < 0.15;
-      this.damageEnemy(e, Math.round(rand(26, 32) * (crit ? 1.8 : 1)), crit, 1, 0.2);
-      e.freeze(1.8);
+      this.damageEnemy(e, Math.round(rand(26, 32) * (o.mult || 1) * (crit ? 1.8 : 1)), crit, 1, 0.2);
+      e.freeze(o.freeze || 1.8);
+      frozen.push(e);
     }
+    // 빙폭진: 얼어붙은 적이 얼음째 부서짐 (얼음에 면역인 보스도 마법진 안이면 피해)
+    if (o.shatter) this.after(1.5, () => {
+      let any = false;
+      for (const e of frozen) {
+        if (e.dead) continue;
+        any = true;
+        const ec = e.center().clone();
+        this.damageEnemy(e, Math.round(rand(40, 48)), true, 4, 0.4);
+        this.fx.cross(ec, '#e8f8ff', e.isBoss ? 5 : 3.4, 0.4);
+        for (let i = 0; i < 24; i++) { const a = Math.random() * Math.PI * 2, s = rand(2, 6); this.fx.add.emit({ x: ec.x, y: ec.y, z: ec.z, vx: Math.cos(a) * s, vy: rand(1, 5), vz: Math.sin(a) * s, g: 12, life: rand(0.4, 0.8), size: rand(2, 4), endSize: 1, color: '#ffffff', color2: '#6ac8ff' }); }
+        this.fx.ring(V(e.pos.x, e.y, e.pos.z), 1.6, '#bfe8ff', 0.3);
+      }
+      if (any) { this.audio.play('freeze'); this.audio.play('crit'); this.shake(0.4); this.hitstop = Math.max(this.hitstop, 0.07); }
+    });
   }
 
   // 요정 화살비: 하늘로 쏜 화살이 조준한 곳에 비처럼 쏟아짐
-  skillArrowRain(pl) {
+  skillArrowRain(pl, o = {}) {
     const c = this.aimPoint(pl, 6);
     const R = 3;
-    this.fx.circle(c, R * 1.1, '#9aff8a', 1.7, 1.6);
-    const tele = this.fx.ring(c, R, '#9aff8a', 1, 1);
+    const col = o.fire ? '#ffb060' : '#9aff8a';
+    this.fx.circle(c, R * 1.1, col, 1.7, 1.6);
+    const tele = this.fx.ring(c, R, col, 1, 1);
     this.audio.play('bow');
     this.audio.play('bowskill');
     // 하늘로 솟는 화살
     for (let i = 0; i < 5; i++) this.fx.add.emit({ x: pl.pos.x + rand(-0.2, 0.2), y: pl.y + 1.4, z: pl.pos.z + rand(-0.2, 0.2), vx: rand(-0.5, 0.5), vy: 18, vz: rand(-0.5, 0.5), life: 0.4, size: 3, color: '#e8ffd8', color2: '#3aa83a' });
-    this.rains.push({ c, R, t: -0.35, dur: 1.2, acc: 0, tele });
+    this.rains.push({ c, R, t: -0.35, dur: o.fire ? 1.4 : 1.2, acc: 0, tele, fire: !!o.fire });
   }
 
   // 요정 회오리 정령: 앞으로 나아가며 주변 적을 빨아들여 계속 상처를 입히는 바람 소용돌이
-  skillTornado(pl) {
-    const dir = V(Math.sin(pl.yaw), 0, Math.cos(pl.yaw));
+  skillTornado(pl, o = {}) {
+    const yaw = pl.yaw + (o.yawOff || 0);
+    const dir = V(Math.sin(yaw), 0, Math.cos(yaw));
     const pos = V(pl.pos.x + dir.x * 1.5, pl.y, pl.pos.z + dir.z * 1.5);
     const rings = [];
     for (let i = 0; i < 4; i++) {
@@ -1443,13 +1576,15 @@ class Game {
       this.scene.add(r);
       rings.push(r);
     }
-    this.tornados.push({ pos, dir, t: 0, dur: 3.2, tick: 0, rings });
+    this.tornados.push({ pos, dir, t: 0, dur: o.orbit ? 4.6 : 3.2, tick: 0, rings, orbit: o.orbit ? pl : null, ang: yaw });
+    if (o.quiet) return;
     this.audio.play('tornado');
     this.fx.circle(pos, 2, '#9aff8a', 0.8, 4);
     this.ui.flash('#9aff8a', 0.15);
   }
 
   updateSkills(dt) {
+    this.updateSkillFx(dt);
     // 화살비
     for (let i = this.rains.length - 1; i >= 0; i--) {
       const r = this.rains[i];
@@ -1463,11 +1598,11 @@ class Game {
         const ty = this.world.heightAt(tx, tz);
         const from = V(tx + rand(-1, 1), ty + 9, tz + rand(-1, 1) - 1.5);
         const dir = V(tx, ty, tz).sub(from).normalize();
-        const g = this.makeArrowMesh(true);
+        const g = r.fire ? this.makeFireArrow() : this.makeArrowMesh(true);
         g.position.copy(from);
         g.lookAt(from.clone().add(dir));
         this.scene.add(g);
-        this.projectiles.push({ owner: 'fx', kind: 'rainArrow', pos: from, dir, speed: 30, life: 1, mesh: g, groundY: ty });
+        this.projectiles.push({ owner: 'fx', kind: 'rainArrow', pos: from, dir, speed: 30, life: 1, mesh: g, groundY: ty, fire: r.fire });
       }
       if (r.t >= r.dur) { this.fx.removeRing(r.tele); this.rains.splice(i, 1); }
     }
@@ -1475,7 +1610,12 @@ class Game {
     for (let i = this.tornados.length - 1; i >= 0; i--) {
       const T = this.tornados[i];
       T.t += dt;
-      this.world.move(T.pos, T.dir.x * 3 * dt, T.dir.z * 3 * dt, 0.4);
+      if (T.orbit) {
+        // 태풍의 눈: 내 주위를 맴돎
+        T.ang += dt * 2.3;
+        const pp = T.orbit.pos, r = Math.min(2.6, 0.8 + T.t * 4);
+        T.pos.set(pp.x + Math.sin(T.ang) * r, pp.y, pp.z + Math.cos(T.ang) * r);
+      } else this.world.move(T.pos, T.dir.x * 3 * dt, T.dir.z * 3 * dt, 0.4);
       T.pos.y = this.world.heightAt(T.pos.x, T.pos.z);
       const fade = Math.min(1, T.t / 0.25) * Math.min(1, (T.dur - T.t) / 0.4);
       T.rings.forEach((ring, k) => {
@@ -1518,11 +1658,192 @@ class Game {
     }
   }
 
+  // ---------- 파생 기술 효과 ----------
+  clearSkillFx() {
+    for (const o of this.orbits) for (const b of o.blades) this.scene.remove(b);
+    for (const m of this.marks) this.scene.remove(m.mesh);
+    this.storms = []; this.fires = []; this.orbits = []; this.marks = [];
+  }
+
+  // 낙인섬: 붉은 낙인이 1초 뒤 터짐
+  markEnemy(e) {
+    if (this.marks.some((m) => m.e === e)) return;
+    const mesh = new THREE.Mesh(new THREE.RingGeometry(0.28, 0.4, 4), new THREE.MeshBasicMaterial({ color: '#ff3a2a', transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
+    mesh.userData.noOutline = true;
+    this.scene.add(mesh);
+    this.marks.push({ e, mesh, t: 0, dur: 1.0 });
+  }
+
+  // 검무 결계: 빛나는 칼날 셋이 몸 주위를 돎
+  startBladeRing(pl) {
+    if (pl.dead) return;
+    const blades = [];
+    for (let i = 0; i < 3; i++) {
+      const g = new THREE.Group();
+      const blade = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.05, 1.1), new THREE.MeshBasicMaterial({ color: '#e8f8ff' }));
+      const edge = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.06, 1.0), new THREE.MeshBasicMaterial({ color: '#7fd8ff' }));
+      edge.position.x = 0.04;
+      g.add(blade, edge);
+      this.scene.add(g);
+      blades.push(g);
+    }
+    this.orbits.push({ pl, blades, t: 0, dur: 5, tick: 0, ang: 0 });
+    this.audio.play('draw');
+    this.fx.ring(V(pl.pos.x, pl.y, pl.pos.z), 2.4, '#bfe8ff', 0.35);
+  }
+
+  // 요정 유성시: 거대한 화살 다섯 대가 차례로 내리꽂힘
+  skillMeteor(pl) {
+    const c = this.aimPoint(pl, 6);
+    this.fx.circle(c, 3.4, '#d8ffb0', 2.0, 1.2);
+    const tele = this.fx.ring(c, 3.0, '#d8ffb0', 1, 1);
+    this.audio.play('bow');
+    this.audio.play('bowskill');
+    for (let i = 0; i < 4; i++) this.fx.add.emit({ x: pl.pos.x, y: pl.y + 1.4, z: pl.pos.z, vx: rand(-0.4, 0.4), vy: 20, vz: rand(-0.4, 0.4), life: 0.4, size: 4, color: '#ffffff', color2: '#7aff5a' });
+    for (let k = 0; k < 5; k++) {
+      this.after(0.45 + k * 0.2, () => {
+        const a = Math.random() * Math.PI * 2, d = k === 0 ? 0 : rand(0.8, 2.4);
+        const tx = c.x + Math.cos(a) * d, tz = c.z + Math.sin(a) * d;
+        const ty = this.world.heightAt(tx, tz);
+        const from = V(tx + 1.2, ty + 12, tz - 2.5);
+        const dir = V(tx, ty, tz).sub(from).normalize();
+        const g = this.makeArrowMesh(true);
+        g.scale.set(3.2, 3.2, 3);
+        g.position.copy(from);
+        g.lookAt(from.clone().add(dir));
+        this.scene.add(g);
+        this.projectiles.push({ owner: 'fx', kind: 'rainArrow', pos: from, dir, speed: 34, life: 1.2, mesh: g, groundY: ty, big: true });
+        if (k === 4) this.after(0.4, () => this.fx.removeRing(tele));
+      });
+    }
+  }
+
+  makeFireArrow() {
+    const g = this.makeArrowMesh(false);
+    g.children[0].material.color.set('#ff8a3a');
+    g.children[1].material.color.set('#fff0a0');
+    return g;
+  }
+
+  updateSkillFx(dt) {
+    // 뇌운: 먹구름이 주변 적에게 번개를 떨어뜨림
+    for (let i = this.storms.length - 1; i >= 0; i--) {
+      const S = this.storms[i];
+      S.t += dt;
+      for (let k = 0; k < 3; k++) {
+        const a = Math.random() * Math.PI * 2, r = Math.sqrt(Math.random()) * S.R;
+        this.fx.norm.emit({ x: S.c.x + Math.cos(a) * r, y: S.c.y + 5 + rand(-0.4, 0.4), z: S.c.z + Math.sin(a) * r, vx: rand(-0.3, 0.3), vz: rand(-0.3, 0.3), life: 0.6, size: rand(4, 7), endSize: 3, color: Math.random() < 0.3 ? '#4a4060' : '#2a2438', alpha: 0.85 });
+      }
+      if (Math.random() < dt * 8) this.fx.add.emit({ x: S.c.x + rand(-S.R, S.R) * 0.8, y: S.c.y + 4.8, z: S.c.z + rand(-S.R, S.R) * 0.8, life: 0.08, size: 6, color: '#e8e0ff' });
+      S.tick -= dt;
+      if (S.tick <= 0) {
+        S.tick = 0.55;
+        const vs = this.enemiesIn(S.c, S.R);
+        const e = vs[Math.floor(Math.random() * vs.length)];
+        if (e) {
+          const at = V(e.pos.x, e.y, e.pos.z);
+          this.fx.bolt(at, 1.0);
+          this.fx.ring(at, 1.4, '#d8c8ff', 0.25);
+          this.damageEnemy(e, Math.round(rand(24, 30)), false, 2, 0.5);
+          this.audio.play('thunder');
+          this.shake(0.2);
+        }
+      }
+      if (S.t >= S.dur) this.storms.splice(i, 1);
+    }
+    // 불길
+    for (let i = this.fires.length - 1; i >= 0; i--) {
+      const F = this.fires[i];
+      F.t += dt;
+      const k = 1 - F.t / F.dur;
+      if (Math.random() < 0.8) this.fx.add.emit({ x: F.pos.x + rand(-0.35, 0.35), y: F.pos.y + 0.05, z: F.pos.z + rand(-0.35, 0.35), vx: rand(-0.2, 0.2), vy: rand(1, 2.4) * k, vz: rand(-0.2, 0.2), life: rand(0.25, 0.5), size: rand(2, 4) * (0.5 + k * 0.5), endSize: 1, color: '#ffe080', color2: '#ff2a00', flicker: 0.3 });
+      F.tick -= dt;
+      if (F.tick <= 0) {
+        F.tick = 0.3;
+        for (const e of this.enemiesIn(F.pos, 0.9)) this.damageEnemy(e, Math.round(rand(5, 7)), false, 0.2, 0.05);
+      }
+      if (F.t >= F.dur) this.fires.splice(i, 1);
+    }
+    // 검무 결계
+    for (let i = this.orbits.length - 1; i >= 0; i--) {
+      const O = this.orbits[i], pl = O.pl;
+      O.t += dt;
+      O.ang += dt * 6.5;
+      const fade = Math.min(1, O.t / 0.2) * Math.min(1, (O.dur - O.t) / 0.3);
+      O.blades.forEach((b, k) => {
+        const a = O.ang + (k / 3) * Math.PI * 2;
+        const r = 2.0 * fade;
+        b.position.set(pl.pos.x + Math.sin(a) * r, pl.y + 0.8 + Math.sin(O.t * 5 + k) * 0.1, pl.pos.z + Math.cos(a) * r);
+        b.rotation.y = a + Math.PI / 2;
+        b.scale.setScalar(Math.max(0.01, fade));
+        if (Math.random() < 0.6) this.fx.add.emit({ x: b.position.x, y: b.position.y, z: b.position.z, life: 0.18, size: 3, endSize: 1, color: '#ffffff', color2: '#5ab8ff' });
+      });
+      O.tick -= dt;
+      if (O.tick <= 0) {
+        O.tick = 0.3;
+        for (const e of this.enemiesIn(pl.pos, 2.7)) {
+          this.damageEnemy(e, Math.round(rand(9, 12)), false, 1.5, 0.15);
+          const c = e.center();
+          this.fx.spark(c.x, c.y, c.z, 5, '#e8f8ff', 4);
+        }
+      }
+      if (O.t >= O.dur || pl.dead) { for (const b of O.blades) this.scene.remove(b); this.orbits.splice(i, 1); }
+    }
+    // 낙인
+    for (let i = this.marks.length - 1; i >= 0; i--) {
+      const M = this.marks[i], e = M.e;
+      M.t += dt;
+      const c = e.center();
+      M.mesh.position.set(c.x, c.y + (e.isBoss ? 2.4 : 1.2), c.z);
+      M.mesh.rotation.z += dt * 5;
+      M.mesh.lookAt(this.pixel.camera.position);
+      M.mesh.scale.setScalar(1 + M.t * 0.6 + Math.sin(M.t * 30) * 0.08);
+      if (M.t >= M.dur || e.dead) {
+        this.scene.remove(M.mesh);
+        this.marks.splice(i, 1);
+        if (e.dead && M.t < M.dur * 0.5) continue;
+        const at = V(e.pos.x, e.y, e.pos.z);
+        this.fx.ring(at, 2.2, '#ff5a3a', 0.35);
+        this.fx.cross(c.clone(), '#ff6a4a', e.isBoss ? 5.5 : 4, 0.4);
+        this.fx.colorFire(at.x, at.y + 0.6, at.z, 30, 0.6, '#ffd0a0', '#ff2a10');
+        if (!e.dead) this.damageEnemy(e, Math.round(rand(52, 60)), true, 6, 0.5);
+        for (const o of this.enemiesIn(at, 2.0)) if (o !== e) this.damageEnemy(o, Math.round(rand(24, 30)), false, 5, 0.3);
+        this.audio.play('crit');
+        this.shake(0.35);
+      }
+    }
+  }
+
   // 떨어지는 화살비 화살
   rainArrowUpdate(pr) {
     pr.mesh.position.copy(pr.pos);
+    if (pr.fire && Math.random() < 0.7) this.fx.add.emit({ x: pr.pos.x, y: pr.pos.y, z: pr.pos.z, vy: 1, life: 0.2, size: 3, endSize: 1, color: '#ffe080', color2: '#ff3010' });
+    if (pr.big) {
+      // 유성시: 꼬리 빛 + 땅에 닿으면 폭발
+      for (let k = 0; k < 6; k++) this.fx.add.emit({ x: pr.pos.x + rand(-0.3, 0.3), y: pr.pos.y + rand(0, 1), z: pr.pos.z + rand(-0.3, 0.3), vx: rand(-0.5, 0.5), vy: 2, vz: rand(-0.5, 0.5), life: rand(0.3, 0.6), size: rand(3, 5), endSize: 1, color: '#ffffff', color2: '#7aff5a' });
+      if (pr.pos.y <= pr.groundY + 0.05) {
+        pr.life = 0;
+        const at = V(pr.pos.x, pr.groundY, pr.pos.z);
+        this.fx.ring(at, 2.6, '#e8ffc8', 0.4);
+        this.fx.ring(at, 1.3, '#ffffff', 0.25);
+        this.fx.scorch(at, 1.4, '#1a2a12', 2.2);
+        this.fx.spark(at.x, at.y + 0.3, at.z, 24, '#f0ffd8', 9);
+        for (let i = 0; i < 30; i++) { const a = Math.random() * Math.PI * 2, s = rand(2, 7); this.fx.norm.emit({ x: at.x, y: at.y + 0.2, z: at.z, vx: Math.cos(a) * s, vy: rand(2, 6), vz: Math.sin(a) * s, g: 14, life: rand(0.4, 0.8), size: 3, color: '#a89878', floor: at.y }); }
+        for (const e of this.enemiesIn(at, 2.3)) { const crit = Math.random() < 0.2; this.damageEnemy(e, Math.round(rand(40, 48) * (crit ? 1.8 : 1)), crit, 7, 0.5); }
+        this.audio.play('thunder');
+        this.shake(0.5);
+        this.hitstop = Math.max(this.hitstop, 0.05);
+      }
+      return;
+    }
     if (pr.pos.y <= pr.groundY + 0.05) {
       pr.life = 0;
+      if (pr.fire) {
+        // 불화살: 떨어진 곳에서 작게 터짐
+        this.fx.ring(V(pr.pos.x, pr.groundY, pr.pos.z), 1.2, '#ffb050', 0.25);
+        for (let i = 0; i < 8; i++) this.fx.add.emit({ x: pr.pos.x, y: pr.groundY + 0.1, z: pr.pos.z, vx: rand(-2, 2), vy: rand(1, 3), vz: rand(-2, 2), life: rand(0.3, 0.5), size: rand(2, 4), endSize: 1, color: '#ffe080', color2: '#ff3010' });
+        for (const e of this.enemiesIn(pr.pos, 1.3)) this.damageEnemy(e, Math.round(rand(6, 8)), false, 0.5, 0.1);
+      }
       this.fx.dust(pr.pos.x, pr.groundY, pr.pos.z, 2);
       this.fx.add.emit({ x: pr.pos.x, y: pr.groundY + 0.1, z: pr.pos.z, life: 0.2, size: 4, endSize: 1, color: '#e8ffd8' });
       for (const e of this.enemiesIn(pr.pos, 0.8)) {
@@ -1647,7 +1968,7 @@ class Game {
 
   checkWave() {
     if (!this.waveActive || this.wave === 0 || this.spawnQueue.length) return;
-    if (this.enemies.some((e) => !e.dead)) return;
+    if (this.enemies.some((e) => !e.dead && !e.field)) return;
     if (this.waveClearing) return;
     this.waveClearing = true;
     if (this.wave >= 3) {
@@ -1670,11 +1991,12 @@ class Game {
     this.player.hp = this.player.maxHp;
     const first = !this.cleared[this.mapId];
     this.cleared[this.mapId] = true;
+    this.after(0.1, () => this.updateRegion(true));
     this.ui.banner('승리', { palace: '도깨비들이 달아나고 동이 튼다', bamboo: '여우들이 숲 깊이 사라진다', temple: '망자들이 저승으로 돌아간다' }[this.mapId], 4, 'win-banner');
     if (first && this.map.next) {
-      this.buildPortals();
       const nx = MAPS[this.map.next];
-      setTimeout(() => this.ui.toast(this.map.next === 'palace' ? '모든 지역을 평정했다! 금빛 포탈이 열렸다' : `${nx.name}(으)로 가는 포탈이 열렸다!`, 3.5), 2500);
+      const msg = this.map.next === 'palace' ? '모든 지역을 평정했다!' : `남쪽 ${nx.name}에 더 강한 적이 기다린다`;
+      setTimeout(() => this.ui.toast(msg, 3.5), 2500);
     }
     this.updateQuest();
     this.save();
@@ -1699,6 +2021,7 @@ class Game {
     this.rains = [];
     for (const T of this.tornados) for (const ring of T.rings) this.scene.remove(ring);
     this.tornados = [];
+    this.clearSkillFx();
     this.ui.setBoss(null);
     this.waveClearing = false;
     if (this.waveActive) {
@@ -1812,7 +2135,7 @@ class Game {
   ambient(dt) {
     const f = this.focus;
     const n = this.night;
-    const amb = this.map.theme.ambient;
+    const amb = this.themeCur.ambient;
     if (amb === 'snow') {
       // 설원: 밤낮없이 눈이 내림
       for (let k = 0; k < 2; k++) if (Math.random() < dt * 30) this.fx.norm.emit({ x: f.x + rand(-20, 20), y: rand(6, 10), z: f.z + rand(-18, 12), vx: rand(-0.3, 0.6), vy: -1.2, vz: rand(-0.2, 0.2), wob: 0.8, life: 8, size: Math.random() < 0.3 ? 3 : 2, color: '#ffffff', floor: 0.02, alpha: 0.95 });
@@ -1835,7 +2158,8 @@ class Game {
     this.updateTarget();
     this.player.update(wdt, inp);
     this.updateDrops(wdt);
-    this.updatePortals(wdt);
+    this.updateRegion();
+    this.updateField(wdt);
     // 길찾기 흐름장 (플레이어가 다른 칸으로 옮겼을 때만 실제로 다시 계산)
     this.flowT -= wdt;
     if (this.enemies.length && this.flowT <= 0) {
@@ -1934,6 +2258,7 @@ class Game {
 }
 
 const _a = new THREE.Vector3(), _b = new THREE.Vector3(), _c = new THREE.Vector3(), _d = new THREE.Vector3();
+const _e = new THREE.Color();
 
 window.addEventListener('DOMContentLoaded', () => {
   try {

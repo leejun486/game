@@ -27,15 +27,17 @@ function extraMaterials(W) {
 }
 
 // 바닥: 큰 평면 + 길 조각들
-function ground(W, mat, size = 120, rep = 60) {
-  const g = new THREE.Mesh(new THREE.PlaneGeometry(size, size), mat);
-  g.geometry.attributes.uv.array.forEach((v, i, a) => (a[i] = v * rep));
+// 지역 길이(z -26.1..22.1)만큼만 깔아서 이웃 지역 바닥과 겹치지 않게
+function ground(W, mat, y = 0) {
+  const g = new THREE.Mesh(new THREE.PlaneGeometry(120, 48.2), mat);
+  g.geometry.attributes.uv.array.forEach((v, i, a) => (a[i] = v * (i % 2 === 0 ? 60 : 24.1)));
   g.rotation.x = -Math.PI / 2;
+  g.position.set(0, y, -2);
   g.receiveShadow = true;
   W.root.add(g);
 }
 
-function pathStrip(W, mat, pts, width) {
+function pathStrip(W, mat, pts, width, y0 = 0.012) {
   for (let i = 0; i < pts.length - 1; i++) {
     const [x0, z0] = pts[i], [x1, z1] = pts[i + 1];
     const len = Math.hypot(x1 - x0, z1 - z0) + width * 0.6;
@@ -45,7 +47,7 @@ function pathStrip(W, mat, pts, width) {
     m.rotation.order = 'YXZ';
     m.rotation.y = Math.atan2(x1 - x0, z1 - z0);
     m.rotation.x = -Math.PI / 2;
-    m.position.set((x0 + x1) / 2, 0.012 + (i % 2) * 0.002, (z0 + z1) / 2); // 높이를 쌓지 않음: 바닥 효과가 길 아래로 묻히지 않게
+    m.position.set((x0 + x1) / 2, y0 + (i % 2) * 0.002, (z0 + z1) / 2); // 높이를 쌓지 않음: 바닥 효과가 길 아래로 묻히지 않게
     m.receiveShadow = true;
     W.root.add(m);
   }
@@ -213,8 +215,8 @@ export function buildTemple(W) {
   const M = W.M, B = (W.batch = new Batcher());
   W.foliage = new Batcher();
   const R = mulberry32(505);
-  ground(W, M.snow);
-  pathStrip(W, M.path, [[0, 24], [0, 10], [0, -5]], 3.6);
+  ground(W, M.snow, -0.004);
+  pathStrip(W, M.path, [[0, 24], [0, 10], [0, -5]], 3.6, 0.02);
   disc(W, M.slab, 0, 3, 7.5);
 
   // 무너진 절터: 월대 + 계단, 부서진 기둥, 기울어진 지붕

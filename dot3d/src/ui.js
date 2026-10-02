@@ -1,4 +1,5 @@
 import { item, itemDesc, drawItemIcon, RARITY, WEAPONS, OUTFITS } from './items.js';
+import { EVOS, branchOf } from './evolve.js';
 import { expNeed, SKILL_LEVEL } from './entities.js';
 
 // HTML HUD: 체력, 스킬, 임무, 배너, 대화창, 보스 체력, 적 체력바, 상호작용 표시
@@ -31,8 +32,12 @@ export class UI {
     drawPortrait(document.getElementById('portrait-cv'), cfg.id);
     document.getElementById('hero-name').innerHTML = `${cfg.title} <b>${cfg.name}</b><span class="lv">Lv.${pl?.level ?? 1}</span>`;
     this.refreshBag();
+    const pr = this.game.progressOf ? this.game.progressOf(cfg.id) : null;
     for (const k of ['atk', 'dash', 'skill', 'skill2', 'skill3']) {
-      const t = cfg.labels[k];
+      // 파생 기술을 수련했으면 그 이름으로
+      const slot = { skill: 1, skill2: 2, skill3: 3 }[k];
+      const br = slot && pr ? branchOf(pr, cfg.id, pl?.level ?? 1, slot) : null;
+      const t = br ? EVOS[cfg.id][slot][br].short : cfg.labels[k];
       document.getElementById('sk-' + k).textContent = t;
       document.querySelectorAll('.lbl-' + k).forEach((el) => (el.textContent = t));
     }
@@ -89,6 +94,39 @@ export class UI {
       s.el.classList.toggle('locked', !!lv);
       if (lv) { s.cd.style.setProperty('--p', '0%'); const t = `Lv${lv}`; if (s.t.textContent !== t) s.t.textContent = t; s.el.classList.remove('cooling'); }
       else if (s.t.textContent.startsWith('Lv')) s.t.textContent = '';
+    }
+  }
+
+  // ---------- 기술 수련 ----------
+  showSkills(open) {
+    document.getElementById('skills').classList.toggle('show', open);
+    if (open) this.refreshSkills();
+  }
+
+  refreshSkills() {
+    const g = this.game, p = g.player;
+    const body = document.getElementById('skills-body');
+    if (!body || !document.getElementById('skills').classList.contains('show')) return;
+    const pr = g.progressOf(p.cls);
+    body.innerHTML = '';
+    const keys = { 1: 'K', 2: 'L', 3: 'I' };
+    for (const slot of [1, 2, 3]) {
+      const E = EVOS[p.cls][slot];
+      const locked = p.level < E.lv;
+      const row = document.createElement('div');
+      row.className = 'evo-row' + (locked ? ' locked' : '');
+      row.innerHTML = `<div class="evo-head"><span class="key">${keys[slot]}</span>${E.base} → 파생 기술<small>${locked ? `Lv.${E.lv}에 수련 가능 (지금 Lv.${p.level})` : pr.evo?.[slot] ? '수련함 · 다른 갈래로 바꿀 수 있음' : '<b style="color:#ffd76a">수련 가능!</b> 하나를 고르세요'}</small></div>`;
+      const opts = document.createElement('div');
+      opts.className = 'evo-opts';
+      for (const b of ['a', 'b']) {
+        const o = document.createElement('div');
+        o.className = 'evo-opt' + (pr.evo?.[slot] === b ? ' on' : '');
+        o.innerHTML = `<b>${E[b].name}</b><span>${E[b].desc}</span>`;
+        if (!locked) o.addEventListener('click', (e) => { e.stopPropagation(); g.chooseEvo(slot, b); });
+        opts.append(o);
+      }
+      row.append(opts);
+      body.append(row);
     }
   }
 

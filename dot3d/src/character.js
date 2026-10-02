@@ -956,10 +956,10 @@ export function makeElf(o = {}) {
   }, ...o });
 }
 
-export function makeLady() {
+export function makeLady(o = {}) {
   return new Rig({
     type: 'lady', scale: 1.15, skin: '#f6d8bc', robe: '#9cc46a', sleeve: '#9cc46a', cuff: '#d84a6a', skirt: '#d8486a',
-    pants: '#d8486a', hair: '#2a2024',
+    pants: '#d8486a', hair: '#2a2024', ...o,
   });
 }
 

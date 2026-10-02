@@ -14,7 +14,6 @@
   <div id="hpbars"></div>
   <div id="numbers"></div>
 
-  <div id="fade"></div>
   <div id="hud" class="hidden">
     <div id="status" class="panel">
       <div id="portrait"><canvas id="portrait-cv" width="20" height="20"></canvas></div>
@@ -33,6 +32,7 @@
     </div>
 
     <button id="bag-btn" class="panel" data-k="bag">가방<span>B</span><i class="dot hidden" id="bag-dot"></i></button>
+    <button id="evo-btn" class="panel" data-k="skills">기술<span>T</span><i class="dot hidden" id="evo-dot"></i></button>
 
     <div id="quest" class="panel">
       <div id="quest-title">임무</div>
@@ -71,6 +71,11 @@
         <div class="bag-sec">옷</div><div id="bag-outfits" class="grid"></div>
       </div>
     </div>
+  </div>
+
+  <div id="skills" class="panel">
+    <div class="bag-head">기술 수련 <small>T / Esc 닫기 · 갈래를 눌러 고르기 (언제든 바꿀 수 있어요)</small><button id="skills-close">✕</button></div>
+    <div id="skills-body"></div>
   </div>
 
   <div id="title">

@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { makeDokkaebi, makeGuard, makeLady, makeFox, makeJiangshi, makeGhost, makeReaper } from './character.js';
+import { makeDokkaebi, makeGuard, makeLady, makeMage, makeFox, makeJiangshi, makeGhost, makeReaper } from './character.js';
 import { CLASSES } from './classes.js';
 import { outfitLook } from './character.js';
 import { item, WEAPONS, perksOf } from './items.js';
@@ -281,7 +281,7 @@ export class Player {
     this.combo = 0;
     this.sinceAttack = 0;
     if (!fromSheath) this.game.audio.play('swing3');
-    this.game.spawnSwordWave(this);
+    this.game.skillSword1(this);
     this.lastCombat = this.game.time;
   }
 
@@ -470,7 +470,7 @@ const TYPES = {
 };
 
 export class Enemy {
-  constructor(game, type, pos, level = 1) {
+  constructor(game, type, pos, level = 1, opts = {}) {
     this.game = game;
     this.type = type;
     const T = (this.T = TYPES[type]);
@@ -512,7 +512,9 @@ export class Enemy {
     const [f1, f2] = T.pal.fire;
     game.fx.colorFire(pos.x, pos.y, pos.z, this.isBoss ? 80 : 30, this.isBoss ? 1.2 : 0.5, f1, f2);
     game.fx.ring(pos, this.isBoss ? 3 : 1.4, f1, 0.5);
-    game.audio.play('spawn');
+    this.field = !!opts.field;
+    this.aggro = !this.field;
+    if (!this.field) game.audio.play('spawn');
   }
 
   buildWisp() {
@@ -641,7 +643,7 @@ export class Enemy {
       const k = smooth(clamp(this.st / 0.7, 0, 1));
       this.root.scale.setScalar(Math.max(0.01, k));
       if (Math.random() < 0.6) g.fx.colorFire(this.pos.x, this.pos.y, this.pos.z, 2, this.isBoss ? 1 : 0.4, ...this.T.pal.fire);
-      if (this.st >= 0.7) { this.spawning = false; this.state = 'chase'; this.st = 0; this.root.scale.setScalar(1); if (Math.random() < 0.4 || this.isBoss) g.audio.play(this.T.pal === PAL.blue ? 'laugh' : this.T.pal === PAL.fox ? 'howl' : 'wail'); }
+      if (this.st >= 0.7) { this.spawning = false; this.state = 'chase'; this.st = 0; this.root.scale.setScalar(1); if (!this.field && (Math.random() < 0.4 || this.isBoss)) g.audio.play(this.T.pal === PAL.blue ? 'laugh' : this.T.pal === PAL.fox ? 'howl' : 'wail'); }
       if (this.isWisp && !this.rig) this.root.position.set(this.pos.x, this.pos.y + 1.3 * k, this.pos.z);
       else this.place(dt, 0);
       return true;
@@ -654,6 +656,11 @@ export class Enemy {
     let attackAnim = null;
     const T = this.T;
 
+    // 필드 몬스터: 플레이어를 알아채기 전엔 제자리 근처를 어슬렁, 멀리 달아나면 포기
+    if (this.field) {
+      if (this.aggro && (dist > 24 || p.dead)) { this.aggro = false; this.home = this.pos.clone(); this.state = 'chase'; this.clearTele(); }
+      if (!this.aggro) return this.updateIdle(dt, dist, toYaw);
+    }
     if (this.isWisp) return this.updateWisp(dt, dist, toYaw);
 
     // 넉백
@@ -907,6 +914,60 @@ export class Enemy {
     return true;
   }
 
+  updateIdle(dt, dist, toYaw) {
+    const g = this.game, p = g.player;
+    if (!p.dead && ((dist < 8.5 && Math.abs(p.pos.y - this.pos.y) < 1.5) || this.hp < this.maxHp)) {
+      // 알아챔: 머리 위에 느낌표
+      this.aggro = true;
+      this.attackCd = Math.max(this.attackCd, 0.5);
+      g.fx.number(new THREE.Vector3(this.pos.x, this.y + (this.isWisp ? 2.2 : 2.0), this.pos.z), '!', 'alert');
+      // 근처 무리도 함께
+      for (const o of g.enemies) if (o !== this && o.field && !o.aggro && !o.dead && Math.hypot(o.pos.x - this.pos.x, o.pos.z - this.pos.z) < 6) o.aggro = true;
+      return true;
+    }
+    if (this.vel.lengthSq() > 0.001) {
+      g.world.move(this.pos, this.vel.x * dt, this.vel.z * dt, this.moveR);
+      this.vel.multiplyScalar(Math.exp(-9 * dt));
+    }
+    if (!this.home) this.home = this.pos.clone();
+    this.wanderT = (this.wanderT ?? rand(0.5, 2)) - dt;
+    if (this.wanderT <= 0) {
+      this.wanderT = rand(2, 5);
+      const a = Math.random() * Math.PI * 2, r = Math.random() * 4;
+      this.wanderTo = Math.random() < 0.35 ? null : { x: this.home.x + Math.cos(a) * r, z: this.home.z + Math.sin(a) * r };
+    }
+    let speed = 0;
+    if (this.wanderTo) {
+      const dx = this.wanderTo.x - this.pos.x, dz = this.wanderTo.z - this.pos.z;
+      const l = Math.hypot(dx, dz);
+      if (l > 0.3) {
+        const sp = this.T.speed * 0.35;
+        if (!g.world.move(this.pos, (dx / l) * sp * dt, (dz / l) * sp * dt, this.moveR)) this.wanderTo = null;
+        this.yaw = dampAngle(this.yaw, Math.atan2(dx, dz), 5, dt);
+        speed = sp;
+      } else this.wanderTo = null;
+    }
+    if (this.isWisp && !this.rig) {
+      const h = g.world.heightAt(this.pos.x, this.pos.z);
+      this.y = lerp(this.y, h, 1 - Math.exp(-6 * dt));
+      this.root.position.set(this.pos.x, this.y + 1.3 + Math.sin(g.time * 3 + this.strafe) * 0.15, this.pos.z);
+      this.root.rotation.y = this.yaw;
+      this.root.scale.setScalar(1);
+      this.coreMat.color.set(this.flashT > 0 ? '#ffffff' : this.T.pal.idle);
+    } else if (this.isWisp) {
+      const h = g.world.heightAt(this.pos.x, this.pos.z);
+      this.y = lerp(this.y, h, 1 - Math.exp(-6 * dt));
+      this.root.position.set(this.pos.x, this.y, this.pos.z);
+      this.root.rotation.y = this.yaw;
+      this.rig.animate(dt, { speed: speed > 0 ? 1 : 0 });
+      this.rig.setFlash(this.flashT > 0 ? 0.9 : 0);
+    } else {
+      if (this.T.hop) this.hop = 0;
+      this.place(dt, speed);
+    }
+    return true;
+  }
+
   // 추격 이동: 곧장 갈 수 있으면 직선(살짝 옆으로 돌아 들어옴), 막혀 있으면 흐름장 길찾기,
   // 그래도 제자리에 걸리면 잠깐 옆으로 비켜서 빠져나옴. 반환: 실제 이동 속도
   chaseMove(dt, sp, dx, dz, dist) {
@@ -973,7 +1034,10 @@ export class Enemy {
 export class NPC {
   constructor(game, kind, x, z, yaw, name, lines) {
     this.game = game;
-    this.rig = kind === 'guard' ? makeGuard() : makeLady();
+    this.rig = kind === 'guard' ? makeGuard()
+      : kind === 'herb' ? makeLady({ robe: '#c8b890', sleeve: '#c8b890', cuff: '#5a7a3a', skirt: '#6a5a3a', pants: '#6a5a3a', hair: '#3a2a20' })
+      : kind === 'hermit' ? makeMage({ robe: '#c8c8c0', sleeve: '#c8c8c0', cuff: '#4a4a5a', belt: '#4a4a5a', pants: '#5a5a62', hair: '#e8e8e8' })
+      : makeLady();
     this.pos = new THREE.Vector3(x, game.world.heightAt(x, z), z);
     this.baseYaw = yaw;
     this.yaw = yaw;

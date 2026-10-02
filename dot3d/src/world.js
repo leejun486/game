@@ -6,17 +6,24 @@ import * as T from './textures.js';
 import { mulberry32 } from './util.js';
 import { buildBamboo, buildTemple } from './worlds2.js';
 
+// 오픈월드: 세 지역을 남북으로 이어 붙임. 궁궐 남문 → 죽림 → 설원 폐사찰
+//  ox/oz: 지역 원점의 월드 위치, flip: 180° 돌려 놓음(폐사찰 입구가 죽림 쪽을 보게)
+//  x0..z1: 그 지역에서 걸을 수 있는 월드 좌표 범위 (이웃 지역과 살짝 겹쳐서 이어짐)
+export const REGIONS = [
+  { id: 'palace', ox: 0, oz: 0, flip: false, x0: -21.6, x1: 21.6, z0: -33.3, z1: 30, gate: { z: 21.2, x0: -3.2, x1: 3.2 }, from: -1e9, to: 29.5, spawn: [0, 0.12, 16] },
+  { id: 'bamboo', ox: 0, oz: 55.6, flip: false, x0: -19.6, x1: 19.6, z0: 29, z1: 78, from: 29.5, to: 77.2, spawn: [0, 0, 36] },
+  { id: 'temple', ox: 0, oz: 98.8, flip: true, x0: -19.6, x1: 19.6, z0: 76.2, z1: 124.4, from: 77.2, to: 1e9, spawn: [0, 0, 84] },
+];
+
 export class World {
-  constructor(scene, mapId = 'palace') {
+  constructor(scene) {
     this.scene = scene;
-    this.mapId = mapId;
-    // 걸을 수 있는 경계. 궁궐은 남쪽 정문 통로만 바깥으로 이어짐
-    this.bounds = mapId === 'palace'
-      ? { x0: -21.6, x1: 21.6, z0: -33.3, z1: 30, gate: { z: 21.2, x0: -3.2, x1: 3.2 } }
-      : { x0: -19.6, x1: 19.6, z0: -25.6, z1: 21.6 };
-    this.spawn = mapId === 'palace' ? new THREE.Vector3(0, 0.12, 16) : new THREE.Vector3(0, 0, 15);
-    this.root = new THREE.Group();
-    scene.add(this.root);
+    this.regions = REGIONS;
+    // 전체 외곽 (길찾기 격자 범위)
+    this.bounds = { x0: -21.6, x1: 21.6, z0: -33.3, z1: 124.4 };
+    this.spawn = new THREE.Vector3(0, 0.12, 16);
+    this.top = new THREE.Group();
+    scene.add(this.top);
     this.rects = [];     // 높이 사각형 {x0,x1,z0,z1,h}
     this.ramps = [];     // 계단 경사 {x0,x1,z0,z1,h0,h1}
     this.blockRects = [];
@@ -27,14 +34,55 @@ export class World {
     this.windows = [];
     this.spawnPoints = [];
     this.makeMaterials();
-    if (mapId === 'palace') this.build();
-    else if (mapId === 'bamboo') buildBamboo(this);
+    for (const R of REGIONS) this.buildRegion(R);
+    this.root = this.top;
+  }
+
+  // 지역 하나를 제 좌표계(그룹)에 짓고, 충돌·높이 정보를 월드 좌표로 옮김
+  buildRegion(R) {
+    const g = new THREE.Group();
+    g.position.set(R.ox, 0, R.oz);
+    if (R.flip) g.rotation.y = Math.PI;
+    this.top.add(g);
+    this.root = g;
+    const n = { rects: this.rects.length, ramps: this.ramps.length, blockRects: this.blockRects.length, circles: this.circles.length, drums: this.drums.length, lanterns: this.lanterns.length, spawnPoints: this.spawnPoints.length };
+    if (R.id === 'palace') this.build();
+    else if (R.id === 'bamboo') buildBamboo(this);
     else buildTemple(this);
+    const f = (x, z) => (R.flip ? [R.ox - x, R.oz - z] : [R.ox + x, R.oz + z]);
+    const box = (r) => {
+      const [ax, az] = f(r.x0, r.z0), [bx, bz] = f(r.x1, r.z1);
+      r.x0 = Math.min(ax, bx); r.x1 = Math.max(ax, bx); r.z0 = Math.min(az, bz); r.z1 = Math.max(az, bz);
+    };
+    for (const r of this.rects.slice(n.rects)) box(r);
+    for (const r of this.blockRects.slice(n.blockRects)) box(r);
+    for (const r of this.ramps.slice(n.ramps)) { box(r); if (R.flip) [r.h0, r.h1] = [r.h1, r.h0]; }
+    for (const c of this.circles.slice(n.circles)) [c.x, c.z] = f(c.x, c.z);
+    const v = (p) => { const [x, z] = f(p.x, p.z); p.x = x; p.z = z; };
+    for (const d of this.drums.slice(n.drums)) { v(d.pos); d.region = R.id; }
+    for (const p of this.lanterns.slice(n.lanterns)) v(p);
+    for (const p of this.spawnPoints.slice(n.spawnPoints)) v(p);
+  }
+
+  // 월드 좌표가 속한 지역
+  regionAt(x, z) {
+    for (const R of REGIONS) if (z >= R.from && z < R.to) return R;
+    return REGIONS[0];
+  }
+
+  // 어느 지역 안이든 걸을 수 있는 범위인지 (몸체 반경 r 만큼 여유)
+  inside(x, z, r = 0) {
+    for (const R of REGIONS) {
+      if (x < R.x0 + r || x > R.x1 - r || z < R.z0 + r || z > R.z1) continue;
+      if (R.gate && z > R.gate.z - r && (x < R.gate.x0 + r || x > R.gate.x1 - r)) continue;
+      return true;
+    }
+    return false;
   }
 
   dispose() {
-    this.scene.remove(this.root);
-    this.root.traverse((o) => { if (o.geometry) o.geometry.dispose(); });
+    this.scene.remove(this.top);
+    this.top.traverse((o) => { if (o.geometry) o.geometry.dispose(); });
   }
 
   makeMaterials() {
@@ -97,10 +145,8 @@ export class World {
   }
 
   isBlocked(x, z, r, fromH) {
-    // 맵 경계 (궁궐은 정문 통로만 바깥으로 이어짐)
-    const bd = this.bounds;
-    if (x < bd.x0 + r || x > bd.x1 - r || z < bd.z0 + r || z > bd.z1) return true;
-    if (bd.gate && z > bd.gate.z - r && (x < bd.gate.x0 + r || x > bd.gate.x1 - r)) return true;
+    // 지역 경계 (궁궐은 정문 통로로만 바깥과 이어짐)
+    if (!this.inside(x, z, r)) return true;
     for (const b of this.blockRects) if (x > b.x0 - r && x < b.x1 + r && z > b.z0 - r && z < b.z1 + r) return true;
     for (const c of this.circles) {
       const dx = x - c.x, dz = z - c.z, rr = c.r + r;
@@ -123,7 +169,7 @@ export class World {
     const h0 = this.heightAt(pos.x, pos.z);
     if (this.isBlocked(pos.x, pos.z, r, h0)) {
       const nx = pos.x + dx, nz = pos.z + dz;
-      if (Math.abs(this.heightAt(nx, nz) - h0) <= 0.45 && nx > -21.6 && nx < 21.6 && nz > -33.3 && nz < 30) { pos.x = nx; pos.z = nz; return true; }
+      if (Math.abs(this.heightAt(nx, nz) - h0) <= 0.45 && this.inside(nx, nz)) { pos.x = nx; pos.z = nz; return true; }
     }
     for (let i = 0; i < steps; i++) {
       const h = this.heightAt(pos.x, pos.z);
@@ -140,7 +186,8 @@ export class World {
       const a = Math.random() * Math.PI * 2, d = rMin + Math.random() * (rMax - rMin);
       const x = cx + Math.cos(a) * d, z = cz + Math.sin(a) * d;
       const h = this.heightAt(x, z);
-      if (!this.isBlocked(x, z, 0.5, h) && z < this.bounds.z1 - 2 && (!this.bounds.gate || z < 20)) return new THREE.Vector3(x, h, z);
+      // 궁궐 남문 통로 밖으로는 소환하지 않음
+      if (!this.isBlocked(x, z, 0.5, h) && this.inside(x, z, 1.5) && !(z > 20 && z < 30)) return new THREE.Vector3(x, h, z);
     }
     return null;
   }
@@ -153,10 +200,11 @@ export class World {
     this.foliage = new Batcher();
 
     // 바깥 풀밭 (성벽 밖)
-    const outer = new THREE.Mesh(new THREE.PlaneGeometry(160, 160), M.dirt);
-    outer.geometry.attributes.uv.array.forEach((v, i, a) => (a[i] = v * 80));
+    // 남쪽은 죽림 바닥과 이어지므로 z=30 까지만
+    const outer = new THREE.Mesh(new THREE.PlaneGeometry(160, 110), M.dirt);
+    outer.geometry.attributes.uv.array.forEach((v, i, a) => (a[i] = v * (i % 2 === 0 ? 80 : 55)));
     outer.rotation.x = -Math.PI / 2;
-    outer.position.y = -0.02;
+    outer.position.set(0, -0.02, -25);
     outer.receiveShadow = true;
     this.root.add(outer);
 
@@ -243,7 +291,7 @@ export class World {
     // 뒤뜰 나무
     for (const [x, z, s, sd] of [[-16, -28, 1.2, 11], [15, -27, 1.3, 12], [-5, -30, 1.0, 13], [6, -31, 0.95, 14], [17.5, -18.5, 0.9, 15], [-17.5, -18, 0.95, 16]]) this.pine(x, 0, z, s, sd);
     // 성 밖 나무
-    for (const [x, z, s, sd] of [[-12, 27, 1.2, 21], [11, 28, 1.3, 22], [-22, 30, 1.0, 23], [24, 31, 1.1, 24], [-7, 33, 0.9, 25], [7, 35, 1.0, 26], [-30, 10, 1.3, 27], [31, -5, 1.2, 28], [-31, -20, 1.2, 29], [30, 15, 1.1, 30]]) this.pine(x, 0, z, s, sd, false);
+    for (const [x, z, s, sd] of [[-12, 27, 1.2, 21], [11, 28, 1.3, 22], [-30, 10, 1.3, 27], [31, -5, 1.2, 28], [-31, -20, 1.2, 29], [30, 15, 1.1, 30]]) this.pine(x, 0, z, s, sd, false);
 
     // 화분 받침
     for (const s of [-1, 1]) {
@@ -844,6 +892,7 @@ export class World {
       const d0 = hd[0];
       const a = pop();
       if (d0 > D[a]) continue;
+      if (d0 > 140) break; // 70유닛 밖은 계산하지 않음 (넓은 오픈월드)
       const ai = a % nx, aj = (a - ai) / nx;
       for (let k = 0; k < 8; k++) {
         const di = NDI[k], dj = NDJ[k];
