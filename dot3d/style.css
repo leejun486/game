@@ -255,3 +255,4 @@ body.touch #gameover .s b::after { content: ' / 화면 탭'; }
 @media (max-width: 600px) { #bag-btn { top: 66px; left: auto; right: 8px; } }
 #fade { position: absolute; inset: 0; background: #000; opacity: 0; pointer-events: none; transition: opacity 0.4s steps(6); z-index: 30; }
 #fade.on { opacity: 1; }
+.eq small em, .it small em { font-style: normal; color: #ff9a7a; }

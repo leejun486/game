@@ -166,6 +166,7 @@ export class Rig {
     this.handL = this.armL.userData.hand;
 
     if (cfg.armor) this.buildArmor(cfg);
+    if (cfg.acc) this.buildAccessory(cfg.acc, hr, cfg);
     if (cfg.weapon) this.buildWeapon(cfg.weapon);
 
     this.root.traverse((o) => { if (o.isMesh) o.castShadow = true; });
@@ -345,6 +346,60 @@ export class Rig {
     if (heavy) {
       this.hips.add(mesh(new THREE.BoxGeometry(0.42, 0.14, 0.06), dark, 0, -0.06, 0.24));
       this.head.add(mesh(new THREE.BoxGeometry(0.06, 0.12, 0.03), plate, 0, 0.2, 0.28));
+    }
+  }
+
+  // 보스 전용 옷 장식: 도깨비 뿔, 여우 귀와 꼬리, 저승사자 갓
+  buildAccessory(acc, hr, cfg) {
+    if (acc === 'horns') {
+      const horn = this.mat({ color: C('#ffd040'), emissive: C('#3a2000') });
+      const tip = this.mat({ color: C('#c8302c') });
+      for (const s of [-1, 1]) {
+        const h = new THREE.Group();
+        h.position.set(s * 0.16, hr * 0.85, 0.05);
+        h.rotation.z = -s * 0.4;
+        h.add(mesh(new THREE.ConeGeometry(0.07, 0.26, 5), horn, 0, 0.11, 0));
+        h.add(mesh(new THREE.ConeGeometry(0.035, 0.1, 5), tip, 0, 0.27, 0));
+        this.head.add(h);
+      }
+      // 이마의 도깨비 구슬
+      this.head.add(mesh(new THREE.IcosahedronGeometry(0.035, 0), this.mat({ color: C('#9ad8ff'), emissive: C('#1a6aaa') }), 0, hr * 0.45, hr * 0.92));
+    } else if (acc === 'fox') {
+      const fur = this.mat({ color: C('#f4ece4') });
+      const inner = this.mat({ color: C('#ff9a6a') });
+      for (const s of [-1, 1]) {
+        const ear = new THREE.Group();
+        ear.position.set(s * 0.17, hr * 0.95, 0);
+        ear.rotation.z = -s * 0.3;
+        ear.add(mesh(new THREE.ConeGeometry(0.095, 0.26, 4), fur, 0, 0.11, 0));
+        ear.add(mesh(new THREE.ConeGeometry(0.05, 0.16, 4), inner, 0, 0.08, 0.04));
+        this.head.add(ear);
+      }
+      // 허리 뒤로 늘어진 꼬리 셋
+      this.foxTails = [];
+      const tipM = this.mat({ color: C('#ff7a2a'), emissive: C('#4a1400') });
+      for (let i = -1; i <= 1; i++) {
+        const t = new THREE.Group();
+        t.position.set(i * 0.08, 0.1, -0.2);
+        t.rotation.set(1.0, i * 0.5, 0);
+        const body = mesh(new THREE.CapsuleGeometry(0.085, 0.36, 3, 6), fur, 0, -0.24, 0);
+        t.add(body);
+        t.add(mesh(new THREE.SphereGeometry(0.09, 6, 5), tipM, 0, -0.48, 0));
+        this.hips.add(t);
+        this.foxTails.push(t);
+      }
+    } else if (acc === 'gat') {
+      const hatM = this.mat({ color: C('#0c0a10') });
+      const band = this.mat({ color: C('#8a5ad8'), emissive: C('#2a0a4a') });
+      const hy = hr * 0.66;
+      if (cfg.type !== 'mage') {
+        this.head.add(mesh(new THREE.CylinderGeometry(0.44, 0.44, 0.022, 18), hatM, 0, hy, 0));
+        this.head.add(mesh(new THREE.CylinderGeometry(0.13, 0.15, 0.3, 12), hatM, 0, hy + 0.15, 0));
+      }
+      this.head.add(mesh(new THREE.CylinderGeometry(0.156, 0.156, 0.04, 12), band, 0, hy + 0.04, 0));
+      // 갓끈: 보랏빛 구슬 줄
+      const bead = this.mat({ color: C('#e0c8ff'), emissive: C('#4a2a8a') });
+      for (const s of [-1, 1]) for (let i = 0; i < 6; i++) this.head.add(mesh(new THREE.SphereGeometry(0.024, 4, 3), bead, s * (0.24 - i * 0.012), hy - 0.05 - i * 0.065, 0.07));
     }
   }
 
@@ -741,6 +796,12 @@ export class Rig {
     if (this.tail) {
       this.tail.rotation.x = 0.25 + run * 0.6 + Math.sin(this.idleT * 7) * 0.08 * run;
     }
+    if (this.foxTails) {
+      this.foxTails.forEach((t, i) => {
+        t.rotation.x = 1.0 + run * 0.5 + Math.sin(this.idleT * 3 + i) * 0.12;
+        t.rotation.y = (i - 1) * 0.5 + Math.sin(this.idleT * 2.2 + i * 1.7) * 0.25;
+      });
+    }
 
     // 사망: 쓰러지기
     if (p.dead) {
@@ -763,8 +824,9 @@ export function makeHero(o = {}) {
 }
 
 // 옷 팔레트를 직업별 리그 색 설정으로 바꿈
-export function outfitColors(type, pal, armor) {
+export function outfitColors(type, pal, armor, acc) {
   if (!pal) return {};
+  if (acc) return { ...outfitColors(type, pal, armor), acc };
   if (type === 'hero') return { robe: pal.main, sleeve: pal.main, cuff: pal.accent, belt: pal.accent, collar: pal.accent, pants: pal.dark, armor, trim: pal.trim };
   if (type === 'mage') return { robe: pal.main, sleeve: pal.main, cuff: pal.trim, belt: pal.trim, pants: pal.dark, armor, trim: pal.trim };
   return { robe: pal.main, sleeve: pal.main, cuff: pal.trim, skirt: pal.accent, belt: pal.dark, pants: pal.trim, armor, trim: pal.trim };

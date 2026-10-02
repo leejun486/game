@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { makeDokkaebi, makeGuard, makeLady, makeFox, makeJiangshi, makeGhost, makeReaper } from './character.js';
 import { CLASSES } from './classes.js';
 import { outfitColors } from './character.js';
-import { item, WEAPONS } from './items.js';
+import { item, WEAPONS, perksOf } from './items.js';
 
 // 스킬 해금 레벨
 export const SKILL_LEVEL = { 2: 3, 3: 5 };
@@ -70,7 +70,7 @@ export class Player {
     const w = item(pr.weapon), o = item(pr.outfit);
     const type = { sword: 'hero', mage: 'mage', elf: 'elf' }[this.cls];
     const old = this.rig;
-    this.rig = this.cfg.make({ wstyle: w?.style, ...outfitColors(type, o?.pal, o?.armor) });
+    this.rig = this.cfg.make({ wstyle: w?.style, ...outfitColors(type, o?.pal, o?.armor, o?.acc) });
     if (old) {
       this.game.scene.remove(old.root);
       this.rig.root.position.copy(old.root.position);
@@ -87,6 +87,8 @@ export class Player {
     this.maxHp = Math.round(this.cfg.hp + (this.level - 1) * 12 + (o?.hp || 0));
     this.atkMul = (1 + (this.level - 1) * 0.08) * (1 + (w?.atk || 0));
     this.def = o?.def || 0;
+    this.perks = perksOf(pr.weapon, pr.outfit);
+    this.dashMax = this.cfg.dashCd * (this.perks.has('swift') ? 0.7 : 1);
     this.hp = full ? this.maxHp : Math.max(1, Math.round(this.maxHp * ratio));
   }
 
@@ -334,7 +336,7 @@ export class Player {
         if (this.cls === 'elf' && Math.random() < 0.6) g.fx.norm.emit({ x: this.pos.x + rand(-0.3, 0.3), y: this.pos.y + rand(0.2, 0.9), z: this.pos.z + rand(-0.3, 0.3), vx: rand(-1, 1), vy: rand(0.5, 1.5), vz: rand(-1, 1), wob: 1.5, life: rand(0.5, 0.9), size: 2, color: Math.random() < 0.5 ? '#8ad06a' : '#c8e88a' });
       } else {
         const slow = this.attack ? (this.attack.kind === 5 ? 0.7 : this.attack.skill ? (this.cls === 'sword' ? 0.1 : 0.25) : this.cls === 'sword' ? 0.22 : 0.45) : 1;
-        const sp = 4.6 * slow;
+        const sp = 4.6 * slow * (this.perks?.has('swift') ? 1.15 : 1);
         if (input.moveLen > 0.1) {
           mv = 1;
           const dx = input.mx * sp, dz = input.mz * sp;

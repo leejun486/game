@@ -106,7 +106,7 @@ export class UI {
     cv.width = cv.height = 16;
     drawItemIcon(cv, id);
     const txt = document.createElement('div');
-    txt.innerHTML = `<span style="color:${RARITY[it.tier].color}">${it.name}</span><small>${RARITY[it.tier].name} · ${itemDesc(it)}</small>`;
+    txt.innerHTML = `<span style="color:${RARITY[it.tier].color}">${it.name}</span><small>${RARITY[it.tier].name} · ${itemDesc(it, !cls.includes('locked-it'))}</small>`;
     row.append(cv, txt);
     if (onClick) row.addEventListener('click', (e) => { e.stopPropagation(); onClick(); });
     return row;

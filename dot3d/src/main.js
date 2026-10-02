@@ -9,7 +9,7 @@ import { shared } from './materials.js';
 import { loadSave, writeSave, clearSave } from './save.js';
 import { CLASSES, CLASS_ORDER } from './classes.js';
 import { drawPortrait } from './ui.js';
-import { item, rollDrop, RARITY, itemDesc, WEAPONS, OUTFITS } from './items.js';
+import { item, rollDrop, bossDrop, RARITY, itemDesc, WEAPONS, OUTFITS } from './items.js';
 import { expNeed, SKILL_LEVEL } from './entities.js';
 import { MAPS, BOSS_TYPES } from './maps.js';
 import { clamp, lerp, rand, angleDiff, damp } from './util.js';
@@ -558,7 +558,12 @@ class Game {
       this.ui.toast(`이미 가진 ${it.name} → 경험치 +${15 + it.tier * 15}`, 2.2);
     } else {
       this.inv.add(id);
-      this.ui.toast(`획득! [${r.name}] ${it.name} — B 키로 가방 열기`, 3);
+      if (it.perk) {
+        this.ui.banner(it.name, `보스 전용 장비 획득! — B 키로 착용`, 2.6, 'win-banner');
+        this.audio.play('levelup');
+        this.fx.ring(p.pos, 2.4, r.color, 0.5);
+        this.fx.colorFire(p.pos.x, p.y + 0.5, p.pos.z, 40, 0.6, '#ffe0a0', r.color);
+      } else this.ui.toast(`획득! [${r.name}] ${it.name} — B 키로 가방 열기`, 3);
       this.ui.newItem = true;
       this.ui.refreshBag();
     }
@@ -908,10 +913,17 @@ class Game {
 
   damageEnemy(e, dmg, crit, knock, stun) {
     const pl = this.player;
-    dmg = Math.max(1, Math.round(dmg * (pl.atkMul || 1)));
+    const perks = pl.perks;
+    const base = dmg;
+    let mul = pl.atkMul || 1;
+    if (perks?.has('rage') && pl.hp < pl.maxHp * 0.4) mul *= 1.35;
+    const exec = perks?.has('execute') && e.hp < e.maxHp * 0.35;
+    if (exec) mul *= 1.6;
+    dmg = Math.max(1, Math.round(dmg * mul));
     const dir = V(e.pos.x - pl.pos.x, 0, e.pos.z - pl.pos.z).normalize();
     if (!e.hit(dmg, dir, knock, stun)) return;
     const c = e.center().clone();
+    if (perks?.size) this.weaponPerks(e, c, base, dmg, exec);
     this.fx.spark(c.x, c.y, c.z, crit ? 18 : 10, crit ? '#fff07a' : '#ffffff', crit ? 8 : 6);
     this.fx.number(c.clone().add(V(0, 0.5 * (e.isBoss ? 2 : 1), 0)), dmg, crit ? 'crit' : 'normal');
     this.audio.play(crit ? 'crit' : 'hit');
@@ -1569,6 +1581,42 @@ class Game {
     if (Math.hypot(p.pos.x - at.x, p.pos.z - at.z) < radius + p.radius && Math.abs(p.pos.y - at.y) < 1.2) p.damage(dmg, at);
   }
 
+  // 보스 장비 고유 효과 (맞힌 순간)
+  weaponPerks(e, c, base, dmg, exec) {
+    const pl = this.player;
+    if (exec) {
+      this.fx.colorFire(c.x, c.y, c.z, 10, 0.3, '#e0c8ff', '#6a2aff');
+      if (Math.random() < 0.3) this.fx.cross(c, '#c890ff', 2.2, 0.3);
+    }
+    if (pl.perks.has('drain') && !pl.dead) {
+      pl.drainAcc = (pl.drainAcc || 0) + dmg * 0.06;
+      if (pl.drainAcc >= 1 && pl.hp < pl.maxHp) {
+        const h = Math.min(Math.floor(pl.drainAcc), pl.maxHp - pl.hp);
+        pl.hp += h;
+        pl.drainAcc -= Math.floor(pl.drainAcc);
+        if (this.time - (pl.drainShown || 0) > 0.5) {
+          pl.drainShown = this.time;
+          this.fx.number(pl.pos.clone().add(V(0, 1.9, 0)), `+${h}`, 'heal');
+        }
+        this.fx.norm.emit({ x: c.x, y: c.y, z: c.z, vx: (pl.pos.x - c.x) * 2, vy: 2, vz: (pl.pos.z - c.z) * 2, drag: 1, life: 0.5, size: 3, color: '#ffb070' });
+      }
+    }
+    if (pl.perks.has('quake') && !this.inQuake && Math.random() < 0.2) {
+      // 도깨비 벼락: 맞은 적 자리에 벼락 + 주변 충격파
+      this.inQuake = true;
+      const at = V(e.pos.x, e.y, e.pos.z);
+      this.fx.bolt(at, 0.8);
+      this.fx.ring(at, 2.6, '#9ad8ff', 0.35);
+      this.fx.spark(at.x, at.y + 0.5, at.z, 16, '#bfe8ff', 7);
+      this.audio.play('thunder');
+      for (const o of this.enemies) {
+        if (o.dead || o.spawning) continue;
+        if (Math.hypot(o.pos.x - at.x, o.pos.z - at.z) < 2.6) this.damageEnemy(o, Math.max(4, Math.round(base * 0.6)), false, 3, 0.25);
+      }
+      this.inQuake = false;
+    }
+  }
+
   onEnemyKilled(e) {
     this.kills++;
     const exp = Math.round(e.T.exp * (1 + this.round * 0.25));
@@ -1576,6 +1624,17 @@ class Game {
     this.fx.number(V(e.pos.x, e.y + (e.isBoss ? 4 : 2.2), e.pos.z), `+${exp} EXP`, 'exp');
     const drop = rollDrop(e.type, this.round, this.player.cls);
     if (drop) this.spawnDrop(e.pos, drop);
+    // 보스는 전용 장비를 하나 더 떨어뜨림
+    const bd = e.isBoss && bossDrop(e.type, this.player.cls, this.inv);
+    if (bd) this.spawnDrop(e.pos, bd);
+    const pl = this.player;
+    if (pl.perks?.has('soul') && !pl.dead && pl.hp < pl.maxHp) {
+      const h = Math.min(Math.ceil(pl.maxHp * 0.04), pl.maxHp - pl.hp);
+      pl.hp += h;
+      this.fx.number(pl.pos.clone().add(V(0, 2.1, 0)), `+${h}`, 'heal');
+      const c = e.center();
+      for (let i = 0; i < 8; i++) this.fx.add.emit({ x: c.x + rand(-0.3, 0.3), y: c.y + rand(0, 0.5), z: c.z + rand(-0.3, 0.3), vx: (pl.pos.x - c.x) * 1.6, vy: rand(1, 2.5), vz: (pl.pos.z - c.z) * 1.6, drag: 1, life: 0.6, size: 3, color: '#e0c8ff', color2: '#6a2aff' });
+    }
     if (this.target === e) this.target = null;
     this.updateQuest();
     if (e.isBoss) {
