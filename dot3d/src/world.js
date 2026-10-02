@@ -1,0 +1,792 @@
+// 궁궐 마당 레벨: 지오메트리 + 충돌/높이
+import * as THREE from 'three';
+import { toon, animateMesh, ANIM, shared } from './materials.js';
+import { boxGeo, cylGeo, Batcher, roofGeometry, latheGeo } from './geom.js';
+import * as T from './textures.js';
+import { mulberry32 } from './util.js';
+
+export class World {
+  constructor(scene) {
+    this.scene = scene;
+    this.root = new THREE.Group();
+    scene.add(this.root);
+    this.rects = [];     // 높이 사각형 {x0,x1,z0,z1,h}
+    this.ramps = [];     // 계단 경사 {x0,x1,z0,z1,h0,h1}
+    this.blockRects = [];
+    this.circles = [];   // {x,z,r}
+    this.lanterns = [];  // 밤에 켜지는 빛 위치
+    this.glowMats = [];  // 밤에 빛나는 재질 {mat, base}
+    this.drums = [];
+    this.windows = [];
+    this.spawnPoints = [];
+    this.makeMaterials();
+    this.build();
+  }
+
+  makeMaterials() {
+    const c = (hex) => new THREE.Color(hex);
+    this.M = {
+      floor: toon({ map: T.stoneFloorTex() }),
+      slab: toon({ map: T.stoneFloorTex(9, [186, 178, 160], 25) }),
+      path: toon({ map: T.pathStoneTex() }),
+      block: toon({ map: T.stoneBlockTex() }),
+      blockDark: toon({ map: T.stoneBlockTex([140, 134, 120]) }),
+      grass: toon({ map: T.grassTex() }),
+      dirt: toon({ map: T.dirtTex() }),
+      wood: toon({ map: T.woodTex() }),
+      darkWood: toon({ map: T.darkWoodTex() }),
+      roof: toon({ map: T.roofTileTex() }),
+      roofUnder: toon({ map: T.dancheongTex() }),
+      fascia: toon({ map: T.dancheongTex(), side: THREE.DoubleSide }),
+      ridge: toon({ color: c('#3b4048') }),
+      mortar: toon({ color: c('#e2dccb') }),
+      dancheong: toon({ map: T.dancheongTex() }),
+      plaster: toon({ map: T.plasterTex() }),
+      bark: toon({ map: T.barkTex() }),
+      leaf: toon({ color: c('#3f6e3e') }),
+      leaf2: toon({ color: c('#5f924a') }),
+      bronze: toon({ color: c('#6e5a3e') }),
+      bronzeDark: toon({ color: c('#3c3226') }),
+      gold: toon({ color: c('#d9a83a') }),
+      black: toon({ color: c('#2a2624') }),
+      stoneLight: toon({ color: c('#bdb5a2') }),
+      stoneGrey: toon({ color: c('#a29c8e') }),
+      pot: toon({ color: c('#c9b48e') }),
+      lotus: toon({ color: c('#4e8a4a') }),
+      pink: toon({ color: c('#e889a6') }),
+      orange: toon({ color: c('#e88a3a') }),
+      blue: toon({ color: c('#2f5aa8') }),
+      red: toon({ color: c('#b23a2e') }),
+      drumSide: toon({ map: T.drumSideTex() }),
+      drumFace: toon({ map: T.drumFaceTex() }),
+      medallion: toon({ map: T.medallionTex(), polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 }),
+      carving: toon({ map: T.stairCarvingTex() }),
+      lattice: toon({ map: T.latticeTex(), emissiveMap: T.latticeTex(true), emissive: c('#000000') }),
+      lampGlow: toon({ color: c('#f3e2b8'), emissive: c('#000000') }),
+    };
+    this.glowMats.push({ mat: this.M.lattice, color: new THREE.Color('#ffb060'), k: 1.1 });
+    this.glowMats.push({ mat: this.M.lampGlow, color: new THREE.Color('#ffc070'), k: 1.6 });
+  }
+
+  // ---------- 높이 / 충돌 ----------
+  heightAt(x, z) {
+    let h = 0;
+    for (const r of this.rects) if (x >= r.x0 && x <= r.x1 && z >= r.z0 && z <= r.z1 && r.h > h) h = r.h;
+    for (const r of this.ramps) {
+      if (x >= r.x0 && x <= r.x1 && z >= r.z0 && z <= r.z1) {
+        const t = (z - r.z0) / (r.z1 - r.z0);
+        const v = r.h0 + (r.h1 - r.h0) * t;
+        if (v > h) h = v;
+      }
+    }
+    return h;
+  }
+
+  isBlocked(x, z, r, fromH) {
+    // 맵 경계 (정문 통로만 바깥으로 이어짐)
+    if (x < -21.6 + r || x > 21.6 - r || z < -33.3 + r) return true;
+    if (z > 21.2 - r && (x < -3.2 + r || x > 3.2 - r)) return true;
+    if (z > 30) return true;
+    for (const b of this.blockRects) if (x > b.x0 - r && x < b.x1 + r && z > b.z0 - r && z < b.z1 + r) return true;
+    for (const c of this.circles) {
+      const dx = x - c.x, dz = z - c.z, rr = c.r + r;
+      if (dx * dx + dz * dz < rr * rr && Math.abs((c.y || 0) - fromH) < 1.5) return true;
+    }
+    const h = this.heightAt(x, z);
+    if (Math.abs(h - fromH) > 0.45) return true;
+    const k = r * 0.8;
+    for (const [ox, oz] of OFFS) if (Math.abs(this.heightAt(x + ox * k, z + oz * k) - h) > 0.45) return true;
+    return false;
+  }
+
+  // 원형 몸체를 미끄러지듯 이동. 반환: 실제로 움직였는지
+  move(pos, dx, dz, r) {
+    const len = Math.hypot(dx, dz);
+    const steps = Math.max(1, Math.ceil(len / 0.15));
+    const sx = dx / steps, sz = dz / steps;
+    let moved = false;
+    for (let i = 0; i < steps; i++) {
+      const h = this.heightAt(pos.x, pos.z);
+      if (!this.isBlocked(pos.x + sx, pos.z + sz, r, h)) { pos.x += sx; pos.z += sz; moved = true; }
+      else if (sx && !this.isBlocked(pos.x + sx, pos.z, r, h)) { pos.x += sx; moved = true; }
+      else if (sz && !this.isBlocked(pos.x, pos.z + sz, r, h)) { pos.z += sz; moved = true; }
+      else break;
+    }
+    return moved;
+  }
+
+  randomWalkable(cx, cz, rMin, rMax, tries = 30) {
+    for (let i = 0; i < tries; i++) {
+      const a = Math.random() * Math.PI * 2, d = rMin + Math.random() * (rMax - rMin);
+      const x = cx + Math.cos(a) * d, z = cz + Math.sin(a) * d;
+      const h = this.heightAt(x, z);
+      if (!this.isBlocked(x, z, 0.5, h) && z < 20) return new THREE.Vector3(x, h, z);
+    }
+    return null;
+  }
+
+  // ---------- 빌드 ----------
+  build() {
+    const M = this.M;
+    const B = (this.batch = new Batcher());
+    const R = mulberry32(77);
+    this.foliage = new Batcher();
+
+    // 바깥 풀밭 (성벽 밖)
+    const outer = new THREE.Mesh(new THREE.PlaneGeometry(160, 160), M.dirt);
+    outer.geometry.attributes.uv.array.forEach((v, i, a) => (a[i] = v * 80));
+    outer.rotation.x = -Math.PI / 2;
+    outer.position.y = -0.02;
+    outer.receiveShadow = true;
+    this.root.add(outer);
+
+    // 마당 박석
+    const floorGeo = new THREE.PlaneGeometry(48, 58);
+    floorGeo.attributes.uv.array.forEach((v, i, a) => (a[i] = v * (i % 2 === 0 ? 12 : 14.5)));
+    const floor = new THREE.Mesh(floorGeo, M.floor);
+    floor.rotation.x = -Math.PI / 2;
+    floor.position.set(0, 0, -6);
+    floor.receiveShadow = true;
+    this.root.add(floor);
+
+    // 어도 (가운데 길)
+    B.add(boxGeo(5.2, 0.12, 24.6, 4), M.path, mat4(0, 0.06, 8.7));
+    this.rects.push({ x0: -2.6, x1: 2.6, z0: -3.6, z1: 21, h: 0.12 });
+    // 정문 밖 길
+    B.add(boxGeo(5.2, 0.08, 10, 4), M.path, mat4(0, 0.04, 27));
+    this.rects.push({ x0: -2.6, x1: 2.6, z0: 21, z1: 32, h: 0.08 });
+
+    // 월대 1, 2
+    this.terrace(-15, 15, -14, -6, 0.9);
+    this.terrace(-12, 12, -22, -14, 1.8);
+    this.stairs(-6, -3.6, 0.9, 0);
+    this.stairs(-14, -11.6, 1.8, 0.9);
+
+    // 난간
+    this.balustrade(-15, -6, -2.9, -6, 0.9);
+    this.balustrade(2.9, -6, 15, -6, 0.9);
+    this.balustrade(-15, -14, -15, -6, 0.9);
+    this.balustrade(15, -14, 15, -6, 0.9);
+    this.balustrade(-12, -14, -2.9, -14, 1.8);
+    this.balustrade(2.9, -14, 12, -14, 1.8);
+    this.balustrade(-12, -22, -12, -14, 1.8);
+    this.balustrade(12, -22, 12, -14, 1.8);
+
+    // 해태상
+    for (const s of [-1, 1]) {
+      this.haetae(s * 3.3, 0.9, -6.5, s);
+      this.haetae(s * 3.3, 1.8, -14.5, s);
+    }
+
+    // 전각
+    this.hall();
+
+    // 드무 (방화수 솥)
+    for (const s of [-1, 1]) this.cauldron(s * 6.2, 0.9, -8.2);
+    for (const s of [-1, 1]) this.cauldron(s * 10.5, 1.8, -15.2);
+
+    // 깃발
+    for (const s of [-1, 1]) {
+      this.flag(s * 4.6, 1.8, -15.3, 'red', s);
+      this.flag(s * 4.6, 0.9, -8.6, 'white', s);
+      this.flag(s * 4.8, 0, 1.2, 'red', s);
+      this.flag(s * 4.8, 0, 9.5, 'white', s);
+      this.flag(s * 19.5, 0, -24, 'navy', s);
+      this.flag(s * 20, 0, -11, 'navy', s);
+      this.flag(s * 20, 0, 18, 'navy', s);
+    }
+
+    // 큰 북
+    for (const s of [-1, 1]) this.drum(s * 10.5, 4.2, s);
+
+    // 바닥 문양
+    for (const s of [-1, 1]) {
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(6, 6), M.medallion);
+      m.rotation.x = -Math.PI / 2;
+      m.position.set(s * 17, 0.012, 4.2);
+      m.receiveShadow = true;
+      this.root.add(m);
+    }
+
+    // 화단 + 소나무
+    this.planter(-14.6, -6, -5.6, -1.4);
+    this.planter(6, 14.6, -5.6, -1.4);
+    this.planter(-14, -7.4, 9.2, 14.2);
+    this.planter(7.4, 14, 9.2, 14.2);
+    this.pine(-11.2, 0.3, -3.6, 1.15, 3);
+    this.pine(11.4, 0.3, -3.4, 1.1, 4);
+    this.pine(-10.6, 0.3, 11.8, 0.85, 5);
+    this.pine(10.8, 0.3, 11.6, 0.8, 6);
+    this.shrub(-7.4, 0.3, -2.6); this.shrub(7.6, 0.3, -2.4); this.shrub(-13.2, 0.3, -2.2); this.shrub(13, 0.3, -4.6);
+    this.shrub(-8.4, 0.3, 13.1); this.shrub(8.6, 0.3, 10.2);
+
+    // 뒤뜰 나무
+    for (const [x, z, s, sd] of [[-16, -28, 1.2, 11], [15, -27, 1.3, 12], [-5, -30, 1.0, 13], [6, -31, 0.95, 14], [17.5, -18.5, 0.9, 15], [-17.5, -18, 0.95, 16]]) this.pine(x, 0, z, s, sd);
+    // 성 밖 나무
+    for (const [x, z, s, sd] of [[-12, 27, 1.2, 21], [11, 28, 1.3, 22], [-22, 30, 1.0, 23], [24, 31, 1.1, 24], [-7, 33, 0.9, 25], [7, 35, 1.0, 26], [-30, 10, 1.3, 27], [31, -5, 1.2, 28], [-31, -20, 1.2, 29], [30, 15, 1.1, 30]]) this.pine(x, 0, z, s, sd, false);
+
+    // 화분 받침
+    for (const s of [-1, 1]) {
+      this.flowerPot(s * 3.7, 4.6);
+      this.flowerPot(s * 3.7, 13.4);
+      this.flowerPot(s * 3.7, -1.6);
+    }
+
+    // 석등
+    for (const s of [-1, 1]) {
+      this.stoneLantern(s * 7.6, 0, 17.2);
+      this.stoneLantern(s * 16.5, 0, -2.2);
+      this.stoneLantern(s * 16.5, 0, 12);
+      this.stoneLantern(s * 10.9, 1.8, -21);
+      this.stoneLantern(s * 13.6, 0.9, -7);
+    }
+    this.stoneLantern(-11, 0, -26);
+    this.stoneLantern(11, 0, -24);
+
+    // 연못
+    this.pond(-21, -15, -31.2, -24.6);
+
+    // 행각과 담장
+    this.corridor(-1);
+    this.corridor(1);
+    this.northWall();
+    this.southWall();
+
+    // 풀
+    this.scatterGrass();
+
+    B.build(this.root);
+    const fol = this.foliage.build(this.root);
+    for (const m of fol) animateMesh(m, ANIM.foliage);
+
+    // 적 등장 지점 (정문 밖)
+    this.spawnPoints.push(new THREE.Vector3(0, 0, 25), new THREE.Vector3(-1.5, 0, 26), new THREE.Vector3(1.5, 0, 26));
+  }
+
+  terrace(x0, x1, z0, z1, h) {
+    const M = this.M, B = this.batch;
+    const w = x1 - x0, d = z1 - z0;
+    // 측면(석축)과 윗면(박석)
+    const g = boxGeo(w, h, d, 2);
+    const top = boxGeo(w, 0.001, d, 4);
+    B.add(g, M.block, mat4((x0 + x1) / 2, h / 2, (z0 + z1) / 2));
+    B.add(top, M.slab, mat4((x0 + x1) / 2, h + 0.001, (z0 + z1) / 2));
+    // 갑석 (윗단 테두리)
+    B.add(boxGeo(w + 0.3, 0.14, 0.4, 2), M.stoneLight, mat4((x0 + x1) / 2, h - 0.05, z1 + 0.05));
+    this.rects.push({ x0, x1, z0, z1, h });
+  }
+
+  stairs(zTop, zBot, hTop, hBot) {
+    const M = this.M, B = this.batch;
+    const n = 6;
+    const depth = (zBot - zTop) / n;
+    const dh = (hTop - hBot) / n;
+    for (let k = 0; k < n; k++) {
+      const hh = hTop - dh * (k + 1) + dh; // 이 단의 윗면 높이
+      const z = zTop + depth * (k + 0.5);
+      const y0 = hBot - 0.2;
+      const geo = boxGeo(5.2, hh - y0, depth, 2);
+      B.add(geo, k % 2 ? M.stoneLight : M.stoneGrey, mat4(0, (hh + y0) / 2, z));
+    }
+    // 답도 + 소맷돌
+    const len = Math.hypot(zBot - zTop, hTop - hBot);
+    const ang = Math.atan2(hTop - hBot, zBot - zTop);
+    const cz = (zTop + zBot) / 2, cy = (hTop + hBot) / 2;
+    const carve = boxGeo(1.4, 0.12, len, 2);
+    const uv = carve.attributes.uv;
+    for (let i = 8; i < 12; i++) uv.setXY(i, (i % 2), i < 10 ? 1 : 0); // 윗면에 조각 텍스처 꽉 차게
+    B.add(carve, M.carving, mat4(0, cy + 0.06, cz, 0, ang));
+    for (const s of [-1, 1]) B.add(boxGeo(0.45, 0.4, len + 0.2, 2), M.stoneLight, mat4(s * 2.82, cy + 0.12, cz, 0, ang));
+    this.ramps.push({ x0: -2.6, x1: 2.6, z0: zTop, z1: zBot, h0: hTop, h1: hBot });
+  }
+
+  balustrade(x0, z0, x1, z1, y) {
+    const M = this.M, B = this.batch;
+    const len = Math.hypot(x1 - x0, z1 - z0);
+    const ry = Math.atan2(-(z1 - z0), x1 - x0);
+    const n = Math.max(1, Math.round(len / 1.6));
+    for (let i = 0; i <= n; i++) {
+      const t = i / n;
+      const x = x0 + (x1 - x0) * t, z = z0 + (z1 - z0) * t;
+      B.add(boxGeo(0.24, 0.62, 0.24, 2), M.stoneLight, mat4(x, y + 0.31, z));
+      B.add(boxGeo(0.3, 0.1, 0.3, 2), M.stoneGrey, mat4(x, y + 0.65, z));
+    }
+    const cx = (x0 + x1) / 2, cz = (z0 + z1) / 2;
+    B.add(boxGeo(len, 0.08, 0.12, 2), M.stoneLight, mat4(cx, y + 0.5, cz, ry));
+    B.add(boxGeo(len, 0.18, 0.08, 2), M.stoneGrey, mat4(cx, y + 0.14, cz, ry));
+  }
+
+  haetae(x, y, z, s) {
+    const M = this.M, B = this.batch;
+    B.add(boxGeo(0.7, 0.3, 0.9, 2), M.stoneGrey, mat4(x, y + 0.15, z));
+    B.add(new THREE.SphereGeometry(0.32, 8, 6), M.stoneLight, mat4(x, y + 0.6, z, 0, 0, 0, [1, 0.9, 1.25]));
+    B.add(new THREE.SphereGeometry(0.27, 8, 6), M.stoneLight, mat4(x, y + 0.95, z + 0.25));
+    B.add(new THREE.SphereGeometry(0.12, 6, 4), M.stoneGrey, mat4(x - 0.12, y + 1.15, z + 0.2));
+    B.add(new THREE.SphereGeometry(0.12, 6, 4), M.stoneGrey, mat4(x + 0.12, y + 1.15, z + 0.2));
+    B.add(boxGeo(0.12, 0.3, 0.12, 2), M.stoneLight, mat4(x - 0.15, y + 0.45, z + 0.3));
+    B.add(boxGeo(0.12, 0.3, 0.12, 2), M.stoneLight, mat4(x + 0.15, y + 0.45, z + 0.3));
+    this.circles.push({ x, z, r: 0.45, y });
+  }
+
+  hall() {
+    const M = this.M, B = this.batch;
+    const y0 = 2.1, zc = -18.5;
+    // 기단
+    B.add(boxGeo(19.4, 0.3, 6.2, 2), M.block, mat4(0, 1.95, zc));
+    B.add(boxGeo(19.6, 0.06, 6.4, 2), M.stoneLight, mat4(0, 2.1, zc));
+    this.blockRects.push({ x0: -9.7, x1: 9.7, z0: -21.6, z1: -15.4 });
+    // 내부 몸체
+    B.add(boxGeo(17.6, 3.5, 4.6, 2), M.darkWood, mat4(0, y0 + 1.75, zc));
+    // 기둥
+    const colGeo = cylGeo(0.24, 0.27, 3.6, 10, 1, 1);
+    for (let i = 0; i <= 6; i++) {
+      const x = -9 + i * 3;
+      B.add(colGeo, M.wood, mat4(x, y0 + 1.8, -16));
+      B.add(colGeo, M.wood, mat4(x, y0 + 1.8, -21));
+      B.add(cylGeo(0.36, 0.38, 0.14, 10), M.stoneLight, mat4(x, y0 + 0.07, -16));
+    }
+    for (const s of [-1, 1]) B.add(colGeo, M.wood, mat4(s * 9, y0 + 1.8, -18.5));
+    // 창호 (앞면)
+    for (let i = 0; i < 6; i++) {
+      const x = -7.5 + i * 3;
+      for (const k of [-0.62, 0.62]) {
+        B.add(new THREE.BoxGeometry(1.22, 3.3, 0.08), M.lattice, mat4(x + k, y0 + 1.68, -16.18));
+      }
+      B.add(boxGeo(2.76, 0.12, 0.14, 2), M.wood, mat4(x, y0 + 3.38, -16.15));
+      B.add(boxGeo(2.76, 0.1, 0.14, 2), M.wood, mat4(x, y0 + 0.05, -16.15));
+    }
+    // 창호 (옆면)
+    for (const s of [-1, 1]) for (const z of [-17.25, -19.75]) {
+      B.add(new THREE.BoxGeometry(0.08, 3.3, 2.3), M.lattice, mat4(s * 8.85, y0 + 1.68, z));
+    }
+    this.hallLightPos = [new THREE.Vector3(-4.5, 3.8, -15.0), new THREE.Vector3(4.5, 3.8, -15.0)];
+    // 창방·평방 단청
+    B.add(boxGeo(18.8, 0.42, 5.8, 4), M.dancheong, mat4(0, 5.9, zc));
+    B.add(boxGeo(19.6, 0.4, 6.6, 4), M.dancheong, mat4(0, 6.3, zc));
+    // 공포 (처마 밑 촘촘한 블록)
+    for (let i = 0; i <= 24; i++) {
+      const x = -9.6 + i * 0.8;
+      for (const z of [-15.1, -21.9]) {
+        B.add(boxGeo(0.3, 0.26, 0.6, 1), i % 2 ? M.dancheong : M.red, mat4(x, 6.58, z));
+      }
+    }
+    for (let i = 0; i <= 8; i++) for (const s of [-1, 1]) B.add(boxGeo(0.6, 0.26, 0.3, 1), i % 2 ? M.dancheong : M.red, mat4(s * 9.95, 6.58, -21.7 + i * 0.8));
+    // 아래 지붕
+    this.roof({ cx: 0, cy: 6.72, cz: zc, w: 19.6, d: 6.4, h: 1.5, overhang: 1.5, lift: 0.7, ridge: false });
+    // 2층
+    B.add(boxGeo(13.2, 2.1, 2.9, 2), M.darkWood, mat4(0, 8.35, zc));
+    for (let i = 0; i < 6; i++) {
+      const x = -5.5 + i * 2.2;
+      B.add(new THREE.BoxGeometry(1.7, 1.25, 0.06), M.lattice, mat4(x, 8.55, zc + 1.48));
+    }
+    for (let i = 0; i <= 6; i++) {
+      B.add(cylGeo(0.17, 0.17, 2.1, 8), M.wood, mat4(-6.6 + i * 2.2, 8.35, zc + 1.5));
+    }
+    B.add(boxGeo(14, 0.4, 3.6, 4), M.dancheong, mat4(0, 9.55, zc));
+    // 위 지붕
+    this.roof({ cx: 0, cy: 9.8, cz: zc, w: 14, d: 3.6, h: 2.4, overhang: 1.9, lift: 0.85, ridge: true });
+  }
+
+  roof({ cx, cy, cz, w, d, h, overhang, lift, ridge, power = 1.7, tile = 2, rot = 0 }) {
+    const M = this.M;
+    const r = roofGeometry({ w, d, h, overhang, lift, power, tile });
+    const g = new THREE.Group();
+    g.position.set(cx, cy, cz);
+    g.rotation.y = rot;
+    const top = new THREE.Mesh(r.top, M.roof);
+    const under = new THREE.Mesh(r.under, M.roofUnder);
+    const fascia = new THREE.Mesh(r.fascia, M.fascia);
+    for (const m of [top, under, fascia]) { m.castShadow = true; m.receiveShadow = true; g.add(m); }
+    // 용마루 + 추녀마루
+    const W = r.W, D = r.D;
+    const ridgeLen = Math.max(0.5, W - D);
+    if (ridge) {
+      const rg = new THREE.Mesh(boxGeo(ridgeLen + 0.6, 0.5, 0.5, 2), M.ridge);
+      rg.position.set(0, h + 0.2, 0);
+      const band = new THREE.Mesh(boxGeo(ridgeLen + 0.3, 0.2, 0.56, 2), M.mortar);
+      band.position.set(0, h + 0.05, 0);
+      g.add(rg, band);
+      for (const s of [-1, 1]) {
+        const orn = new THREE.Mesh(boxGeo(0.5, 0.8, 0.6, 1), M.ridge);
+        orn.position.set(s * (ridgeLen / 2 + 0.3), h + 0.45, 0);
+        orn.rotation.z = s * 0.15;
+        g.add(orn);
+      }
+    }
+    // 추녀마루
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
+      const start = new THREE.Vector3(sx * ridgeLen / 2, 0, 0);
+      const end = new THREE.Vector3(sx * W / 2, 0, sz * D / 2);
+      const N = 7;
+      let prev = null;
+      for (let i = 0; i <= N; i++) {
+        const t = 0.02 + (i / N) * 0.96;
+        const x = start.x + (end.x - start.x) * t, z = start.z + (end.z - start.z) * t;
+        const p = new THREE.Vector3(x, r.height(x, z) + 0.12, z);
+        if (prev) {
+          const mid = prev.clone().add(p).multiplyScalar(0.5);
+          const len = prev.distanceTo(p);
+          const seg = new THREE.Mesh(boxGeo(0.32, 0.26, len + 0.08, 1), M.ridge);
+          seg.position.copy(mid);
+          seg.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), p.clone().sub(prev).normalize());
+          seg.castShadow = true;
+          g.add(seg);
+        }
+        prev = p;
+      }
+      // 잡상 몇 개
+      for (let k = 0; k < 3; k++) {
+        const t = 0.62 + k * 0.1;
+        const x = start.x + (end.x - start.x) * t, z = start.z + (end.z - start.z) * t;
+        const fig = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.24, 0.16), M.ridge);
+        fig.position.set(x, r.height(x, z) + 0.36, z);
+        g.add(fig);
+      }
+    }
+    this.root.add(g);
+    return { group: g, r };
+  }
+
+  cauldron(x, y, z) {
+    const M = this.M, B = this.batch;
+    B.add(boxGeo(1.2, 0.2, 1.2, 2), M.stoneGrey, mat4(x, y + 0.1, z));
+    const bowl = latheGeo([[0.0, 0], [0.42, 0.02], [0.58, 0.25], [0.62, 0.55], [0.56, 0.72], [0.62, 0.78], [0.5, 0.78]], 12);
+    B.add(bowl, M.bronze, mat4(x, y + 0.2, z));
+    B.add(new THREE.CircleGeometry(0.5, 12), M.bronzeDark, mat4(x, y + 0.9, z, 0, -Math.PI / 2));
+    for (const s of [-1, 1]) B.add(new THREE.TorusGeometry(0.12, 0.035, 4, 8), M.bronzeDark, mat4(x + s * 0.6, y + 0.6, z, Math.PI / 2));
+    this.circles.push({ x, z, r: 0.7, y });
+  }
+
+  flag(x, y, z, kind, side) {
+    const M = this.M, B = this.batch;
+    const h = 4.4;
+    B.add(boxGeo(0.7, 0.28, 0.7, 1), M.black, mat4(x, y + 0.14, z));
+    B.add(boxGeo(0.4, 0.4, 0.4, 1), M.darkWood, mat4(x, y + 0.48, z));
+    B.add(cylGeo(0.055, 0.07, h, 6), M.black, mat4(x, y + h / 2, z));
+    B.add(new THREE.ConeGeometry(0.1, 0.35, 6), M.gold, mat4(x, y + h + 0.15, z));
+    // 깃발 (깃대 쪽이 로컬 x=-0.5)
+    const geo = new THREE.PlaneGeometry(1.1, 1.4, 8, 4);
+    const mat = toon({ map: T.bannerTex(kind), side: THREE.DoubleSide });
+    const m = new THREE.Mesh(geo, mat);
+    m.position.set(x + side * 0.6, y + h - 0.9, z);
+    if (side < 0) m.scale.x = -1;
+    m.rotation.y = side < 0 ? 0.25 : -0.25;
+    m.castShadow = true;
+    m.receiveShadow = true;
+    animateMesh(m, ANIM.flag);
+    this.root.add(m);
+    this.circles.push({ x, z, r: 0.4, y });
+  }
+
+  drum(x, z, side) {
+    const M = this.M, B = this.batch;
+    const g = new THREE.Group();
+    g.position.set(x, 0, z);
+    g.rotation.y = side * 0.5;
+    // 받침대
+    const legGeo = boxGeo(0.18, 2.2, 0.18, 1);
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
+      const leg = new THREE.Mesh(legGeo, M.wood);
+      leg.position.set(sx * 0.75, 1.0, sz * 0.75);
+      leg.rotation.set(sz * 0.12, 0, -sx * 0.12);
+      g.add(leg);
+    }
+    for (const sz of [-1, 1]) {
+      const bar = new THREE.Mesh(boxGeo(1.7, 0.14, 0.14, 1), M.wood);
+      bar.position.set(0, 0.35, sz * 0.8);
+      g.add(bar);
+    }
+    const body = new THREE.Group();
+    body.position.y = 2.15;
+    const barrel = new THREE.Mesh(latheGeo([[0.95, -0.75], [1.08, -0.4], [1.12, 0], [1.08, 0.4], [0.95, 0.75]], 18), M.drumSide);
+    barrel.rotation.x = Math.PI / 2;
+    body.add(barrel);
+    for (const s of [-1, 1]) {
+      const face = new THREE.Mesh(new THREE.CircleGeometry(0.95, 18), M.drumFace);
+      face.position.z = s * 0.76;
+      face.rotation.y = s > 0 ? 0 : Math.PI;
+      body.add(face);
+      // 징 박힌 테
+      for (let k = 0; k < 14; k++) {
+        const a = (k / 14) * Math.PI * 2;
+        const stud = new THREE.Mesh(new THREE.SphereGeometry(0.05, 4, 3), M.gold);
+        stud.position.set(Math.cos(a) * 0.97, Math.sin(a) * 0.97, s * 0.66);
+        body.add(stud);
+      }
+    }
+    // 위 장식
+    const crown = new THREE.Mesh(new THREE.ConeGeometry(0.25, 0.6, 6), M.gold);
+    crown.position.y = 1.35;
+    body.add(crown);
+    g.add(body);
+    g.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+    this.root.add(g);
+    this.circles.push({ x, z, r: 1.25, y: 0 });
+    this.drums.push({ group: g, body, pos: new THREE.Vector3(x, 0, z), shake: 0 });
+  }
+
+  planter(x0, x1, z0, z1) {
+    const M = this.M, B = this.batch;
+    const w = x1 - x0, d = z1 - z0, cx = (x0 + x1) / 2, cz = (z0 + z1) / 2;
+    const bh = 0.32, bw = 0.3;
+    B.add(boxGeo(w, bh, bw, 2), M.stoneLight, mat4(cx, bh / 2, z0 + bw / 2));
+    B.add(boxGeo(w, bh, bw, 2), M.stoneLight, mat4(cx, bh / 2, z1 - bw / 2));
+    B.add(boxGeo(bw, bh, d - bw * 2, 2), M.stoneLight, mat4(x0 + bw / 2, bh / 2, cz));
+    B.add(boxGeo(bw, bh, d - bw * 2, 2), M.stoneLight, mat4(x1 - bw / 2, bh / 2, cz));
+    // 모서리 돌기둥
+    for (const [x, z] of [[x0, z0], [x1, z0], [x0, z1], [x1, z1]]) {
+      B.add(boxGeo(0.42, 0.46, 0.42, 1), M.stoneGrey, mat4(x + (x === x0 ? 0.15 : -0.15), 0.23, z + (z === z0 ? 0.15 : -0.15)));
+    }
+    B.add(boxGeo(w - bw * 2, 0.26, d - bw * 2, 2), M.grass, mat4(cx, 0.13, cz));
+    this.rects.push({ x0, x1, z0, z1, h: 0.3 });
+    this.grassAreas = this.grassAreas || [];
+    this.grassAreas.push({ x0: x0 + bw, x1: x1 - bw, z0: z0 + bw, z1: z1 - bw, y: 0.26 });
+  }
+
+  pine(x, y, z, s, seed, collide = true) {
+    const B = this.batch, F = this.foliage, M = this.M;
+    const R = mulberry32(seed * 97 + 3);
+    const up = new THREE.Vector3(0, 1, 0);
+    let p = new THREE.Vector3(x, y, z);
+    let dir = new THREE.Vector3((R() - 0.5) * 0.5, 1, (R() - 0.5) * 0.5).normalize();
+    const segs = 5;
+    const segLen = 0.9 * s;
+    let r0 = 0.3 * s;
+    const pts = [];
+    for (let i = 0; i < segs; i++) {
+      const r1 = r0 * 0.8;
+      const end = p.clone().addScaledVector(dir, segLen);
+      const geo = new THREE.CylinderGeometry(r1, r0, segLen * 1.05, 7);
+      const q = new THREE.Quaternion().setFromUnitVectors(up, dir);
+      B.add(geo, M.bark, new THREE.Matrix4().compose(p.clone().add(end).multiplyScalar(0.5), q, new THREE.Vector3(1, 1, 1)));
+      pts.push(end.clone());
+      p = end;
+      r0 = r1;
+      // 줄기가 구불구불
+      dir.x += (R() - 0.5) * 0.7;
+      dir.z += (R() - 0.5) * 0.5;
+      dir.y = 1;
+      dir.normalize();
+    }
+    const pad = (c, sx, sy, sz, mat) => {
+      const geo = new THREE.IcosahedronGeometry(1, 1);
+      F.add(geo, mat, new THREE.Matrix4().compose(c, new THREE.Quaternion().setFromEuler(new THREE.Euler(0, R() * 6, 0)), new THREE.Vector3(sx, sy, sz)));
+    };
+    // 가지 + 잎뭉치 (우산형)
+    for (let i = 2; i < segs; i++) {
+      const base = pts[i - 1];
+      const nb = 2;
+      for (let b = 0; b < nb; b++) {
+        const a = R() * Math.PI * 2;
+        const L = (1.2 + R() * 1.0) * s * (1 - (i - 2) * 0.18);
+        const bd = new THREE.Vector3(Math.cos(a), 0.25 + R() * 0.3, Math.sin(a)).normalize();
+        const end = base.clone().addScaledVector(bd, L);
+        const geo = new THREE.CylinderGeometry(0.06 * s, 0.11 * s, L, 5);
+        const q = new THREE.Quaternion().setFromUnitVectors(up, bd);
+        B.add(geo, M.bark, new THREE.Matrix4().compose(base.clone().add(end).multiplyScalar(0.5), q, new THREE.Vector3(1, 1, 1)));
+        const ps = (0.8 + R() * 0.4) * s;
+        pad(end.clone().add(new THREE.Vector3(0, 0.15 * s, 0)), 1.25 * ps, 0.42 * ps, 1.05 * ps, M.leaf);
+        pad(end.clone().add(new THREE.Vector3(0.1, 0.42 * s, 0.05)), 0.85 * ps, 0.3 * ps, 0.75 * ps, M.leaf2);
+      }
+    }
+    const top = pts[segs - 1];
+    pad(top.clone().add(new THREE.Vector3(0, 0.2 * s, 0)), 1.5 * s, 0.5 * s, 1.3 * s, M.leaf);
+    pad(top.clone().add(new THREE.Vector3(0.1, 0.55 * s, 0)), 1.0 * s, 0.35 * s, 0.9 * s, M.leaf2);
+    if (collide) this.circles.push({ x, z, r: 0.45 * s, y });
+  }
+
+  shrub(x, y, z) {
+    const F = this.foliage, M = this.M;
+    const R = mulberry32(Math.floor(x * 31 + z * 7));
+    for (let i = 0; i < 3; i++) {
+      F.add(new THREE.IcosahedronGeometry(1, 1), i ? M.leaf2 : M.leaf, new THREE.Matrix4().compose(
+        new THREE.Vector3(x + (R() - 0.5) * 0.6, y + 0.3 + i * 0.12, z + (R() - 0.5) * 0.6), new THREE.Quaternion(), new THREE.Vector3(0.55, 0.42, 0.5)));
+    }
+  }
+
+  flowerPot(x, z) {
+    const M = this.M, B = this.batch;
+    B.add(boxGeo(0.7, 0.5, 0.7, 2), M.stoneLight, mat4(x, 0.25, z));
+    B.add(boxGeo(0.8, 0.08, 0.8, 2), M.stoneGrey, mat4(x, 0.52, z));
+    B.add(latheGeo([[0.18, 0], [0.3, 0.1], [0.34, 0.3], [0.3, 0.38]], 10), M.pot, mat4(x, 0.56, z));
+    const R = mulberry32(Math.floor(x * 13 + z * 5 + 99));
+    for (let i = 0; i < 6; i++) {
+      const a = R() * Math.PI * 2, d = R() * 0.2;
+      B.add(new THREE.IcosahedronGeometry(0.09, 0), i % 3 ? M.pink : M.orange, mat4(x + Math.cos(a) * d, 0.98 + R() * 0.1, z + Math.sin(a) * d));
+    }
+    B.add(new THREE.IcosahedronGeometry(0.22, 0), M.leaf2, mat4(x, 0.9, z));
+    this.circles.push({ x, z, r: 0.45, y: 0 });
+  }
+
+  stoneLantern(x, y, z) {
+    const M = this.M, B = this.batch;
+    B.add(cylGeo(0.42, 0.46, 0.2, 8), M.stoneGrey, mat4(x, y + 0.1, z));
+    B.add(cylGeo(0.3, 0.38, 0.16, 8), M.stoneLight, mat4(x, y + 0.28, z));
+    B.add(cylGeo(0.13, 0.15, 0.9, 8), M.stoneLight, mat4(x, y + 0.8, z));
+    B.add(cylGeo(0.36, 0.2, 0.2, 8), M.stoneLight, mat4(x, y + 1.32, z));
+    // 화사석 (빛나는 창)
+    B.add(cylGeo(0.22, 0.22, 0.42, 8), M.lampGlow, mat4(x, y + 1.63, z));
+    for (let k = 0; k < 4; k++) {
+      const a = (k / 4) * Math.PI * 2 + Math.PI / 4;
+      B.add(boxGeo(0.1, 0.44, 0.1, 1), M.stoneLight, mat4(x + Math.cos(a) * 0.24, y + 1.63, z + Math.sin(a) * 0.24));
+    }
+    B.add(new THREE.ConeGeometry(0.52, 0.32, 8), M.stoneGrey, mat4(x, y + 2.0, z));
+    B.add(new THREE.SphereGeometry(0.1, 6, 4), M.stoneGrey, mat4(x, y + 2.22, z));
+    this.lanterns.push(new THREE.Vector3(x, y + 1.65, z));
+    this.circles.push({ x, z, r: 0.45, y });
+  }
+
+  pond(x0, x1, z0, z1) {
+    const M = this.M, B = this.batch;
+    const w = x1 - x0, d = z1 - z0, cx = (x0 + x1) / 2, cz = (z0 + z1) / 2;
+    const b = 0.4, h = 0.35;
+    B.add(boxGeo(w, h, b, 2), M.blockDark, mat4(cx, h / 2, z0 + b / 2));
+    B.add(boxGeo(w, h, b, 2), M.blockDark, mat4(cx, h / 2, z1 - b / 2));
+    B.add(boxGeo(b, h, d - 2 * b, 2), M.blockDark, mat4(x0 + b / 2, h / 2, cz));
+    B.add(boxGeo(b, h, d - 2 * b, 2), M.blockDark, mat4(x1 - b / 2, h / 2, cz));
+    const water = new THREE.Mesh(new THREE.PlaneGeometry(w - 2 * b, d - 2 * b), waterMaterial());
+    water.rotation.x = -Math.PI / 2;
+    water.position.set(cx, 0.2, cz);
+    this.root.add(water);
+    this.water = water;
+    const R = mulberry32(5);
+    for (let i = 0; i < 9; i++) {
+      const x = x0 + 0.9 + R() * (w - 1.8), z = z0 + 0.9 + R() * (d - 1.8);
+      const r = 0.3 + R() * 0.25;
+      B.add(cylGeo(r, r, 0.03, 9), M.lotus, mat4(x, 0.23, z));
+      if (R() < 0.45) {
+        B.add(new THREE.ConeGeometry(0.12, 0.22, 5), M.pink, mat4(x + 0.1, 0.36, z));
+      }
+    }
+    this.blockRects.push({ x0: x0 - 0.1, x1: x1 + 0.1, z0: z0 - 0.1, z1: z1 + 0.1 });
+  }
+
+  corridor(side) {
+    const M = this.M, B = this.batch;
+    const xIn = side * 22, xOut = side * 26.2;
+    const cx = (xIn + xOut) / 2;
+    const z0 = -34, z1 = 22, len = z1 - z0, cz = (z0 + z1) / 2;
+    B.add(boxGeo(4.4, 0.5, len, 2), M.block, mat4(cx, 0.25, cz));
+    B.add(boxGeo(4.4, 0.02, len, 4), M.slab, mat4(cx, 0.51, cz));
+    // 뒷벽
+    B.add(boxGeo(0.4, 3.6, len, 2), M.plaster, mat4(side * 25.9, 2.3, cz));
+    // 기둥 + 인방
+    const colGeo = cylGeo(0.17, 0.19, 3.3, 8);
+    for (let z = z0 + 1; z <= z1 - 1; z += 3) {
+      B.add(colGeo, M.wood, mat4(side * 22.5, 2.15, z));
+      B.add(boxGeo(0.4, 0.14, 0.4, 1), M.stoneLight, mat4(side * 22.5, 0.56, z));
+    }
+    B.add(boxGeo(0.3, 0.36, len, 4), M.dancheong, mat4(side * 22.5, 3.85, cz));
+    this.roof({ cx: side * 24.2, cy: 4.05, cz, w: 3.8, d: len, h: 1.25, overhang: 1.0, lift: 0, ridge: true, power: 1.5 });
+  }
+
+  northWall() {
+    const M = this.M, B = this.batch;
+    B.add(boxGeo(44, 3.2, 0.6, 2), M.plaster, mat4(0, 1.6, -33.9));
+    this.roof({ cx: 0, cy: 3.2, cz: -33.9, w: 44, d: 0.5, h: 0.5, overhang: 0.55, lift: 0, ridge: true, power: 1.2 });
+  }
+
+  southWall() {
+    const M = this.M, B = this.batch;
+    for (const s of [-1, 1]) {
+      const x0 = s * 3.9, x1 = s * 22;
+      const cx = (x0 + x1) / 2, w = Math.abs(x1 - x0);
+      B.add(boxGeo(w, 1.2, 0.7, 2), M.block, mat4(cx, 0.6, 21.9));
+      B.add(boxGeo(w + 0.1, 0.12, 0.85, 2), M.stoneLight, mat4(cx, 1.26, 21.9));
+      this.blockRects.push({ x0: Math.min(x0, x1), x1: Math.max(x0, x1), z0: 21.4, z1: 22.4 });
+      // 정문 기둥
+      B.add(boxGeo(0.7, 3.4, 0.7, 1), M.wood, mat4(s * 3.6, 1.7, 21.9));
+      B.add(boxGeo(1, 0.3, 1, 1), M.stoneLight, mat4(s * 3.6, 0.15, 21.9));
+      this.circles.push({ x: s * 3.6, z: 21.9, r: 0.5, y: 0 });
+    }
+    B.add(boxGeo(7.9, 0.5, 0.8, 4), M.dancheong, mat4(0, 3.5, 21.9));
+    this.roof({ cx: 0, cy: 3.75, cz: 21.9, w: 8, d: 1.1, h: 0.9, overhang: 0.8, lift: 0.3, ridge: true });
+  }
+
+  scatterGrass() {
+    const areas = this.grassAreas;
+    let total = 0;
+    for (const a of areas) total += Math.floor((a.x1 - a.x0) * (a.z1 - a.z0) * 26);
+    const blade = new THREE.BufferGeometry();
+    blade.setAttribute('position', new THREE.Float32BufferAttribute([-0.05, 0, 0, 0.05, 0, 0, 0.0, 0.38, 0], 3));
+    blade.setAttribute('normal', new THREE.Float32BufferAttribute([0, 1, 0, 0, 1, 0, 0, 1, 0], 3));
+    blade.setAttribute('color', new THREE.Float32BufferAttribute([0.55, 0.62, 0.5, 0.55, 0.62, 0.5, 1.15, 1.12, 0.95], 3));
+    const mat = toon({ color: 0xffffff, vertexColors: true, side: THREE.DoubleSide });
+    const mesh = new THREE.InstancedMesh(blade, mat, total);
+    const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler();
+    const col = new THREE.Color();
+    const R = mulberry32(99);
+    const greens = ['#6f9c48', '#5d8c3e', '#86ad52', '#7aa04a'].map((h) => new THREE.Color(h));
+    let i = 0;
+    for (const a of areas) {
+      const n = Math.floor((a.x1 - a.x0) * (a.z1 - a.z0) * 26);
+      for (let k = 0; k < n; k++) {
+        const x = a.x0 + R() * (a.x1 - a.x0), z = a.z0 + R() * (a.z1 - a.z0);
+        e.set(0, R() * Math.PI, 0);
+        const s = 0.7 + R() * 0.7;
+        m4.compose(new THREE.Vector3(x, a.y, z), q.setFromEuler(e), new THREE.Vector3(s, s * (0.8 + R() * 0.6), s));
+        mesh.setMatrixAt(i, m4);
+        const patch = Math.sin(x * 0.7) * Math.cos(z * 0.9) * 0.5 + 0.5;
+        col.copy(greens[Math.floor(R() * greens.length)]).lerp(new THREE.Color('#a8b85a'), patch * 0.35);
+        if (R() < 0.015) col.set(R() < 0.5 ? '#f2eee0' : '#f0c850');
+        mesh.setColorAt(i, col);
+        i++;
+      }
+    }
+    mesh.receiveShadow = true;
+    mesh.castShadow = false;
+    mesh.userData.noOutline = true;
+    animateMesh(mesh, ANIM.grass, { shadow: false });
+    this.root.add(mesh);
+  }
+
+  setNight(n) {
+    for (const g of this.glowMats) g.mat.emissive.copy(g.color).multiplyScalar(n * g.k);
+  }
+
+  update(dt, t) {
+    for (const d of this.drums) {
+      if (d.shake > 0) {
+        d.shake = Math.max(0, d.shake - dt * 2.5);
+        const s = d.shake;
+        d.body.scale.set(1 + Math.sin(t * 60) * 0.05 * s, 1 + Math.sin(t * 60 + 1) * 0.05 * s, 1);
+        d.body.rotation.z = Math.sin(t * 40) * 0.04 * s;
+      }
+    }
+    if (this.water) this.water.material.uniforms.uNight.value = shared.night.value;
+  }
+}
+
+const OFFS = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+
+function mat4(x, y, z, ry = 0, rx = 0, rz = 0, s = null) {
+  const m = new THREE.Matrix4();
+  const sc = Array.isArray(s) ? new THREE.Vector3(...s) : new THREE.Vector3(1, 1, 1);
+  m.compose(new THREE.Vector3(x, y, z), new THREE.Quaternion().setFromEuler(new THREE.Euler(rx, ry, rz, 'YXZ')), sc);
+  return m;
+}
+
+function waterMaterial() {
+  return new THREE.ShaderMaterial({
+    uniforms: { uTime: shared.time, uNight: { value: 0 } },
+    vertexShader: `
+      varying vec3 vW;
+      void main(){ vec4 w = modelMatrix * vec4(position,1.0); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`,
+    fragmentShader: `
+      uniform float uTime; uniform float uNight;
+      varying vec3 vW;
+      vec3 lin(vec3 c){ return pow(c, vec3(2.2)); }
+      void main(){
+        vec2 p = floor(vW.xz * 16.0) / 16.0;
+        float w = sin(p.x * 3.1 + uTime * 1.3) + sin(p.y * 2.3 - uTime * 1.1) + sin((p.x + p.y) * 4.7 + uTime * 2.0) * 0.5;
+        vec3 deep = vec3(0.16, 0.36, 0.42);
+        vec3 c = deep;
+        if (w > 1.2) c = vec3(0.30, 0.55, 0.58);
+        if (w > 1.75) c = vec3(0.70, 0.86, 0.84);
+        if (w < -1.3) c = vec3(0.11, 0.27, 0.33);
+        c = lin(c);
+        c *= mix(1.0, 0.35, uNight);
+        gl_FragColor = vec4(c, 1.0);
+      }`,
+  });
+}
