@@ -11,7 +11,7 @@ export class UI {
       dialog: $('dialog'), dName: $('dialog-name'), dText: $('dialog-text'),
       prompt: $('prompt'), boss: $('boss'), bossFill: $('boss-fill'), bossLag: $('boss-lag'), bossName: $('boss-name'),
       bars: $('hpbars'), title: $('title'), over: $('gameover'), combo: $('combo'), comboN: $('combo-n'),
-      kills: $('kills'), toast: $('toast'), flash: $('flash'),
+      kills: $('kills'), best: $('best'), toast: $('toast'), flash: $('flash'),
     };
     this.hpLag = 1;
     this.bossLag = 1;
@@ -42,6 +42,15 @@ export class UI {
     this.el.bannerSub.textContent = sub;
     this.el.banner.className = 'show ' + cls;
     this.bannerT = dur;
+  }
+
+  // 오른쪽 아래 작은 저장 표시
+  saveMark() {
+    const el = document.getElementById('savemark');
+    if (!el) return;
+    el.classList.remove('show');
+    void el.offsetWidth;
+    el.classList.add('show');
   }
 
   toast(text, dur = 2.2) {
@@ -100,6 +109,7 @@ export class UI {
     el.dashCd.style.height = (p.dashCd / 0.5) * 100 + '%';
     el.skillCd.style.height = (p.skillCd / p.skillMax) * 100 + '%';
     el.kills.textContent = g.kills;
+    if (el.best) el.best.textContent = g.bestCombo;
 
     // 보스
     if (this.bossEnemy) {

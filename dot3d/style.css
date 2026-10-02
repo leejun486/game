@@ -104,6 +104,13 @@ canvas.view { position: absolute; left: 0; top: 0; image-rendering: pixelated; i
 .logo-big .han { display: block; font-family: 'Noto Serif KR', 'Noto Serif CJK KR', serif; font-size: min(140px, 22vw); font-weight: 900; color: #fff6e2; -webkit-text-stroke: 4px #15121c; paint-order: stroke fill; letter-spacing: -4px; }
 .logo-big .kr { display: block; font-size: 22px; color: var(--gold); margin-top: 6px; letter-spacing: 12px; }
 .logo-big .sub { display: block; font-size: 18px; color: #bfe8ff; margin-top: 14px; letter-spacing: 4px; }
+#title-save { font-size: 14px; color: #f3ead6; text-align: center; background: rgba(16, 12, 24, 0.7); padding: 8px 18px; border: 2px solid var(--gold-dark); line-height: 1.6; }
+#title-save:empty { display: none; }
+#title-save b { color: var(--gold); font-weight: normal; }
+#title-save small { display: block; font-size: 11px; color: #a89e8a; }
+#savemark { position: absolute; right: 18px; bottom: 40px; font-size: 11px; color: var(--gold); text-shadow: 1px 1px 0 #000; opacity: 0; pointer-events: none; z-index: 9; }
+#savemark.show { animation: savemark 1.6s steps(8) forwards; }
+@keyframes savemark { 0% { opacity: 0; } 15% { opacity: 1; } 75% { opacity: 1; } 100% { opacity: 0; } }
 #title .press { font-size: 16px; color: #fff; text-shadow: 2px 2px 0 #000; animation: blink 1.1s steps(2) infinite; }
 #title .credit { position: absolute; bottom: 18px; font-size: 11px; color: #a89e8a; }
 #title .err { font-size: 18px; text-align: center; background: var(--panel); padding: 20px; }

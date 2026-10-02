@@ -71,12 +71,34 @@ export class Player {
       if (this.attack.t > 0.4) this.buffered = true;
       return;
     }
-    const kind = this.combo % 3;
+    // 칼집에 있으면 발도베기(3)로 시작 → 가로베기(0) → 내려찍기(2).
+    // 칼을 뽑은 채 이어서 치면 되베기(1) → 가로베기(0) → 내려찍기(2)
+    const r = this.rig;
+    const fromSheath = r.sheathed;
+    if (fromSheath) { this.combo = 0; this.drawCut(); }
+    else if (this.combo === 0) this.comboFromSheath = false;
+    const seq = this.comboFromSheath ? [3, 0, 2] : [1, 0, 2];
+    const kind = seq[this.combo % 3];
     this.combo++;
     this.yaw = this.aimYaw(input);
-    this.attack = { t: 0, kind, dur: kind === 2 ? 0.46 : 0.34, hit: false };
-    this.game.audio.play(kind === 2 ? 'swing3' : 'swing');
+    this.attack = { t: 0, kind, dur: kind === 2 ? 0.48 : kind === 3 ? 0.42 : 0.36, hit: false, hitAt: kind === 3 ? 0.44 : 0.38 };
+    if (kind !== 3) this.game.audio.play(kind === 2 ? 'swing3' : 'swing');
     this.lastCombat = this.game.time;
+    this.sinceAttack = 0;
+  }
+
+  // 칼집에서 칼을 뽑음 (발도)
+  drawCut() {
+    this.rig.unsheathe();
+    this.sheatheT = 0;
+    this.comboFromSheath = true;
+    this.game.audio.play('draw');
+    const sp = this.rig.saya;
+    if (sp) {
+      const p = new THREE.Vector3();
+      sp.getWorldPosition(p);
+      this.game.fx.spark(p.x, p.y, p.z, 6, '#ffffff', 3);
+    }
   }
 
   startDash(input) {
@@ -97,8 +119,12 @@ export class Player {
     if (this.dead || this.skillCd > 0 || this.dashT > 0) return;
     this.skillCd = this.skillMax;
     this.yaw = this.aimYaw(input);
-    this.attack = { t: 0, kind: 0, dur: 0.36, hit: true, skill: true };
-    this.game.audio.play('swing3');
+    const fromSheath = this.rig.sheathed;
+    if (fromSheath) this.drawCut();
+    this.attack = { t: 0, kind: fromSheath ? 3 : 1, dur: fromSheath ? 0.4 : 0.36, hit: true, skill: true };
+    this.combo = 0;
+    this.sinceAttack = 0;
+    if (!fromSheath) this.game.audio.play('swing3');
     this.game.spawnSwordWave(this);
     this.lastCombat = this.game.time;
   }
@@ -181,7 +207,7 @@ export class Player {
       if (this.attack) {
         const a = this.attack;
         a.t += dt / a.dur;
-        if (!a.hit && a.t >= 0.36) {
+        if (!a.hit && a.t >= (a.hitAt ?? 0.38)) {
           a.hit = true;
           g.playerSwingHit(this, a.kind);
         }
@@ -192,6 +218,20 @@ export class Player {
         }
       } else if (this.comboTimer <= 0) {
         this.combo = 0;
+      }
+      // 한동안 베지 않으면 칼을 칼집에 넣음 (납도)
+      const r = this.rig;
+      if (!this.attack && r.saya) {
+        this.sinceAttack = (this.sinceAttack ?? 9) + dt;
+        if (!r.sheathed && this.sinceAttack > 0.9 && this.dashT <= 0) {
+          r.sheathe();
+          this.sheatheT = 0.0001;
+        }
+      }
+      if (this.sheatheT > 0) {
+        this.sheatheT += dt / 0.42;
+        if (r.justSheathed) { r.justSheathed = false; g.audio.play('sheathe'); }
+        if (this.sheatheT >= 1) this.sheatheT = 0;
       }
     }
 
@@ -210,6 +250,7 @@ export class Player {
     r.animate(dt, {
       speed: this.dead ? 0 : speed,
       attack: this.attack ? { t: Math.min(1, this.attack.t), kind: this.attack.kind } : null,
+      sheathing: this.sheatheT > 0 ? Math.min(1, this.sheatheT) : 0,
       dash: this.dashT > 0,
       hurt: this.hurtT / 0.3,
       dead: this.dead,
@@ -219,7 +260,7 @@ export class Player {
     r.root.visible = this.dead || this.blinkT <= 0 || Math.floor(g.time * 18) % 2 === 0;
     r.setFlash(this.hurtT > 0.2 ? 0.6 : 0);
     if (r.bladeMat) {
-      const glow = this.attack ? 0.5 : (g.night > 0.5 ? 0.16 : 0.08); // 평소에도 은은한 칼빛
+      const glow = this.attack ? 0.5 : r.sheathed ? 0 : (g.night > 0.5 ? 0.16 : 0.08); // 뽑은 칼엔 은은한 칼빛
       r.bladeMat.emissive.setRGB(glow * 0.6, glow * 0.9, glow);
       r.edgeMat.emissive.setRGB(glow * 1.2, glow * 1.4, glow * 1.6);
     }

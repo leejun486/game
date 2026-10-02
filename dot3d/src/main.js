@@ -6,6 +6,7 @@ import { Audio } from './audio.js';
 import { UI } from './ui.js';
 import { Player, Enemy, NPC, Bird } from './entities.js';
 import { shared } from './materials.js';
+import { loadSave, writeSave, clearSave } from './save.js';
 import { clamp, lerp, rand, angleDiff, damp } from './util.js';
 
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
@@ -59,7 +60,13 @@ class Game {
     this.world.buildNav();
     this.flowT = 0;
     this.setupInput();
+    this.bestCombo = 0;
+    this.saveT = 15;
+    this.applySave(loadSave());
     this.updateQuest();
+    // 탭을 닫거나 숨길 때 저장
+    document.addEventListener('visibilitychange', () => { if (document.hidden) this.save(false); });
+    window.addEventListener('pagehide', () => this.save(false));
     this.last = performance.now();
     this.loop = this.loop.bind(this);
     requestAnimationFrame(this.loop);
@@ -154,7 +161,7 @@ class Game {
       if (e.button === 2) this.player.startSkill(this.readInput());
     });
     stage.addEventListener('contextmenu', (e) => e.preventDefault());
-    stage.addEventListener('wheel', (e) => { this.pixel.zoom(e.deltaY > 0 ? -1 : 1); }, { passive: true });
+    stage.addEventListener('wheel', (e) => { this.pixel.zoom(e.deltaY > 0 ? -1 : 1); this.saveT = Math.min(this.saveT, 2); }, { passive: true });
     this.setupTouch();
   }
 
@@ -222,15 +229,64 @@ class Game {
     return inp;
   }
 
+  // ---------- 자동 저장 ----------
+  applySave(d) {
+    const info = document.getElementById('title-save');
+    if (!d) { if (info) info.textContent = ''; return; }
+    this.kills = d.kills | 0;
+    this.round = d.round | 0;
+    this.bestCombo = d.bestCombo | 0;
+    // 싸우던 중에 저장됐다면 북을 울리기 전 상태로
+    this.stage = this.round > 0 ? 3 : Math.min(1, d.stage | 0);
+    if (d.music === false && this.audio.musicOn) this.audio.toggleMusic();
+    if (d.outline === 0) this.pixel.compMat.uniforms.outline.value = 0;
+    if (typeof d.zoom === 'number' && d.zoom !== this.pixel.userZoom) { this.pixel.userZoom = d.zoom; this.pixel.resize(); }
+    if (d.night) { this.nightTarget = 1; this.night = 1; }
+    if (info) {
+      const when = new Date(d.savedAt || Date.now());
+      const pad = (n) => String(n).padStart(2, '0');
+      info.innerHTML = `이어하기 · <b>${this.round + 1}회차</b> · 퇴치 <b>${this.kills}</b> · 최고 연속 <b>${this.bestCombo}</b>` +
+        `<small>${when.getMonth() + 1}/${when.getDate()} ${pad(when.getHours())}:${pad(when.getMinutes())} 자동 저장 · Delete 키: 기록 지우기</small>`;
+    }
+  }
+
+  save(show = true) {
+    const ok = writeSave({
+      kills: this.kills,
+      round: this.round,
+      stage: this.stage === 2 ? (this.round > 0 ? 3 : 1) : this.stage,
+      bestCombo: this.bestCombo,
+      music: this.audio.musicOn,
+      outline: this.pixel.compMat.uniforms.outline.value,
+      zoom: this.pixel.userZoom,
+      night: !this.waveActive && this.nightTarget > 0.5,
+    });
+    if (ok && show) this.ui.saveMark();
+    this.saveT = 15;
+  }
+
   onKey(code) {
-    if (this.state === 'title') { this.start(); return; }
+    if (this.state === 'title') {
+      if (code === 'Delete' || code === 'Backspace') {
+        clearSave();
+        this.kills = 0; this.round = 0; this.stage = 0; this.bestCombo = 0;
+        this.applySave(null);
+        this.updateQuest();
+        const info = document.getElementById('title-save');
+        if (info) info.textContent = '기록을 지웠습니다. 처음부터 시작합니다.';
+        return;
+      }
+      this.start();
+      return;
+    }
     this.audio.unlock();
-    if (code === 'KeyM') { const on = this.audio.toggleMusic(); this.ui.toast(on ? '음악 켜짐' : '음악 꺼짐'); return; }
+    if (code === 'KeyM') { const on = this.audio.toggleMusic(); this.ui.toast(on ? '음악 켜짐' : '음악 꺼짐'); this.save(false); return; }
     if (code === 'Equal' || code === 'NumpadAdd') { this.pixel.zoom(1); return; }
     if (code === 'Minus' || code === 'NumpadSubtract') { this.pixel.zoom(-1); return; }
     if (code === 'KeyO') {
       this.pixel.compMat.uniforms.outline.value = this.pixel.compMat.uniforms.outline.value ? 0 : 1;
       this.ui.toast(this.pixel.compMat.uniforms.outline.value ? '외곽선 켜짐' : '외곽선 꺼짐');
+      this.save(false);
       return;
     }
     if (this.state === 'dead') { if (code === 'KeyR' || code === 'Enter' || code === 'act') this.retry(); return; }
@@ -284,7 +340,7 @@ class Game {
       let lines = n.lines;
       if (n.name.startsWith('수문장')) lines = this.guardLines();
       this.ui.dialog(n.name, lines, () => {
-        if (n.name.startsWith('수문장') && this.stage === 0) { this.stage = 1; this.updateQuest(); }
+        if (n.name.startsWith('수문장') && this.stage === 0) { this.stage = 1; this.updateQuest(); this.save(); }
       });
     } else if (it.kind === 'drum') {
       this.player.yaw = Math.atan2(it.drum.pos.x - this.player.pos.x, it.drum.pos.z - this.player.pos.z);
@@ -351,6 +407,7 @@ class Game {
 
   nextWave() {
     if (this.state === 'dead') return;
+    if (this.wave > 0) this.save();
     this.wave++;
     const list = this.waveDef(this.wave);
     const boss = this.wave === 3;
@@ -376,11 +433,12 @@ class Game {
   playerSwingHit(pl, kind) {
     const range = kind === 2 ? 2.45 : 2.2;
     const half = kind === 2 ? 0.95 : 1.35;
+    const fxKind = kind === 3 ? 1 : kind; // 발도베기는 왼→오른 궤적
     const yaw = pl.yaw;
     const origin = V(pl.pos.x, pl.y + 0.72, pl.pos.z);
-    this.fx.slash(origin, yaw, kind, { dur: 0.16, outer: range, color: kind === 2 ? '#fff6d0' : '#a8e4ff' });
+    this.fx.slash(origin, yaw, fxKind, { dur: kind === 3 ? 0.2 : 0.16, outer: range + (kind === 3 ? 0.25 : 0), len: kind === 3 ? 3.2 : 2.8, color: kind === 2 ? '#fff6d0' : kind === 3 ? '#d8f4ff' : '#a8e4ff' });
     // 칼날 궤적의 얇고 하얀 심
-    this.fx.slash(origin, yaw, kind, { dur: 0.16, inner: range - 0.32, outer: range - 0.05, color: '#ffffff' });
+    this.fx.slash(origin, yaw, fxKind, { dur: kind === 3 ? 0.2 : 0.16, inner: range - 0.32, outer: range - 0.05 + (kind === 3 ? 0.25 : 0), len: kind === 3 ? 3.2 : 2.8, color: '#ffffff' });
     if (kind === 2) {
       // 내려찍기: 앞쪽 바닥 충격
       const f = V(pl.pos.x + Math.sin(yaw) * 1.4, pl.y, pl.pos.z + Math.cos(yaw) * 1.4);
@@ -399,7 +457,7 @@ class Game {
       if (d > range + e.radius) continue;
       if (d > 0.6 && Math.abs(angleDiff(yaw, Math.atan2(dx, dz))) > half) continue;
       const crit = Math.random() < 0.15;
-      let dmg = Math.round((kind === 2 ? rand(24, 30) : rand(13, 17)) * (crit ? 1.8 : 1));
+      let dmg = Math.round((kind === 2 ? rand(24, 30) : kind === 3 ? rand(18, 23) : rand(13, 17)) * (crit ? 1.8 : 1)); // 발도베기는 한 방이 강함
       this.damageEnemy(e, dmg, crit, kind === 2 ? 9 : 5.5, kind === 2 ? 0.4 : 0.25);
       hitAny = true;
     }
@@ -440,6 +498,7 @@ class Game {
     this.hitstop = Math.max(this.hitstop, crit ? 0.085 : 0.05);
     this.hitCombo = this.time - this.lastHitTime < 2 ? this.hitCombo + 1 : 1;
     this.lastHitTime = this.time;
+    if (this.hitCombo > this.bestCombo) this.bestCombo = this.hitCombo;
     pl.lastCombat = this.time;
     // 보스 체력에 따른 졸개 소환
     if (e.type === 'boss' && !e.dead) {
@@ -575,6 +634,7 @@ class Game {
     this.player.hp = this.player.maxHp;
     this.ui.banner('승리', '도깨비들이 달아나고 동이 튼다', 4, 'win-banner');
     this.updateQuest();
+    this.save();
   }
 
   onPlayerDeath() {
@@ -721,6 +781,8 @@ class Game {
     let dt = Math.min(0.05, (now - this.last) / 1000);
     this.last = now;
     this.audio.update();
+    // 15초마다 자동 저장
+    if (this.state === 'play') { this.saveT -= dt; if (this.saveT <= 0) this.save(); }
 
     // 히트스톱: 월드 시간 멈춤
     let wdt = dt;

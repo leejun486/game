@@ -93,6 +93,16 @@ export class Audio {
         this.tone(0.6, { f0: 180, f1: 70, gain: 0.3 });
         this.noise(0.35, { type: 'lowpass', f0: 900, f1: 120, gain: 0.5 });
         break;
+      case 'draw': // 칼 뽑는 소리: 쇳소리 "스릉"
+        this.noise(0.22, { type: 'highpass', f0: 2500, f1: 6000, gain: 0.22, attack: 0.01 });
+        this.tone(0.25, { type: 'triangle', f0: 2600, f1: 3400, gain: 0.05 });
+        this.noise(0.18, { f0: 900, f1: 3500, q: 2.5, gain: 0.25, attack: 0.02 });
+        break;
+      case 'sheathe': // 칼 넣는 소리: "착"
+        this.tone(0.05, { type: 'square', f0: 2200, f1: 1400, gain: 0.06 });
+        this.noise(0.06, { type: 'highpass', f0: 3000, f1: 2000, gain: 0.2 });
+        this.tone(0.08, { type: 'square', f0: 1300, f1: 900, gain: 0.04, at: 0.04 });
+        break;
       case 'skill':
         this.noise(0.5, { f0: 300, f1: 5000, q: 1.8, gain: 0.32, attack: 0.02 });
         this.tone(0.45, { type: 'sawtooth', f0: 220, f1: 1760, gain: 0.05, attack: 0.02 });

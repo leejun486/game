@@ -5,6 +5,13 @@ import { tigerTex } from './textures.js';
 import { clamp, lerp, smooth } from './util.js';
 
 const C = (h) => new THREE.Color(h);
+// 칼집 로컬 좌표: 꽂힌 자세 / 칼집 축 위로 뽑힌 자세, 손 로컬 좌표: 쥔 자세
+const SHEATHED_POS = new THREE.Vector3(0, 0.17, 0);
+const ALIGN_POS = new THREE.Vector3(0, 0.8, 0);
+const HAND_POS = new THREE.Vector3(0, 0, 0);
+const IDENT_Q = new THREE.Quaternion();
+const easeOut = (x) => 1 - Math.pow(1 - x, 3);
+const easeInOut = (x) => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
 
 function mesh(geo, mat, x = 0, y = 0, z = 0) {
   const m = new THREE.Mesh(geo, mat);
@@ -267,17 +274,19 @@ export class Rig {
       w.add(tip);
       this.bladeMat = blade;
       this.edgeMat = edge;
-      // 왼쪽 허리의 칼집
+      // 왼쪽 허리의 칼집 (입구가 로컬 원점, 칼집은 로컬 -y 방향)
       if (this.cfg.type === 'hero') {
         const saya = new THREE.Group();
         // 입구는 왼쪽 허리 앞, 끝은 뒤쪽 아래로 (rotation.x 양수 = 로컬 -y가 뒤쪽을 향함)
         saya.position.set(0.21, 0.1, 0.12);
         saya.rotation.set(1.22, 0, 0.18);
         const lac = this.mat({ color: C('#1a1420') });
-        saya.add(mesh(new THREE.BoxGeometry(0.035, 0.95, 0.06), lac, 0, -0.42, 0));
-        saya.add(mesh(new THREE.BoxGeometry(0.04, 0.04, 0.065), gold, 0, -0.9, 0));
-        saya.add(mesh(new THREE.BoxGeometry(0.04, 0.05, 0.07), this.mat({ color: C('#c8302c') }), 0, -0.1, 0));
+        saya.add(mesh(new THREE.BoxGeometry(0.046, 1.2, 0.088), lac, 0, -0.6, 0.004));
+        saya.add(mesh(new THREE.BoxGeometry(0.052, 0.045, 0.094), gold, 0, -1.18, 0.004));
+        saya.add(mesh(new THREE.BoxGeometry(0.052, 0.05, 0.096), this.mat({ color: C('#c8302c') }), 0, -0.12, 0.004));
+        saya.add(mesh(new THREE.BoxGeometry(0.052, 0.03, 0.096), gold, 0, -0.015, 0.004));
         this.hips.add(saya);
+        this.saya = saya;
       }
     } else if (kind === 'club') {
       const wood = this.mat({ color: C('#7a4a2a') });
@@ -309,6 +318,51 @@ export class Rig {
     w.traverse((o) => { if (o.isMesh) o.castShadow = true; });
     hand.add(w);
     this.weapon = w;
+    if (this.saya) {
+      // 처음엔 칼집에 꽂힌 상태
+      this.saya.add(w);
+      w.position.copy(SHEATHED_POS);
+      w.quaternion.identity();
+      this.sheathed = true;
+      this.wStage = 'in';
+    }
+  }
+
+  // ---- 발도 / 납도 ----
+  // 칼을 손에 옮겨 붙이되 월드 위치를 유지 → 매 프레임 손 자세로 빠르게 보간 = 칼집에서 뽑혀 나오는 모습
+  unsheathe() {
+    if (!this.saya || !this.sheathed) return;
+    this.handR.attach(this.weapon);
+    this.sheathed = false;
+    this.wStage = 'hand';
+  }
+
+  // 칼집에 옮겨 붙인 뒤: ① 칼집 축 위로 뽑힌 자세로 정렬 → ② 칼집 안으로 미끄러져 들어감
+  sheathe() {
+    if (!this.saya || this.sheathed) return;
+    this.saya.attach(this.weapon);
+    this.sheathed = true;
+    this.wStage = 'align';
+    this.wStageT = 0;
+  }
+
+  updateWeapon(dt) {
+    if (!this.saya) return;
+    const w = this.weapon;
+    let pos, rate;
+    if (this.wStage === 'hand') { pos = HAND_POS; rate = 26; }
+    else if (this.wStage === 'align') {
+      pos = ALIGN_POS; rate = 22;
+      this.wStageT += dt;
+      if (this.wStageT > 0.16) { this.wStage = 'slide'; this.wStageT = 0; }
+    } else if (this.wStage === 'slide') {
+      pos = SHEATHED_POS; rate = 16;
+      this.wStageT += dt;
+      if (this.wStageT > 0.22) { this.wStage = 'in'; this.justSheathed = true; }
+    } else { pos = SHEATHED_POS; rate = 30; }
+    const k = 1 - Math.exp(-rate * dt);
+    w.position.lerp(pos, k);
+    w.quaternion.slerp(IDENT_Q, k);
   }
 
   setFlash(v) {
@@ -342,41 +396,72 @@ export class Rig {
     let wristX = 0;
 
     if (this.cfg.weapon === 'spear') { armRx = -0.35; armRz = 0.25; wristX = -1.2; }
-    // 긴 칼: 평소엔 칼끝을 앞쪽 아래로 겨누고, 뛸 때 오른팔은 조금만 흔듦
-    if (this.cfg.weapon === 'sword') { armRx = -sw * 0.18 - 0.2; wristX = -1.2; }
+    const sword = this.cfg.weapon === 'sword';
+    if (sword && !this.sheathed) {
+      // 뽑은 칼: 칼끝을 앞쪽 아래로 겨누고, 뛸 때 오른팔은 조금만 흔듦
+      armRx = -sw * 0.18 - 0.2; wristX = -1.2;
+    }
+    if (sword && this.saya) {
+      // 왼손은 칼집 입구를 쥠
+      armLx = -0.5 + sw * 0.12; armLz = 0.18;
+    }
 
     if (p.attack) {
       wristX = 0; // 벨 때는 칼이 팔의 연장선
       const t = p.attack.t;
       const k = p.attack.kind;
-      // 0: 오른→왼 가로베기, 1: 왼→오른, 2: 내려찍기
-      const wind = smooth(clamp(t / 0.28, 0, 1));
-      const strike = smooth(clamp((t - 0.28) / 0.22, 0, 1));
-      const rec = smooth(clamp((t - 0.62) / 0.38, 0, 1));
+      // 0: 오른→왼 가로베기, 1: 왼→오른 되베기, 2: 내려찍기, 3: 발도베기(칼집에서 뽑으며 왼→오른)
+      const wEnd = k === 3 ? 0.3 : 0.26;
+      const sEnd = k === 3 ? 0.56 : 0.5;
+      const wind = easeInOut(clamp(t / wEnd, 0, 1));
+      const strike = easeOut(clamp((t - wEnd) / (sEnd - wEnd), 0, 1));
+      const rec = easeInOut(clamp((t - sEnd - 0.08) / (1 - sEnd - 0.08), 0, 1));
+      const hold = 1 - rec;
       if (k === 0 || k === 1) {
         const dir = k === 0 ? 1 : -1;
-        const from = -1.25 * dir, to = 1.35 * dir;
-        chestYaw = lerp(lerp(0, from, wind), to, strike) * (1 - rec);
-        armRx = lerp(armRx, lerp(-1.45, -1.55, strike), (1 - rec) * Math.max(wind, strike));
-        armRz = lerp(0.12, 0.35, wind) * (1 - rec);
-        armLx = 0.4 * (1 - rec);
-        legL = 0.35 * (1 - rec); legR = -0.25 * (1 - rec);
+        const from = -1.2 * dir, to = 1.5 * dir;
+        chestYaw = lerp(lerp(0, from, wind), to, strike) * hold;
+        armRx = lerp(armRx, lerp(-1.4, -1.58, strike), hold * Math.max(wind, strike));
+        armRz = lerp(0.12, k === 0 ? 0.45 : 0.15, wind) * hold;
+        armLx = lerp(armLx, 0.35, hold);
+        legL = 0.35 * hold; legR = -0.25 * hold;
+        bob -= 0.04 * strike * hold;
+      } else if (k === 3) {
+        // 발도: 오른손이 왼허리 칼자루로 → 몸을 틀며 단숨에 뽑아 벰 → 칼집은 뒤로 당김
+        chestYaw = lerp(lerp(0, 0.95, wind), -1.55, strike) * hold;
+        armRx = lerp(lerp(armRx, -0.75, wind), -1.58, strike);
+        armRx = lerp(-0.2, armRx, hold);
+        armRz = lerp(lerp(0.12, -0.95, wind), 0.4, strike) * hold;
+        armLx = lerp(lerp(armLx, -0.6, wind), 0.55, strike);
+        armLx = lerp(-0.5, armLx, hold);
+        legL = lerp(0.2 * wind, 0.55, strike) * hold; legR = lerp(-0.1 * wind, -0.35, strike) * hold;
+        bob -= (0.06 * wind + 0.05 * strike) * hold;
+        chestPitch = lerp(0.15 * wind, 0.2, strike) * hold;
       } else {
         const up = -2.9, down = -0.45;
         armRx = lerp(lerp(armRx, up, wind), down, strike);
         armRx = lerp(armRx, -0.25, rec);
         armRy = 0;
-        chestPitch = lerp(lerp(0, -0.25, wind), 0.35, strike) * (1 - rec);
+        chestPitch = lerp(lerp(0, -0.25, wind), 0.38, strike) * hold;
         armLx = armRx * 0.9;
         armLz = -0.05;
-        bob -= 0.05 * strike * (1 - rec);
-        legL = 0.4 * strike * (1 - rec); legR = -0.4 * strike * (1 - rec);
+        bob -= 0.06 * strike * hold;
+        legL = 0.4 * strike * hold; legR = -0.4 * strike * hold;
       }
+    } else if (p.sheathing > 0) {
+      // 납도: 칼을 왼허리 칼집 입구로 가져와 밀어 넣음
+      const s = p.sheathing;
+      const reach = Math.sin(Math.min(1, s * 1.3) * Math.PI * 0.5) * (1 - easeInOut(clamp((s - 0.75) / 0.25, 0, 1)));
+      armRx = lerp(armRx, -1.15, reach);
+      armRz = lerp(armRz, -0.7, reach);
+      wristX = lerp(-1.2, 0, Math.min(1, s * 3));
+      chestYaw = 0.35 * reach;
+      armLx = lerp(armLx, -0.7, reach);
     }
     if (p.dash) {
       chestPitch = 0.45;
       legL = 0.9; legR = -0.7;
-      armRx = this.cfg.weapon === 'sword' ? 1.3 : 0.9; armLx = 0.9;
+      armRx = sword && !this.sheathed ? 1.3 : 0.9; armLx = sword ? -0.5 : 0.9;
       wristX = 0; // 회피 때는 칼을 뒤로 끌며 달림
       bob = 0.02;
     }
@@ -388,7 +473,7 @@ export class Rig {
       armLx = -1.5; armLz = -0.2;
     }
 
-    const L = 1 - Math.exp(-28 * dt);
+    const L = 1 - Math.exp(-(p.attack ? 34 : 16) * dt);
     const lp = (o, key, v) => (o[key] += (v - o[key]) * L);
     lp(this.legs[0].rotation, 'x', legR);
     lp(this.legs[1].rotation, 'x', legL);
@@ -402,6 +487,7 @@ export class Rig {
     lp(this.head.rotation, 'x', headPitch);
     if (this.handR) lp(this.handR.rotation, 'x', wristX);
     this.body.position.y = bob;
+    this.updateWeapon(dt);
     this.body.rotation.z = bodyRoll;
 
     if (this.tail) {
