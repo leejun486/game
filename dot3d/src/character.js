@@ -268,8 +268,9 @@ export class Rig {
       // 왼쪽 허리의 칼집
       if (this.cfg.type === 'hero') {
         const saya = new THREE.Group();
-        saya.position.set(0.2, 0.08, -0.05);
-        saya.rotation.set(-1.15, 0, 0.25);
+        // 입구는 왼쪽 허리 앞, 끝은 뒤쪽 아래로 (rotation.x 양수 = 로컬 -y가 뒤쪽을 향함)
+        saya.position.set(0.21, 0.1, 0.12);
+        saya.rotation.set(1.22, 0, 0.18);
         const lac = this.mat({ color: C('#1a1420') });
         saya.add(mesh(new THREE.BoxGeometry(0.035, 0.95, 0.06), lac, 0, -0.42, 0));
         saya.add(mesh(new THREE.BoxGeometry(0.04, 0.04, 0.065), gold, 0, -0.9, 0));
