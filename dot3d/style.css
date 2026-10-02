@@ -115,7 +115,8 @@ canvas.view { position: absolute; left: 0; top: 0; image-rendering: pixelated; i
 .logo-big .sub { display: block; font-size: 18px; color: #bfe8ff; margin-top: 14px; letter-spacing: 4px; }
 #classes { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; max-width: 96vw; }
 .cls { position: relative; width: 168px; padding: 12px 12px 10px; background: rgba(16, 12, 24, 0.78); border: 2px solid #4a3e2a; box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.45); display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; transition: transform 0.12s steps(2); }
-.cls canvas { width: 72px; height: 72px; image-rendering: pixelated; border: 2px solid #0a0810; }
+.cls canvas { width: 96px; height: 144px; image-rendering: pixelated; border: 2px solid #0a0810; background: radial-gradient(ellipse 30% 4% at 50% 91%, rgba(0, 0, 0, 0.55) 60%, transparent 62%), radial-gradient(ellipse 46% 9% at 50% 91%, rgba(255, 220, 150, 0.18) 60%, transparent 62%), linear-gradient(180deg, #2a2440, #141020); }
+.cls.sel canvas { background: radial-gradient(ellipse 30% 4% at 50% 91%, rgba(0, 0, 0, 0.55) 60%, transparent 62%), radial-gradient(ellipse 46% 9% at 50% 91%, rgba(255, 220, 120, 0.4) 60%, transparent 62%), linear-gradient(180deg, #4a3a5a, #1a1420); border-color: var(--gold-dark); }
 .cls b { font-size: 17px; color: #fff6e2; font-weight: normal; margin-top: 2px; }
 .cls .role { font-size: 11px; color: var(--gold); }
 .cls .desc { font-size: 10.5px; color: #c8bea8; text-align: center; line-height: 1.45; min-height: 30px; }
@@ -204,13 +205,13 @@ body.touch #gameover .s b::after { content: ' / 화면 탭'; }
   #title { gap: 12px; }
   .logo-big .han { font-size: 62px; }
   .cls { width: 128px; padding: 6px; }
-  .cls canvas { width: 44px; height: 44px; }
+  .cls canvas { width: 48px; height: 72px; }
   .cls .desc { display: none; }
   .logo-big .sub { font-size: 14px; }
 }
 @media (max-width: 600px) {
   .cls { width: 104px; padding: 8px 6px; }
-  .cls canvas { width: 48px; height: 48px; }
+  .cls canvas { width: 64px; height: 96px; }
   .cls .desc { display: none; }
   #quest { top: 66px; left: 8px; right: auto; width: 200px; }
   #boss { top: 132px; }
@@ -256,3 +257,4 @@ body.touch #gameover .s b::after { content: ' / 화면 탭'; }
 #fade { position: absolute; inset: 0; background: #000; opacity: 0; pointer-events: none; transition: opacity 0.4s steps(6); z-index: 30; }
 #fade.on { opacity: 1; }
 .eq small em, .it small em { font-style: normal; color: #ff9a7a; }
+#title:not(.hide) ~ #touch .btns { display: none; }

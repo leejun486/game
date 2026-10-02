@@ -8,7 +8,7 @@ import { Player, Enemy, NPC, Bird } from './entities.js';
 import { shared } from './materials.js';
 import { loadSave, writeSave, clearSave } from './save.js';
 import { CLASSES, CLASS_ORDER } from './classes.js';
-import { drawPortrait } from './ui.js';
+import { ClassPreview } from './preview.js';
 import { item, rollDrop, bossDrop, RARITY, itemDesc, WEAPONS, OUTFITS } from './items.js';
 import { expNeed, SKILL_LEVEL } from './entities.js';
 import { MAPS, BOSS_TYPES } from './maps.js';
@@ -75,6 +75,7 @@ class Game {
     this.selectedCls = 'sword';
     this.setupClassSelect();
     this.applySave(loadSave());
+    this.preview = new ClassPreview(this);
     this.ui.setClass(this.player.cfg);
     this.updateQuest();
     // 탭을 닫거나 숨길 때 저장
@@ -259,7 +260,6 @@ class Game {
   setupClassSelect() {
     for (const card of document.querySelectorAll('#classes .cls')) {
       const C = CLASSES[card.dataset.cls];
-      drawPortrait(card.querySelector('canvas'), C.id);
       card.querySelector('.role').textContent = C.role;
       card.querySelector('.desc').textContent = C.desc;
     }
@@ -654,6 +654,7 @@ class Game {
         const c0 = this.player.cls; this.player.cls = null; this.selectClass(c0);
         this.applySave(null);
         this.updateQuest();
+        this.preview.rebuild();
         const info = document.getElementById('title-save');
         if (info) info.textContent = '기록을 지웠습니다. 처음부터 시작합니다.';
         return;
@@ -1909,6 +1910,7 @@ class Game {
     // 카메라
     let target;
     if (this.state === 'title') {
+      this.preview.update(dt);
       const k = (Math.sin(this.time * 0.12) * 0.5 + 0.5);
       target = V(Math.sin(this.time * 0.07) * 4, 0.5, lerp(10, -6, k));
       this.focus.copy(target);
