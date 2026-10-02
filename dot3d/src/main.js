@@ -166,7 +166,7 @@ class Game {
       if (this.ui.inDialog) { this.ui.advance(); return; }
       if (this.state !== 'play') return;
       if (e.button === 0) this.player.startAttack(this.readInput());
-      if (e.button === 2) this.player.startSkill(this.readInput());
+      if (e.button === 2 && !this.cdCheck('skill', this.player.skillCd)) this.player.startSkill(this.readInput());
     });
     stage.addEventListener('contextmenu', (e) => e.preventDefault());
     stage.addEventListener('wheel', (e) => { this.pixel.zoom(e.deltaY > 0 ? -1 : 1); this.saveT = Math.min(this.saveT, 2); }, { passive: true });
@@ -330,10 +330,10 @@ class Game {
     const inp = this.readInput();
     switch (code) {
       case 'KeyJ': case 'KeyZ': case 'atk': this.player.startAttack(inp); break;
-      case 'Space': case 'ShiftLeft': case 'ShiftRight': case 'dash': this.player.startDash(inp); break;
-      case 'KeyL': case 'KeyQ': case 'skill2': this.player.startExtraSkill(inp, 2); break;
-      case 'KeyI': case 'KeyR': case 'skill3': this.player.startExtraSkill(inp, 3); break;
-      case 'KeyK': case 'KeyX': case 'skill': this.player.startSkill(inp); break;
+      case 'Space': case 'ShiftLeft': case 'ShiftRight': case 'dash': if (!this.cdCheck('dash', this.player.dashCd)) this.player.startDash(inp); break;
+      case 'KeyL': case 'KeyQ': case 'skill2': if (!this.cdCheck('skill2', this.player.cd2)) this.player.startExtraSkill(inp, 2); break;
+      case 'KeyI': case 'KeyR': case 'skill3': if (!this.cdCheck('skill3', this.player.cd3)) this.player.startExtraSkill(inp, 3); break;
+      case 'KeyK': case 'KeyX': case 'skill': if (!this.cdCheck('skill', this.player.skillCd)) this.player.startSkill(inp); break;
       case 'KeyE': case 'Enter': case 'act': this.interact(); break;
       case 'KeyN':
         if (this.waveActive) { this.ui.toast('도깨비가 날뛰는 중엔 시간을 바꿀 수 없어요'); break; }
@@ -342,6 +342,14 @@ class Game {
         break;
       case 'KeyG': this.godMode = !this.godMode; this.ui.toast(this.godMode ? '무적 (디버그)' : '무적 해제'); break;
     }
+  }
+
+  // 쿨타임이면 칸을 흔들고 짧은 소리. 반환: 쿨타임 중인지
+  cdCheck(key, remain) {
+    if (!(remain > 0.05) || this.player.dead) return false;
+    this.ui.denied(key);
+    this.audio.play('denied');
+    return true;
   }
 
   start() {

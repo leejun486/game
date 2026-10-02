@@ -150,6 +150,10 @@ export class Audio {
         this.noise(1.6, { f0: 300, f1: 1600, q: 2.5, gain: 0.3, attack: 0.2 });
         this.noise(1.4, { type: 'lowpass', f0: 600, f1: 200, gain: 0.25, attack: 0.3 });
         break;
+      case 'denied':
+        this.tone(0.07, { type: 'square', f0: 180, gain: 0.05 });
+        this.tone(0.07, { type: 'square', f0: 140, gain: 0.05, at: 0.07 });
+        break;
       case 'skill':
         this.noise(0.5, { f0: 300, f1: 5000, q: 1.8, gain: 0.32, attack: 0.02 });
         this.tone(0.45, { type: 'sawtooth', f0: 220, f1: 1760, gain: 0.05, attack: 0.02 });

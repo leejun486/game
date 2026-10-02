@@ -5,7 +5,7 @@ export class UI {
     const $ = (id) => document.getElementById(id);
     this.el = {
       hud: $('hud'), hpFill: $('hp-fill'), hpLag: $('hp-lag'), hpText: $('hp-text'),
-      dashCd: $('cd-dash'), skillCd: $('cd-skill'), cd2: $('cd-skill2'), cd3: $('cd-skill3'),
+      
       quest: $('quest-text'), questTitle: $('quest-title'),
       banner: $('banner'), bannerMain: $('banner-main'), bannerSub: $('banner-sub'),
       dialog: $('dialog'), dName: $('dialog-name'), dText: $('dialog-text'),
@@ -53,6 +53,35 @@ export class UI {
     this.el.bannerSub.textContent = sub;
     this.el.banner.className = 'show ' + cls;
     this.bannerT = dur;
+  }
+
+  // 쿨타임 표시: HUD 칸과 터치 버튼 모두
+  slots(key) {
+    this.slotCache = this.slotCache || {};
+    if (!this.slotCache[key]) {
+      this.slotCache[key] = [...document.querySelectorAll(`[data-slot="${key}"]`)].map((el) => ({ el, cd: el.querySelector('.cd'), t: el.querySelector('.cdt') }));
+    }
+    return this.slotCache[key];
+  }
+
+  setCd(key, remain, max) {
+    this.cdState = this.cdState || {};
+    const cooling = remain > 0.02;
+    const txt = !cooling ? '' : remain >= 1 ? String(Math.ceil(remain)) : remain.toFixed(1);
+    const pct = cooling ? ((remain / max) * 100).toFixed(1) + '%' : '0%';
+    const prev = this.cdState[key];
+    for (const s of this.slots(key)) {
+      s.cd.style.setProperty('--p', pct);
+      if (s.t.textContent !== txt) s.t.textContent = txt;
+      s.el.classList.toggle('cooling', cooling);
+      if (prev && !cooling) { s.el.classList.remove('ready'); void s.el.offsetWidth; s.el.classList.add('ready'); }
+    }
+    this.cdState[key] = cooling;
+  }
+
+  // 쿨타임 중에 누르면 칸이 붉게 흔들림
+  denied(key) {
+    for (const s of this.slots(key)) { s.el.classList.remove('denied'); void s.el.offsetWidth; s.el.classList.add('denied'); }
   }
 
   // 오른쪽 아래 작은 저장 표시
@@ -117,10 +146,10 @@ export class UI {
     el.hpLag.style.width = (this.hpLag * 100).toFixed(1) + '%';
     el.hpText.textContent = `${Math.ceil(p.hp)} / ${p.maxHp}`;
     el.hpFill.classList.toggle('low', hp < 0.3);
-    el.dashCd.style.height = (p.dashCd / (p.dashMax || 0.5)) * 100 + '%';
-    el.skillCd.style.height = (p.skillCd / p.skillMax) * 100 + '%';
-    el.cd2.style.height = ((p.cd2 || 0) / p.cd2Max) * 100 + '%';
-    el.cd3.style.height = ((p.cd3 || 0) / p.cd3Max) * 100 + '%';
+    this.setCd('dash', p.dashCd, p.dashMax || 0.5);
+    this.setCd('skill', p.skillCd, p.skillMax);
+    this.setCd('skill2', p.cd2 || 0, p.cd2Max);
+    this.setCd('skill3', p.cd3 || 0, p.cd3Max);
     el.kills.textContent = g.kills;
     if (el.best) el.best.textContent = g.bestCombo;
 
