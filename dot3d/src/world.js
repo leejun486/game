@@ -105,6 +105,12 @@ export class World {
     const steps = Math.max(1, Math.ceil(len / 0.15));
     const sx = dx / steps, sz = dz / steps;
     let moved = false;
+    // 이미 장애물에 박혀 있으면(소환·밀림 등) 높이 규칙만 지키며 빠져나오게 허용
+    const h0 = this.heightAt(pos.x, pos.z);
+    if (this.isBlocked(pos.x, pos.z, r, h0)) {
+      const nx = pos.x + dx, nz = pos.z + dz;
+      if (Math.abs(this.heightAt(nx, nz) - h0) <= 0.45 && nx > -21.6 && nx < 21.6 && nz > -33.3 && nz < 30) { pos.x = nx; pos.z = nz; return true; }
+    }
     for (let i = 0; i < steps; i++) {
       const h = this.heightAt(pos.x, pos.z);
       if (!this.isBlocked(pos.x + sx, pos.z + sz, r, h)) { pos.x += sx; pos.z += sz; moved = true; }
@@ -158,24 +164,24 @@ export class World {
 
     // 월대 1, 2
     this.terrace(-15, 15, -14, -6, 0.9);
-    this.terrace(-12, 12, -22, -14, 1.8);
+    this.terrace(-12, 12, -22, -13, 1.8);
     this.stairs(-6, -3.6, 0.9, 0);
-    this.stairs(-14, -11.6, 1.8, 0.9);
+    this.stairs(-13, -10.6, 1.8, 0.9);
 
     // 난간
     this.balustrade(-15, -6, -2.9, -6, 0.9);
     this.balustrade(2.9, -6, 15, -6, 0.9);
     this.balustrade(-15, -14, -15, -6, 0.9);
     this.balustrade(15, -14, 15, -6, 0.9);
-    this.balustrade(-12, -14, -2.9, -14, 1.8);
-    this.balustrade(2.9, -14, 12, -14, 1.8);
-    this.balustrade(-12, -22, -12, -14, 1.8);
-    this.balustrade(12, -22, 12, -14, 1.8);
+    this.balustrade(-12, -13, -2.9, -13, 1.8);
+    this.balustrade(2.9, -13, 12, -13, 1.8);
+    this.balustrade(-12, -22, -12, -13, 1.8);
+    this.balustrade(12, -22, 12, -13, 1.8);
 
     // 해태상
     for (const s of [-1, 1]) {
       this.haetae(s * 3.3, 0.9, -6.5, s);
-      this.haetae(s * 3.3, 1.8, -14.5, s);
+      this.haetae(s * 3.3, 1.8, -13.5, s);
     }
 
     // 전각
@@ -187,7 +193,7 @@ export class World {
 
     // 깃발
     for (const s of [-1, 1]) {
-      this.flag(s * 4.6, 1.8, -15.3, 'red', s);
+      this.flag(s * 5.4, 1.8, -13.45, 'red', s);
       this.flag(s * 4.6, 0.9, -8.6, 'white', s);
       this.flag(s * 4.8, 0, 1.2, 'red', s);
       this.flag(s * 4.8, 0, 9.5, 'white', s);
@@ -209,8 +215,8 @@ export class World {
     }
 
     // 화단 + 소나무
-    this.planter(-14.6, -6, -5.6, -1.4);
-    this.planter(6, 14.6, -5.6, -1.4);
+    this.planter(-14.6, -6, -6, -1.4);
+    this.planter(6, 14.6, -6, -1.4);
     this.planter(-14, -7.4, 9.2, 14.2);
     this.planter(7.4, 14, 9.2, 14.2);
     this.pine(-11.2, 0.3, -3.6, 1.15, 3);
@@ -740,6 +746,168 @@ export class World {
     this.root.add(mesh);
   }
 
+  // ---------- 길찾기: 격자 + 플레이어 기준 흐름장(다익스트라) ----------
+  // 작은 몸체(일반 도깨비)와 큰 몸체(대왕)용 통행 가능 격자를 따로 만든다
+  buildNav() {
+    const cs = 0.5, x0 = -22, z0 = -34;
+    const nx = Math.ceil(44 / cs), nz = Math.ceil(64 / cs);
+    const N = nx * nz;
+    const h = new Float32Array(N);
+    const ok = [new Uint8Array(N), new Uint8Array(N)];
+    for (let j = 0; j < nz; j++) for (let i = 0; i < nx; i++) {
+      const x = x0 + (i + 0.5) * cs, z = z0 + (j + 0.5) * cs;
+      const k = j * nx + i;
+      const hh = (h[k] = this.heightAt(x, z));
+      ok[0][k] = this.isBlocked(x, z, NAV_R[0], hh) ? 0 : 1;
+      ok[1][k] = this.isBlocked(x, z, NAV_R[1], hh) ? 0 : 1;
+    }
+    this.nav = { cs, x0, z0, nx, nz, h, ok, dist: [new Float32Array(N), new Float32Array(N)], target: [-1, -1], heap: new Int32Array(N * 8), hd: new Float32Array(N * 8) };
+  }
+
+  navCell(x, z) {
+    const n = this.nav;
+    const i = Math.floor((x - n.x0) / n.cs), j = Math.floor((z - n.z0) / n.cs);
+    if (i < 0 || j < 0 || i >= n.nx || j >= n.nz) return -1;
+    return j * n.nx + i;
+  }
+
+  // 두 칸 사이를 지날 수 있는지 (높이 차가 작아야 함: 계단은 통과, 월대 벽은 불가)
+  navLink(a, b, big) {
+    const n = this.nav;
+    return n.ok[big][b] && Math.abs(n.h[a] - n.h[b]) <= 0.35;
+  }
+
+  // 플레이어 위치로 향하는 흐름장 갱신 (목표 칸이 바뀔 때만)
+  updateFlow(tx, tz, big) {
+    const n = this.nav;
+    if (!n) return;
+    let t = this.navCell(tx, tz);
+    if (t < 0) return;
+    if (!n.ok[big][t]) {
+      // 목표가 막힌 칸이면 가까운 열린 칸으로
+      let best = -1, bd = 1e9;
+      const ti = t % n.nx, tj = Math.floor(t / n.nx);
+      for (let dj = -4; dj <= 4; dj++) for (let di = -4; di <= 4; di++) {
+        const i = ti + di, j = tj + dj;
+        if (i < 0 || j < 0 || i >= n.nx || j >= n.nz) continue;
+        const k = j * n.nx + i;
+        if (n.ok[big][k] && Math.abs(n.h[k] - n.h[t]) < 0.5 && di * di + dj * dj < bd) { bd = di * di + dj * dj; best = k; }
+      }
+      if (best < 0) return;
+      t = best;
+    }
+    if (n.target[big] === t) return;
+    n.target[big] = t;
+    const D = n.dist[big];
+    D.fill(Infinity);
+    D[t] = 0;
+    // 이진 힙 다익스트라
+    const heap = n.heap, hd = n.hd;
+    let size = 0;
+    const push = (k, d) => {
+      let i = size++;
+      while (i > 0) { const p = (i - 1) >> 1; if (hd[p] <= d) break; heap[i] = heap[p]; hd[i] = hd[p]; i = p; }
+      heap[i] = k; hd[i] = d;
+    };
+    const pop = () => {
+      const top = heap[0];
+      const lk = heap[--size], ld = hd[size];
+      let i = 0;
+      while (true) {
+        let c = 2 * i + 1;
+        if (c >= size) break;
+        if (c + 1 < size && hd[c + 1] < hd[c]) c++;
+        if (hd[c] >= ld) break;
+        heap[i] = heap[c]; hd[i] = hd[c]; i = c;
+      }
+      heap[i] = lk; hd[i] = ld;
+      return top;
+    };
+    push(t, 0);
+    const nx = n.nx;
+    while (size > 0) {
+      const d0 = hd[0];
+      const a = pop();
+      if (d0 > D[a]) continue;
+      const ai = a % nx, aj = (a - ai) / nx;
+      for (let k = 0; k < 8; k++) {
+        const di = NDI[k], dj = NDJ[k];
+        const i = ai + di, j = aj + dj;
+        if (i < 0 || j < 0 || i >= nx || j >= n.nz) continue;
+        const b = j * nx + i;
+        if (!this.navLink(a, b, big)) continue;
+        // 대각선은 양옆 칸이 모두 열려 있어야 (모서리 끼임 방지)
+        if (di && dj && (!this.navLink(a, aj * nx + i, big) || !this.navLink(a, j * nx + ai, big))) continue;
+        const nd = d0 + (di && dj ? 1.4142 : 1);
+        if (nd < D[b]) { D[b] = nd; push(b, nd); }
+      }
+    }
+  }
+
+  // 흐름장을 따라 몇 칸 앞을 내다본 이동 방향. 길이 없으면 null
+  navDir(pos, big) {
+    const n = this.nav;
+    if (!n) return null;
+    let c = this.navCell(pos.x, pos.z);
+    if (c < 0) return null;
+    const D = n.dist[big];
+    if (!isFinite(D[c])) {
+      // 내 칸이 막힌 칸(벽에 살짝 걸침)이면 이웃 중 가장 좋은 칸에서 시작
+      let best = -1, bd = Infinity;
+      const ci = c % n.nx, cj = Math.floor(c / n.nx);
+      for (let k = 0; k < 8; k++) {
+        const i = ci + NDI[k], j = cj + NDJ[k];
+        if (i < 0 || j < 0 || i >= n.nx || j >= n.nz) continue;
+        const b = j * n.nx + i;
+        if (D[b] < bd && Math.abs(n.h[b] - n.h[c]) <= 0.5) { bd = D[b]; best = b; }
+      }
+      if (best < 0) return null;
+      c = best;
+    }
+    // 내리막을 따라 최대 6칸(3유닛)까지 경로를 따라간 뒤,
+    // 그중 곧장 갈 수 있는 가장 먼 칸을 목표로 (모서리를 억지로 질러가다 걸리지 않게)
+    const path = [];
+    let cur = c;
+    for (let s = 0; s < 6; s++) {
+      const ci = cur % n.nx, cj = (cur - ci) / n.nx;
+      let best = cur, bd = D[cur];
+      for (let k = 0; k < 8; k++) {
+        const i = ci + NDI[k], j = cj + NDJ[k];
+        if (i < 0 || j < 0 || i >= n.nx || j >= n.nz) continue;
+        const b = j * n.nx + i;
+        if (D[b] < bd && this.navLink(cur, b, big)) { bd = D[b]; best = b; }
+      }
+      if (best === cur) break;
+      cur = best;
+      path.push(cur);
+    }
+    if (!path.length) return null;
+    const center = (k) => { const ti = k % n.nx, tj = (k - ti) / n.nx; return [n.x0 + (ti + 0.5) * n.cs, n.z0 + (tj + 0.5) * n.cs]; };
+    let tx, tz;
+    for (let s = path.length - 1; s >= 0; s--) {
+      [tx, tz] = center(path[s]);
+      if (s === 0 || this.clearLine(pos.x, pos.z, tx, tz, NAV_R[big])) break;
+    }
+    const dx = tx - pos.x, dz = tz - pos.z;
+    const l = Math.hypot(dx, dz);
+    if (l < 0.05) return null;
+    return { x: dx / l, z: dz / l, dist: D[c] * n.cs };
+  }
+
+  // 두 점 사이를 장애물 없이 곧장 갈 수 있는지
+  clearLine(ax, az, bx, bz, r) {
+    const len = Math.hypot(bx - ax, bz - az);
+    const steps = Math.ceil(len / 0.35);
+    let prevH = this.heightAt(ax, az);
+    for (let s = 1; s <= steps; s++) {
+      const t = s / steps;
+      const x = ax + (bx - ax) * t, z = az + (bz - az) * t;
+      if (this.isBlocked(x, z, r, prevH)) return false;
+      prevH = this.heightAt(x, z);
+    }
+    return true;
+  }
+
   setNight(n) {
     for (const g of this.glowMats) g.mat.emissive.copy(g.color).multiplyScalar(n * g.k);
   }
@@ -758,6 +926,10 @@ export class World {
 }
 
 const OFFS = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+// 길찾기·장애물 충돌용 몸체 반경 (일반 도깨비, 대왕)
+export const NAV_R = [0.36, 0.7];
+const NDI = [1, -1, 0, 0, 1, 1, -1, -1];
+const NDJ = [0, 0, 1, -1, 1, -1, 1, -1];
 
 function mat4(x, y, z, ry = 0, rx = 0, rz = 0, s = null) {
   const m = new THREE.Matrix4();

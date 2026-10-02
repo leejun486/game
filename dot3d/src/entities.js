@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { makeHero, makeDokkaebi, makeGuard, makeLady } from './character.js';
 import { toon } from './materials.js';
+import { NAV_R } from './world.js';
 import { clamp, angleDiff, dampAngle, rand, lerp, smooth } from './util.js';
 
 const tmp = new THREE.Vector3();
@@ -166,7 +167,7 @@ export class Player {
             this.vel.z += Math.cos(this.yaw) * lunge * dt * 10 * (1 - Math.exp(-dt * 5));
           }
         }
-        g.world.move(this.pos, this.vel.x * dt, this.vel.z * dt, this.radius);
+        g.world.move(this.pos, this.vel.x * dt, this.vel.z * dt, this.moveR);
         speed = Math.hypot(this.vel.x, this.vel.z);
       }
       // 발걸음 먼지
@@ -215,16 +216,17 @@ export class Player {
     r.root.visible = this.dead || this.blinkT <= 0 || Math.floor(g.time * 18) % 2 === 0;
     r.setFlash(this.hurtT > 0.2 ? 0.6 : 0);
     if (r.bladeMat) {
-      const glow = this.attack ? 0.5 : (g.night > 0.5 ? 0.12 : 0);
+      const glow = this.attack ? 0.5 : (g.night > 0.5 ? 0.16 : 0.08); // 평소에도 은은한 칼빛
       r.bladeMat.emissive.setRGB(glow * 0.6, glow * 0.9, glow);
+      r.edgeMat.emissive.setRGB(glow * 1.2, glow * 1.4, glow * 1.6);
     }
   }
 }
 
 // ===================== 적 =====================
 const TYPES = {
-  blue: { hp: 46, speed: 2.7, dmg: 10, range: 1.45, windup: 0.5, recover: 0.6, radius: 0.42, rig: 'blue', exp: 10 },
-  red: { hp: 72, speed: 3.1, dmg: 15, range: 1.55, windup: 0.42, recover: 0.5, radius: 0.45, rig: 'red', exp: 16 },
+  blue: { hp: 46, speed: 2.7, dmg: 10, range: 1.5, windup: 0.5, recover: 0.6, radius: 0.46, rig: 'blue', exp: 10 },
+  red: { hp: 72, speed: 3.1, dmg: 15, range: 1.6, windup: 0.42, recover: 0.5, radius: 0.48, rig: 'red', exp: 16 },
   wisp: { hp: 28, speed: 3.2, dmg: 9, range: 7, windup: 0.6, recover: 1.6, radius: 0.35, exp: 12 },
   boss: { hp: 900, speed: 2.35, dmg: 24, range: 2.7, windup: 0.85, recover: 0.8, radius: 0.95, rig: 'boss', exp: 200 },
 };
@@ -239,6 +241,8 @@ export class Enemy {
     this.hp = this.maxHp;
     this.dmg = Math.round(T.dmg * (1 + (level - 1) * 0.15));
     this.radius = T.radius;
+    // 벽·소품과의 충돌 반경은 길찾기 격자와 같게 (좁은 틈에서 끼이지 않도록)
+    this.moveR = type === 'boss' ? NAV_R[1] : Math.min(T.radius, NAV_R[0]);
     this.pos = pos.clone();
     this.vel = new THREE.Vector3();
     this.yaw = 0;
@@ -374,35 +378,36 @@ export class Enemy {
 
     // 넉백
     if (this.vel.lengthSq() > 0.001) {
-      g.world.move(this.pos, this.vel.x * dt, this.vel.z * dt, this.radius);
+      g.world.move(this.pos, this.vel.x * dt, this.vel.z * dt, this.moveR);
       this.vel.multiplyScalar(Math.exp(-9 * dt));
     }
 
     if (this.hurtT > 0) {
       // 경직
     } else if (this.state === 'chase') {
-      this.yaw = dampAngle(this.yaw, toYaw, 8, dt);
+      const sameLevel = Math.abs(p.pos.y - this.pos.y) < 0.5;
       if (p.dead) {
-        // 플레이어가 쓰러지면 주변을 맴돌며 웃음
+        // 플레이어가 쓰러지면 제자리에서 웃음
         speed = 0;
+        this.yaw = dampAngle(this.yaw, toYaw, 8, dt);
       } else if (this.type === 'boss' && this.leapCd <= 0 && dist > 4.5 && dist < 14) {
         this.state = 'leapPrep'; this.st = 0;
         this.leapTarget = p.pos.clone();
         this.tele = g.fx.ring(this.leapTarget, 3.6, '#ff4a3a', 1, 1);
-      } else if (dist > T.range * 0.85) {
+      } else if (dist > T.range * 0.85 || !sameLevel) {
         const sp = T.speed * (this.type === 'boss' && this.hp < this.maxHp * 0.4 ? 1.25 : 1);
-        // 약간 옆으로 돌아 들어오기
-        const side = dist > 3 ? 0.35 * this.strafe : 0;
-        const ux = dx / dist, uz = dz / dist;
-        const mx = ux - uz * side, mz = uz + ux * side;
-        g.world.move(this.pos, mx * sp * dt, mz * sp * dt, this.radius);
-        speed = sp;
-      } else if (this.attackCd <= 0) {
-        this.state = 'windup'; this.st = 0;
-        if (this.type === 'boss') {
-          const f = new THREE.Vector3(this.pos.x + Math.sin(this.yaw) * 1.6, this.pos.y, this.pos.z + Math.cos(this.yaw) * 1.6);
-          this.tele = g.fx.ring(f, 2.6, '#ff4a3a', 1, 1);
-          this.smashAt = f;
+        speed = this.chaseMove(dt, sp, dx, dz, dist);
+        // 돌아가는 중엔 가는 방향을, 곧장 갈 땐 플레이어를 바라봄
+        this.yaw = dampAngle(this.yaw, this.los ? toYaw : Math.atan2(this.moveX, this.moveZ), 8, dt);
+      } else {
+        this.yaw = dampAngle(this.yaw, toYaw, 8, dt);
+        if (this.attackCd <= 0) {
+          this.state = 'windup'; this.st = 0;
+          if (this.type === 'boss') {
+            const f = new THREE.Vector3(this.pos.x + Math.sin(this.yaw) * 1.6, this.pos.y, this.pos.z + Math.cos(this.yaw) * 1.6);
+            this.tele = g.fx.ring(f, 2.6, '#ff4a3a', 1, 1);
+            this.smashAt = f;
+          }
         }
       }
     } else if (this.state === 'windup') {
@@ -455,7 +460,7 @@ export class Enemy {
         this.clearTele();
         // 착지 지점이 막혀 있으면 가까운 빈 곳으로
         const h = g.world.heightAt(this.pos.x, this.pos.z);
-        if (g.world.isBlocked(this.pos.x, this.pos.z, this.radius * 0.5, h)) this.pos.copy(this.leapFrom);
+        if (g.world.isBlocked(this.pos.x, this.pos.z, this.moveR * 0.7, h)) this.pos.copy(this.leapFrom);
         g.bossSlam(this, this.pos.clone(), 3.6, Math.round(this.dmg * 1.2), true);
         this.state = 'recover'; this.st = 0;
         this.leapCd = rand(6, 9);
@@ -470,14 +475,17 @@ export class Enemy {
     const g = this.game, p = g.player;
     this.yaw = dampAngle(this.yaw, toYaw, 6, dt);
     if (this.vel.lengthSq() > 0.001) {
-      g.world.move(this.pos, this.vel.x * dt, this.vel.z * dt, this.radius);
+      g.world.move(this.pos, this.vel.x * dt, this.vel.z * dt, this.moveR);
       this.vel.multiplyScalar(Math.exp(-6 * dt));
     }
     const dx = p.pos.x - this.pos.x, dz = p.pos.z - this.pos.z;
     const ux = dx / (dist || 1), uz = dz / (dist || 1);
     let mx = 0, mz = 0;
     if (this.state === 'chase') {
-      if (dist > 7.5) { mx = ux; mz = uz; }
+      if (dist > 7.5) {
+        const d = g.world.clearLine(this.pos.x, this.pos.z, p.pos.x, p.pos.z, this.moveR) ? null : g.world.navDir(this.pos, 0);
+        if (d) { mx = d.x; mz = d.z; } else { mx = ux; mz = uz; }
+      }
       else if (dist < 4.5) { mx = -ux; mz = -uz; }
       mx += -uz * this.strafe * 0.6; mz += ux * this.strafe * 0.6;
       if (Math.random() < dt * 0.3) this.strafe *= -1;
@@ -490,7 +498,7 @@ export class Enemy {
       }
     }
     const len = Math.hypot(mx, mz);
-    if (len > 0.01) g.world.move(this.pos, (mx / len) * this.T.speed * dt, (mz / len) * this.T.speed * dt, this.radius);
+    if (len > 0.01) g.world.move(this.pos, (mx / len) * this.T.speed * dt, (mz / len) * this.T.speed * dt, this.moveR);
     // 둥실둥실
     const h = g.world.heightAt(this.pos.x, this.pos.z);
     this.y = lerp(this.y, h, 1 - Math.exp(-6 * dt));
@@ -502,6 +510,45 @@ export class Enemy {
     this.coreMat.color.set(this.flashT > 0 ? '#ffffff' : this.state === 'windup' ? '#e8ffff' : '#9feaff');
     if (Math.random() < 0.7) g.fx.add.emit({ x: this.pos.x + rand(-0.15, 0.15), y: this.y + 1.45 + bob, z: this.pos.z + rand(-0.15, 0.15), vx: rand(-0.3, 0.3), vy: rand(0.8, 1.6), vz: rand(-0.3, 0.3), life: rand(0.3, 0.6), size: rand(2, 4), endSize: 1, color: '#7fe0ff', color2: '#1a40ff' });
     return true;
+  }
+
+  // 추격 이동: 곧장 갈 수 있으면 직선(살짝 옆으로 돌아 들어옴), 막혀 있으면 흐름장 길찾기,
+  // 그래도 제자리에 걸리면 잠깐 옆으로 비켜서 빠져나옴. 반환: 실제 이동 속도
+  chaseMove(dt, sp, dx, dz, dist) {
+    const w = this.game.world, p = this.game.player;
+    const big = this.type === 'boss' ? 1 : 0;
+    this.losT = (this.losT ?? 0) - dt;
+    if (this.losT <= 0) {
+      this.losT = 0.2 + Math.random() * 0.1;
+      this.los = Math.abs(p.pos.y - this.pos.y) < 0.5 && w.clearLine(this.pos.x, this.pos.z, p.pos.x, p.pos.z, this.moveR);
+    }
+    let mx, mz;
+    if (this.los || dist < 1.2) {
+      const side = dist > 3 ? 0.35 * this.strafe : 0;
+      const ux = dx / dist, uz = dz / dist;
+      mx = ux - uz * side; mz = uz + ux * side;
+      const l = Math.hypot(mx, mz); mx /= l; mz /= l;
+    } else {
+      const d = w.navDir(this.pos, big);
+      if (d) { mx = d.x; mz = d.z; } else { mx = dx / dist; mz = dz / dist; }
+    }
+    if (this.unstuckT > 0) { this.unstuckT -= dt; mx = this.unstuckX; mz = this.unstuckZ; }
+    // 방향 전환을 부드럽게
+    this.moveX = this.moveX === undefined ? mx : this.moveX + (mx - this.moveX) * Math.min(1, dt * 12);
+    this.moveZ = this.moveZ === undefined ? mz : this.moveZ + (mz - this.moveZ) * Math.min(1, dt * 12);
+    const ml = Math.hypot(this.moveX, this.moveZ) || 1;
+    const bx = this.pos.x, bz = this.pos.z;
+    w.move(this.pos, (this.moveX / ml) * sp * dt, (this.moveZ / ml) * sp * dt, this.moveR);
+    const moved = Math.hypot(this.pos.x - bx, this.pos.z - bz);
+    this.stuckAcc = moved < sp * dt * 0.35 ? (this.stuckAcc || 0) + dt : 0;
+    if (this.stuckAcc > 0.35) {
+      this.stuckAcc = 0;
+      this.los = false; this.losT = 0.8;
+      this.strafe *= -1;
+      const a = Math.atan2(mz, mx) + (Math.random() < 0.5 ? 1 : -1) * (Math.PI / 2 + Math.random() * 0.5);
+      this.unstuckX = Math.cos(a); this.unstuckZ = Math.sin(a); this.unstuckT = 0.3;
+    }
+    return dt > 0 ? moved / dt : 0;
   }
 
   place(dt, speed, attackAnim = null) {

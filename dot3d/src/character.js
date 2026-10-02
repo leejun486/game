@@ -225,15 +225,57 @@ export class Rig {
     const w = new THREE.Group();
     // 무기는 팔의 연장선(-y) 방향으로
     if (kind === 'sword') {
-      const blade = this.mat({ color: C('#dfe6ee'), emissive: C('#000000') });
-      const grip = this.mat({ color: C('#2a2030') });
+      // 일본도풍: 긴 손잡이(엮은 끈 무늬), 둥근 코등이, 가늘고 길게 휜 칼날
+      const blade = this.mat({ color: C('#c9d4e0'), emissive: C('#000000') });
+      const edge = this.mat({ color: C('#ffffff'), emissive: C('#000000') });
+      const wrap = this.mat({ color: C('#1c1824') });
+      const wrapLight = this.mat({ color: C('#d8d0e8') });
       const gold = this.mat({ color: C('#d9a83a') });
-      w.add(mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.18, 5), grip, 0, 0.03, 0));
-      w.add(mesh(new THREE.BoxGeometry(0.16, 0.035, 0.08), gold, 0, -0.07, 0));
-      const bl = mesh(new THREE.BoxGeometry(0.035, 0.78, 0.06), blade, 0, -0.47, 0);
-      w.add(bl);
-      w.add(mesh(new THREE.ConeGeometry(0.035, 0.1, 4), blade, 0, -0.9, 0)).rotation.x = Math.PI;
+      const black = this.mat({ color: C('#141218') });
+      // 손잡이: 손 위아래로 길게 (양손 잡이)
+      for (let i = 0; i < 6; i++) {
+        w.add(mesh(new THREE.CylinderGeometry(0.023, 0.023, 0.045, 6), i % 2 ? wrapLight : wrap, 0, 0.12 - i * 0.045, 0));
+      }
+      w.add(mesh(new THREE.CylinderGeometry(0.026, 0.026, 0.03, 6), gold, 0, 0.16, 0)); // 칼자루 끝 장식
+      const tsuba = mesh(new THREE.CylinderGeometry(0.075, 0.075, 0.022, 10), black, 0, -0.13, 0);
+      w.add(tsuba);
+      w.add(mesh(new THREE.TorusGeometry(0.072, 0.008, 4, 12), gold, 0, -0.13, 0)).rotation.x = Math.PI / 2;
+      w.add(mesh(new THREE.BoxGeometry(0.03, 0.05, 0.045), gold, 0, -0.165, 0)); // 하바키
+      // 칼날: 여러 마디를 살짝씩 휘어 이어 붙임 (등 쪽으로 곡선), 끝으로 갈수록 가늘게
+      const N = 7, L = 1.08;
+      let y = -0.19, z = 0, ang = 0;
+      for (let i = 0; i < N; i++) {
+        const segL = L / N;
+        const taper = 1 - (i / N) * 0.35;
+        const g = new THREE.Group();
+        g.position.set(0, y, z);
+        g.rotation.x = ang;
+        const b = mesh(new THREE.BoxGeometry(0.03, segL + 0.012, 0.068 * taper), blade, 0, -segL / 2, -0.004);
+        const e = mesh(new THREE.BoxGeometry(0.034, segL + 0.012, 0.02), edge, 0, -segL / 2, 0.032 * taper);
+        g.add(b, e);
+        w.add(g);
+        y -= Math.cos(ang) * segL;
+        z -= Math.sin(ang) * segL;
+        ang -= 0.035;
+      }
+      // 칼끝(키사키): 비스듬히 깎인 끝
+      const tip = mesh(new THREE.ConeGeometry(0.036, 0.14, 4), edge, 0, y - 0.06, z - 0.002);
+      tip.rotation.x = Math.PI + ang;
+      tip.scale.set(0.55, 1, 1);
+      w.add(tip);
       this.bladeMat = blade;
+      this.edgeMat = edge;
+      // 왼쪽 허리의 칼집
+      if (this.cfg.type === 'hero') {
+        const saya = new THREE.Group();
+        saya.position.set(0.2, 0.08, -0.05);
+        saya.rotation.set(-1.15, 0, 0.25);
+        const lac = this.mat({ color: C('#1a1420') });
+        saya.add(mesh(new THREE.BoxGeometry(0.035, 0.95, 0.06), lac, 0, -0.42, 0));
+        saya.add(mesh(new THREE.BoxGeometry(0.04, 0.04, 0.065), gold, 0, -0.9, 0));
+        saya.add(mesh(new THREE.BoxGeometry(0.04, 0.05, 0.07), this.mat({ color: C('#c8302c') }), 0, -0.1, 0));
+        this.hips.add(saya);
+      }
     } else if (kind === 'club') {
       const wood = this.mat({ color: C('#7a4a2a') });
       const stud = this.mat({ color: C('#c8c0b0') });

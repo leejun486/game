@@ -56,6 +56,8 @@ class Game {
       this.birds.push(new Bird(this, V(x, this.world.heightAt(x, z), z)));
     }
 
+    this.world.buildNav();
+    this.flowT = 0;
     this.setupInput();
     this.updateQuest();
     this.last = performance.now();
@@ -372,7 +374,7 @@ class Game {
   }
 
   playerSwingHit(pl, kind) {
-    const range = kind === 2 ? 2.25 : 1.95;
+    const range = kind === 2 ? 2.45 : 2.2;
     const half = kind === 2 ? 0.95 : 1.35;
     const yaw = pl.yaw;
     const origin = V(pl.pos.x, pl.y + 0.72, pl.pos.z);
@@ -588,8 +590,8 @@ class Game {
         const ux = dx / d, uz = dz / d;
         const wa = a === this.player ? 0.3 : (a.type === 'boss' ? 0.1 : 1);
         const wb = b.type === 'boss' ? 0.1 : 1;
-        this.world.move(a.pos, -ux * push * wa, -uz * push * wa, a.radius);
-        this.world.move(b.pos, ux * push * wb, uz * push * wb, b.radius);
+        this.world.move(a.pos, -ux * push * wa, -uz * push * wa, a.moveR ?? a.radius);
+        this.world.move(b.pos, ux * push * wb, uz * push * wb, b.moveR ?? b.radius);
       }
     }
   }
@@ -604,6 +606,42 @@ class Game {
     if (Math.random() < dt * 14 * n) {
       this.fx.add.emit({ x: f.x + rand(-18, 18), y: rand(0.4, 2.5), z: f.z + rand(-14, 10), vx: rand(-0.3, 0.3), vy: rand(-0.1, 0.2), vz: rand(-0.3, 0.3), wob: 0.8, life: rand(2.5, 5), size: 2, color: Math.random() < 0.3 ? '#9ff0ff' : '#d8ff8a', flicker: 0.8 });
     }
+  }
+
+  // 전투 시뮬레이션 한 단계 (플레이어, 적, 길찾기, 투사체, 웨이브)
+  simulate(wdt, inp) {
+    this.player.update(wdt, inp);
+    // 길찾기 흐름장 (플레이어가 다른 칸으로 옮겼을 때만 실제로 다시 계산)
+    this.flowT -= wdt;
+    if (this.enemies.length && this.flowT <= 0) {
+      this.flowT = 0.15;
+      const pp = this.player.pos;
+      this.world.updateFlow(pp.x, pp.z, 0);
+      if (this.enemies.some((e) => e.type === 'boss' && !e.dead)) this.world.updateFlow(pp.x, pp.z, 1);
+    }
+    for (let i = this.enemies.length - 1; i >= 0; i--) {
+      const e = this.enemies[i];
+      if (!e.update(wdt)) { e.dispose(); this.enemies.splice(i, 1); }
+    }
+    this.separate();
+    this.updateProjectiles(wdt);
+    while (this.spawnQueue.length && this.spawnQueue[0].at <= this.time) this.spawnEnemy(this.spawnQueue.shift().type);
+    this.spawnQueue.sort((a, b) => a.at - b.at);
+    this.checkWave();
+    if (this.enemies.length || this.spawnQueue.length) this.updateQuest();
+  }
+
+  // 테스트·디버그용: 렌더링 없이 시간만 진행
+  stepSim(dt) {
+    this.time += dt;
+    shared.time.value += dt;
+    this.simulate(dt, { mx: 0, mz: 0, moveLen: 0, mouseRecent: false, mouseWorld: null });
+  }
+
+  spawnEnemyAt(type, x, z) {
+    const e = new Enemy(this, type, V(x, this.world.heightAt(x, z), z), 1 + this.round);
+    this.enemies.push(e);
+    return e;
   }
 
   loop(now) {
@@ -623,21 +661,8 @@ class Game {
     this.alarm = Math.max(0, this.alarm - dt);
 
     const inp = this.readInput();
-    if (this.state !== 'title') {
-      this.player.update(wdt, inp);
-      for (let i = this.enemies.length - 1; i >= 0; i--) {
-        const e = this.enemies[i];
-        if (!e.update(wdt)) { e.dispose(); this.enemies.splice(i, 1); }
-      }
-      this.separate();
-      this.updateProjectiles(wdt);
-      while (this.spawnQueue.length && this.spawnQueue[0].at <= this.time) this.spawnEnemy(this.spawnQueue.shift().type);
-      this.spawnQueue.sort((a, b) => a.at - b.at);
-      this.checkWave();
-      if (this.enemies.length || this.spawnQueue.length) this.updateQuest();
-    } else {
-      this.player.update(wdt, inp);
-    }
+    if (this.state !== 'title') this.simulate(wdt, inp);
+    else this.player.update(wdt, inp);
     for (const n of this.npcs) n.update(wdt);
     for (const b of this.birds) b.update(wdt);
     this.world.update(wdt, this.time);
