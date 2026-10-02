@@ -154,6 +154,29 @@ export class Audio {
         [523, 659, 784, 1046, 1318].forEach((f, i) => this.tone(0.45, { type: 'triangle', f0: f, gain: 0.1, at: i * 0.07 }));
         this.noise(0.8, { f0: 2000, f1: 6000, q: 1, gain: 0.12, attack: 0.1 });
         break;
+      case 'howl': // 여우 울음
+        this.tone(0.7, { type: 'sawtooth', f0: 500, f1: 1100, gain: 0.04, attack: 0.15 });
+        this.tone(0.6, { type: 'triangle', f0: 900, f1: 600, gain: 0.05, at: 0.3 });
+        break;
+      case 'wail': // 귀신 곡소리
+        this.tone(1.0, { type: 'sine', f0: 620, f1: 380, gain: 0.07, attack: 0.25 });
+        this.tone(1.0, { type: 'sine', f0: 640, f1: 395, gain: 0.05, attack: 0.3 });
+        this.noise(0.9, { f0: 600, f1: 300, q: 6, gain: 0.08, attack: 0.3 });
+        break;
+      case 'bell': // 서낭당 방울
+        [1760, 2217, 2637].forEach((f, i) => this.tone(0.9, { type: 'sine', f0: f, gain: 0.08, at: i * 0.05 }));
+        [1760, 2217].forEach((f, i) => this.tone(0.6, { type: 'sine', f0: f * 1.01, gain: 0.05, at: 0.25 + i * 0.05 }));
+        break;
+      case 'bigbell': // 범종: 낮고 길게 울림
+        this.tone(3.2, { type: 'sine', f0: 98, gain: 0.7, attack: 0.01 });
+        this.tone(3.0, { type: 'sine', f0: 196.5, gain: 0.25, attack: 0.01 });
+        this.tone(2.4, { type: 'sine', f0: 263, gain: 0.12, attack: 0.02 });
+        this.noise(0.25, { type: 'lowpass', f0: 800, f1: 150, gain: 0.4 });
+        break;
+      case 'portal':
+        this.tone(1.0, { type: 'sine', f0: 300, f1: 1200, gain: 0.1, attack: 0.2 });
+        this.noise(1.0, { f0: 400, f1: 3000, q: 2, gain: 0.15, attack: 0.3 });
+        break;
       case 'denied':
         this.tone(0.07, { type: 'square', f0: 180, gain: 0.05 });
         this.tone(0.07, { type: 'square', f0: 140, gain: 0.05, at: 0.07 });

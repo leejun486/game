@@ -4,10 +4,17 @@ import { toon, animateMesh, ANIM, shared } from './materials.js';
 import { boxGeo, cylGeo, Batcher, roofGeometry, latheGeo } from './geom.js';
 import * as T from './textures.js';
 import { mulberry32 } from './util.js';
+import { buildBamboo, buildTemple } from './worlds2.js';
 
 export class World {
-  constructor(scene) {
+  constructor(scene, mapId = 'palace') {
     this.scene = scene;
+    this.mapId = mapId;
+    // 걸을 수 있는 경계. 궁궐은 남쪽 정문 통로만 바깥으로 이어짐
+    this.bounds = mapId === 'palace'
+      ? { x0: -21.6, x1: 21.6, z0: -33.3, z1: 30, gate: { z: 21.2, x0: -3.2, x1: 3.2 } }
+      : { x0: -19.6, x1: 19.6, z0: -25.6, z1: 21.6 };
+    this.spawn = mapId === 'palace' ? new THREE.Vector3(0, 0.12, 16) : new THREE.Vector3(0, 0, 15);
     this.root = new THREE.Group();
     scene.add(this.root);
     this.rects = [];     // 높이 사각형 {x0,x1,z0,z1,h}
@@ -20,7 +27,14 @@ export class World {
     this.windows = [];
     this.spawnPoints = [];
     this.makeMaterials();
-    this.build();
+    if (mapId === 'palace') this.build();
+    else if (mapId === 'bamboo') buildBamboo(this);
+    else buildTemple(this);
+  }
+
+  dispose() {
+    this.scene.remove(this.root);
+    this.root.traverse((o) => { if (o.geometry) o.geometry.dispose(); });
   }
 
   makeMaterials() {
@@ -83,10 +97,10 @@ export class World {
   }
 
   isBlocked(x, z, r, fromH) {
-    // 맵 경계 (정문 통로만 바깥으로 이어짐)
-    if (x < -21.6 + r || x > 21.6 - r || z < -33.3 + r) return true;
-    if (z > 21.2 - r && (x < -3.2 + r || x > 3.2 - r)) return true;
-    if (z > 30) return true;
+    // 맵 경계 (궁궐은 정문 통로만 바깥으로 이어짐)
+    const bd = this.bounds;
+    if (x < bd.x0 + r || x > bd.x1 - r || z < bd.z0 + r || z > bd.z1) return true;
+    if (bd.gate && z > bd.gate.z - r && (x < bd.gate.x0 + r || x > bd.gate.x1 - r)) return true;
     for (const b of this.blockRects) if (x > b.x0 - r && x < b.x1 + r && z > b.z0 - r && z < b.z1 + r) return true;
     for (const c of this.circles) {
       const dx = x - c.x, dz = z - c.z, rr = c.r + r;
@@ -126,7 +140,7 @@ export class World {
       const a = Math.random() * Math.PI * 2, d = rMin + Math.random() * (rMax - rMin);
       const x = cx + Math.cos(a) * d, z = cz + Math.sin(a) * d;
       const h = this.heightAt(x, z);
-      if (!this.isBlocked(x, z, 0.5, h) && z < 20) return new THREE.Vector3(x, h, z);
+      if (!this.isBlocked(x, z, 0.5, h) && z < this.bounds.z1 - 2 && (!this.bounds.gate || z < 20)) return new THREE.Vector3(x, h, z);
     }
     return null;
   }
@@ -528,7 +542,7 @@ export class World {
     g.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
     this.root.add(g);
     this.circles.push({ x, z, r: 1.25, y: 0 });
-    this.drums.push({ group: g, body, pos: new THREE.Vector3(x, 0, z), shake: 0 });
+    this.drums.push({ group: g, body, pos: new THREE.Vector3(x, 0, z), shake: 0, label: '북', sound: 'drum', reach: 2.9, promptY: 4.0 });
   }
 
   planter(x0, x1, z0, z1) {
@@ -549,7 +563,7 @@ export class World {
     this.grassAreas.push({ x0: x0 + bw, x1: x1 - bw, z0: z0 + bw, z1: z1 - bw, y: 0.26 });
   }
 
-  pine(x, y, z, s, seed, collide = true) {
+  pine(x, y, z, s, seed, collide = true, snowy = false) {
     const B = this.batch, F = this.foliage, M = this.M;
     const R = mulberry32(seed * 97 + 3);
     const up = new THREE.Vector3(0, 1, 0);
@@ -592,12 +606,12 @@ export class World {
         B.add(geo, M.bark, new THREE.Matrix4().compose(base.clone().add(end).multiplyScalar(0.5), q, new THREE.Vector3(1, 1, 1)));
         const ps = (0.8 + R() * 0.4) * s;
         pad(end.clone().add(new THREE.Vector3(0, 0.15 * s, 0)), 1.25 * ps, 0.42 * ps, 1.05 * ps, M.leaf);
-        pad(end.clone().add(new THREE.Vector3(0.1, 0.42 * s, 0.05)), 0.85 * ps, 0.3 * ps, 0.75 * ps, M.leaf2);
+        pad(end.clone().add(new THREE.Vector3(0.1, 0.42 * s, 0.05)), 0.85 * ps, 0.3 * ps, 0.75 * ps, snowy ? M.snowLeaf : M.leaf2);
       }
     }
     const top = pts[segs - 1];
     pad(top.clone().add(new THREE.Vector3(0, 0.2 * s, 0)), 1.5 * s, 0.5 * s, 1.3 * s, M.leaf);
-    pad(top.clone().add(new THREE.Vector3(0.1, 0.55 * s, 0)), 1.0 * s, 0.35 * s, 0.9 * s, M.leaf2);
+    pad(top.clone().add(new THREE.Vector3(0.1, 0.55 * s, 0)), 1.0 * s, 0.35 * s, 0.9 * s, snowy ? M.snowLeaf : M.leaf2);
     if (collide) this.circles.push({ x, z, r: 0.45 * s, y });
   }
 
@@ -749,8 +763,9 @@ export class World {
   // ---------- 길찾기: 격자 + 플레이어 기준 흐름장(다익스트라) ----------
   // 작은 몸체(일반 도깨비)와 큰 몸체(대왕)용 통행 가능 격자를 따로 만든다
   buildNav() {
-    const cs = 0.5, x0 = -22, z0 = -34;
-    const nx = Math.ceil(44 / cs), nz = Math.ceil(64 / cs);
+    const bd = this.bounds;
+    const cs = 0.5, x0 = Math.floor(bd.x0) - 0.5, z0 = Math.floor(bd.z0) - 0.5;
+    const nx = Math.ceil((bd.x1 - x0 + 0.5) / cs), nz = Math.ceil((bd.z1 - z0 + 0.5) / cs);
     const N = nx * nz;
     const h = new Float32Array(N);
     const ok = [new Uint8Array(N), new Uint8Array(N)];
@@ -931,14 +946,14 @@ export const NAV_R = [0.36, 0.7];
 const NDI = [1, -1, 0, 0, 1, 1, -1, -1];
 const NDJ = [0, 0, 1, -1, 1, -1, 1, -1];
 
-function mat4(x, y, z, ry = 0, rx = 0, rz = 0, s = null) {
+export function mat4(x, y, z, ry = 0, rx = 0, rz = 0, s = null) {
   const m = new THREE.Matrix4();
   const sc = Array.isArray(s) ? new THREE.Vector3(...s) : new THREE.Vector3(1, 1, 1);
   m.compose(new THREE.Vector3(x, y, z), new THREE.Quaternion().setFromEuler(new THREE.Euler(rx, ry, rz, 'YXZ')), sc);
   return m;
 }
 
-function waterMaterial() {
+export function waterMaterial() {
   return new THREE.ShaderMaterial({
     uniforms: { uTime: shared.time, uNight: { value: 0 } },
     vertexShader: `

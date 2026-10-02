@@ -239,6 +239,16 @@ export class FX {
     }
   }
 
+  colorFire(x, y, z, n = 20, spread = 0.5, c1 = '#9ff0ff', c2 = '#2050ff') {
+    for (let i = 0; i < n; i++) {
+      this.add.emit({
+        x: x + rand(-spread, spread), y: y + rand(0, 0.4), z: z + rand(-spread, spread),
+        vx: rand(-0.4, 0.4), vy: rand(1.2, 3.2), vz: rand(-0.4, 0.4), drag: 1.5,
+        life: rand(0.35, 0.8), size: rand(2, 4), endSize: 1, color: c1, color2: c2, flicker: 0.3,
+      });
+    }
+  }
+
   blueFire(x, y, z, n = 20, spread = 0.5) {
     for (let i = 0; i < n; i++) {
       this.add.emit({

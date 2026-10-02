@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { makeDokkaebi, makeGuard, makeLady } from './character.js';
+import { makeDokkaebi, makeGuard, makeLady, makeFox, makeJiangshi, makeGhost, makeReaper } from './character.js';
 import { CLASSES } from './classes.js';
 import { outfitColors } from './character.js';
 import { item, WEAPONS } from './items.js';
@@ -444,11 +444,27 @@ export class Player {
 }
 
 // ===================== 적 =====================
+// 도깨비불 계열 색 (몸, 꼬리불, 쏘는 구슬)
+const PAL = {
+  blue: { core: '#bff4ff', hi: '#e8ffff', idle: '#9feaff', shell: '#3a8cff', trail: '#7fe0ff', trail2: '#1a40ff', orb: '#d8fbff', eye: 0x0a1030, fire: ['#9ff0ff', '#2050ff'] },
+  fox: { core: '#ffe0c0', hi: '#fff4e0', idle: '#ffc89a', shell: '#ff6a2a', trail: '#ffb070', trail2: '#ff2a00', orb: '#ffe8c8', eye: 0x3a0a00, fire: ['#ffd08a', '#ff3a00'] },
+  ghost: { core: '#f0e0ff', hi: '#ffffff', idle: '#d8c0ff', shell: '#8a4aff', trail: '#c8a0ff', trail2: '#4a1a9a', orb: '#ecdcff', eye: 0x1a0a2a, fire: ['#d8c0ff', '#5a1aaa'] },
+};
+
 const TYPES = {
-  blue: { hp: 46, speed: 2.7, dmg: 10, range: 1.5, windup: 0.5, recover: 0.6, radius: 0.46, rig: 'blue', exp: 10 },
-  red: { hp: 72, speed: 3.1, dmg: 15, range: 1.6, windup: 0.42, recover: 0.5, radius: 0.48, rig: 'red', exp: 16 },
-  wisp: { hp: 28, speed: 3.2, dmg: 9, range: 7, windup: 0.6, recover: 1.6, radius: 0.35, exp: 12 },
-  boss: { hp: 900, speed: 2.35, dmg: 24, range: 2.7, windup: 0.85, recover: 0.8, radius: 0.95, rig: 'boss', exp: 200 },
+  // 궁궐
+  blue: { hp: 46, speed: 2.7, dmg: 10, range: 1.5, windup: 0.5, recover: 0.6, radius: 0.46, exp: 10, ai: 'melee', make: () => makeDokkaebi('blue'), pal: PAL.blue },
+  red: { hp: 72, speed: 3.1, dmg: 15, range: 1.6, windup: 0.42, recover: 0.5, radius: 0.48, exp: 16, ai: 'melee', make: () => makeDokkaebi('red'), pal: PAL.blue },
+  wisp: { hp: 28, speed: 3.2, dmg: 9, range: 7, windup: 0.6, recover: 1.6, radius: 0.35, exp: 12, ai: 'wisp', pal: PAL.blue },
+  boss: { hp: 900, speed: 2.35, dmg: 24, range: 2.7, windup: 0.85, recover: 0.8, radius: 0.95, exp: 200, ai: 'boss', boss: 'dokkaebi', make: () => makeDokkaebi('boss'), pal: PAL.blue, name: '도깨비 대왕 두억시니', summon: ['red', 'blue'] },
+  // 죽림
+  fox: { hp: 44, speed: 4.4, dmg: 10, range: 1.5, windup: 0.34, recover: 0.5, radius: 0.42, exp: 14, ai: 'melee', lunge: true, make: () => makeFox('fox'), pal: PAL.fox },
+  foxfire: { hp: 32, speed: 3.6, dmg: 10, range: 7, windup: 0.5, recover: 1.4, radius: 0.35, exp: 14, ai: 'wisp', pal: PAL.fox },
+  gumiho: { hp: 1150, speed: 3.1, dmg: 22, range: 2.4, windup: 0.6, recover: 0.7, radius: 0.95, exp: 320, ai: 'boss', boss: 'gumiho', make: () => makeFox('gumiho'), pal: PAL.fox, name: '천년 구미호', summon: ['fox', 'foxfire'] },
+  // 설원 폐사찰
+  jiangshi: { hp: 92, speed: 3.2, dmg: 15, range: 1.5, windup: 0.45, recover: 0.6, radius: 0.45, exp: 20, ai: 'melee', hop: true, make: makeJiangshi, pal: PAL.ghost },
+  ghost: { hp: 48, speed: 3.0, dmg: 12, range: 6.5, windup: 0.6, recover: 1.6, radius: 0.4, exp: 20, ai: 'wisp', teleport: true, make: makeGhost, pal: PAL.ghost },
+  reaper: { hp: 1500, speed: 2.7, dmg: 26, range: 2.8, windup: 0.7, recover: 0.8, radius: 1.0, exp: 450, ai: 'boss', boss: 'reaper', make: makeReaper, pal: PAL.ghost, name: '저승사자', summon: ['ghost', 'jiangshi'] },
 };
 
 export class Enemy {
@@ -461,8 +477,11 @@ export class Enemy {
     this.hp = this.maxHp;
     this.dmg = Math.round(T.dmg * (1 + (level - 1) * 0.15));
     this.radius = T.radius;
+    this.isBoss = T.ai === 'boss';
+    this.isWisp = T.ai === 'wisp';
+    this.name = T.name;
     // 벽·소품과의 충돌 반경은 길찾기 격자와 같게 (좁은 틈에서 끼이지 않도록)
-    this.moveR = type === 'boss' ? NAV_R[1] : Math.min(T.radius, NAV_R[0]);
+    this.moveR = this.isBoss ? NAV_R[1] : Math.min(T.radius, NAV_R[0]);
     this.pos = pos.clone();
     this.vel = new THREE.Vector3();
     this.yaw = 0;
@@ -477,29 +496,33 @@ export class Enemy {
     this.y = pos.y;
     this.strafe = Math.random() < 0.5 ? 1 : -1;
     this.leapCd = 6;
+    this.patCd = 3;
+    this.tpCd = rand(3, 6);
+    this.hopPh = Math.random();
     this.summoned = 0;
-    if (type === 'wisp') this.buildWisp();
-    else {
-      this.rig = makeDokkaebi(T.rig);
+    if (T.make) {
+      this.rig = T.make();
       game.scene.add(this.rig.root);
-    }
+    } else this.buildWisp();
     this.root = this.rig ? this.rig.root : this.wisp;
     this.root.position.copy(this.pos);
     this.root.scale.setScalar(0.01);
-    game.fx.blueFire(pos.x, pos.y, pos.z, type === 'boss' ? 80 : 30, type === 'boss' ? 1.2 : 0.5);
-    game.fx.ring(pos, type === 'boss' ? 3 : 1.4, '#7fd8ff', 0.5);
+    const [f1, f2] = T.pal.fire;
+    game.fx.colorFire(pos.x, pos.y, pos.z, this.isBoss ? 80 : 30, this.isBoss ? 1.2 : 0.5, f1, f2);
+    game.fx.ring(pos, this.isBoss ? 3 : 1.4, f1, 0.5);
     game.audio.play('spawn');
   }
 
   buildWisp() {
     const g = new THREE.Group();
-    const coreMat = new THREE.MeshBasicMaterial({ color: new THREE.Color('#bff4ff') });
+    const P = this.T.pal;
+    const coreMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(P.core) });
     const core = new THREE.Mesh(new THREE.IcosahedronGeometry(0.28, 1), coreMat);
     g.add(core);
-    const shell = new THREE.Mesh(new THREE.IcosahedronGeometry(0.36, 1), new THREE.MeshBasicMaterial({ color: new THREE.Color('#3a8cff'), transparent: true, opacity: 0.45, depthWrite: false }));
+    const shell = new THREE.Mesh(new THREE.IcosahedronGeometry(0.36, 1), new THREE.MeshBasicMaterial({ color: new THREE.Color(P.shell), transparent: true, opacity: 0.45, depthWrite: false }));
     shell.userData.noOutline = true;
     g.add(shell);
-    const eyeM = new THREE.MeshBasicMaterial({ color: 0x0a1030 });
+    const eyeM = new THREE.MeshBasicMaterial({ color: P.eye });
     for (const s of [-1, 1]) {
       const e = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.1, 0.04), eyeM);
       e.position.set(s * 0.09, 0.03, 0.27);
@@ -512,16 +535,16 @@ export class Enemy {
 
   get alive() { return !this.dead; }
 
-  center() { return tmp.set(this.pos.x, this.y + (this.type === 'boss' ? 2.0 : this.type === 'wisp' ? 1.3 : 0.8), this.pos.z); }
+  center() { return tmp.set(this.pos.x, this.y + (this.isBoss ? 2.0 : this.isWisp ? (this.rig ? 1.2 : 1.3) : 0.8), this.pos.z); }
 
   hit(dmg, dir, knock = 5, stun = 0.25) {
     if (this.dead || this.spawning) return false;
     this.hp -= dmg;
     this.flashT = 0.12;
-    if (this.type !== 'boss' || this.state === 'chase') {
-      const k = this.type === 'boss' ? knock * 0.15 : knock;
+    if (!this.isBoss || this.state === 'chase') {
+      const k = this.isBoss ? knock * 0.15 : knock;
       this.vel.addScaledVector(dir, k);
-      if (this.type !== 'boss') {
+      if (!this.isBoss) {
         this.hurtT = stun;
         if (this.state === 'windup' && stun >= 0.25) { this.state = 'chase'; this.attackCd = 0.6; this.clearTele(); }
       }
@@ -532,12 +555,12 @@ export class Enemy {
 
   // 빙결: 얼음 덩어리에 갇혀 잠시 못 움직임 (대왕은 면역)
   freeze(dur) {
-    if (this.dead || this.type === 'boss') return;
+    if (this.dead || this.isBoss) return;
     this.frozenT = Math.max(this.frozenT || 0, dur);
     this.hurtT = Math.max(this.hurtT, dur);
     if (this.state === 'windup' || this.state === 'strike') { this.state = 'chase'; this.attackCd = 0.8; this.clearTele(); }
     if (!this.ice) {
-      const s = this.type === 'wisp' ? 0.9 : 1.15 * (this.T.radius / 0.46);
+      const s = this.isWisp ? 0.9 : 1.15 * (this.T.radius / 0.46);
       const mat = new THREE.MeshBasicMaterial({ color: '#a8e4ff', transparent: true, opacity: 0.42, depthWrite: false });
       this.ice = new THREE.Mesh(new THREE.IcosahedronGeometry(0.75 * s, 0), mat);
       this.ice.scale.set(1, 1.35, 1);
@@ -548,7 +571,7 @@ export class Enemy {
   updateIce(dt) {
     if (!this.ice) return;
     this.frozenT -= dt;
-    const y = this.type === 'wisp' ? this.y + 1.3 : this.y + 0.75;
+    const y = this.isWisp ? this.y + 1.2 : this.y + 0.75;
     this.ice.position.set(this.pos.x, y, this.pos.z);
     if (this.frozenT <= 0 || this.dead) {
       const g = this.game;
@@ -569,9 +592,10 @@ export class Enemy {
     this.clearTele();
     const g = this.game;
     g.audio.play('poof');
-    if (this.type === 'wisp') {
-      g.fx.blueFire(this.pos.x, this.y + 1, this.pos.z, 40, 0.4);
-      g.fx.ring(new THREE.Vector3(this.pos.x, this.y, this.pos.z), 1.5, '#7fd8ff', 0.4);
+    if (this.isWisp && !this.rig) {
+      const [f1, f2] = this.T.pal.fire;
+      g.fx.colorFire(this.pos.x, this.y + 1, this.pos.z, 40, 0.4, f1, f2);
+      g.fx.ring(new THREE.Vector3(this.pos.x, this.y, this.pos.z), 1.5, f1, 0.4);
     }
     g.onEnemyKilled(this);
   }
@@ -591,16 +615,17 @@ export class Enemy {
 
     if (this.dead) {
       this.deadT += dt;
-      if (this.type === 'wisp') {
+      if (this.isWisp && !this.rig) {
         this.root.scale.setScalar(Math.max(0.01, 1 - this.deadT * 4));
       } else {
         this.rig.animate(dt, { speed: 0, dead: true });
         this.rig.setFlash(Math.max(0, 0.8 - this.deadT * 2));
         if (this.deadT > 0.55 && !this.poofed) {
           this.poofed = true;
-          const big = this.type === 'boss';
+          const big = this.isBoss;
+          const [f1, f2] = this.T.pal.fire;
           g.fx.smoke(this.pos.x, this.y + 0.3, this.pos.z, big ? 30 : 12);
-          g.fx.blueFire(this.pos.x, this.y + 0.2, this.pos.z, big ? 60 : 24, big ? 1.4 : 0.6);
+          g.fx.colorFire(this.pos.x, this.y + 0.2, this.pos.z, big ? 60 : 24, big ? 1.4 : 0.6, f1, f2);
           g.fx.coins(this.pos.x, this.y, this.pos.z, big ? 30 : 6);
           g.audio.play('coin');
           this.root.visible = false;
@@ -613,9 +638,9 @@ export class Enemy {
     if (this.spawning) {
       const k = smooth(clamp(this.st / 0.7, 0, 1));
       this.root.scale.setScalar(Math.max(0.01, k));
-      if (Math.random() < 0.6) g.fx.blueFire(this.pos.x, this.pos.y, this.pos.z, 2, this.type === 'boss' ? 1 : 0.4);
-      if (this.st >= 0.7) { this.spawning = false; this.state = 'chase'; this.st = 0; this.root.scale.setScalar(1); if (Math.random() < 0.4 || this.type === 'boss') g.audio.play('laugh'); }
-      if (this.type === 'wisp') this.root.position.set(this.pos.x, this.pos.y + 1.3 * k, this.pos.z);
+      if (Math.random() < 0.6) g.fx.colorFire(this.pos.x, this.pos.y, this.pos.z, 2, this.isBoss ? 1 : 0.4, ...this.T.pal.fire);
+      if (this.st >= 0.7) { this.spawning = false; this.state = 'chase'; this.st = 0; this.root.scale.setScalar(1); if (Math.random() < 0.4 || this.isBoss) g.audio.play(this.T.pal === PAL.blue ? 'laugh' : this.T.pal === PAL.fox ? 'howl' : 'wail'); }
+      if (this.isWisp && !this.rig) this.root.position.set(this.pos.x, this.pos.y + 1.3 * k, this.pos.z);
       else this.place(dt, 0);
       return true;
     }
@@ -627,7 +652,7 @@ export class Enemy {
     let attackAnim = null;
     const T = this.T;
 
-    if (this.type === 'wisp') return this.updateWisp(dt, dist, toYaw);
+    if (this.isWisp) return this.updateWisp(dt, dist, toYaw);
 
     // 넉백
     if (this.vel.lengthSq() > 0.001) {
@@ -643,12 +668,23 @@ export class Enemy {
         // 플레이어가 쓰러지면 제자리에서 웃음
         speed = 0;
         this.yaw = dampAngle(this.yaw, toYaw, 8, dt);
-      } else if (this.type === 'boss' && this.leapCd <= 0 && dist > 4.5 && dist < 14) {
+      } else if (T.boss === 'dokkaebi' && this.leapCd <= 0 && dist > 4.5 && dist < 14) {
         this.state = 'leapPrep'; this.st = 0;
         this.leapTarget = p.pos.clone();
         this.tele = g.fx.ring(this.leapTarget, 3.6, '#ff4a3a', 1, 1);
+      } else if (this.isBoss && T.boss !== 'dokkaebi' && this.bossPattern(dt, dist, toYaw)) {
+        // 구미호·저승사자 고유 패턴 시작
       } else if (dist > T.range * 0.85 || !sameLevel) {
-        const sp = T.speed * (this.type === 'boss' && this.hp < this.maxHp * 0.4 ? 1.25 : 1);
+        let sp = T.speed * (this.isBoss && this.hp < this.maxHp * 0.4 ? 1.25 : 1);
+        if (T.hop) {
+          // 강시: 뛰어오른 동안만 앞으로 감
+          this.hopPh = (this.hopPh + dt * 1.8) % 1;
+          const air = this.hopPh < 0.62;
+          this.hop = air ? Math.sin((this.hopPh / 0.62) * Math.PI) : 0;
+          sp = air ? sp * 1.6 : 0;
+          if (!air && !this.landed) { this.landed = true; g.fx.dust(this.pos.x, this.pos.y, this.pos.z, 3); }
+          if (air) this.landed = false;
+        }
         speed = this.chaseMove(dt, sp, dx, dz, dist);
         // 돌아가는 중엔 가는 방향을, 곧장 갈 땐 플레이어를 바라봄
         this.yaw = dampAngle(this.yaw, this.los ? toYaw : Math.atan2(this.moveX, this.moveZ), 8, dt);
@@ -656,7 +692,7 @@ export class Enemy {
         this.yaw = dampAngle(this.yaw, toYaw, 8, dt);
         if (this.attackCd <= 0) {
           this.state = 'windup'; this.st = 0;
-          if (this.type === 'boss') {
+          if (this.isBoss) {
             const f = new THREE.Vector3(this.pos.x + Math.sin(this.yaw) * 1.6, this.pos.y, this.pos.z + Math.cos(this.yaw) * 1.6);
             this.tele = g.fx.ring(f, 2.6, '#ff4a3a', 1, 1);
             this.smashAt = f;
@@ -667,16 +703,20 @@ export class Enemy {
       if (this.st < T.windup * 0.6) this.yaw = dampAngle(this.yaw, toYaw, 5, dt);
       attackAnim = { t: 0.28 * clamp(this.st / T.windup, 0, 1), kind: 2 };
       if (this.tele) this.tele.mat.uniforms.uProg.value = this.st / T.windup;
-      if (this.type === 'boss' && this.smashAt) {
+      if (this.isBoss && this.smashAt) {
         this.smashAt.set(this.pos.x + Math.sin(this.yaw) * 1.6, this.pos.y, this.pos.z + Math.cos(this.yaw) * 1.6);
         if (this.tele) this.tele.m.position.set(this.smashAt.x, this.smashAt.y + 0.04, this.smashAt.z);
       }
       if (this.st >= T.windup) { this.state = 'strike'; this.st = 0; g.audio.play('swing'); }
     } else if (this.state === 'strike') {
       attackAnim = { t: 0.28 + 0.34 * clamp(this.st / 0.12, 0, 1), kind: 2 };
+      if (T.lunge && this.st < 0.12) {
+        // 여우: 몸을 날려 물기
+        g.world.move(this.pos, Math.sin(this.yaw) * 9 * dt, Math.cos(this.yaw) * 9 * dt, this.moveR);
+      }
       if (!this.struck && this.st >= 0.08) {
         this.struck = true;
-        if (this.type === 'boss') {
+        if (this.isBoss) {
           this.clearTele();
           g.bossSlam(this, this.smashAt, 2.6, this.dmg);
         } else {
@@ -692,6 +732,52 @@ export class Enemy {
     } else if (this.state === 'recover') {
       attackAnim = { t: 0.62 + 0.38 * clamp(this.st / T.recover, 0, 1), kind: 2 };
       if (this.st >= T.recover) { this.state = 'chase'; this.st = 0; this.attackCd = rand(0.6, 1.4); }
+    } else if (this.state === 'cast') {
+      // 구미호: 여우불 부채 / 저승사자: 검은 초승달 세 줄기
+      this.yaw = dampAngle(this.yaw, toYaw, 6, dt);
+      attackAnim = { t: 0.28 * clamp(this.st / 0.7, 0, 1), kind: 2 };
+      if (Math.random() < 0.9) {
+        const [f1, f2] = T.pal.fire;
+        g.fx.add.emit({ x: this.pos.x + rand(-1.5, 1.5), y: this.y + rand(0.5, 3), z: this.pos.z + rand(-1.5, 1.5), vx: (this.pos.x - this.pos.x), vy: 0.5, life: 0.35, size: 3, endSize: 1, color: f1, color2: f2 });
+      }
+      if (this.st >= 0.7) {
+        if (T.boss === 'gumiho') for (let k = -3; k <= 3; k++) g.spawnOrb(this, k * 0.2);
+        else g.spawnDarkWaves(this);
+        this.state = 'recover'; this.st = 0;
+      }
+    } else if (this.state === 'chargePrep') {
+      // 구미호 돌진: 붉은 선으로 경고 후 일직선 질주
+      attackAnim = { t: 0.2 * clamp(this.st / 0.6, 0, 1), kind: 2 };
+      if (this.st >= 0.65) { this.state = 'charge'; this.st = 0; g.audio.play('dash'); this.chargeHit = false; }
+    } else if (this.state === 'charge') {
+      const sp = 16;
+      const moved = g.world.move(this.pos, Math.sin(this.yaw) * sp * dt, Math.cos(this.yaw) * sp * dt, this.moveR);
+      speed = sp;
+      if (Math.random() < 0.9) g.fx.colorFire(this.pos.x, this.pos.y + 0.5, this.pos.z, 2, 0.8, ...T.pal.fire);
+      if (!this.chargeHit && Math.hypot(p.pos.x - this.pos.x, p.pos.z - this.pos.z) < 1.6 + p.radius) { this.chargeHit = true; p.damage(Math.round(this.dmg * 1.1), this.pos); }
+      if (this.st >= 0.55 || !moved) { this.state = 'recover'; this.st = 0; g.fx.dust(this.pos.x, this.pos.y, this.pos.z, 12); g.shake(0.3); }
+    } else if (this.state === 'vanish') {
+      // 저승사자: 연기 속으로 사라졌다가 플레이어 등 뒤에서 나타남
+      const k = clamp(this.st / 0.5, 0, 1);
+      this.root.scale.setScalar(Math.max(0.01, 1 - k));
+      if (this.st >= 0.5 && !this.reappeared) {
+        this.reappeared = true;
+        const behind = p.yaw + Math.PI;
+        const tx = p.pos.x + Math.sin(behind) * 2.6, tz = p.pos.z + Math.cos(behind) * 2.6;
+        const th = g.world.heightAt(tx, tz);
+        if (!g.world.isBlocked(tx, tz, this.moveR, th)) { this.pos.set(tx, th, tz); this.y = th; }
+        g.fx.smoke(this.pos.x, this.y + 0.5, this.pos.z, 20);
+        g.fx.colorFire(this.pos.x, this.y, this.pos.z, 40, 1, ...T.pal.fire);
+        g.audio.play('blink');
+      }
+      if (this.st >= 0.85) {
+        this.root.scale.setScalar(1);
+        this.yaw = toYaw;
+        this.state = 'windup'; this.st = T.windup * 0.35;
+        const f = new THREE.Vector3(this.pos.x + Math.sin(this.yaw) * 1.6, this.pos.y, this.pos.z + Math.cos(this.yaw) * 1.6);
+        this.tele = g.fx.ring(f, 2.6, '#c84aff', 1, 1);
+        this.smashAt = f;
+      }
     } else if (this.state === 'leapPrep') {
       attackAnim = { t: 0.2 * clamp(this.st / 0.6, 0, 1), kind: 2 };
       if (this.tele) this.tele.mat.uniforms.uProg.value = this.st / 1.5;
@@ -724,6 +810,32 @@ export class Enemy {
     return true;
   }
 
+  // 구미호·저승사자: 거리와 체력에 따라 고유 패턴을 고름. 시작하면 true
+  bossPattern(dt, dist, toYaw) {
+    const g = this.game, T = this.T;
+    this.patCd -= dt;
+    if (this.patCd > 0 || g.player.dead) return false;
+    this.patCd = rand(3.2, 4.6) * (this.hp < this.maxHp * 0.4 ? 0.7 : 1);
+    this.yaw = toYaw;
+    if (T.boss === 'gumiho') {
+      if (dist > 4 && Math.random() < 0.5) {
+        this.state = 'chargePrep'; this.st = 0;
+        // 돌진 경로 경고선
+        const from = new THREE.Vector3(this.pos.x, this.y + 0.1, this.pos.z);
+        const to = from.clone().add(new THREE.Vector3(Math.sin(toYaw) * 9, 0, Math.cos(toYaw) * 9));
+        g.fx.streak(from, to, '#ff4a3a', 0.7, 1.6);
+        g.audio.play('howl');
+      } else { this.state = 'cast'; this.st = 0; g.audio.play('charge'); }
+      return true;
+    }
+    if (T.boss === 'reaper') {
+      if (dist > 3 && Math.random() < 0.45) { this.state = 'vanish'; this.st = 0; this.reappeared = false; g.fx.smoke(this.pos.x, this.y + 0.6, this.pos.z, 20); g.audio.play('wail'); }
+      else { this.state = 'cast'; this.st = 0; g.audio.play('charge'); }
+      return true;
+    }
+    return false;
+  }
+
   updateWisp(dt, dist, toYaw) {
     const g = this.game, p = g.player;
     if (this.frozenT > 0) return true;
@@ -745,7 +857,7 @@ export class Enemy {
       if (Math.random() < dt * 0.3) this.strafe *= -1;
       if (this.attackCd <= 0 && dist < 10 && !p.dead) { this.state = 'windup'; this.st = 0; g.audio.play('orb'); }
     } else if (this.state === 'windup') {
-      if (Math.random() < 0.8) g.fx.add.emit({ x: this.pos.x + rand(-0.6, 0.6), y: this.y + 1.3 + rand(-0.6, 0.6), z: this.pos.z + rand(-0.6, 0.6), vx: 0, vy: 0, vz: 0, life: 0.3, size: 2, color: '#8fe8ff' });
+      if (Math.random() < 0.8) g.fx.add.emit({ x: this.pos.x + rand(-0.6, 0.6), y: this.y + 1.3 + rand(-0.6, 0.6), z: this.pos.z + rand(-0.6, 0.6), vx: 0, vy: 0, vz: 0, life: 0.3, size: 2, color: this.T.pal.trail });
       if (this.st >= this.T.windup) {
         g.spawnOrb(this);
         this.state = 'chase'; this.st = 0; this.attackCd = rand(2.0, 3.0);
@@ -753,16 +865,43 @@ export class Enemy {
     }
     const len = Math.hypot(mx, mz);
     if (len > 0.01) g.world.move(this.pos, (mx / len) * this.T.speed * dt, (mz / len) * this.T.speed * dt, this.moveR);
+    // 원귀: 가끔 사라졌다가 플레이어 옆에 나타남
+    if (this.T.teleport && this.state === 'chase') {
+      this.tpCd -= dt;
+      if (this.tpCd <= 0 && !p.dead) {
+        this.tpCd = rand(5, 8);
+        const a = Math.random() * Math.PI * 2;
+        const tx = p.pos.x + Math.cos(a) * 3.5, tz = p.pos.z + Math.sin(a) * 3.5;
+        const th = g.world.heightAt(tx, tz);
+        if (!g.world.isBlocked(tx, tz, this.moveR, th)) {
+          g.fx.smoke(this.pos.x, this.y + 0.8, this.pos.z, 10);
+          this.pos.set(tx, th, tz); this.y = th;
+          g.fx.colorFire(tx, th + 0.5, tz, 20, 0.5, ...this.T.pal.fire);
+          g.audio.play('wail');
+          this.attackCd = Math.min(this.attackCd, 0.5);
+        }
+      }
+    }
     // 둥실둥실
     const h = g.world.heightAt(this.pos.x, this.pos.z);
     this.y = lerp(this.y, h, 1 - Math.exp(-6 * dt));
     const bob = Math.sin(g.time * 3 + this.strafe) * 0.15;
+    if (this.rig) {
+      // 사람 모양 귀신: 리그로 애니메이션
+      this.root.position.set(this.pos.x, this.y, this.pos.z);
+      this.root.rotation.y = this.yaw;
+      this.rig.animate(dt, { speed: len > 0.01 ? 1 : 0, attack: this.state === 'windup' ? { t: 0.28 * clamp(this.st / this.T.windup, 0, 1), kind: 2 } : null, hurt: this.hurtT > 0 ? Math.min(1, this.hurtT / 0.25) : 0 });
+      this.rig.setFlash(this.flashT > 0 ? 0.9 : this.state === 'windup' ? (Math.floor(this.st * 12) % 2 ? 0.3 : 0) : 0);
+      if (Math.random() < 0.4) g.fx.add.emit({ x: this.pos.x + rand(-0.3, 0.3), y: this.y + rand(0.2, 1.4), z: this.pos.z + rand(-0.3, 0.3), vy: rand(0.2, 0.6), life: 0.6, size: 2, color: this.T.pal.trail, color2: this.T.pal.trail2, alpha: 0.7 });
+      return true;
+    }
     this.root.position.set(this.pos.x, this.y + 1.3 + bob, this.pos.z);
     this.root.rotation.y = this.yaw;
     const pulse = this.state === 'windup' ? 1 + Math.sin(this.st * 40) * 0.12 + this.st * 0.4 : 1;
     this.root.scale.setScalar(pulse);
-    this.coreMat.color.set(this.flashT > 0 ? '#ffffff' : this.state === 'windup' ? '#e8ffff' : '#9feaff');
-    if (Math.random() < 0.7) g.fx.add.emit({ x: this.pos.x + rand(-0.15, 0.15), y: this.y + 1.45 + bob, z: this.pos.z + rand(-0.15, 0.15), vx: rand(-0.3, 0.3), vy: rand(0.8, 1.6), vz: rand(-0.3, 0.3), life: rand(0.3, 0.6), size: rand(2, 4), endSize: 1, color: '#7fe0ff', color2: '#1a40ff' });
+    const P = this.T.pal;
+    this.coreMat.color.set(this.flashT > 0 ? '#ffffff' : this.state === 'windup' ? P.hi : P.idle);
+    if (Math.random() < 0.7) g.fx.add.emit({ x: this.pos.x + rand(-0.15, 0.15), y: this.y + 1.45 + bob, z: this.pos.z + rand(-0.15, 0.15), vx: rand(-0.3, 0.3), vy: rand(0.8, 1.6), vz: rand(-0.3, 0.3), life: rand(0.3, 0.6), size: rand(2, 4), endSize: 1, color: P.trail, color2: P.trail2 });
     return true;
   }
 
@@ -770,7 +909,7 @@ export class Enemy {
   // 그래도 제자리에 걸리면 잠깐 옆으로 비켜서 빠져나옴. 반환: 실제 이동 속도
   chaseMove(dt, sp, dx, dz, dist) {
     const w = this.game.world, p = this.game.player;
-    const big = this.type === 'boss' ? 1 : 0;
+    const big = this.isBoss ? 1 : 0;
     this.losT = (this.losT ?? 0) - dt;
     if (this.losT <= 0) {
       this.losT = 0.2 + Math.random() * 0.1;
@@ -813,10 +952,10 @@ export class Enemy {
     const r = this.rig;
     r.root.position.set(this.pos.x, this.y + (this.jumpY || 0), this.pos.z);
     r.root.rotation.y = this.yaw;
-    r.animate(dt, { speed, attack: attackAnim, hurt: this.frozenT > 0 ? 0.3 : this.hurtT > 0 ? Math.min(1, this.hurtT / 0.25) : 0 });
+    r.animate(dt, { speed, hop: this.hop || 0, attack: attackAnim, hurt: this.frozenT > 0 ? 0.3 : this.hurtT > 0 ? Math.min(1, this.hurtT / 0.25) : 0 });
     // 공격 준비 중엔 붉게 깜빡임, 피격 시 흰색
     if (this.flashT > 0) r.setFlash(0.9);
-    else if (this.state === 'windup' && this.type !== 'boss') r.setFlash(Math.floor(this.st * 14) % 2 ? 0.35 : 0);
+    else if (this.state === 'windup' && !this.isBoss) r.setFlash(Math.floor(this.st * 14) % 2 ? 0.35 : 0);
     else if (this.state === 'windup' || this.state === 'leapPrep') r.setFlash(Math.floor(this.st * 10) % 2 ? 0.25 : 0);
     else r.setFlash(0);
   }

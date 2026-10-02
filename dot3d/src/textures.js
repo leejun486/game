@@ -475,3 +475,61 @@ export function cloudNoiseTex() {
     return toTexture(p, { linear: true });
   });
 }
+
+// 대나무 줄기: 초록 바탕에 마디 띠 (16x32)
+export function bambooTex() {
+  return cached('bamboo', () => {
+    const p = painter(16, 32);
+    const R = mulberry32(61);
+    for (let i = 0; i < 16; i++) for (let j = 0; j < 32; j++) {
+      const stripe = i % 8;
+      let c = stripe < 2 ? [92, 140, 66] : stripe < 5 ? [120, 168, 78] : [104, 152, 70];
+      c = add(c, (R() - 0.5) * 8);
+      if (j % 16 === 0) c = [186, 196, 120];
+      else if (j % 16 === 1 || j % 16 === 15) c = [70, 104, 50];
+      p.set(i, j, c);
+    }
+    return toTexture(p);
+  });
+}
+
+// 눈 덮인 땅
+export function snowTex() {
+  return cached('snow', () => {
+    const p = painter(32, 32);
+    const R = mulberry32(67);
+    for (let i = 0; i < 32; i++) for (let j = 0; j < 32; j++) {
+      let c = add([226, 234, 244], (R() - 0.5) * 8);
+      const n = R();
+      if (n < 0.08) c = [196, 210, 232];
+      else if (n < 0.11) c = [250, 252, 255];
+      p.set(i, j, c);
+    }
+    // 바람에 쓸린 눈결
+    for (let k = 0; k < 6; k++) {
+      const y = Math.floor(R() * 32), x0 = Math.floor(R() * 32);
+      for (let i = 0; i < 8; i++) p.set(x0 + i, y + (i > 4 ? 1 : 0), [204, 216, 236]);
+    }
+    return toTexture(p);
+  });
+}
+
+// 숲 흙길 (낙엽 섞임)
+export function forestPathTex() {
+  return cached('fpath', () => {
+    const p = painter(32, 32);
+    const R = mulberry32(71);
+    for (let i = 0; i < 32; i++) for (let j = 0; j < 32; j++) {
+      let c = add([138, 112, 82], (R() - 0.5) * 14);
+      const n = R();
+      if (n < 0.06) c = [176, 120, 60];
+      else if (n < 0.1) c = [110, 88, 64];
+      else if (n < 0.13) c = [150, 160, 90];
+      p.set(i, j, c);
+    }
+    return toTexture(p);
+  });
+}
+
+// 숲 바닥 풀 (어두운 초록 + 이끼)
+export function forestGrassTex() { return grassTex([70, 112, 58]); }

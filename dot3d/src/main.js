@@ -11,6 +11,7 @@ import { CLASSES, CLASS_ORDER } from './classes.js';
 import { drawPortrait } from './ui.js';
 import { item, rollDrop, RARITY, itemDesc, WEAPONS, OUTFITS } from './items.js';
 import { expNeed, SKILL_LEVEL } from './entities.js';
+import { MAPS, BOSS_TYPES } from './maps.js';
 import { clamp, lerp, rand, angleDiff, damp } from './util.js';
 
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
@@ -57,19 +58,14 @@ class Game {
     this.player = new Player(this);
     this.buildTargetMarker();
 
-    this.npcs = [
-      new NPC(this, 'guard', -12.4, 6.4, 0.6, '수문장 박돌쇠', []),
-      new NPC(this, 'lady', 19.2, 7.5, -0.9, '나인 연이', [
-        '어머, 검객님. 이 궁은 밤만 되면 도깨비불이 떠다녀요.',
-        '도깨비들은 장난이 심하지만, 혼쭐을 내주면 금방 달아난답니다.',
-        '푸른 불덩이를 쏘는 녀석은 검으로 쳐내면 튕겨낼 수 있대요!',
-        '(N 키로 낮과 밤을 바꿔 볼 수 있어요. 싸우는 중엔 안 돼요.)',
-      ]),
-    ];
+    this.mapId = 'palace';
+    this.map = MAPS.palace;
+    this.cleared = {};
+    this.portals = [];
+    this.npcs = [];
     this.birds = [];
-    for (const [x, z] of [[-6, 6], [-5.4, 6.6], [6.5, 15], [7, 14.3], [-15, 9], [14, -0.5], [0.5, -9.5]]) {
-      this.birds.push(new Bird(this, V(x, this.world.heightAt(x, z), z)));
-    }
+    this.createPalaceActors();
+    this.buildPortals();
 
     this.world.buildNav();
     this.flowT = 0;
@@ -116,12 +112,13 @@ class Game {
     const n = this.night;
     shared.night.value = n;
     const c = (a, b) => new THREE.Color(a).lerp(new THREE.Color(b), n);
-    this.sun.color.copy(c('#fff0d6', '#8ea6ff'));
-    this.sun.intensity = lerp(2.5, 0.9, n);
-    this.hemi.color.copy(c('#dfe9ff', '#55669e'));
-    this.hemi.groundColor.copy(c('#8a7c62', '#262438'));
-    this.hemi.intensity = lerp(1.15, 0.95, n);
-    this.scene.background.copy(c('#3b4a3a', '#0e1220'));
+    const th = this.map.theme;
+    this.sun.color.copy(c(...th.sun));
+    this.sun.intensity = lerp(th.sunI[0], th.sunI[1], n);
+    this.hemi.color.copy(c(...th.sky));
+    this.hemi.groundColor.copy(c(...th.ground));
+    this.hemi.intensity = lerp(th.hemiI[0], th.hemiI[1], n);
+    this.scene.background.copy(c(...th.bg));
     this.world.setNight(n);
 
     // 그림자 카메라를 초점에 맞추되 섀도 텍셀 단위로 스냅 (그림자 지글거림 방지)
@@ -143,9 +140,11 @@ class Game {
     if (this.lightTimer <= 0) {
       this.lightTimer = 0.25;
       const L = [...this.world.lanterns].sort((a, b) => a.distanceToSquared(f) - b.distanceToSquared(f));
-      for (let i = 0; i < 6; i++) this.points[i].position.copy(L[i]);
-      this.points[6].position.copy(this.world.hallLightPos[0]);
-      this.points[7].position.copy(this.world.hallLightPos[1]);
+      const hl = this.world.hallLightPos;
+      for (let i = 0; i < 8; i++) {
+        const src = hl && i >= 6 ? hl[i - 6] : L[i];
+        if (src) this.points[i].position.copy(src); else this.points[i].position.set(0, -50, 0);
+      }
     }
     for (let i = 0; i < 8; i++) {
       const fl = 1 + Math.sin(this.time * 9 + i * 1.7) * 0.06 + Math.sin(this.time * 23 + i) * 0.04;
@@ -275,6 +274,132 @@ class Game {
     if (this.player.cls !== id) { this.player.setClass(id); this.ui.setClass(this.player.cfg); }
   }
 
+  // 궁궐에만 있는 수문장·나인·참새
+  createPalaceActors() {
+    this.npcs = [
+      new NPC(this, 'guard', -12.4, 6.4, 0.6, '수문장 박돌쇠', []),
+      new NPC(this, 'lady', 19.2, 7.5, -0.9, '나인 연이', [
+        '어머, 검객님. 이 궁은 밤만 되면 도깨비불이 떠다녀요.',
+        '도깨비들은 장난이 심하지만, 혼쭐을 내주면 금방 달아난답니다.',
+        '푸른 불덩이를 쏘는 녀석은 검으로 쳐내면 튕겨낼 수 있대요!',
+        '(N 키로 낮과 밤을 바꿔 볼 수 있어요. 싸우는 중엔 안 돼요.)',
+      ]),
+    ];
+    this.birds = [];
+    for (const [x, z] of [[-6, 6], [-5.4, 6.6], [6.5, 15], [7, 14.3], [-15, 9], [14, -0.5], [0.5, -9.5]]) {
+      this.birds.push(new Bird(this, V(x, this.world.heightAt(x, z), z)));
+    }
+  }
+
+  removeActors() {
+    for (const n of this.npcs) this.scene.remove(n.rig.root);
+    for (const b of this.birds) this.scene.remove(b.root);
+    this.npcs = [];
+    this.birds = [];
+  }
+
+  // ---------- 포탈 · 지역 이동 ----------
+  buildPortals() {
+    for (const pt of this.portals) this.scene.remove(pt.g);
+    this.portals = [];
+    const M = this.map;
+    const add = (spot, to, color) => {
+      if (!spot || !to) return;
+      const y = this.world.heightAt(spot.x, spot.z);
+      const g = new THREE.Group();
+      g.position.set(spot.x, y, spot.z);
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(1.25, 0.13, 6, 24), new THREE.MeshBasicMaterial({ color }));
+      ring.position.y = 1.45;
+      const inner = new THREE.Mesh(new THREE.CircleGeometry(1.15, 24), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.35, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
+      inner.position.y = 1.45;
+      const base = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 1.5, 0.12, 16), this.world.M.stoneGrey);
+      base.position.y = 0.06;
+      base.receiveShadow = true;
+      g.add(ring, inner, base);
+      this.scene.add(g);
+      this.portals.push({ g, ring, inner, to, pos: V(spot.x, y, spot.z), color });
+    };
+    add(M.entry, M.prev, '#9ad0ff');
+    if (this.cleared[M.id]) add(M.exit, M.next, M.next === 'palace' ? '#ffd76a' : '#c890ff');
+  }
+
+  updatePortals(dt) {
+    const p = this.player;
+    for (const pt of this.portals) {
+      pt.ring.rotation.z += dt * 1.5;
+      pt.inner.rotation.z -= dt * 2;
+      pt.inner.material.opacity = 0.3 + Math.sin(this.time * 4) * 0.08;
+      pt.g.rotation.y = 0;
+      if (Math.random() < dt * 30) {
+        const a = Math.random() * Math.PI * 2;
+        this.fx.add.emit({ x: pt.pos.x + Math.cos(a) * 1.2, y: pt.pos.y + 1.45 + Math.sin(a) * 1.2, z: pt.pos.z, vx: -Math.cos(a) * 1.2, vy: -Math.sin(a) * 1.2, life: 0.8, size: 2, color: '#ffffff', color2: pt.color });
+      }
+      if (this.state === 'play' && !this.traveling && !this.waveActive && Math.hypot(p.pos.x - pt.pos.x, p.pos.z - pt.pos.z) < 1.0) this.travel(pt.to);
+    }
+  }
+
+  travel(to) {
+    if (this.traveling) return;
+    this.traveling = true;
+    this.audio.play('portal');
+    const fade = document.getElementById('fade');
+    fade.classList.add('on');
+    setTimeout(() => {
+      this.switchMap(to, this.mapId);
+      setTimeout(() => { fade.classList.remove('on'); this.traveling = false; }, 120);
+    }, 450);
+  }
+
+  // 지역을 통째로 바꿈: 맵 지오메트리, 적·투사체·드롭 정리, 길찾기, 조명, 임무
+  switchMap(to, from = null) {
+    for (const e of this.enemies) e.dispose();
+    this.enemies = [];
+    this.spawnQueue = [];
+    for (const pr of this.projectiles) if (pr.mesh) this.scene.remove(pr.mesh);
+    this.projectiles = [];
+    this.timers = [];
+    for (const r of this.rains) this.fx.removeRing(r.tele);
+    this.rains = [];
+    for (const T of this.tornados) for (const ring of T.rings) this.scene.remove(ring);
+    this.tornados = [];
+    for (const d of this.drops) this.scene.remove(d.g);
+    this.drops = [];
+    this.target = null;
+    this.ui.setBoss(null);
+    this.waveActive = false;
+    this.waveClearing = false;
+    this.wave = 0;
+    this.removeActors();
+    this.world.dispose();
+    this.mapId = to;
+    this.map = MAPS[to];
+    this.world = new World(this.scene, to);
+    if (to === 'palace') this.createPalaceActors();
+    this.world.buildNav();
+    this.flowT = 0;
+    this.lightTimer = 0;
+    this.buildPortals();
+    // 도착 위치: 앞 지역에서 왔으면 입구, 뒤 지역에서 돌아왔으면 출구 앞
+    const p = this.player;
+    const back = from && MAPS[to].next === from && this.map.exit;
+    const spot = back ? V(this.map.exit.x, 0, this.map.exit.z + (this.map.exit.z > 0 ? -2.5 : 2.5)) : this.world.spawn.clone();
+    if (to === 'temple' && back) spot.set(this.map.exit.x - 2.5, 0, this.map.exit.z);
+    p.pos.set(spot.x, this.world.heightAt(spot.x, spot.z), spot.z);
+    p.y = p.pos.y;
+    p.vel.set(0, 0, 0);
+    p.yaw = back ? 0 : Math.PI;
+    this.focus.copy(p.pos);
+    this.nightTarget = 0; this.night = 0;
+    this.audio.mood = 'day';
+    this.stage = to === 'palace' ? (this.round > 0 || this.cleared.palace ? 3 : Math.max(this.stage === 0 ? 0 : 1, 0)) : (this.cleared[to] ? 3 : 1);
+    if (to === 'palace' && this.stage !== 0 && !this.cleared.palace) this.stage = 1;
+    const logo = document.getElementById('logo');
+    if (logo) logo.innerHTML = `<span class="han">${this.map.han}</span><span class="sub">${this.map.sub}</span>`;
+    this.ui.banner(this.map.name, this.map.sub, 2.6, 'title-banner');
+    this.updateQuest();
+    this.save(false);
+  }
+
   progressOf(cls) {
     if (!this.progress[cls]) this.progress[cls] = { level: 1, exp: 0, weapon: WEAPONS[cls][0].id, outfit: 'ot0' };
     return this.progress[cls];
@@ -339,13 +464,13 @@ class Game {
     const M = this.marker, t = this.target;
     M.g.visible = !!t && this.state === 'play';
     if (!M.g.visible) return;
-    const r = t.type === 'boss' ? 1.6 : t.type === 'wisp' ? 0.7 : 0.8;
+    const r = t.isBoss ? 1.6 : t.isWisp ? 0.7 : 0.8;
     M.g.position.set(t.pos.x, t.y + 0.05, t.pos.z);
     const pulse = 1 + Math.sin(this.time * 8) * 0.06;
     M.ring.scale.setScalar(r * pulse);
     M.ticks.scale.setScalar(r * (1.05 + Math.sin(this.time * 8) * 0.1));
     M.ticks.rotation.y += dt * 1.5;
-    const top = t.type === 'boss' ? 4.4 : t.type === 'wisp' ? 2.3 : 2.2;
+    const top = t.isBoss ? 4.4 : t.isWisp ? 2.3 : 2.2;
     M.arrow.position.set(0, top + Math.abs(Math.sin(this.time * 5)) * 0.25, 0);
   }
 
@@ -477,6 +602,10 @@ class Game {
     if (d.night) { this.nightTarget = 1; this.night = 1; }
     if (d.progress) for (const k of Object.keys(CLASSES)) if (d.progress[k]) Object.assign(this.progressOf(k), d.progress[k]);
     if (Array.isArray(d.inv)) for (const id of d.inv) if (item(id)) this.inv.add(id);
+    if (d.cleared) this.cleared = { ...d.cleared };
+    else if (d.round > 0) this.cleared = { palace: true }; // 지역 추가 전 기록: 궁을 이미 지켰으면 포탈을 열어 둠
+    if (d.mapId && MAPS[d.mapId] && d.mapId !== this.mapId) this.switchMap(d.mapId);
+    else this.buildPortals();
     const cls = d.cls && CLASSES[d.cls] ? d.cls : this.player.cls;
     this.player.cls = null; // 강제로 다시 만들기
     this.selectClass(cls);
@@ -496,6 +625,8 @@ class Game {
       bestCombo: this.bestCombo,
       cls: this.player.cls,
       progress: this.progress,
+      mapId: this.mapId,
+      cleared: this.cleared,
       inv: [...this.inv],
       music: this.audio.musicOn,
       outline: this.pixel.compMat.uniforms.outline.value,
@@ -512,6 +643,9 @@ class Game {
         clearSave();
         this.kills = 0; this.round = 0; this.stage = 0; this.bestCombo = 0;
         this.progress = {}; this.inv = new Set(['sw0', 'mg0', 'bw0', 'ot0']);
+        this.cleared = {};
+        if (this.mapId !== 'palace') this.switchMap('palace'); else this.buildPortals();
+        this.stage = 0;
         const c0 = this.player.cls; this.player.cls = null; this.selectClass(c0);
         this.applySave(null);
         this.updateQuest();
@@ -600,7 +734,11 @@ class Game {
     }
     for (const dr of this.world.drums) {
       const d = Math.hypot(dr.pos.x - p.x, dr.pos.z - p.z);
-      if (d < 2.9 && d - 0.5 < bd) { bd = d - 0.5; best = { kind: 'drum', drum: dr, label: this.waveActive ? '북 치기' : '북 울리기', promptPos: dr.pos.clone().add(V(0, 4.0, 0)) }; }
+      if (d < (dr.reach || 2.9) && d - 0.5 < bd) { bd = d - 0.5; best = { kind: 'drum', drum: dr, label: `${dr.label || '북'} 울리기`, promptPos: dr.pos.clone().add(V(0, dr.promptY || 4.0, 0)) }; }
+    }
+    for (const pt of this.portals) {
+      const d = Math.hypot(pt.pos.x - p.x, pt.pos.z - p.z);
+      if (d < 3.2 && d - 1 < bd) { bd = d - 1; best = { kind: 'portal', label: this.waveActive ? '싸우는 중엔 못 가요' : `${MAPS[pt.to].name}(으)로 · 들어가기`, promptPos: pt.pos.clone().add(V(0, 3.2, 0)) }; }
     }
     return best;
   }
@@ -615,6 +753,8 @@ class Game {
       this.ui.dialog(n.name, lines, () => {
         if (n.name.startsWith('수문장') && this.stage === 0) { this.stage = 1; this.updateQuest(); this.save(); }
       });
+    } else if (it.kind === 'portal') {
+      // 걸어 들어가면 이동
     } else if (it.kind === 'drum') {
       this.player.yaw = Math.atan2(it.drum.pos.x - this.player.pos.x, it.drum.pos.z - this.player.pos.z);
       this.player.startAttack({ moveLen: 0, mx: 0, mz: 0 });
@@ -635,24 +775,29 @@ class Game {
     if (this.round >= 1) return [
       `허허, 대왕까지 쫓아내다니! 벌써 ${this.kills}마리나 혼쭐을 냈구려.`,
       '북을 다시 울리면 더 사나운 놈들이 올 거요. 각오가 되었다면 언제든.',
+      '참, 정문 밖에 보랏빛 문이 열렸소. 대숲 너머 여우들이 들끓는다니 가 보시겠소?',
     ];
     return ['북은 저기 있소. 둥— 하고 울려 보시오!'];
   }
 
   updateQuest() {
-    const ui = this.ui;
+    const ui = this.ui, M = this.map;
+    const trig = { palace: '큰 북', bamboo: '서낭당 방울', temple: '종각의 범종' }[this.mapId];
     if (this.stage === 0) ui.setQuest('임무', '왼쪽 북 옆의 <b>수문장</b>에게 말을 걸자');
-    else if (this.stage === 1) ui.setQuest('임무', '<b>큰 북</b>을 울려 도깨비를 불러내자');
+    else if (this.stage === 1) ui.setQuest(`${M.name} · 임무`, `<b>${trig}</b>을 울려 ${M.foe}들을 불러내자`);
     else if (this.stage === 2) {
       const left = this.enemies.filter((e) => !e.dead).length + this.spawnQueue.length;
-      ui.setQuest(`도깨비 야행 · 제 ${this.wave} 파`, `남은 도깨비 <b>${left}</b>`);
-    } else ui.setQuest('자유 탐방', `북을 다시 울리면 <b>${this.round + 1}회차</b> 도깨비가 몰려온다`);
+      ui.setQuest(`${M.night[0]} · 제 ${this.wave} 파`, `남은 ${M.foe} <b>${left}</b>`);
+    } else if (this.cleared[M.id] && M.next) {
+      const nx = MAPS[M.next];
+      ui.setQuest(`${M.name} 평정`, M.next === 'palace' ? `모든 지역 평정! <b>금빛 포탈</b>로 월하궁에 돌아가거나 ${trig}을 다시 울리자` : `<b>보랏빛 포탈</b>로 <b>${nx.name}</b>에 가자 · ${trig}을 다시 울리면 ${this.round + 1}회차`);
+    } else ui.setQuest('자유 탐방', `${trig}을 다시 울리면 <b>${this.round + 1}회차</b> ${M.foe}들이 몰려온다`);
   }
 
   // ---------- 전투 ----------
   drumHit(drum) {
     drum.shake = 1;
-    this.audio.play('drum');
+    this.audio.play(drum.sound || 'drum');
     this.shake(0.35);
     this.alarm = 3;
     this.fx.ring(V(drum.pos.x, 0, drum.pos.z), 5, '#fff2c0', 0.6);
@@ -666,17 +811,14 @@ class Game {
     this.wave = 0;
     this.nightTarget = 1;
     this.audio.mood = 'battle';
-    this.ui.banner('도깨비 야행', this.round > 0 ? `${this.round + 1}회차 — 더 사나운 놈들이 온다` : '북소리에 도깨비들이 깨어난다…', 3, 'night-banner');
-    setTimeout(() => this.nextWave(), 3200);
+    const [t1, t2] = this.map.night;
+    this.ui.banner(t1, this.round > 0 ? `${this.round + 1}회차 — 더 사나운 놈들이 온다` : t2, 3, 'night-banner');
+    this.after(3.2, () => this.nextWave());
   }
 
   waveDef(n) {
-    const r = this.round;
     const list = [];
-    const add = (t, c) => { for (let i = 0; i < c; i++) list.push(t); };
-    if (n === 1) { add('blue', 4 + r); add('red', r); }
-    else if (n === 2) { add('blue', 3 + r); add('red', 2 + r); add('wisp', 2 + Math.floor(r / 2)); }
-    else { add('boss', 1); add('red', 2 + r); add('wisp', r); }
+    for (const [t, c] of this.map.waves(n, this.round)) for (let i = 0; i < c; i++) list.push(t);
     return list;
   }
 
@@ -686,22 +828,24 @@ class Game {
     this.wave++;
     const list = this.waveDef(this.wave);
     const boss = this.wave === 3;
-    this.ui.banner(`제 ${['', '一', '二', '三'][this.wave]} 파`, boss ? '도깨비 대왕 두억시니 출현!' : `도깨비 ${list.length}마리`, 2.4, boss ? 'boss-banner' : '');
+    const bossName = { palace: '도깨비 대왕 두억시니', bamboo: '천년 구미호', temple: '저승사자' }[this.mapId];
+    this.ui.banner(`제 ${['', '一', '二', '三'][this.wave]} 파`, boss ? `${bossName} 출현!` : `${this.map.foe} ${list.length}마리`, 2.4, boss ? 'boss-banner' : '');
     this.audio.play(boss ? 'drum' : 'wave');
     let delay = 0.6;
     for (const t of list) {
       this.spawnQueue.push({ type: t, at: this.time + delay });
-      delay += t === 'boss' ? 1.2 : rand(0.3, 0.6);
+      delay += BOSS_TYPES.has(t) ? 1.2 : rand(0.3, 0.6);
     }
     this.updateQuest();
   }
 
   spawnEnemy(type) {
     const p = this.player.pos;
-    let pos = type === 'boss' ? this.world.randomWalkable(p.x, p.z, 6, 9) : this.world.randomWalkable(p.x, p.z, 5, 10);
-    if (!pos) pos = V(0, 0.12, 5);
-    const e = new Enemy(this, type, pos, 1 + this.round + Math.floor((this.player.level - 1) / 3));
-    if (type === 'boss') { e.name = this.round > 0 ? `도깨비 대왕 두억시니 +${this.round}` : '도깨비 대왕 두억시니'; this.ui.setBoss(e); this.shake(0.5); }
+    const isBoss = BOSS_TYPES.has(type);
+    let pos = isBoss ? this.world.randomWalkable(p.x, p.z, 6, 9) : this.world.randomWalkable(p.x, p.z, 5, 10);
+    if (!pos) pos = this.world.randomWalkable(p.x, p.z, 2, 14) || V(this.world.spawn.x, 0, this.world.spawn.z - 6);
+    const e = new Enemy(this, type, pos, 1 + this.round + this.map.lvl + Math.floor((this.player.level - 1) / 3));
+    if (isBoss) { e.name = this.round > 0 ? `${e.T.name} +${this.round}` : e.T.name; this.ui.setBoss(e); this.shake(0.5); }
     this.enemies.push(e);
   }
 
@@ -727,7 +871,7 @@ class Game {
       if (e.dead || e.spawning) continue;
       const dx = e.pos.x - pl.pos.x, dz = e.pos.z - pl.pos.z;
       const d = Math.hypot(dx, dz);
-      const ey = e.type === 'wisp' ? e.y + 1.3 : e.y;
+      const ey = e.isWisp ? e.y + 1.3 : e.y;
       if (Math.abs(ey - pl.y) > 2.2) continue;
       if (d > range + e.radius) continue;
       if (d > 0.6 && Math.abs(angleDiff(yaw, Math.atan2(dx, dz))) > half) continue;
@@ -738,7 +882,7 @@ class Game {
     }
     // 푸른 불덩이 튕겨내기
     for (const pr of this.projectiles) {
-      if (pr.owner !== 'enemy' || pr.dead) continue;
+      if (pr.owner !== 'enemy' || pr.dead || pr.kind !== 'orb') continue;
       const dx = pr.pos.x - pl.pos.x, dz = pr.pos.z - pl.pos.z;
       if (Math.hypot(dx, dz) < range + 0.3 && Math.abs(angleDiff(yaw, Math.atan2(dx, dz))) < half + 0.3) {
         pr.owner = 'player';
@@ -769,7 +913,7 @@ class Game {
     if (!e.hit(dmg, dir, knock, stun)) return;
     const c = e.center().clone();
     this.fx.spark(c.x, c.y, c.z, crit ? 18 : 10, crit ? '#fff07a' : '#ffffff', crit ? 8 : 6);
-    this.fx.number(c.clone().add(V(0, 0.5 * (e.type === 'boss' ? 2 : 1), 0)), dmg, crit ? 'crit' : 'normal');
+    this.fx.number(c.clone().add(V(0, 0.5 * (e.isBoss ? 2 : 1), 0)), dmg, crit ? 'crit' : 'normal');
     this.audio.play(crit ? 'crit' : 'hit');
     this.hitstop = Math.max(this.hitstop, crit ? 0.085 : 0.05);
     this.hitCombo = this.time - this.lastHitTime < 2 ? this.hitCombo + 1 : 1;
@@ -777,13 +921,14 @@ class Game {
     if (this.hitCombo > this.bestCombo) this.bestCombo = this.hitCombo;
     pl.lastCombat = this.time;
     // 보스 체력에 따른 졸개 소환
-    if (e.type === 'boss' && !e.dead) {
+    if (e.isBoss && !e.dead) {
       const k = e.hp / e.maxHp;
       if ((k < 0.6 && e.summoned === 0) || (k < 0.3 && e.summoned === 1)) {
         e.summoned++;
-        this.audio.play('laugh');
-        this.ui.toast('두억시니: "얘들아, 나와라 뚝딱!"', 2);
-        for (let i = 0; i < 2 + this.round; i++) this.spawnQueue.push({ type: i === 0 ? 'red' : 'blue', at: this.time + 0.3 + i * 0.3 });
+        this.audio.play(e.T.boss === 'dokkaebi' ? 'laugh' : e.T.boss === 'gumiho' ? 'howl' : 'wail');
+        this.ui.toast(this.map.summonLine, 2.4);
+        const [s1, s2] = e.T.summon;
+        for (let i = 0; i < 2 + this.round; i++) this.spawnQueue.push({ type: i === 0 ? s1 : s2, at: this.time + 0.3 + i * 0.3 });
       }
     }
   }
@@ -1107,7 +1252,7 @@ class Game {
         const crit = Math.random() < 0.3;
         this.damageEnemy(e, Math.round(rand(40, 48) * (crit ? 1.8 : 1)), crit, 5, 0.6);
         const c = e.center().clone();
-        this.fx.cross(c, '#fff6d0', e.type === 'boss' ? 6 : 4.2, 0.45);
+        this.fx.cross(c, '#fff6d0', e.isBoss ? 6 : 4.2, 0.45);
         this.fx.spark(c.x, c.y, c.z, 16, '#fff6d0', 8);
       }
     } });
@@ -1339,7 +1484,7 @@ class Game {
       // 빨아들이기
       for (const e of this.enemiesIn(T.pos, 3)) {
         const dx = T.pos.x - e.pos.x, dz = T.pos.z - e.pos.z, d = Math.hypot(dx, dz) || 1;
-        const pull = (e.type === 'boss' ? 0.8 : 3.4) * dt;
+        const pull = (e.isBoss ? 0.8 : 3.4) * dt;
         if (d > 0.4) this.world.move(e.pos, (dx / d) * pull, (dz / d) * pull, e.moveR ?? e.radius);
       }
       T.tick -= dt;
@@ -1375,16 +1520,39 @@ class Game {
     }
   }
 
-  spawnOrb(w) {
+  // 적이 쏘는 구슬 (도깨비불·여우불·원귀의 저주 구슬). off: 조준 각도 비틀기
+  spawnOrb(w, off = 0) {
     const p = this.player;
-    const pos = V(w.pos.x, w.y + 1.3, w.pos.z);
+    const P = w.T.pal;
+    const pos = V(w.pos.x, w.y + (w.isBoss ? 2 : w.rig ? 1.1 : 1.3), w.pos.z);
     const target = V(p.pos.x + p.vel.x * 0.3, p.y + 0.7, p.pos.z + p.vel.z * 0.3);
     const dir = target.sub(pos).setY(0).normalize();
-    const mesh = new THREE.Mesh(new THREE.IcosahedronGeometry(0.2, 1), new THREE.MeshBasicMaterial({ color: '#d8fbff' }));
+    if (off) dir.applyAxisAngle(V(0, 1, 0), off);
+    const mesh = new THREE.Mesh(new THREE.IcosahedronGeometry(w.isBoss ? 0.28 : 0.2, 1), new THREE.MeshBasicMaterial({ color: P.orb }));
     mesh.position.copy(pos);
     this.scene.add(mesh);
-    this.projectiles.push({ owner: 'enemy', kind: 'orb', pos, dir, speed: 7, life: 3, dmg: w.dmg, mesh, radius: 0.45, hitSet: new Set(), y: pos.y });
+    this.projectiles.push({ owner: 'enemy', kind: 'orb', pos, dir, speed: w.isBoss ? 8 : 7, life: 3, dmg: w.isBoss ? Math.round(w.dmg * 0.6) : w.dmg, mesh, radius: 0.45, hitSet: new Set(), y: pos.y, pal: P });
   }
+
+  // 저승사자의 검은 초승달: 플레이어 쪽으로 세 줄기
+  spawnDarkWaves(w) {
+    const p = this.player;
+    const base = Math.atan2(p.pos.x - w.pos.x, p.pos.z - w.pos.z);
+    for (const off of [-0.35, 0, 0.35]) {
+      const yaw = base + off;
+      const dir = V(Math.sin(yaw), 0, Math.cos(yaw));
+      const pos = V(w.pos.x, w.y + 0.8, w.pos.z).addScaledVector(dir, 1.2);
+      const pr = { owner: 'enemy', kind: 'darkwave', pos, dir, speed: 9, life: 1.3, dmg: Math.round(w.dmg * 0.8), radius: 1.0, hitSet: new Set() };
+      pr.vis = [
+        this.fx.slash(pos, yaw, 0, { inner: 0.3, outer: 1.6, len: 2.2, dur: 1.3, color: '#6a1aaa', static: true, move: (a) => a.g.position.copy(pr.pos) }),
+        this.fx.slash(pos, yaw, 0, { inner: 1.25, outer: 1.55, len: 2.0, dur: 1.3, color: '#e0c8ff', static: true, move: (a) => a.g.position.copy(pr.pos) }),
+      ];
+      this.projectiles.push(pr);
+    }
+    this.audio.play('swing3');
+    this.shake(0.2);
+  }
+
 
   bossSlam(boss, at, radius, dmg, big = false) {
     this.audio.play('slam');
@@ -1405,12 +1573,12 @@ class Game {
     this.kills++;
     const exp = Math.round(e.T.exp * (1 + this.round * 0.25));
     this.player.addExp(exp);
-    this.fx.number(V(e.pos.x, e.y + (e.type === 'boss' ? 4 : 2.2), e.pos.z), `+${exp} EXP`, 'exp');
+    this.fx.number(V(e.pos.x, e.y + (e.isBoss ? 4 : 2.2), e.pos.z), `+${exp} EXP`, 'exp');
     const drop = rollDrop(e.type, this.round, this.player.cls);
     if (drop) this.spawnDrop(e.pos, drop);
     if (this.target === e) this.target = null;
     this.updateQuest();
-    if (e.type === 'boss') {
+    if (e.isBoss) {
       this.hitstop = 0.25;
       this.shake(1);
       this.ui.flash('#ffffff', 0.6);
@@ -1423,11 +1591,11 @@ class Game {
     if (this.waveClearing) return;
     this.waveClearing = true;
     if (this.wave >= 3) {
-      setTimeout(() => this.victory(), 1500);
+      this.after(1.5, () => this.victory());
     } else {
       this.ui.banner('격퇴!', `제 ${['', '一', '二', '三'][this.wave]} 파 완료 · 경험치 +${20 + this.round * 10}`, 1.8);
       this.player.addExp(20 + this.round * 10);
-      setTimeout(() => { this.waveClearing = false; this.nextWave(); }, 2600);
+      this.after(2.6, () => { this.waveClearing = false; this.nextWave(); });
     }
   }
 
@@ -1440,7 +1608,14 @@ class Game {
     this.audio.mood = 'day';
     this.audio.play('victory');
     this.player.hp = this.player.maxHp;
-    this.ui.banner('승리', '도깨비들이 달아나고 동이 튼다', 4, 'win-banner');
+    const first = !this.cleared[this.mapId];
+    this.cleared[this.mapId] = true;
+    this.ui.banner('승리', { palace: '도깨비들이 달아나고 동이 튼다', bamboo: '여우들이 숲 깊이 사라진다', temple: '망자들이 저승으로 돌아간다' }[this.mapId], 4, 'win-banner');
+    if (first && this.map.next) {
+      this.buildPortals();
+      const nx = MAPS[this.map.next];
+      setTimeout(() => this.ui.toast(this.map.next === 'palace' ? '모든 지역을 평정했다! 금빛 포탈이 열렸다' : `${nx.name}(으)로 가는 포탈이 열렸다!`, 3.5), 2500);
+    }
     this.updateQuest();
     this.save();
   }
@@ -1468,7 +1643,7 @@ class Game {
     this.waveClearing = false;
     if (this.waveActive) {
       this.wave = Math.max(0, this.wave - 1);
-      setTimeout(() => this.nextWave(), 1200);
+      this.after(1.2, () => this.nextWave());
     }
   }
 
@@ -1484,14 +1659,17 @@ class Game {
       pr.pos.addScaledVector(pr.dir, pr.speed * dt);
       if (pr.kind === 'orb') {
         pr.mesh.position.copy(pr.pos);
-        pr.mesh.material.color.set(pr.owner === 'player' ? '#ffffff' : '#d8fbff');
-        if (Math.random() < 0.9) this.fx.add.emit({ x: pr.pos.x + rand(-0.1, 0.1), y: pr.pos.y + rand(-0.1, 0.1), z: pr.pos.z + rand(-0.1, 0.1), vx: rand(-0.3, 0.3), vy: rand(0.2, 0.8), vz: rand(-0.3, 0.3), life: rand(0.2, 0.45), size: 3, endSize: 1, color: '#8ff0ff', color2: '#1a40ff' });
+        const P = pr.pal || { orb: '#d8fbff', trail: '#8ff0ff', trail2: '#1a40ff' };
+        pr.mesh.material.color.set(pr.owner === 'player' ? '#ffffff' : P.orb);
+        if (Math.random() < 0.9) this.fx.add.emit({ x: pr.pos.x + rand(-0.1, 0.1), y: pr.pos.y + rand(-0.1, 0.1), z: pr.pos.z + rand(-0.1, 0.1), vx: rand(-0.3, 0.3), vy: rand(0.2, 0.8), vz: rand(-0.3, 0.3), life: rand(0.2, 0.45), size: 3, endSize: 1, color: P.trail, color2: P.trail2 });
         const h = this.world.heightAt(pr.pos.x, pr.pos.z);
         if (h > pr.pos.y - 0.4 || this.world.isBlocked(pr.pos.x, pr.pos.z, 0.05, h) && h > pr.pos.y - 1) pr.life = 0;
       } else if (pr.kind === 'wave') {
         this.swordWaveTrail(pr, dt);
       } else if (pr.kind === 'talisman' || pr.kind === 'arrow') {
         this.missileTrail(pr, dt);
+      } else if (pr.kind === 'darkwave') {
+        if (Math.random() < 0.8) this.fx.add.emit({ x: pr.pos.x + rand(-0.8, 0.8), y: pr.pos.y + rand(-0.2, 0.3), z: pr.pos.z + rand(-0.8, 0.8), vy: 0.4, life: 0.4, size: 3, endSize: 1, color: '#c8a0ff', color2: '#2a0a4a' });
       } else if (pr.kind === 'dragon') {
         this.dragonUpdate(pr, dt);
       } else if (pr.kind === 'rainArrow') {
@@ -1513,8 +1691,8 @@ class Game {
             this.damageEnemy(e, Math.round(pr.dmg * (crit ? 1.8 : 1) * rand(0.9, 1.1)), crit, pr.knock ?? 7, pr.stun ?? 0.35);
             if (pr.kind === 'wave') {
               const c = e.center().clone();
-              this.fx.cross(c, '#9fe8ff', e.type === 'boss' ? 5.5 : 3.8);
-              this.fx.ring(V(e.pos.x, e.y, e.pos.z), e.type === 'boss' ? 3 : 1.8, '#9fe8ff', 0.3);
+              this.fx.cross(c, '#9fe8ff', e.isBoss ? 5.5 : 3.8);
+              this.fx.ring(V(e.pos.x, e.y, e.pos.z), e.isBoss ? 3 : 1.8, '#9fe8ff', 0.3);
               this.fx.spark(c.x, c.y, c.z, 14, '#d8f6ff', 7);
               this.audio.play('skillhit');
               this.hitstop = Math.max(this.hitstop, 0.07);
@@ -1526,7 +1704,7 @@ class Game {
               const c = e.center();
               this.fx.spark(c.x, c.y, c.z, pr.pierce ? 10 : 6, pr.pierce ? '#c8ff9a' : '#ffffff', 5);
               if (pr.pierce) {
-                this.fx.cross(c.clone(), '#a8ff8a', e.type === 'boss' ? 3.5 : 2.4, 0.25);
+                this.fx.cross(c.clone(), '#a8ff8a', e.isBoss ? 3.5 : 2.4, 0.25);
                 for (let k = 0; k < 6; k++) this.fx.norm.emit({ x: c.x, y: c.y, z: c.z, vx: rand(-3, 3), vy: rand(1, 3), vz: rand(-3, 3), wob: 1.5, drag: 2, life: rand(0.4, 0.8), size: 2, color: Math.random() < 0.5 ? '#8ad06a' : '#d8f0a0' });
               }
               if (!pr.pierce) { pr.life = 0; pr.stuck = true; }
@@ -1542,6 +1720,7 @@ class Game {
       }
       if (pr.life <= 0) {
         if (pr.kind === 'wave') this.swordWaveEnd(pr);
+        if (pr.kind === 'darkwave') for (const a of pr.vis) a.kill = true;
         if (pr.kind === 'talisman') this.talismanBurst(pr);
         if (pr.mesh) {
           this.scene.remove(pr.mesh);
@@ -1554,7 +1733,7 @@ class Game {
   }
 
   separate() {
-    const list = [this.player, ...this.enemies.filter((e) => !e.dead && e.type !== 'wisp')];
+    const list = [this.player, ...this.enemies.filter((e) => !e.dead && !e.isWisp)];
     for (let i = 0; i < list.length; i++) for (let j = i + 1; j < list.length; j++) {
       const a = list[i], b = list[j];
       const dx = b.pos.x - a.pos.x, dz = b.pos.z - a.pos.z;
@@ -1562,8 +1741,8 @@ class Game {
       if (d < m && d > 0.0001) {
         const push = (m - d) * 0.5;
         const ux = dx / d, uz = dz / d;
-        const wa = a === this.player ? 0.3 : (a.type === 'boss' ? 0.1 : 1);
-        const wb = b.type === 'boss' ? 0.1 : 1;
+        const wa = a === this.player ? 0.3 : (a.isBoss ? 0.1 : 1);
+        const wb = b.isBoss ? 0.1 : 1;
         this.world.move(a.pos, -ux * push * wa, -uz * push * wa, a.moveR ?? a.radius);
         this.world.move(b.pos, ux * push * wb, uz * push * wb, b.moveR ?? b.radius);
       }
@@ -1573,8 +1752,17 @@ class Game {
   ambient(dt) {
     const f = this.focus;
     const n = this.night;
+    const amb = this.map.theme.ambient;
+    if (amb === 'snow') {
+      // 설원: 밤낮없이 눈이 내림
+      for (let k = 0; k < 2; k++) if (Math.random() < dt * 30) this.fx.norm.emit({ x: f.x + rand(-20, 20), y: rand(6, 10), z: f.z + rand(-18, 12), vx: rand(-0.3, 0.6), vy: -1.2, vz: rand(-0.2, 0.2), wob: 0.8, life: 8, size: Math.random() < 0.3 ? 3 : 2, color: '#ffffff', floor: 0.02, alpha: 0.95 });
+      return;
+    }
+    if (amb === 'leaf' && Math.random() < dt * 7 * (1 - n)) {
+      this.fx.norm.emit({ x: f.x + rand(-18, 18), y: rand(4, 7), z: f.z + rand(-16, 10), vx: rand(0.2, 0.8), vy: -0.7, vz: rand(-0.2, 0.3), wob: 1.6, life: 7, size: 2, color: Math.random() < 0.5 ? '#8ad06a' : '#c8e08a', floor: 0.02 });
+    }
     // 낮: 흩날리는 꽃잎 / 밤: 반딧불
-    if (Math.random() < dt * 6 * (1 - n)) {
+    if (amb === 'petal' && Math.random() < dt * 6 * (1 - n)) {
       this.fx.norm.emit({ x: f.x + rand(-18, 18), y: rand(4, 8), z: f.z + rand(-16, 10), vx: rand(0.4, 1.0), vy: -0.6, vz: rand(-0.2, 0.3), wob: 1.2, life: 7, size: 2, color: Math.random() < 0.6 ? '#f6c8d4' : '#fff4f0', floor: 0.02, alpha: 0.95 });
     }
     if (Math.random() < dt * 14 * n) {
@@ -1587,13 +1775,14 @@ class Game {
     this.updateTarget();
     this.player.update(wdt, inp);
     this.updateDrops(wdt);
+    this.updatePortals(wdt);
     // 길찾기 흐름장 (플레이어가 다른 칸으로 옮겼을 때만 실제로 다시 계산)
     this.flowT -= wdt;
     if (this.enemies.length && this.flowT <= 0) {
       this.flowT = 0.15;
       const pp = this.player.pos;
       this.world.updateFlow(pp.x, pp.z, 0);
-      if (this.enemies.some((e) => e.type === 'boss' && !e.dead)) this.world.updateFlow(pp.x, pp.z, 1);
+      if (this.enemies.some((e) => e.isBoss && !e.dead)) this.world.updateFlow(pp.x, pp.z, 1);
     }
     for (let i = this.enemies.length - 1; i >= 0; i--) {
       const e = this.enemies[i];
@@ -1602,12 +1791,18 @@ class Game {
     this.separate();
     this.updateProjectiles(wdt);
     this.updateSkills(wdt);
-    for (let i = this.timers.length - 1; i >= 0; i--) if (this.timers[i].at <= this.time) { const t = this.timers[i]; this.timers.splice(i, 1); t.fn(); }
+    if (this.timers.length) {
+      const due = this.timers.filter((t) => t.at <= this.time);
+      if (due.length) { this.timers = this.timers.filter((t) => t.at > this.time); for (const t of due) t.fn(); }
+    }
     while (this.spawnQueue.length && this.spawnQueue[0].at <= this.time) this.spawnEnemy(this.spawnQueue.shift().type);
     this.spawnQueue.sort((a, b) => a.at - b.at);
     this.checkWave();
     if (this.enemies.length || this.spawnQueue.length) this.updateQuest();
   }
+
+  // 게임 시간 기준 예약 (일시정지·지역 이동 시 함께 멈추거나 취소됨)
+  after(sec, fn) { this.timers.push({ at: this.time + sec, fn }); }
 
   // 테스트·디버그용: 렌더링 없이 시간만 진행
   stepSim(dt) {
