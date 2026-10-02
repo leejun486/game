@@ -31,6 +31,8 @@ class Game {
     this.enemies = [];
     this.projectiles = [];
     this.timers = [];
+    this.rains = [];
+    this.tornados = [];
     this.spawnQueue = [];
     this.wave = 0;
     this.round = 0;
@@ -328,7 +330,9 @@ class Game {
     const inp = this.readInput();
     switch (code) {
       case 'KeyJ': case 'KeyZ': case 'atk': this.player.startAttack(inp); break;
-      case 'Space': case 'ShiftLeft': case 'ShiftRight': case 'KeyL': case 'dash': this.player.startDash(inp); break;
+      case 'Space': case 'ShiftLeft': case 'ShiftRight': case 'dash': this.player.startDash(inp); break;
+      case 'KeyL': case 'KeyQ': case 'skill2': this.player.startExtraSkill(inp, 2); break;
+      case 'KeyI': case 'KeyR': case 'skill3': this.player.startExtraSkill(inp, 3); break;
       case 'KeyK': case 'KeyX': case 'skill': this.player.startSkill(inp); break;
       case 'KeyE': case 'Enter': case 'act': this.interact(); break;
       case 'KeyN':
@@ -668,6 +672,14 @@ class Game {
   spawnArrow(pl, yaw, { dmg = 16, pierce = false, glow = false, speed = 26, life = 0.55 } = {}) {
     const dir = V(Math.sin(yaw), 0, Math.cos(yaw));
     const pos = this.handPos(pl);
+    const g = this.makeArrowMesh(glow);
+    g.position.copy(pos);
+    g.rotation.y = yaw;
+    this.scene.add(g);
+    this.projectiles.push({ owner: 'player', kind: 'arrow', pos, dir, yaw, speed, life, dmg, mesh: g, radius: 0.4, hitSet: new Set(), pierce, glow, knock: pierce ? 5 : 3, stun: pierce ? 0.3 : 0.18 });
+  }
+
+  makeArrowMesh(glow) {
     const g = new THREE.Group();
     const shaftM = new THREE.MeshBasicMaterial({ color: glow ? '#c8ff9a' : '#9a7a52' });
     const shaft = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.04, 0.78), shaftM);
@@ -677,10 +689,7 @@ class Game {
     const fl = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.02, 0.14), new THREE.MeshBasicMaterial({ color: glow ? '#8aff6a' : '#f0ece0' }));
     fl.position.z = -0.32;
     g.add(shaft, head, fl);
-    g.position.copy(pos);
-    g.rotation.y = yaw;
-    this.scene.add(g);
-    this.projectiles.push({ owner: 'player', kind: 'arrow', pos, dir, yaw, speed, life, dmg, mesh: g, radius: 0.4, hitSet: new Set(), pierce, glow, knock: pierce ? 5 : 3, stun: pierce ? 0.3 : 0.18 });
+    return g;
   }
 
   // 불부적·화살이 날아가는 동안
@@ -704,66 +713,430 @@ class Game {
     if (h > pr.pos.y - 0.3) pr.life = 0;
   }
 
-  // 도사 낙뢰: 조준한 지점에 경고 원 → 번개 다발이 내리쳐 광역 피해
-  castLightning(pl) {
-    // 바라보는 쪽 가까운 적, 없으면 5걸음 앞
-    let target = null, bd = 11;
+  // 앞쪽 가까운 적 (없으면 n걸음 앞 지점)
+  aimPoint(pl, ahead = 5, range = 11) {
+    let target = null, bd = range;
     for (const e of this.enemies) {
       if (e.dead || e.spawning) continue;
       const dx = e.pos.x - pl.pos.x, dz = e.pos.z - pl.pos.z;
       const d = Math.hypot(dx, dz);
       if (d < bd && Math.abs(angleDiff(pl.yaw, Math.atan2(dx, dz))) < 1.0) { bd = d; target = e; }
     }
-    const c = target ? V(target.pos.x, 0, target.pos.z) : V(pl.pos.x + Math.sin(pl.yaw) * 5, 0, pl.pos.z + Math.cos(pl.yaw) * 5);
+    const c = target ? V(target.pos.x, 0, target.pos.z) : V(pl.pos.x + Math.sin(pl.yaw) * ahead, 0, pl.pos.z + Math.cos(pl.yaw) * ahead);
     c.y = this.world.heightAt(c.x, c.z);
+    return c;
+  }
+
+  // 원 안의 살아 있는 적
+  enemiesIn(c, R) {
+    return this.enemies.filter((e) => !e.dead && !e.spawning && Math.hypot(e.pos.x - c.x, e.pos.z - c.z) < R + e.radius);
+  }
+
+  // 도사 낙뢰: 팔괘 마법진이 펼쳐지고 빛이 모여듦 → 번개 다발이 연달아 내리꽂히며 전기 사슬이 적들을 잇고, 바닥에 그을음
+  castLightning(pl) {
+    const c = this.aimPoint(pl);
     const R = 2.9;
+    this.fx.circle(c, R * 1.15, '#b89aff', 1.3, 2.2);
+    this.fx.circle(V(pl.pos.x, pl.y, pl.pos.z), 1.3, '#d8c8ff', 0.7, -3);
     const tele = this.fx.ring(c, R, '#b89aff', 1, 1);
-    this.fx.ring(this.handPos(pl), 1.2, '#d8c8ff', 0.3);
+    // 빛이 원 가장자리에서 가운데로 모여듦
+    for (let i = 0; i < 46; i++) {
+      const a = Math.random() * Math.PI * 2, r = R * rand(0.8, 1.1);
+      this.fx.add.emit({ x: c.x + Math.cos(a) * r, y: c.y + rand(0.1, 1.6), z: c.z + Math.sin(a) * r, vx: -Math.cos(a) * r / 0.42, vy: rand(-0.5, 1), vz: -Math.sin(a) * r / 0.42, life: 0.42, size: rand(2, 3), color: '#e8e0ff', color2: '#6a4aff' });
+    }
     this.audio.play('charge');
     this.shake(0.12);
     this.timers.push({ at: this.time + 0.42, fn: () => {
       this.fx.removeRing(tele);
-      const pts = [c, ...[0, 1, 2].map(() => V(c.x + rand(-1.8, 1.8), c.y, c.z + rand(-1.8, 1.8)))];
-      pts.forEach((p, i) => this.fx.bolt(p, i === 0 ? 1.4 : 0.9));
+      this.fx.bolt(c, 1.7);
       this.audio.play('thunder');
-      this.ui.flash('#e8e0ff', 0.55);
-      this.shake(0.6);
-      this.hitstop = Math.max(this.hitstop, 0.08);
-      this.fx.ring(c, R * 1.25, '#d8c8ff', 0.4);
+      this.ui.flash('#e8e0ff', 0.6);
+      this.shake(0.7);
+      this.hitstop = Math.max(this.hitstop, 0.09);
+      this.fx.ring(c, R * 1.3, '#d8c8ff', 0.45);
       this.fx.ring(c, R * 0.6, '#ffffff', 0.25);
-      for (let i = 0; i < 50; i++) {
-        const a = Math.random() * Math.PI * 2, s = rand(2, 8);
-        this.fx.add.emit({ x: c.x, y: c.y + 0.3, z: c.z, vx: Math.cos(a) * s, vy: rand(1, 6), vz: Math.sin(a) * s, g: 10, drag: 2, life: rand(0.3, 0.7), size: rand(2, 4), endSize: 1, color: '#ffffff', color2: '#7a5aff' });
+      this.fx.scorch(c, R * 0.75, '#1c1230', 3);
+      for (let i = 0; i < 60; i++) {
+        const a = Math.random() * Math.PI * 2, s = rand(2, 9);
+        this.fx.add.emit({ x: c.x, y: c.y + 0.3, z: c.z, vx: Math.cos(a) * s, vy: rand(1, 7), vz: Math.sin(a) * s, g: 10, drag: 2, life: rand(0.3, 0.8), size: rand(2, 4), endSize: 1, color: '#ffffff', color2: '#7a5aff' });
       }
+      // 남은 불티
       for (let i = 0; i < 30; i++) {
-        const a = (i / 30) * Math.PI * 2, r = rand(0.5, R);
-        this.fx.add.emit({ x: c.x + Math.cos(a) * r, y: c.y + 0.06, z: c.z + Math.sin(a) * r, life: rand(0.6, 1.2), size: 2, color: '#b89aff', alpha: 0.8, flicker: 0.6 });
+        const a = Math.random() * Math.PI * 2, r = rand(0.3, R);
+        this.fx.add.emit({ x: c.x + Math.cos(a) * r, y: c.y + 0.06, z: c.z + Math.sin(a) * r, vy: rand(0, 0.4), life: rand(0.8, 1.6), size: 2, color: '#d8c8ff', alpha: 0.8, flicker: 0.7 });
       }
-      for (const e of this.enemies) {
-        if (e.dead || e.spawning) continue;
-        if (Math.hypot(e.pos.x - c.x, e.pos.z - c.z) < R + e.radius) {
-          const crit = Math.random() < 0.2;
-          this.damageEnemy(e, Math.round(rand(44, 54) * (crit ? 1.8 : 1)), crit, 3, 0.7);
-          const ec = e.center();
-          this.fx.spark(ec.x, ec.y, ec.z, 10, '#e8e0ff', 6);
-        }
+      // 피해 + 전기 사슬
+      const hit = this.enemiesIn(c, R);
+      let prev = V(c.x, c.y + 1.2, c.z);
+      for (const e of hit) {
+        const crit = Math.random() < 0.2;
+        this.damageEnemy(e, Math.round(rand(44, 54) * (crit ? 1.8 : 1)), crit, 3, 0.7);
+        const ec = e.center().clone();
+        this.fx.arc(prev, ec, '#c8b0ff', 0.8);
+        this.fx.spark(ec.x, ec.y, ec.z, 10, '#e8e0ff', 6);
+        prev = ec;
+      }
+      // 뒤따르는 번개 세 줄기
+      for (let k = 1; k <= 3; k++) {
+        this.timers.push({ at: this.time + k * 0.07, fn: () => {
+          const p = V(c.x + rand(-2, 2), c.y, c.z + rand(-2, 2));
+          this.fx.bolt(p, 0.9);
+          this.fx.spark(p.x, p.y + 0.2, p.z, 8, '#e8e0ff', 5);
+          this.shake(0.25);
+        } });
       }
     } });
   }
 
-  // 요정 바람화살: 부채꼴로 9발, 관통
+  // 요정 바람화살: 발밑 마법진 + 소용돌이 고리 → 빛나는 관통 화살 9발
   windArrows(pl) {
     for (let i = 0; i < 9; i++) this.spawnArrow(pl, pl.yaw + (i - 4) * 0.13, { dmg: 22, pierce: true, glow: true, speed: 24, life: 0.6 });
     this.audio.play('bowskill');
     const feet = V(pl.pos.x, pl.y, pl.pos.z);
-    this.fx.ring(feet, 2.4, '#a8ff8a', 0.4);
-    this.fx.ring(this.handPos(pl), 1.4, '#ffffff', 0.25);
-    for (let i = 0; i < 26; i++) {
-      const a = pl.yaw + rand(-0.7, 0.7);
-      this.fx.norm.emit({ x: feet.x, y: feet.y + rand(0.3, 1.2), z: feet.z, vx: Math.sin(a) * rand(3, 8), vy: rand(0, 1.5), vz: Math.cos(a) * rand(3, 8), drag: 2, wob: 1, life: rand(0.5, 1), size: 2, color: Math.random() < 0.5 ? '#8ad06a' : '#d8f0a0' });
+    this.fx.circle(feet, 2.2, '#8aff7a', 0.7, 3);
+    const hp = this.handPos(pl);
+    for (let k = 0; k < 3; k++) {
+      this.timers.push({ at: this.time + k * 0.05, fn: () => {
+        const p = hp.clone().add(V(Math.sin(pl.yaw) * k * 0.6, 0, Math.cos(pl.yaw) * k * 0.6));
+        this.fx.ring(p, 0.8 + k * 0.4, k ? '#c8ffb0' : '#ffffff', 0.25);
+      } });
     }
-    this.ui.flash('#6aff7a', 0.15);
-    this.shake(0.18);
+    for (let i = 0; i < 36; i++) {
+      const a = pl.yaw + rand(-0.8, 0.8);
+      this.fx.norm.emit({ x: feet.x, y: feet.y + rand(0.3, 1.2), z: feet.z, vx: Math.sin(a) * rand(3, 9), vy: rand(0, 1.5), vz: Math.cos(a) * rand(3, 9), drag: 2, wob: 1.5, life: rand(0.5, 1.1), size: 2, color: Math.random() < 0.5 ? '#8ad06a' : '#d8f0a0' });
+    }
+    // 바람이 휘감는 나선
+    for (let i = 0; i < 30; i++) {
+      const a = (i / 30) * Math.PI * 4, r = 0.3 + i * 0.03;
+      this.fx.add.emit({ x: feet.x + Math.cos(a) * r, y: feet.y + i * 0.05, z: feet.z + Math.sin(a) * r, vx: -Math.sin(a) * 3, vy: 1, vz: Math.cos(a) * 3, life: 0.4, size: 2, color: '#e8ffd8', color2: '#3aa83a' });
+    }
+    this.ui.flash('#6aff7a', 0.18);
+    this.shake(0.2);
+  }
+
+  // ================= 추가 스킬 =================
+  castSkill(pl, slot) {
+    const k = pl.cls + slot;
+    if (k === 'sword2') this.skillIssen(pl);
+    else if (k === 'sword3') this.skillWhirl(pl);
+    else if (k === 'mage2') this.skillDragon(pl);
+    else if (k === 'mage3') this.skillFrost(pl);
+    else if (k === 'elf2') this.skillArrowRain(pl);
+    else if (k === 'elf3') this.skillTornado(pl);
+  }
+
+  // 검객 일섬: 눈에 보이지 않을 만큼 빠르게 앞으로 돌진하며 지나간 자리에 빛줄기,
+  // 칼을 칼집에 넣는 "착" 소리와 동시에 베인 적들이 한꺼번에 갈라짐
+  skillIssen(pl) {
+    const dir = V(Math.sin(pl.yaw), 0, Math.cos(pl.yaw));
+    const from = pl.pos.clone();
+    this.fx.ghost(pl.rig, '#ffffff', 0.4);
+    this.world.move(pl.pos, dir.x * 7, dir.z * 7, pl.moveR);
+    pl.vel.set(0, 0, 0);
+    pl.invuln = Math.max(pl.invuln, 0.6);
+    const to = pl.pos.clone();
+    const y = pl.y + 0.8;
+    this.fx.streak(V(from.x, y, from.z), V(to.x, y, to.z), '#ffffff', 0.55, 0.5);
+    this.fx.streak(V(from.x, y, from.z), V(to.x, y, to.z), '#7fd8ff', 0.7, 1.2);
+    for (let i = 1; i < 5; i++) {
+      const t = i / 5;
+      const gp = from.clone().lerp(to, t);
+      this.fx.add.emit({ x: gp.x, y: y, z: gp.z, vx: rand(-1, 1), vy: rand(0, 1), vz: rand(-1, 1), life: 0.4, size: 3, endSize: 1, color: '#ffffff', color2: '#7fd8ff' });
+    }
+    this.fx.dust(from.x, from.y, from.z, 12);
+    this.fx.ring(V(to.x, pl.y, to.z), 1.6, '#ffffff', 0.25);
+    this.audio.play('dash');
+    this.audio.play('swing3');
+    this.shake(0.2);
+    // 지나간 길 가까이에 있던 적
+    const seg = to.clone().sub(from);
+    const L2 = seg.lengthSq() || 1;
+    const victims = this.enemies.filter((e) => {
+      if (e.dead || e.spawning) return false;
+      const t = Math.max(0, Math.min(1, ((e.pos.x - from.x) * seg.x + (e.pos.z - from.z) * seg.z) / L2));
+      const px = from.x + seg.x * t, pz = from.z + seg.z * t;
+      return Math.hypot(e.pos.x - px, e.pos.z - pz) < 1.3 + e.radius;
+    });
+    // 곧바로 칼을 넣게 하고, 넣는 순간 베임이 터짐
+    pl.sinceAttack = 5;
+    this.timers.push({ at: this.time + 0.62, fn: () => {
+      this.audio.play('sheathe');
+      if (!victims.length) return;
+      this.audio.play('crit');
+      this.ui.flash('#ffffff', 0.35);
+      this.shake(0.5);
+      this.hitstop = Math.max(this.hitstop, 0.1);
+      for (const e of victims) {
+        if (e.dead) continue;
+        const crit = Math.random() < 0.3;
+        this.damageEnemy(e, Math.round(rand(40, 48) * (crit ? 1.8 : 1)), crit, 5, 0.6);
+        const c = e.center().clone();
+        this.fx.cross(c, '#fff6d0', e.type === 'boss' ? 6 : 4.2, 0.45);
+        this.fx.spark(c.x, c.y, c.z, 16, '#fff6d0', 8);
+      }
+    } });
+  }
+
+  // 검객 회오리베기: 세 바퀴 돌며 주변 전체를 벰 (마지막 바퀴가 가장 셈)
+  skillWhirl(pl) {
+    for (let k = 0; k < 3; k++) {
+      this.timers.push({ at: this.time + k * 0.27, fn: () => {
+        if (pl.dead) return;
+        const last = k === 2;
+        const R = last ? 2.9 : 2.5;
+        const o = V(pl.pos.x, pl.y + 0.7, pl.pos.z);
+        this.fx.slash(o, pl.yaw + k * 2.1, 0, { inner: 0.4, outer: R, len: 6.25, dur: 0.24, color: last ? '#fff6d0' : '#a8e4ff' });
+        this.fx.slash(o, pl.yaw + k * 2.1, 0, { inner: R - 0.3, outer: R - 0.05, len: 6.25, dur: 0.24, color: '#ffffff' });
+        this.fx.ring(V(pl.pos.x, pl.y, pl.pos.z), R, last ? '#fff2c0' : '#bfe8ff', 0.3);
+        for (let i = 0; i < 16; i++) {
+          const a = (i / 16) * Math.PI * 2;
+          this.fx.norm.emit({ x: pl.pos.x + Math.cos(a) * 0.6, y: pl.y + 0.1, z: pl.pos.z + Math.sin(a) * 0.6, vx: Math.cos(a) * 4 - Math.sin(a) * 3, vy: rand(0.3, 1), vz: Math.sin(a) * 4 + Math.cos(a) * 3, drag: 3, life: 0.5, size: 3, endSize: 1, color: '#c8bca0', alpha: 0.7 });
+        }
+        this.audio.play(last ? 'swing3' : 'swing');
+        let any = false;
+        for (const e of this.enemiesIn(pl.pos, R)) {
+          const crit = Math.random() < 0.15;
+          this.damageEnemy(e, Math.round((last ? rand(22, 28) : rand(13, 17)) * (crit ? 1.8 : 1)), crit, last ? 8 : 2.5, 0.3);
+          any = true;
+        }
+        if (any) this.shake(last ? 0.35 : 0.15);
+      } });
+    }
+  }
+
+  // 도사 화룡부: 부적이 불뱀이 되어 꿈틀대며 날아감. 지나가는 적을 여러 번 태우고 끝에서 폭발
+  skillDragon(pl) {
+    const dir = V(Math.sin(pl.yaw), 0, Math.cos(pl.yaw));
+    const base = this.handPos(pl);
+    const g = new THREE.Group();
+    const segs = [];
+    const N = 12;
+    for (let i = 0; i < N; i++) {
+      const k = i / (N - 1);
+      const col = new THREE.Color('#fff2a0').lerp(new THREE.Color('#e8401a'), k);
+      const s = new THREE.Mesh(new THREE.IcosahedronGeometry(0.46 * (1 - k * 0.6), 1), new THREE.MeshBasicMaterial({ color: col }));
+      g.add(s);
+      segs.push(s);
+    }
+    // 머리: 뿔과 눈
+    const head = segs[0];
+    for (const sx of [-1, 1]) {
+      const horn = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.35, 4), new THREE.MeshBasicMaterial({ color: '#ffd040' }));
+      horn.position.set(sx * 0.16, 0.22, -0.12);
+      horn.rotation.x = -0.8;
+      head.add(horn);
+      const eye = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.07, 0.05), new THREE.MeshBasicMaterial({ color: '#2a0a0a' }));
+      eye.position.set(sx * 0.13, 0.08, 0.27);
+      head.add(eye);
+    }
+    this.scene.add(g);
+    const pr = { owner: 'fx', kind: 'dragon', pos: base.clone(), base: base.clone(), dir, yaw: pl.yaw, speed: 10, life: 1.6, t: 0, dmg: 20, mesh: g, segs, hist: [], hitAt: new Map() };
+    for (let i = 0; i < N * 3; i++) pr.hist.push(base.clone());
+    this.projectiles.push(pr);
+    this.audio.play('fire');
+    this.audio.play('cast');
+    this.fx.circle(V(pl.pos.x, pl.y, pl.pos.z), 1.6, '#ffa040', 0.6, 3);
+    this.fx.ring(base, 1.4, '#ffd080', 0.3);
+    this.ui.flash('#ff8a30', 0.18);
+    this.shake(0.2);
+  }
+
+  dragonUpdate(pr, dt) {
+    pr.t += dt;
+    pr.base.addScaledVector(pr.dir, pr.speed * dt);
+    const side = V(pr.dir.z, 0, -pr.dir.x);
+    const wave = Math.sin(pr.t * 9) * 0.9;
+    pr.pos.copy(pr.base).addScaledVector(side, wave);
+    pr.pos.y = pr.base.y + Math.sin(pr.t * 6) * 0.25;
+    pr.hist.unshift(pr.pos.clone());
+    pr.hist.length = pr.segs.length * 3;
+    pr.segs.forEach((s, i) => {
+      const h = pr.hist[Math.min(pr.hist.length - 1, i * 3)];
+      s.position.copy(h);
+    });
+    const head = pr.segs[0];
+    const nxt = pr.hist[2] || pr.pos;
+    head.lookAt(pr.pos.clone().add(pr.pos.clone().sub(nxt)));
+    // 불꽃
+    for (let k = 0; k < 4; k++) {
+      const h = pr.hist[Math.floor(Math.random() * pr.hist.length)];
+      this.fx.add.emit({ x: h.x + rand(-0.15, 0.15), y: h.y + rand(-0.1, 0.2), z: h.z + rand(-0.15, 0.15), vx: rand(-0.6, 0.6), vy: rand(0.8, 2), vz: rand(-0.6, 0.6), life: rand(0.25, 0.5), size: rand(2, 5), endSize: 1, color: '#fff0a0', color2: '#ff2a00', flicker: 0.3 });
+    }
+    // 여러 번 태우기 (같은 적은 0.35초마다)
+    for (const e of this.enemies) {
+      if (e.dead || e.spawning) continue;
+      if (Math.hypot(e.pos.x - pr.pos.x, e.pos.z - pr.pos.z) > 0.9 + e.radius) continue;
+      const last = pr.hitAt.get(e) ?? -9;
+      if (this.time - last < 0.35) continue;
+      pr.hitAt.set(e, this.time);
+      const crit = Math.random() < 0.2;
+      this.damageEnemy(e, Math.round(pr.dmg * (crit ? 1.8 : 1) * rand(0.9, 1.1)), crit, 3, 0.3);
+      const c = e.center();
+      for (let i = 0; i < 12; i++) this.fx.add.emit({ x: c.x, y: c.y, z: c.z, vx: rand(-3, 3), vy: rand(1, 4), vz: rand(-3, 3), drag: 2, life: rand(0.3, 0.5), size: 3, endSize: 1, color: '#ffe080', color2: '#ff3010' });
+    }
+    if (pr.life <= 0 && !pr.exploded) {
+      pr.exploded = true;
+      const p = pr.pos;
+      const gy = this.world.heightAt(p.x, p.z);
+      this.audio.play('fire');
+      this.fx.ring(V(p.x, gy, p.z), 2.4, '#ffb050', 0.35);
+      this.fx.scorch(V(p.x, gy, p.z), 1.6, '#2a140a', 2.5);
+      for (let i = 0; i < 40; i++) {
+        const a = Math.random() * Math.PI * 2, s = rand(2, 6);
+        this.fx.add.emit({ x: p.x, y: p.y, z: p.z, vx: Math.cos(a) * s, vy: rand(0.5, 5), vz: Math.sin(a) * s, g: 4, drag: 2.5, life: rand(0.3, 0.7), size: rand(2, 5), endSize: 1, color: '#fff2a0', color2: '#ff2a00', flicker: 0.3 });
+      }
+      for (const e of this.enemiesIn(p, 2.2)) this.damageEnemy(e, Math.round(rand(24, 30)), false, 6, 0.35);
+      this.shake(0.35);
+    }
+  }
+
+  // 도사 빙결진: 발밑에 얼음 마법진 → 세 겹의 얼음 가시가 퍼져 나가며 적을 얼림
+  skillFrost(pl) {
+    const c = V(pl.pos.x, pl.y, pl.pos.z);
+    const R = 4.6;
+    this.fx.circle(c, R, '#8ad8ff', 1.6, 1.4);
+    this.fx.scorch(c, R * 0.9, '#cfefff', 2.6);
+    this.audio.play('freeze');
+    this.ui.flash('#8ad8ff', 0.25);
+    this.shake(0.35);
+    [1.4, 2.8, 4.2].forEach((r, k) => {
+      this.timers.push({ at: this.time + k * 0.09, fn: () => {
+        const n = Math.round(r * 5);
+        for (let i = 0; i < n; i++) {
+          const a = (i / n) * Math.PI * 2 + k * 0.3;
+          const x = c.x + Math.cos(a) * r, z = c.z + Math.sin(a) * r;
+          const h = this.world.heightAt(x, z);
+          if (Math.abs(h - c.y) > 1) continue;
+          this.fx.iceSpike(V(x, h, z), rand(0.8, 1.5) * (1 - k * 0.15), 1.4 - k * 0.1);
+        }
+        this.fx.ring(c, r + 0.3, '#d8f4ff', 0.25);
+        for (let i = 0; i < 20; i++) {
+          const a = Math.random() * Math.PI * 2;
+          this.fx.add.emit({ x: c.x + Math.cos(a) * r, y: c.y + 0.2, z: c.z + Math.sin(a) * r, vx: Math.cos(a) * 2, vy: rand(1, 3), vz: Math.sin(a) * 2, g: 6, life: rand(0.4, 0.8), size: 2, color: '#ffffff', color2: '#7ac8ff' });
+        }
+        this.shake(0.15);
+      } });
+    });
+    for (const e of this.enemiesIn(c, R)) {
+      const crit = Math.random() < 0.15;
+      this.damageEnemy(e, Math.round(rand(26, 32) * (crit ? 1.8 : 1)), crit, 1, 0.2);
+      e.freeze(1.8);
+    }
+  }
+
+  // 요정 화살비: 하늘로 쏜 화살이 조준한 곳에 비처럼 쏟아짐
+  skillArrowRain(pl) {
+    const c = this.aimPoint(pl, 6);
+    const R = 3;
+    this.fx.circle(c, R * 1.1, '#9aff8a', 1.7, 1.6);
+    const tele = this.fx.ring(c, R, '#9aff8a', 1, 1);
+    this.audio.play('bow');
+    this.audio.play('bowskill');
+    // 하늘로 솟는 화살
+    for (let i = 0; i < 5; i++) this.fx.add.emit({ x: pl.pos.x + rand(-0.2, 0.2), y: pl.y + 1.4, z: pl.pos.z + rand(-0.2, 0.2), vx: rand(-0.5, 0.5), vy: 18, vz: rand(-0.5, 0.5), life: 0.4, size: 3, color: '#e8ffd8', color2: '#3aa83a' });
+    this.rains.push({ c, R, t: -0.35, dur: 1.2, acc: 0, tele });
+  }
+
+  // 요정 회오리 정령: 앞으로 나아가며 주변 적을 빨아들여 계속 상처를 입히는 바람 소용돌이
+  skillTornado(pl) {
+    const dir = V(Math.sin(pl.yaw), 0, Math.cos(pl.yaw));
+    const pos = V(pl.pos.x + dir.x * 1.5, pl.y, pl.pos.z + dir.z * 1.5);
+    const rings = [];
+    for (let i = 0; i < 4; i++) {
+      const mat = new THREE.MeshBasicMaterial({ color: i % 2 ? '#c8ffb0' : '#ffffff', transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false });
+      const r = new THREE.Mesh(new THREE.TorusGeometry(1, 0.05, 4, 20), mat);
+      r.rotation.x = Math.PI / 2;
+      this.scene.add(r);
+      rings.push(r);
+    }
+    this.tornados.push({ pos, dir, t: 0, dur: 3.2, tick: 0, rings });
+    this.audio.play('tornado');
+    this.fx.circle(pos, 2, '#9aff8a', 0.8, 4);
+    this.ui.flash('#9aff8a', 0.15);
+  }
+
+  updateSkills(dt) {
+    // 화살비
+    for (let i = this.rains.length - 1; i >= 0; i--) {
+      const r = this.rains[i];
+      r.t += dt;
+      if (r.t < 0) continue;
+      r.acc += dt * 34;
+      while (r.acc >= 1) {
+        r.acc -= 1;
+        const a = Math.random() * Math.PI * 2, d = Math.sqrt(Math.random()) * r.R;
+        const tx = r.c.x + Math.cos(a) * d, tz = r.c.z + Math.sin(a) * d;
+        const ty = this.world.heightAt(tx, tz);
+        const from = V(tx + rand(-1, 1), ty + 9, tz + rand(-1, 1) - 1.5);
+        const dir = V(tx, ty, tz).sub(from).normalize();
+        const g = this.makeArrowMesh(true);
+        g.position.copy(from);
+        g.lookAt(from.clone().add(dir));
+        this.scene.add(g);
+        this.projectiles.push({ owner: 'fx', kind: 'rainArrow', pos: from, dir, speed: 30, life: 1, mesh: g, groundY: ty });
+      }
+      if (r.t >= r.dur) { this.fx.removeRing(r.tele); this.rains.splice(i, 1); }
+    }
+    // 회오리 정령
+    for (let i = this.tornados.length - 1; i >= 0; i--) {
+      const T = this.tornados[i];
+      T.t += dt;
+      this.world.move(T.pos, T.dir.x * 3 * dt, T.dir.z * 3 * dt, 0.4);
+      T.pos.y = this.world.heightAt(T.pos.x, T.pos.z);
+      const fade = Math.min(1, T.t / 0.25) * Math.min(1, (T.dur - T.t) / 0.4);
+      T.rings.forEach((ring, k) => {
+        const h = 0.3 + k * 0.8;
+        ring.position.set(T.pos.x + Math.sin(T.t * 7 + k) * 0.12, T.pos.y + h, T.pos.z + Math.cos(T.t * 7 + k) * 0.12);
+        ring.scale.setScalar((0.5 + k * 0.45) * fade);
+        ring.rotation.z += dt * (8 + k * 2);
+        ring.material.opacity = 0.45 * fade;
+      });
+      // 나선으로 감도는 바람 입자와 잎사귀
+      for (let k = 0; k < 10; k++) {
+        const h = Math.random() * 3.2;
+        const ang = T.t * 9 + h * 2.2 + Math.random() * 6.28;
+        const rr = (0.25 + h * 0.4) * fade;
+        this.fx.add.emit({ x: T.pos.x + Math.cos(ang) * rr, y: T.pos.y + h, z: T.pos.z + Math.sin(ang) * rr, vx: -Math.sin(ang) * 4, vy: 1.2, vz: Math.cos(ang) * 4, life: 0.25, size: 2, color: '#f0ffe8', color2: '#5ac84a', alpha: 0.9 });
+      }
+      if (Math.random() < 0.5) this.fx.norm.emit({ x: T.pos.x + rand(-1, 1), y: T.pos.y + rand(0.2, 2.5), z: T.pos.z + rand(-1, 1), vx: rand(-3, 3), vy: rand(1, 3), vz: rand(-3, 3), wob: 2, life: 0.8, size: 2, color: Math.random() < 0.5 ? '#8ad06a' : '#d8f0a0' });
+      if (Math.random() < 0.3) this.fx.dust(T.pos.x, T.pos.y, T.pos.z, 1);
+      // 빨아들이기
+      for (const e of this.enemiesIn(T.pos, 3)) {
+        const dx = T.pos.x - e.pos.x, dz = T.pos.z - e.pos.z, d = Math.hypot(dx, dz) || 1;
+        const pull = (e.type === 'boss' ? 0.8 : 3.4) * dt;
+        if (d > 0.4) this.world.move(e.pos, (dx / d) * pull, (dz / d) * pull, e.moveR ?? e.radius);
+      }
+      T.tick -= dt;
+      if (T.tick <= 0) {
+        T.tick = 0.25;
+        for (const e of this.enemiesIn(T.pos, 1.7)) {
+          this.damageEnemy(e, Math.round(rand(7, 10)), false, 0.5, 0.25);
+          const c = e.center();
+          this.fx.spark(c.x, c.y, c.z, 4, '#e8ffd8', 3);
+        }
+      }
+      if (T.t >= T.dur) {
+        for (const ring of T.rings) { this.scene.remove(ring); ring.geometry.dispose(); ring.material.dispose(); }
+        for (let k = 0; k < 30; k++) this.fx.norm.emit({ x: T.pos.x, y: T.pos.y + rand(0.3, 2.5), z: T.pos.z, vx: rand(-5, 5), vy: rand(0, 3), vz: rand(-5, 5), wob: 2, drag: 2, life: rand(0.6, 1.1), size: 2, color: Math.random() < 0.5 ? '#8ad06a' : '#d8f0a0' });
+        this.fx.ring(T.pos, 2.2, '#c8ffb0', 0.35);
+        this.tornados.splice(i, 1);
+      }
+    }
+  }
+
+  // 떨어지는 화살비 화살
+  rainArrowUpdate(pr) {
+    pr.mesh.position.copy(pr.pos);
+    if (pr.pos.y <= pr.groundY + 0.05) {
+      pr.life = 0;
+      this.fx.dust(pr.pos.x, pr.groundY, pr.pos.z, 2);
+      this.fx.add.emit({ x: pr.pos.x, y: pr.groundY + 0.1, z: pr.pos.z, life: 0.2, size: 4, endSize: 1, color: '#e8ffd8' });
+      for (const e of this.enemiesIn(pr.pos, 0.8)) {
+        const crit = Math.random() < 0.15;
+        this.damageEnemy(e, Math.round(rand(9, 12) * (crit ? 1.8 : 1)), crit, 1, 0.15);
+      }
+      if (Math.random() < 0.3) this.audio.play('arrowhit');
+    }
   }
 
   spawnOrb(w) {
@@ -844,6 +1217,10 @@ class Game {
     for (const pr of this.projectiles) if (pr.mesh) this.scene.remove(pr.mesh);
     this.projectiles = [];
     this.timers = [];
+    for (const r of this.rains) this.fx.removeRing(r.tele);
+    this.rains = [];
+    for (const T of this.tornados) for (const ring of T.rings) this.scene.remove(ring);
+    this.tornados = [];
     this.ui.setBoss(null);
     this.waveClearing = false;
     if (this.waveActive) {
@@ -872,6 +1249,10 @@ class Game {
         this.swordWaveTrail(pr, dt);
       } else if (pr.kind === 'talisman' || pr.kind === 'arrow') {
         this.missileTrail(pr, dt);
+      } else if (pr.kind === 'dragon') {
+        this.dragonUpdate(pr, dt);
+      } else if (pr.kind === 'rainArrow') {
+        this.rainArrowUpdate(pr);
       }
       if (pr.owner === 'player' && (pr.kind === 'talisman' || pr.kind === 'arrow')) {
         // 부적·화살로 북을 맞혀도 울림
@@ -901,13 +1282,16 @@ class Game {
               this.audio.play('arrowhit');
               const c = e.center();
               this.fx.spark(c.x, c.y, c.z, pr.pierce ? 10 : 6, pr.pierce ? '#c8ff9a' : '#ffffff', 5);
-              if (pr.pierce) this.fx.cross(c.clone(), '#a8ff8a', e.type === 'boss' ? 3.5 : 2.4, 0.25);
+              if (pr.pierce) {
+                this.fx.cross(c.clone(), '#a8ff8a', e.type === 'boss' ? 3.5 : 2.4, 0.25);
+                for (let k = 0; k < 6; k++) this.fx.norm.emit({ x: c.x, y: c.y, z: c.z, vx: rand(-3, 3), vy: rand(1, 3), vz: rand(-3, 3), wob: 1.5, drag: 2, life: rand(0.4, 0.8), size: 2, color: Math.random() < 0.5 ? '#8ad06a' : '#d8f0a0' });
+              }
               if (!pr.pierce) { pr.life = 0; pr.stuck = true; }
             }
             if (pr.life <= 0) break;
           }
         }
-      } else {
+      } else if (pr.owner === 'enemy') {
         const p = this.player;
         if (Math.hypot(p.pos.x - pr.pos.x, p.pos.z - pr.pos.z) < pr.radius + p.radius * 0.5 && p.dashT <= 0) {
           if (p.damage(pr.dmg, pr.pos)) pr.life = 0;
@@ -972,6 +1356,7 @@ class Game {
     }
     this.separate();
     this.updateProjectiles(wdt);
+    this.updateSkills(wdt);
     for (let i = this.timers.length - 1; i >= 0; i--) if (this.timers[i].at <= this.time) { const t = this.timers[i]; this.timers.splice(i, 1); t.fn(); }
     while (this.spawnQueue.length && this.spawnQueue[0].at <= this.time) this.spawnEnemy(this.spawnQueue.shift().type);
     this.spawnQueue.sort((a, b) => a.at - b.at);

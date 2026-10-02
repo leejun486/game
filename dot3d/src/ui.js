@@ -5,7 +5,7 @@ export class UI {
     const $ = (id) => document.getElementById(id);
     this.el = {
       hud: $('hud'), hpFill: $('hp-fill'), hpLag: $('hp-lag'), hpText: $('hp-text'),
-      dashCd: $('cd-dash'), skillCd: $('cd-skill'),
+      dashCd: $('cd-dash'), skillCd: $('cd-skill'), cd2: $('cd-skill2'), cd3: $('cd-skill3'),
       quest: $('quest-text'), questTitle: $('quest-title'),
       banner: $('banner'), bannerMain: $('banner-main'), bannerSub: $('banner-sub'),
       dialog: $('dialog'), dName: $('dialog-name'), dText: $('dialog-text'),
@@ -27,7 +27,7 @@ export class UI {
   setClass(cfg) {
     drawPortrait(document.getElementById('portrait-cv'), cfg.id);
     document.getElementById('hero-name').innerHTML = `${cfg.title} <b>${cfg.name}</b><span class="lv">Lv.7</span>`;
-    for (const k of ['atk', 'dash', 'skill']) {
+    for (const k of ['atk', 'dash', 'skill', 'skill2', 'skill3']) {
       const t = cfg.labels[k];
       document.getElementById('sk-' + k).textContent = t;
       document.querySelectorAll('.lbl-' + k).forEach((el) => (el.textContent = t));
@@ -119,6 +119,8 @@ export class UI {
     el.hpFill.classList.toggle('low', hp < 0.3);
     el.dashCd.style.height = (p.dashCd / (p.dashMax || 0.5)) * 100 + '%';
     el.skillCd.style.height = (p.skillCd / p.skillMax) * 100 + '%';
+    el.cd2.style.height = ((p.cd2 || 0) / p.cd2Max) * 100 + '%';
+    el.cd3.style.height = ((p.cd3 || 0) / p.cd3Max) * 100 + '%';
     el.kills.textContent = g.kills;
     if (el.best) el.best.textContent = g.bestCombo;
 

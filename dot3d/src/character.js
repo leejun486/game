@@ -536,8 +536,9 @@ export class Rig {
       const aim = 1 - easeInOut(clamp((t - 0.7) / 0.3, 0, 1));
       const up = Math.min(1, draw * 1.6) * aim;
       bowDraw = draw * (1 - rel);
-      armLx = lerp(armLx, -1.55, up); armLz = lerp(armLz, 0.06, up);
-      armRx = lerp(armRx, -1.42 + 0.35 * rel, up); armRz = lerp(armRz, -0.62 + 0.5 * rel, up);
+      armLx = lerp(armLx, k === 23 ? -2.45 : -1.55, up); armLz = lerp(armLz, 0.06, up);
+      if (k === 23) chestPitch = -0.3 * up; // 화살비: 하늘로 겨눔
+      armRx = lerp(armRx, (k === 23 ? -2.2 : -1.42) + 0.35 * rel, up); armRz = lerp(armRz, -0.62 + 0.5 * rel, up);
       chestYaw = (k === 21 ? lerp(-0.7, 0.5, rel) : -0.4) * aim;
       legL = 0.3 * aim; legR = -0.2 * aim;
     } else if (p.attack && p.attack.kind >= 10) {

@@ -141,6 +141,15 @@ export class Audio {
         this.tone(0.25, { type: 'sine', f0: 1600, f1: 400, gain: 0.08 });
         this.noise(0.25, { f0: 3000, f1: 600, q: 3, gain: 0.15 });
         break;
+      case 'freeze': // 빙결: 맑게 부서지는 소리
+        [1568, 2093, 2637, 3136].forEach((f, i) => this.tone(0.4, { type: 'triangle', f0: f, f1: f * 0.98, gain: 0.05, at: i * 0.05 }));
+        this.noise(0.5, { type: 'highpass', f0: 4000, f1: 6000, gain: 0.18, attack: 0.01 });
+        this.tone(0.4, { f0: 160, f1: 60, gain: 0.3 });
+        break;
+      case 'tornado': // 회오리: 휘몰아치는 바람
+        this.noise(1.6, { f0: 300, f1: 1600, q: 2.5, gain: 0.3, attack: 0.2 });
+        this.noise(1.4, { type: 'lowpass', f0: 600, f1: 200, gain: 0.25, attack: 0.3 });
+        break;
       case 'skill':
         this.noise(0.5, { f0: 300, f1: 5000, q: 1.8, gain: 0.32, attack: 0.02 });
         this.tone(0.45, { type: 'sawtooth', f0: 220, f1: 1760, gain: 0.05, attack: 0.02 });

@@ -2,6 +2,55 @@
 import * as THREE from 'three';
 import { rand } from './util.js';
 
+// 바닥 마법진 텍스처 (팔괘·별·태극 문양, 흰색 → 재질 색으로 물듦)
+let circleTex = null;
+function magicCircleTexture() {
+  if (circleTex) return circleTex;
+  const N = 128, c = document.createElement('canvas');
+  c.width = c.height = N;
+  const g = c.getContext('2d');
+  g.imageSmoothingEnabled = false;
+  g.strokeStyle = g.fillStyle = '#fff';
+  const ctr = N / 2;
+  const circle = (r, w) => { g.lineWidth = w; g.beginPath(); g.arc(ctr, ctr, r, 0, Math.PI * 2); g.stroke(); };
+  circle(61, 2); circle(56, 1); circle(40, 2); circle(18, 1);
+  // 팔괘: 원 둘레에 막대 세 줄(이어진/끊어진)
+  for (let k = 0; k < 8; k++) {
+    const a = (k / 8) * Math.PI * 2;
+    g.save(); g.translate(ctr, ctr); g.rotate(a);
+    for (let l = 0; l < 3; l++) {
+      const y = -50 + l * 4, broken = (k >> l) & 1;
+      if (broken) { g.fillRect(-7, y, 6, 2); g.fillRect(1, y, 6, 2); } else g.fillRect(-7, y, 14, 2);
+    }
+    g.restore();
+  }
+  // 팔각 별
+  g.lineWidth = 1;
+  g.beginPath();
+  for (let k = 0; k <= 8; k++) {
+    const a = (k * 3 / 8) * Math.PI * 2;
+    const x = ctr + Math.cos(a) * 40, y = ctr + Math.sin(a) * 40;
+    k ? g.lineTo(x, y) : g.moveTo(x, y);
+  }
+  g.stroke();
+  // 작은 점 고리
+  for (let k = 0; k < 24; k++) { const a = (k / 24) * Math.PI * 2; g.fillRect(ctr + Math.cos(a) * 30 - 1, ctr + Math.sin(a) * 30 - 1, 2, 2); }
+  // 가운데 태극(반원 두 개)
+  g.beginPath(); g.arc(ctr, ctr, 12, 0, Math.PI); g.fill();
+  g.globalCompositeOperation = 'destination-out';
+  g.beginPath(); g.arc(ctr - 6, ctr, 6, 0, Math.PI * 2); g.fill();
+  g.globalCompositeOperation = 'source-over';
+  g.beginPath(); g.arc(ctr + 6, ctr, 6, Math.PI, Math.PI * 2); g.fill();
+  // 알파를 0/1로 (도트 느낌)
+  const img = g.getImageData(0, 0, N, N);
+  for (let i = 3; i < img.data.length; i += 4) img.data[i] = img.data[i] > 90 ? 255 : 0;
+  g.putImageData(img, 0, 0);
+  circleTex = new THREE.CanvasTexture(c);
+  circleTex.magFilter = circleTex.minFilter = THREE.NearestFilter;
+  circleTex.generateMipmaps = false;
+  return circleTex;
+}
+
 const pVert = /* glsl */`
 attribute vec3 aColor;
 attribute float aSize;
@@ -167,6 +216,10 @@ export class FX {
     this.flashes = [];
     this.ghosts = [];
     this.bolts = [];
+    this.circles = [];
+    this.scorches = [];
+    this.streaks = [];
+    this.spikes = [];
     this.numLayer = document.getElementById('numbers');
     this.time = 0;
   }
@@ -259,6 +312,87 @@ export class FX {
     }
     this.scene.add(g);
     this.flashes.push({ g, mats, t: 0, dur, size });
+  }
+
+  // 바닥 마법진: 펼쳐지며 회전하다 사라짐
+  circle(pos, radius, color = '#b89aff', dur = 1, spin = 1.2) {
+    const mat = new THREE.MeshBasicMaterial({ map: magicCircleTexture(), color: new THREE.Color(color), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false });
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), mat);
+    m.rotation.x = -Math.PI / 2;
+    m.position.set(pos.x, pos.y + 0.05, pos.z);
+    m.renderOrder = 22;
+    this.scene.add(m);
+    const c = { m, mat, t: 0, dur, radius, spin };
+    this.circles.push(c);
+    return c;
+  }
+
+  // 바닥 그을음 / 서리 자국 (천천히 사라짐)
+  scorch(pos, radius, color = '#1a1220', dur = 2.5) {
+    const mat = new THREE.MeshBasicMaterial({ color: new THREE.Color(color), transparent: true, opacity: 0.55, depthWrite: false });
+    const m = new THREE.Mesh(new THREE.CircleGeometry(radius, 12), mat);
+    m.rotation.x = -Math.PI / 2;
+    m.position.set(pos.x, pos.y + 0.03, pos.z);
+    m.renderOrder = 5;
+    this.scene.add(m);
+    this.scorches.push({ m, mat, t: 0, dur });
+  }
+
+  // 두 점 사이를 잇는 전기 사슬 (지그재그)
+  arc(a, b, color = '#d8c8ff', width = 0.6) {
+    const g = new THREE.Group();
+    const core = new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, blending: THREE.AdditiveBlending, depthWrite: false });
+    const glow = new THREE.MeshBasicMaterial({ color: new THREE.Color(color), transparent: true, opacity: 0.6, blending: THREE.AdditiveBlending, depthWrite: false });
+    const N = 6;
+    let p = a.clone();
+    for (let i = 1; i <= N; i++) {
+      const t = i / N;
+      const q = a.clone().lerp(b, t);
+      if (i < N) q.add(new THREE.Vector3(rand(-0.35, 0.35), rand(-0.3, 0.3), rand(-0.35, 0.35)));
+      const len = p.distanceTo(q);
+      const dir = q.clone().sub(p).normalize();
+      const quat = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
+      for (const [m, w] of [[glow, 0.3 * width], [core, 0.1 * width]]) {
+        const s = new THREE.Mesh(new THREE.BoxGeometry(w, len + 0.04, w), m);
+        s.position.copy(p).lerp(q, 0.5); s.quaternion.copy(quat); s.renderOrder = 45;
+        g.add(s);
+      }
+      p = q;
+    }
+    this.scene.add(g);
+    this.bolts.push({ g, mats: [core, glow], t: 0, dur: 0.25 });
+  }
+
+  // 일섬: 지나간 자리에 남는 날카로운 빛줄기
+  streak(a, b, color = '#ffffff', dur = 0.45, width = 0.35) {
+    const len = a.distanceTo(b);
+    const mat = new THREE.ShaderMaterial({
+      vertexShader: arcVert, fragmentShader: flashFrag,
+      uniforms: { uColor: { value: new THREE.Color(color) }, uAlpha: { value: 1 } },
+      transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
+    });
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), mat);
+    m.position.copy(a).lerp(b, 0.5);
+    m.rotation.order = 'YXZ';
+    m.rotation.y = Math.atan2(b.x - a.x, b.z - a.z) + Math.PI / 2;
+    m.rotation.x = -Math.PI / 2;
+    m.scale.set(len / 2, width / 2, 1);
+    m.renderOrder = 42;
+    this.scene.add(m);
+    this.streaks.push({ m, mat, t: 0, dur, w: width });
+  }
+
+  // 얼음 가시: 땅에서 솟았다가 잠시 뒤 부서짐
+  iceSpike(pos, h = 1.2, life = 1.3) {
+    if (!this.iceMat) {
+      this.iceMat = new THREE.MeshToonMaterial({ color: new THREE.Color('#bfe8ff'), emissive: new THREE.Color('#2a5a8a') });
+    }
+    const m = new THREE.Mesh(new THREE.ConeGeometry(0.22 + Math.random() * 0.1, h, 5), this.iceMat);
+    m.position.set(pos.x, pos.y - h / 2, pos.z);
+    m.rotation.set(rand(-0.25, 0.25), rand(0, 6), rand(-0.25, 0.25));
+    m.castShadow = true;
+    this.scene.add(m);
+    this.spikes.push({ m, t: 0, life, h, y0: pos.y });
   }
 
   // 하늘에서 내리치는 번개 줄기: 지그재그 마디 (흰 심 + 보랏빛 테두리), 깜빡이며 사라짐
@@ -372,6 +506,41 @@ export class FX {
       fl.g.children.forEach((m, j) => { m.scale.x = fl.size * 0.5 * (j ? 0.8 : 1) * (0.3 + 0.7 * grow); m.scale.y = 0.14 * (1 - k * 0.7); });
       for (const m of fl.mats) m.uniforms.uAlpha.value = Math.max(0, 1 - k * k);
       if (k >= 1) { this.scene.remove(fl.g); for (const m of fl.mats) m.dispose(); fl.g.children.forEach((m) => m.geometry.dispose()); this.flashes.splice(i, 1); }
+    }
+    for (let i = this.circles.length - 1; i >= 0; i--) {
+      const c = this.circles[i];
+      c.t += dt;
+      const k = c.t / c.dur;
+      const open = Math.min(1, c.t / 0.18);
+      c.m.scale.setScalar(c.radius * (0.4 + 0.6 * (1 - Math.pow(1 - open, 3))));
+      c.m.rotation.z += dt * c.spin;
+      c.mat.opacity = k > 0.75 ? Math.max(0, 1 - (k - 0.75) / 0.25) : 1;
+      if (k >= 1 || c.dead) { this.scene.remove(c.m); c.mat.dispose(); c.m.geometry.dispose(); this.circles.splice(i, 1); }
+    }
+    for (let i = this.scorches.length - 1; i >= 0; i--) {
+      const s = this.scorches[i];
+      s.t += dt;
+      s.mat.opacity = 0.55 * Math.max(0, 1 - s.t / s.dur);
+      if (s.t >= s.dur) { this.scene.remove(s.m); s.mat.dispose(); s.m.geometry.dispose(); this.scorches.splice(i, 1); }
+    }
+    for (let i = this.streaks.length - 1; i >= 0; i--) {
+      const s = this.streaks[i];
+      s.t += dt;
+      const k = s.t / s.dur;
+      s.mat.uniforms.uAlpha.value = Math.max(0, 1 - k * k);
+      s.m.scale.y = (s.w / 2) * (1 - k * 0.8);
+      if (k >= 1) { this.scene.remove(s.m); s.mat.dispose(); s.m.geometry.dispose(); this.streaks.splice(i, 1); }
+    }
+    for (let i = this.spikes.length - 1; i >= 0; i--) {
+      const s = this.spikes[i];
+      s.t += dt;
+      const up = Math.min(1, s.t / 0.12);
+      s.m.position.y = s.y0 - s.h / 2 + s.h * (1 - Math.pow(1 - up, 3)) * 0.95;
+      if (s.t >= s.life) {
+        // 부서지는 얼음 조각
+        for (let k = 0; k < 6; k++) this.add.emit({ x: s.m.position.x, y: s.y0 + rand(0.2, s.h), z: s.m.position.z, vx: rand(-2, 2), vy: rand(1, 4), vz: rand(-2, 2), g: 12, life: rand(0.3, 0.6), size: 3, endSize: 1, color: '#e8f8ff', color2: '#5aa8ff' });
+        this.scene.remove(s.m); s.m.geometry.dispose(); this.spikes.splice(i, 1);
+      }
     }
     for (let i = this.bolts.length - 1; i >= 0; i--) {
       const b = this.bolts[i];

@@ -6,6 +6,8 @@ import { NAV_R } from './world.js';
 import { clamp, angleDiff, dampAngle, rand, lerp, smooth } from './util.js';
 
 const tmp = new THREE.Vector3();
+// 추가 스킬 동작은 기존 동작을 재사용: 일섬→발도, 회오리→가로베기, 화룡부→양손 던지기, 빙결진→지팡이 내리꽂기, 회오리 정령→부채꼴
+const ANIM_KIND = { 4: 3, 5: 0, 13: 12, 14: 11, 24: 21 };
 
 // ===================== 플레이어 =====================
 export class Player {
@@ -47,6 +49,8 @@ export class Player {
     this.maxHp = C.hp;
     this.hp = this.maxHp;
     this.skillMax = C.skillCd;
+    this.cd2 = 0; this.cd3 = 0;
+    this.cd2Max = C.skill2Cd; this.cd3Max = C.skill3Cd;
     this.dashMax = C.dashCd;
     this.attack = null;
     this.combo = 0;
@@ -168,6 +172,30 @@ export class Player {
     g.fx.smoke(to.x, to.y + 0.2, to.z, 8);
   }
 
+  // 추가 스킬 (slot 2, 3). 공격 동작(kind)과 발동 시점(hitAt)에 맞춰 game.castSkill(slot)이 실행됨
+  startExtraSkill(input, slot) {
+    if (this.dead || this.dashT > 0) return;
+    const key = slot === 2 ? 'cd2' : 'cd3';
+    if (this[key] > 0) return;
+    if (this.attack && this.attack.t < 0.6) return;
+    this[key] = slot === 2 ? this.cd2Max : this.cd3Max;
+    this.yaw = this.aimYaw(input);
+    this.combo = 0;
+    this.buffered = false;
+    const g = this.game;
+    const T = {
+      sword: { 2: { kind: 4, dur: 0.5, hitAt: 0.3 }, 3: { kind: 5, dur: 0.9, hitAt: 0.05 } },
+      mage: { 2: { kind: 13, dur: 0.5, hitAt: 0.45 }, 3: { kind: 14, dur: 0.62, hitAt: 0.5 } },
+      elf: { 2: { kind: 23, dur: 0.55, hitAt: 0.5 }, 3: { kind: 24, dur: 0.5, hitAt: 0.47 } },
+    }[this.cls][slot];
+    if (this.cls === 'sword' && this.rig.sheathed) this.drawCut();
+    this.attack = { t: 0, kind: T.kind, dur: T.dur, hit: false, hitAt: T.hitAt, skill: true, slot };
+    if (this.cls === 'mage') g.audio.play('chant');
+    else if (this.cls === 'elf') g.audio.play('bowdraw');
+    this.sinceAttack = 0;
+    this.lastCombat = g.time;
+  }
+
   startSkill(input) {
     if (this.dead || this.skillCd > 0 || this.dashT > 0) return;
     if (this.cls !== 'sword') {
@@ -224,6 +252,8 @@ export class Player {
     const g = this.game;
     this.dashCd = Math.max(0, this.dashCd - dt);
     this.skillCd = Math.max(0, this.skillCd - dt);
+    this.cd2 = Math.max(0, (this.cd2 || 0) - dt);
+    this.cd3 = Math.max(0, (this.cd3 || 0) - dt);
     this.invuln = Math.max(0, this.invuln - dt);
     this.hurtT = Math.max(0, this.hurtT - dt);
     this.comboTimer -= dt;
@@ -243,7 +273,7 @@ export class Player {
         if (this.ghostT <= 0) { this.ghostT = 0.045; g.fx.ghost(this.rig, this.cls === 'elf' ? '#7ad86a' : '#5ab8ff'); }
         if (this.cls === 'elf' && Math.random() < 0.6) g.fx.norm.emit({ x: this.pos.x + rand(-0.3, 0.3), y: this.pos.y + rand(0.2, 0.9), z: this.pos.z + rand(-0.3, 0.3), vx: rand(-1, 1), vy: rand(0.5, 1.5), vz: rand(-1, 1), wob: 1.5, life: rand(0.5, 0.9), size: 2, color: Math.random() < 0.5 ? '#8ad06a' : '#c8e88a' });
       } else {
-        const slow = this.attack ? (this.attack.skill ? (this.cls === 'sword' ? 0.1 : 0.25) : this.cls === 'sword' ? 0.22 : 0.45) : 1;
+        const slow = this.attack ? (this.attack.kind === 5 ? 0.7 : this.attack.skill ? (this.cls === 'sword' ? 0.1 : 0.25) : this.cls === 'sword' ? 0.22 : 0.45) : 1;
         const sp = 4.6 * slow;
         if (input.moveLen > 0.1) {
           mv = 1;
@@ -277,7 +307,8 @@ export class Player {
         a.t += dt / a.dur;
         if (!a.hit && a.t >= (a.hitAt ?? 0.38)) {
           a.hit = true;
-          if (a.skill) g.playerSkillHit(this, a);
+          if (a.slot) g.castSkill(this, a.slot);
+          else if (a.skill) g.playerSkillHit(this, a);
           else if (this.cls === 'sword') g.playerSwingHit(this, a.kind);
           else g.playerShoot(this, a.kind);
         }
@@ -316,10 +347,12 @@ export class Player {
     // 리그
     const r = this.rig;
     r.root.position.set(this.pos.x, this.y, this.pos.z);
-    r.root.rotation.y = this.yaw;
+    // 회오리베기: 몸 전체가 세 바퀴 회전
+    const spin = this.attack && this.attack.kind === 5 ? Math.min(1, this.attack.t / 0.85) * Math.PI * 6 : 0;
+    r.root.rotation.y = this.yaw + spin;
     r.animate(dt, {
       speed: this.dead ? 0 : speed,
-      attack: this.attack ? { t: Math.min(1, this.attack.t), kind: this.attack.kind } : null,
+      attack: this.attack ? { t: Math.min(1, this.attack.t), kind: ANIM_KIND[this.attack.kind] ?? this.attack.kind } : null,
       sheathing: this.sheatheT > 0 ? Math.min(1, this.sheatheT) : 0,
       dash: this.dashT > 0,
       hurt: this.hurtT / 0.3,
@@ -424,6 +457,38 @@ export class Enemy {
     return true;
   }
 
+  // 빙결: 얼음 덩어리에 갇혀 잠시 못 움직임 (대왕은 면역)
+  freeze(dur) {
+    if (this.dead || this.type === 'boss') return;
+    this.frozenT = Math.max(this.frozenT || 0, dur);
+    this.hurtT = Math.max(this.hurtT, dur);
+    if (this.state === 'windup' || this.state === 'strike') { this.state = 'chase'; this.attackCd = 0.8; this.clearTele(); }
+    if (!this.ice) {
+      const s = this.type === 'wisp' ? 0.9 : 1.15 * (this.T.radius / 0.46);
+      const mat = new THREE.MeshBasicMaterial({ color: '#a8e4ff', transparent: true, opacity: 0.42, depthWrite: false });
+      this.ice = new THREE.Mesh(new THREE.IcosahedronGeometry(0.75 * s, 0), mat);
+      this.ice.scale.set(1, 1.35, 1);
+      this.game.scene.add(this.ice);
+    }
+  }
+
+  updateIce(dt) {
+    if (!this.ice) return;
+    this.frozenT -= dt;
+    const y = this.type === 'wisp' ? this.y + 1.3 : this.y + 0.75;
+    this.ice.position.set(this.pos.x, y, this.pos.z);
+    if (this.frozenT <= 0 || this.dead) {
+      const g = this.game;
+      for (let k = 0; k < 14; k++) g.fx.add.emit({ x: this.pos.x, y: y + rand(-0.4, 0.4), z: this.pos.z, vx: rand(-3, 3), vy: rand(1, 4), vz: rand(-3, 3), g: 12, life: rand(0.3, 0.6), size: 3, endSize: 1, color: '#e8f8ff', color2: '#5aa8ff' });
+      g.audio.play('block');
+      g.scene.remove(this.ice);
+      this.ice.geometry.dispose();
+      this.ice.material.dispose();
+      this.ice = null;
+      this.frozenT = 0;
+    }
+  }
+
   die() {
     this.dead = true;
     this.hp = 0;
@@ -444,6 +509,7 @@ export class Enemy {
 
   update(dt) {
     const g = this.game, p = g.player;
+    this.updateIce(dt);
     this.st += dt;
     this.flashT = Math.max(0, this.flashT - dt);
     this.hurtT = Math.max(0, this.hurtT - dt);
@@ -587,6 +653,7 @@ export class Enemy {
 
   updateWisp(dt, dist, toYaw) {
     const g = this.game, p = g.player;
+    if (this.frozenT > 0) return true;
     this.yaw = dampAngle(this.yaw, toYaw, 6, dt);
     if (this.vel.lengthSq() > 0.001) {
       g.world.move(this.pos, this.vel.x * dt, this.vel.z * dt, this.moveR);
@@ -673,7 +740,7 @@ export class Enemy {
     const r = this.rig;
     r.root.position.set(this.pos.x, this.y + (this.jumpY || 0), this.pos.z);
     r.root.rotation.y = this.yaw;
-    r.animate(dt, { speed, attack: attackAnim, hurt: this.hurtT > 0 ? this.hurtT / 0.25 : 0 });
+    r.animate(dt, { speed, attack: attackAnim, hurt: this.frozenT > 0 ? 0.3 : this.hurtT > 0 ? Math.min(1, this.hurtT / 0.25) : 0 });
     // 공격 준비 중엔 붉게 깜빡임, 피격 시 흰색
     if (this.flashT > 0) r.setFlash(0.9);
     else if (this.state === 'windup' && this.type !== 'boss') r.setFlash(Math.floor(this.st * 14) % 2 ? 0.35 : 0);
@@ -683,6 +750,7 @@ export class Enemy {
 
   dispose() {
     this.clearTele();
+    if (this.ice) { this.game.scene.remove(this.ice); this.ice = null; }
     this.game.scene.remove(this.root);
   }
 }
