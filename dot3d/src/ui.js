@@ -1,3 +1,6 @@
+import { item, itemDesc, drawItemIcon, RARITY, WEAPONS, OUTFITS } from './items.js';
+import { expNeed, SKILL_LEVEL } from './entities.js';
+
 // HTML HUD: 체력, 스킬, 임무, 배너, 대화창, 보스 체력, 적 체력바, 상호작용 표시
 export class UI {
   constructor(game) {
@@ -24,9 +27,10 @@ export class UI {
   showHud(v) { this.el.hud.classList.toggle('hidden', !v); }
 
   // 직업에 맞게 이름·초상화·버튼 이름을 바꿈
-  setClass(cfg) {
+  setClass(cfg, pl = this.game.player) {
     drawPortrait(document.getElementById('portrait-cv'), cfg.id);
-    document.getElementById('hero-name').innerHTML = `${cfg.title} <b>${cfg.name}</b><span class="lv">Lv.7</span>`;
+    document.getElementById('hero-name').innerHTML = `${cfg.title} <b>${cfg.name}</b><span class="lv">Lv.${pl?.level ?? 1}</span>`;
+    this.refreshBag();
     for (const k of ['atk', 'dash', 'skill', 'skill2', 'skill3']) {
       const t = cfg.labels[k];
       document.getElementById('sk-' + k).textContent = t;
@@ -77,6 +81,65 @@ export class UI {
       if (prev && !cooling) { s.el.classList.remove('ready'); void s.el.offsetWidth; s.el.classList.add('ready'); }
     }
     this.cdState[key] = cooling;
+  }
+
+  // 레벨이 모자라 잠긴 스킬 칸: 흑백 + 필요 레벨
+  setLock(key, lv) {
+    for (const s of this.slots(key)) {
+      s.el.classList.toggle('locked', !!lv);
+      if (lv) { s.cd.style.setProperty('--p', '0%'); const t = `Lv${lv}`; if (s.t.textContent !== t) s.t.textContent = t; s.el.classList.remove('cooling'); }
+      else if (s.t.textContent.startsWith('Lv')) s.t.textContent = '';
+    }
+  }
+
+  // ---------- 가방 ----------
+  showBag(open) {
+    document.getElementById('bag').classList.toggle('show', open);
+    if (open) this.refreshBag();
+  }
+
+  itemRow(id, cls, onClick) {
+    const it = item(id);
+    const row = document.createElement('div');
+    row.className = 'it ' + cls;
+    const cv = document.createElement('canvas');
+    cv.width = cv.height = 16;
+    drawItemIcon(cv, id);
+    const txt = document.createElement('div');
+    txt.innerHTML = `<span style="color:${RARITY[it.tier].color}">${it.name}</span><small>${RARITY[it.tier].name} · ${itemDesc(it)}</small>`;
+    row.append(cv, txt);
+    if (onClick) row.addEventListener('click', (e) => { e.stopPropagation(); onClick(); });
+    return row;
+  }
+
+  refreshBag() {
+    const g = this.game;
+    if (!g || !g.player || !document.getElementById('bag').classList.contains('show')) return;
+    const p = g.player;
+    const pr = g.progressOf(p.cls);
+    document.getElementById('bag-stats').innerHTML =
+      `${p.cfg.title} ${p.cfg.name} <b>Lv.${p.level}</b><br>경험치 <b>${Math.floor(p.exp)}</b> / ${expNeed(p.level)}<br>` +
+      `최대 체력 <b>${p.maxHp}</b><br>공격력 <b>×${p.atkMul.toFixed(2)}</b><br>받는 피해 <b>-${Math.round(p.def * 100)}%</b>`;
+    for (const [elId, id] of [['eq-weapon', pr.weapon], ['eq-outfit', pr.outfit]]) {
+      const el = document.getElementById(elId);
+      el.innerHTML = '';
+      const r = this.itemRow(id, 'on');
+      el.append(...r.childNodes);
+    }
+    const wl = document.getElementById('bag-weapons'), ol = document.getElementById('bag-outfits');
+    wl.innerHTML = ''; ol.innerHTML = '';
+    // 내 직업 무기 먼저, 다른 직업 무기는 흐리게. 아직 없는 장비는 자리만 보여줌
+    for (const cls of [p.cls, ...Object.keys(WEAPONS).filter((c) => c !== p.cls)]) {
+      for (const w of WEAPONS[cls]) {
+        if (!g.inv.has(w.id)) { if (cls === p.cls) wl.append(this.itemRow(w.id, 'locked-it')); continue; }
+        const mine = cls === p.cls;
+        wl.append(this.itemRow(w.id, (pr.weapon === w.id ? 'on' : '') + (mine ? '' : ' other'), mine ? () => g.equipItem(w.id) : null));
+      }
+    }
+    for (const o of OUTFITS) {
+      if (!g.inv.has(o.id)) { ol.append(this.itemRow(o.id, 'locked-it')); continue; }
+      ol.append(this.itemRow(o.id, pr.outfit === o.id ? 'on' : '', () => g.equipItem(o.id)));
+    }
   }
 
   // 쿨타임 중에 누르면 칸이 붉게 흔들림
@@ -146,10 +209,20 @@ export class UI {
     el.hpLag.style.width = (this.hpLag * 100).toFixed(1) + '%';
     el.hpText.textContent = `${Math.ceil(p.hp)} / ${p.maxHp}`;
     el.hpFill.classList.toggle('low', hp < 0.3);
+    // 경험치
+    const need = expNeed(p.level);
+    document.getElementById('exp-fill').style.width = ((p.exp / need) * 100).toFixed(1) + '%';
+    const et = `EXP ${Math.floor(p.exp)} / ${need}`;
+    const etEl = document.getElementById('exp-text');
+    if (etEl.textContent !== et) etEl.textContent = et;
+    document.getElementById('bag-dot').classList.toggle('hidden', !this.newItem);
     this.setCd('dash', p.dashCd, p.dashMax || 0.5);
     this.setCd('skill', p.skillCd, p.skillMax);
-    this.setCd('skill2', p.cd2 || 0, p.cd2Max);
-    this.setCd('skill3', p.cd3 || 0, p.cd3Max);
+    for (const slot of [2, 3]) {
+      const key = 'skill' + slot;
+      if (p.level < SKILL_LEVEL[slot]) this.setLock(key, SKILL_LEVEL[slot]);
+      else { this.setLock(key, 0); this.setCd(key, (slot === 2 ? p.cd2 : p.cd3) || 0, slot === 2 ? p.cd2Max : p.cd3Max); }
+    }
     el.kills.textContent = g.kills;
     if (el.best) el.best.textContent = g.bestCombo;
 

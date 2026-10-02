@@ -1,6 +1,12 @@
 import * as THREE from 'three';
 import { makeDokkaebi, makeGuard, makeLady } from './character.js';
 import { CLASSES } from './classes.js';
+import { outfitColors } from './character.js';
+import { item, WEAPONS } from './items.js';
+
+// 스킬 해금 레벨
+export const SKILL_LEVEL = { 2: 3, 3: 5 };
+export const expNeed = (lv) => 40 + lv * 30;
 import { toon } from './materials.js';
 import { NAV_R } from './world.js';
 import { clamp, angleDiff, dampAngle, rand, lerp, smooth } from './util.js';
@@ -41,13 +47,12 @@ export class Player {
   // 직업을 바꾸면 캐릭터 모델과 능력치를 새로 만듦
   setClass(cls) {
     const C = CLASSES[cls] || CLASSES.sword;
-    if (this.rig) this.game.scene.remove(this.rig.root);
     this.cls = C.id;
     this.cfg = C;
-    this.rig = C.make();
-    this.game.scene.add(this.rig.root);
-    this.maxHp = C.hp;
-    this.hp = this.maxHp;
+    // 직업별 레벨·장비는 game.progress에 보관
+    const pr = this.game.progressOf(C.id);
+    this.level = pr.level;
+    this.exp = pr.exp;
     this.skillMax = C.skillCd;
     this.cd2 = 0; this.cd3 = 0;
     this.cd2Max = C.skill2Cd; this.cd3Max = C.skill3Cd;
@@ -55,6 +60,54 @@ export class Player {
     this.attack = null;
     this.combo = 0;
     this.sheatheT = 0;
+    this.buildRig();
+    this.recalc(true);
+  }
+
+  // 착용 장비를 반영해 캐릭터 모델을 새로 만듦 (옷 색·갑옷·무기 모양)
+  buildRig() {
+    const pr = this.game.progressOf(this.cls);
+    const w = item(pr.weapon), o = item(pr.outfit);
+    const type = { sword: 'hero', mage: 'mage', elf: 'elf' }[this.cls];
+    const old = this.rig;
+    this.rig = this.cfg.make({ wstyle: w?.style, ...outfitColors(type, o?.pal, o?.armor) });
+    if (old) {
+      this.game.scene.remove(old.root);
+      this.rig.root.position.copy(old.root.position);
+      this.rig.root.rotation.y = old.root.rotation.y;
+    }
+    this.game.scene.add(this.rig.root);
+  }
+
+  // 레벨·장비로 능력치 계산
+  recalc(full = false) {
+    const pr = this.game.progressOf(this.cls);
+    const w = item(pr.weapon), o = item(pr.outfit);
+    const ratio = this.maxHp ? this.hp / this.maxHp : 1;
+    this.maxHp = Math.round(this.cfg.hp + (this.level - 1) * 12 + (o?.hp || 0));
+    this.atkMul = (1 + (this.level - 1) * 0.08) * (1 + (w?.atk || 0));
+    this.def = o?.def || 0;
+    this.hp = full ? this.maxHp : Math.max(1, Math.round(this.maxHp * ratio));
+  }
+
+  equip(id) {
+    const it = item(id);
+    if (!it) return false;
+    if (it.kind === 'weapon' && it.cls !== this.cls) return false;
+    const pr = this.game.progressOf(this.cls);
+    if (it.kind === 'weapon') pr.weapon = id; else pr.outfit = id;
+    this.buildRig();
+    this.recalc();
+    return true;
+  }
+
+  addExp(n) {
+    this.exp += n;
+    let up = 0;
+    while (this.exp >= expNeed(this.level)) { this.exp -= expNeed(this.level); this.level++; up++; }
+    const pr = this.game.progressOf(this.cls);
+    pr.level = this.level; pr.exp = this.exp;
+    if (up) { this.recalc(true); this.game.onLevelUp(this, up); }
   }
 
   reset() {
@@ -67,6 +120,11 @@ export class Player {
 
   aimYaw(input, range = this.cls === 'sword' ? 3.6 : 11) {
     const g = this.game;
+    // 0) 자동 타겟이 잡혀 있으면 그쪽으로
+    const t = g.target;
+    if (t && !t.dead && !t.spawning && Math.hypot(t.pos.x - this.pos.x, t.pos.z - this.pos.z) < g.targetRange() + 2) {
+      return Math.atan2(t.pos.x - this.pos.x, t.pos.z - this.pos.z);
+    }
     // 1) 근처 적 자동 조준 (원거리 직업은 더 멀리)
     let best = null, bd = 1e9;
     const baseYaw = input.moveLen > 0.1 ? Math.atan2(input.mx, input.mz) : this.yaw;
@@ -176,6 +234,7 @@ export class Player {
   startExtraSkill(input, slot) {
     if (this.dead || this.dashT > 0) return;
     const key = slot === 2 ? 'cd2' : 'cd3';
+    if (this.level < SKILL_LEVEL[slot]) return;
     if (this[key] > 0) return;
     if (this.attack && this.attack.t < 0.6) return;
     this[key] = slot === 2 ? this.cd2Max : this.cd3Max;
@@ -226,6 +285,7 @@ export class Player {
 
   damage(dmg, from) {
     if (this.invuln > 0 || this.dead || this.game.godMode) return false;
+    dmg = Math.max(1, Math.round(dmg * (1 - (this.def || 0))));
     this.hp -= dmg;
     this.invuln = 0.7;
     this.blinkT = 0.7;
@@ -364,8 +424,21 @@ export class Player {
     r.setFlash(this.hurtT > 0.2 ? 0.6 : 0);
     if (r.bladeMat) {
       const glow = this.attack ? 0.5 : r.sheathed ? 0 : (g.night > 0.5 ? 0.16 : 0.08); // 뽑은 칼엔 은은한 칼빛
-      r.bladeMat.emissive.setRGB(glow * 0.6, glow * 0.9, glow);
-      r.edgeMat.emissive.setRGB(glow * 1.2, glow * 1.4, glow * 1.6);
+      if (r.glowColor) {
+        // 좋은 칼은 뽑으면 고유한 빛
+        const k = r.sheathed ? 0 : glow + 0.22 + Math.sin(g.time * 5) * 0.06;
+        r.bladeMat.emissive.copy(r.glowColor).multiplyScalar(k * 0.8);
+        r.edgeMat.emissive.copy(r.glowColor).multiplyScalar(k * 1.4);
+      } else {
+        r.bladeMat.emissive.setRGB(glow * 0.6, glow * 0.9, glow);
+        r.edgeMat.emissive.setRGB(glow * 1.2, glow * 1.4, glow * 1.6);
+      }
+    }
+    if (r.bowMat && r.glowColor) r.bowMat.emissive.copy(r.glowColor).multiplyScalar(0.3 + Math.sin(g.time * 4) * 0.08 + (this.attack ? 0.3 : 0));
+    // 빛나는 무기 주변 반짝이
+    if (r.glowColor && !r.sheathed && Math.random() < dt * 14) {
+      const wp = r.weapon.getWorldPosition(tmp);
+      g.fx.add.emit({ x: wp.x + rand(-0.3, 0.3), y: wp.y + rand(-0.3, 0.5), z: wp.z + rand(-0.3, 0.3), vy: rand(0.2, 0.8), life: rand(0.3, 0.6), size: 2, color: '#ffffff', color2: '#' + r.glowColor.getHexString() });
     }
   }
 }

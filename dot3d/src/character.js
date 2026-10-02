@@ -159,6 +159,7 @@ export class Rig {
     this.handR = this.armR.userData.hand;
     this.handL = this.armL.userData.hand;
 
+    if (cfg.armor) this.buildArmor(cfg);
     if (cfg.weapon) this.buildWeapon(cfg.weapon);
 
     this.root.traverse((o) => { if (o.isMesh) o.castShadow = true; });
@@ -291,6 +292,28 @@ export class Rig {
     }
   }
 
+  // 갑옷 장식: 어깨받이와 가슴판 (heavy는 더 크고 투구 장식까지)
+  buildArmor(cfg) {
+    const heavy = cfg.armor === 'heavy';
+    const plate = this.mat({ color: C(cfg.trim || '#d9a83a') });
+    const dark = this.mat({ color: C(cfg.pants || '#2a2a34') });
+    for (const side of [-1, 1]) {
+      const pad = mesh(new THREE.BoxGeometry(heavy ? 0.2 : 0.16, 0.08, heavy ? 0.24 : 0.2), plate, side * (heavy ? 0.25 : 0.23), 0.0, 0);
+      pad.rotation.z = side * -0.35;
+      this.chest.add(pad);
+      if (heavy) {
+        const pad2 = mesh(new THREE.BoxGeometry(0.17, 0.06, 0.22), dark, side * 0.28, -0.07, 0);
+        pad2.rotation.z = side * -0.5;
+        this.chest.add(pad2);
+      }
+    }
+    this.hips.add(mesh(new THREE.BoxGeometry(0.26, heavy ? 0.26 : 0.18, 0.06), plate, 0, 0.24, 0.17));
+    if (heavy) {
+      this.hips.add(mesh(new THREE.BoxGeometry(0.42, 0.14, 0.06), dark, 0, -0.06, 0.24));
+      this.head.add(mesh(new THREE.BoxGeometry(0.06, 0.12, 0.03), plate, 0, 0.2, 0.28));
+    }
+  }
+
   buildWeapon(kind) {
     const hand = this.handR;
     const w = new THREE.Group();
@@ -299,11 +322,13 @@ export class Rig {
     // 무기는 팔의 연장선(-y) 방향으로
     if (kind === 'sword') {
       // 일본도풍: 긴 손잡이(엮은 끈 무늬), 둥근 코등이, 가늘고 길게 휜 칼날
-      const blade = this.mat({ color: C('#c9d4e0'), emissive: C('#000000') });
-      const edge = this.mat({ color: C('#ffffff'), emissive: C('#000000') });
-      const wrap = this.mat({ color: C('#1c1824') });
+      const ws = this.cfg.wstyle || {};
+      const blade = this.mat({ color: C(ws.blade || '#c9d4e0'), emissive: C('#000000') });
+      const edge = this.mat({ color: C(ws.edge || '#ffffff'), emissive: C('#000000') });
+      const wrap = this.mat({ color: C(ws.wrap || '#1c1824') });
       const wrapLight = this.mat({ color: C('#d8d0e8') });
-      const gold = this.mat({ color: C('#d9a83a') });
+      const gold = this.mat({ color: C(ws.guard || '#d9a83a') });
+      this.glowColor = ws.glow ? C(ws.glow) : null;
       const black = this.mat({ color: C('#141218') });
       // 손잡이: 손 위아래로 길게 (양손 잡이)
       for (let i = 0; i < 6; i++) {
@@ -315,7 +340,7 @@ export class Rig {
       w.add(rot(mesh(new THREE.TorusGeometry(0.072, 0.008, 4, 12), gold, 0, -0.13, 0), 'x', Math.PI / 2));
       w.add(mesh(new THREE.BoxGeometry(0.03, 0.05, 0.045), gold, 0, -0.165, 0)); // 하바키
       // 칼날: 여러 마디를 살짝씩 휘어 이어 붙임 (등 쪽으로 곡선), 끝으로 갈수록 가늘게
-      const N = 7, L = 1.08;
+      const N = 7, L = 1.08 * (ws.long || 1);
       let y = -0.19, z = 0, ang = 0;
       for (let i = 0; i < N; i++) {
         const segL = L / N;
@@ -345,8 +370,9 @@ export class Rig {
         saya.position.set(0.21, 0.1, 0.12);
         saya.rotation.set(1.22, 0, 0.18);
         const lac = this.mat({ color: C('#1a1420') });
-        saya.add(mesh(new THREE.BoxGeometry(0.046, 1.2, 0.088), lac, 0, -0.6, 0.004));
-        saya.add(mesh(new THREE.BoxGeometry(0.052, 0.045, 0.094), gold, 0, -1.18, 0.004));
+        const sl = 1.2 * (ws.long || 1);
+        saya.add(mesh(new THREE.BoxGeometry(0.046, sl, 0.088), lac, 0, -sl / 2, 0.004));
+        saya.add(mesh(new THREE.BoxGeometry(0.052, 0.045, 0.094), gold, 0, -sl + 0.02, 0.004));
         saya.add(mesh(new THREE.BoxGeometry(0.052, 0.05, 0.096), this.mat({ color: C('#c8302c') }), 0, -0.12, 0.004));
         saya.add(mesh(new THREE.BoxGeometry(0.052, 0.03, 0.096), gold, 0, -0.015, 0.004));
         this.hips.add(saya);
@@ -373,25 +399,34 @@ export class Rig {
       }
     } else if (kind === 'staff') {
       // 도사의 지팡이: 위로 뻗은 막대 + 금빛 초승달 + 빛나는 구슬 + 매달린 부적
-      const wood = this.mat({ color: C('#5a3e2a') });
-      const gold = this.mat({ color: C('#e0b040') });
+      const ws = this.cfg.wstyle || {};
+      const big = ws.big || 1;
+      const wood = this.mat({ color: C(ws.wood || '#5a3e2a') });
+      const gold = this.mat({ color: C(ws.moon || '#e0b040') });
       w.add(mesh(new THREE.CylinderGeometry(0.028, 0.034, 1.55, 6), wood, 0, 0.35, 0));
-      w.add(rot(mesh(new THREE.TorusGeometry(0.14, 0.022, 4, 12, Math.PI * 1.4), gold, 0, 1.2, 0), 'z', -Math.PI * 0.2));
-      const orb = this.mat({ color: C('#b8a8ff'), emissive: C('#6a4aff') });
+      w.add(rot(mesh(new THREE.TorusGeometry(0.14 * big, 0.022 * big, 4, 12, Math.PI * 1.4), gold, 0, 1.2, 0), 'z', -Math.PI * 0.2));
+      if (big > 1.2) for (const s of [-1, 1]) w.add(rot(mesh(new THREE.ConeGeometry(0.03, 0.18, 4), gold, s * 0.14, 1.05, 0), 'z', s * 0.6));
+      const orb = this.mat({ color: C(ws.orb || '#b8a8ff'), emissive: C('#000000') });
       this.orbMat = orb;
-      w.add(mesh(new THREE.IcosahedronGeometry(0.075, 1), orb, 0, 1.2, 0));
+      this.glowColor = C(ws.orbGlow || '#6a4aff');
+      w.add(mesh(new THREE.IcosahedronGeometry(0.075 * big, 1), orb, 0, 1.2, 0));
       const tali = new THREE.MeshBasicMaterial({ color: new THREE.Color('#f2d36b'), side: THREE.DoubleSide });
       const t = new THREE.Mesh(new THREE.PlaneGeometry(0.08, 0.2), tali);
       t.position.set(0.05, 1.0, 0);
       w.add(t);
     } else if (kind === 'bow') {
       // 활: 왼손에 쥠. 손 로컬 -y가 팔 방향 → 활대는 손 로컬 z축을 따라 세움, 배는 -y(앞)로 휨
-      const wood = this.mat({ color: C('#8a5a32') });
-      const curve = new THREE.QuadraticBezierCurve3(new THREE.Vector3(0, 0.1, 0.5), new THREE.Vector3(0, -0.22, 0), new THREE.Vector3(0, 0.1, -0.5));
+      const ws = this.cfg.wstyle || {};
+      const big = ws.big || 1;
+      const wood = this.mat({ color: C(ws.wood || '#8a5a32'), emissive: C('#000000') });
+      this.glowColor = ws.glow ? C(ws.glow) : null;
+      this.bowMat = wood;
+      const curve = new THREE.QuadraticBezierCurve3(new THREE.Vector3(0, 0.1, 0.5 * big), new THREE.Vector3(0, -0.22 * big, 0), new THREE.Vector3(0, 0.1, -0.5 * big));
       w.add(mesh(new THREE.TubeGeometry(curve, 10, 0.024, 4), wood));
-      w.add(mesh(new THREE.BoxGeometry(0.05, 0.05, 0.12), this.mat({ color: C('#3a7a3a') }), 0, -0.1, 0));
+      w.add(mesh(new THREE.BoxGeometry(0.05, 0.05, 0.12), this.mat({ color: C(ws.grip || '#3a7a3a') }), 0, -0.1, 0));
+      if (ws.tips) for (const s of [-1, 1]) w.add(mesh(new THREE.BoxGeometry(0.05, 0.05, 0.1), this.mat({ color: C(ws.tips) }), 0, 0.1, s * 0.5 * big));
       const strM = new THREE.MeshBasicMaterial({ color: new THREE.Color('#f0ece0') });
-      this.bowEnds = [new THREE.Vector3(0, 0.1, 0.5), new THREE.Vector3(0, 0.1, -0.5)];
+      this.bowEnds = [new THREE.Vector3(0, 0.1, 0.5 * big), new THREE.Vector3(0, 0.1, -0.5 * big)];
       this.bowStrings = [0, 1].map(() => { const s = new THREE.Mesh(new THREE.BoxGeometry(0.012, 1, 0.012), strM); w.add(s); return s; });
       // 시위에 건 화살
       const arrow = new THREE.Group();
@@ -653,7 +688,7 @@ export class Rig {
     }
     if (this.orbMat) {
       const glow = 0.45 + Math.sin(this.idleT * 4) * 0.15 + (p.attack ? 0.5 : 0);
-      this.orbMat.emissive.setRGB(0.42 * glow, 0.29 * glow, glow);
+      this.orbMat.emissive.copy(this.glowColor).multiplyScalar(glow);
     }
     this.body.rotation.z = bodyRoll;
 
@@ -674,11 +709,19 @@ export class Rig {
   }
 }
 
-export function makeHero() {
-  return new Rig({
+export function makeHero(o = {}) {
+  return new Rig({ ...{
     type: 'hero', scale: 1.15, skin: '#f6d6b6', robe: '#eeeae0', sleeve: '#eeeae0', cuff: '#2e4f8f', belt: '#2e4f8f', collar: '#2e4f8f',
     pants: '#3a3f5a', hair: '#2a2024', weapon: 'sword',
-  });
+  }, ...o });
+}
+
+// 옷 팔레트를 직업별 리그 색 설정으로 바꿈
+export function outfitColors(type, pal, armor) {
+  if (!pal) return {};
+  if (type === 'hero') return { robe: pal.main, sleeve: pal.main, cuff: pal.accent, belt: pal.accent, collar: pal.accent, pants: pal.dark, armor, trim: pal.trim };
+  if (type === 'mage') return { robe: pal.main, sleeve: pal.main, cuff: pal.trim, belt: pal.trim, pants: pal.dark, armor, trim: pal.trim };
+  return { robe: pal.main, sleeve: pal.main, cuff: pal.trim, skirt: pal.accent, belt: pal.dark, pants: pal.trim, armor, trim: pal.trim };
 }
 
 export function makeGuard() {
@@ -688,18 +731,18 @@ export function makeGuard() {
   });
 }
 
-export function makeMage() {
-  return new Rig({
+export function makeMage(o = {}) {
+  return new Rig({ ...{
     type: 'mage', scale: 1.15, skin: '#f4d4b2', robe: '#3a3a7a', sleeve: '#3a3a7a', cuff: '#e0b040', belt: '#e0b040',
     pants: '#24244a', hair: '#1e1a24', weapon: 'staff',
-  });
+  }, ...o });
 }
 
-export function makeElf() {
-  return new Rig({
+export function makeElf(o = {}) {
+  return new Rig({ ...{
     type: 'elf', scale: 1.12, skin: '#fbe2cc', robe: '#5aa84e', sleeve: '#5aa84e', cuff: '#e8d8a0', skirt: '#3f7a3a', belt: '#7a4e2e',
     pants: '#f0e8d0', shoes: '#6a4428', hair: '#e8e4c8', eye: '#2a6a4a', weapon: 'bow',
-  });
+  }, ...o });
 }
 
 export function makeLady() {

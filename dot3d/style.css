@@ -215,3 +215,41 @@ body.touch #gameover .s b::after { content: ' / 화면 탭'; }
   #quest { top: 66px; left: 8px; right: auto; width: 200px; }
   #boss { top: 132px; }
 }
+
+/* ---------- 경험치 · 잠긴 스킬 · 가방 ---------- */
+.bar.exp { height: 10px; background: #1a1622; box-shadow: 0 0 0 1px #6a5a2a; }
+#exp-fill { background: linear-gradient(#ffe890, #e0a830); }
+#exp-text { position: absolute; left: 0; right: 0; top: 0; text-align: center; font-size: 8px; line-height: 9px; color: #fff; text-shadow: 1px 0 #000, -1px 0 #000, 0 1px #000; }
+.locked { filter: grayscale(1) brightness(0.6); }
+.locked .cdt { font-size: 11px; color: #ffd76a; }
+.dmg.exp { font-size: 13px; color: #ffe070; }
+#bag-btn { position: absolute; left: 16px; top: 132px; pointer-events: auto; cursor: pointer; padding: 6px 10px; color: #fff; font-family: var(--font); font-size: 12px; }
+#bag-btn span { margin-left: 6px; font-size: 10px; color: var(--gold); }
+#bag-btn .dot { position: absolute; right: -4px; top: -4px; width: 10px; height: 10px; background: #ff4a3a; border: 2px solid #000; animation: blink 0.8s steps(2) infinite; }
+#bag { position: absolute; right: 16px; top: 50%; transform: translateY(-50%); width: min(560px, 94vw); max-height: 88vh; overflow: auto; z-index: 14; display: none; padding: 12px; pointer-events: auto; }
+#bag.show { display: block; }
+.bag-head { font-size: 16px; color: var(--gold); margin-bottom: 10px; display: flex; align-items: center; gap: 10px; }
+.bag-head small { font-size: 11px; color: #a89e8a; flex: 1; }
+#bag-close { background: #2a2230; color: #fff; border: 2px solid var(--gold-dark); font-family: var(--font); width: 28px; height: 28px; cursor: pointer; }
+.bag-body { display: flex; gap: 12px; flex-wrap: wrap; }
+.bag-left { width: 200px; display: flex; flex-direction: column; gap: 8px; }
+.bag-right { flex: 1; min-width: 240px; }
+#bag-stats { font-size: 12px; line-height: 1.7; background: rgba(0, 0, 0, 0.3); padding: 8px; border: 1px solid #3a3020; }
+#bag-stats b { color: #ffd76a; font-weight: normal; }
+.eq-label, .bag-sec { font-size: 11px; color: var(--gold); margin: 4px 0; }
+.eq, .it { display: flex; align-items: center; gap: 8px; padding: 5px; background: rgba(0, 0, 0, 0.3); border: 2px solid #3a3020; font-size: 12px; }
+.eq canvas, .it canvas { width: 32px; height: 32px; image-rendering: pixelated; flex: none; }
+.eq small, .it small { display: block; font-size: 10px; color: #c8bea8; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; }
+.it { cursor: pointer; }
+.it:hover { border-color: var(--gold); }
+.it.on { border-color: #ffd76a; box-shadow: 0 0 0 1px #ffd76a inset; }
+.it.on::after { content: '착용 중'; font-size: 10px; color: #ffd76a; margin-left: auto; }
+.it.other { opacity: 0.4; cursor: default; }
+.it.other::after { content: '다른 직업'; font-size: 10px; color: #a89e8a; margin-left: auto; }
+.it.locked-it { opacity: 0.25; cursor: default; filter: grayscale(1); }
+@media (max-height: 520px), (max-width: 600px) {
+  #bag-btn { top: 64px; left: 8px; padding: 4px 8px; font-size: 11px; }
+  .bag-left { width: 100%; }
+}
+@media (max-width: 600px) { #bag-btn { top: 66px; left: auto; right: 8px; } }

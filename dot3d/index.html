@@ -20,6 +20,7 @@
       <div class="col">
         <div class="name" id="hero-name">검객 <b>이랑</b><span class="lv">Lv.7</span></div>
         <div class="bar hp"><i id="hp-lag"></i><i id="hp-fill"></i><span id="hp-text"></span></div>
+        <div class="bar exp"><i id="exp-fill"></i><span id="exp-text"></span></div>
         <div class="skills">
           <div class="sk"><span class="key">J</span><em id="sk-atk">베기</em></div>
           <div class="sk" data-slot="dash"><i class="cd"></i><span class="key">␣</span><em id="sk-dash">회피</em><b class="cdt"></b></div>
@@ -29,6 +30,8 @@
         </div>
       </div>
     </div>
+
+    <button id="bag-btn" class="panel" data-k="bag">가방<span>B</span><i class="dot hidden" id="bag-dot"></i></button>
 
     <div id="quest" class="panel">
       <div id="quest-title">임무</div>
@@ -44,7 +47,7 @@
 
     <div id="help">
       <span><b>WASD</b> 이동</span><span><b>J</b>/<b>클릭</b> <i class="lbl-atk">베기</i></span><span><b>Space</b> <i class="lbl-dash">회피</i></span><span><b>K</b>/<b>우클릭</b> <i class="lbl-skill">검기</i></span><span><b>L</b>/<b>Q</b> <i class="lbl-skill2">일섬</i></span><span><b>I</b>/<b>R</b> <i class="lbl-skill3">회오리</i></span>
-      <span><b>E</b> 대화·북</span><span><b>N</b> 낮/밤</span><span><b>휠</b> 확대</span><span><b>O</b> 외곽선</span><span><b>M</b> 음악</span>
+      <span><b>E</b> 대화·북</span><span><b>Tab</b> 타겟 변경</span><span><b>B</b> 가방</span><span><b>N</b> 낮/밤</span><span><b>휠</b> 확대</span><span><b>O</b> 외곽선</span><span><b>M</b> 음악</span>
     </div>
   </div>
 
@@ -53,6 +56,21 @@
   <div id="savemark">◆ 자동 저장됨</div>
   <div id="prompt"></div>
   <div id="dialog"><div id="dialog-name"></div><div id="dialog-text"></div><div class="next">▼</div></div>
+
+  <div id="bag" class="panel">
+    <div class="bag-head">가방 <small>B / Esc 닫기 · 클릭해서 착용</small><button id="bag-close">✕</button></div>
+    <div class="bag-body">
+      <div class="bag-left">
+        <div id="bag-stats"></div>
+        <div class="bag-eq"><div class="eq-label">무기</div><div id="eq-weapon" class="eq"></div></div>
+        <div class="bag-eq"><div class="eq-label">옷</div><div id="eq-outfit" class="eq"></div></div>
+      </div>
+      <div class="bag-right">
+        <div class="bag-sec">무기</div><div id="bag-weapons" class="grid"></div>
+        <div class="bag-sec">옷</div><div id="bag-outfits" class="grid"></div>
+      </div>
+    </div>
+  </div>
 
   <div id="title">
     <div class="logo-big"><span class="han">月下宮</span><span class="kr">월하궁</span><span class="sub">— 도깨비 야행 —</span></div>
