@@ -167,12 +167,17 @@ export class PixelRenderer {
     window.addEventListener('resize', () => this.resize());
   }
 
+  // 화면 면적 기준: 데스크톱 720p→3, 1080p→4, 휴대폰(세로·가로)→2
+  basePixelSize() {
+    return Math.max(2, Math.round(Math.sqrt(window.innerWidth * window.innerHeight) / 330));
+  }
+
   autoPixelSize() {
-    return Math.max(2, Math.round(window.innerHeight / 250)) + this.userZoom;
+    return this.basePixelSize() + this.userZoom;
   }
 
   zoom(dir) {
-    const base = Math.max(2, Math.round(window.innerHeight / 250));
+    const base = this.basePixelSize();
     const next = Math.min(Math.max(base + this.userZoom + dir, 2), base + 3);
     this.userZoom = next - base;
     this.resize();

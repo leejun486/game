@@ -160,6 +160,10 @@ class Game {
     const pad = document.getElementById('touch');
     if (!('ontouchstart' in window)) return;
     pad.classList.add('on');
+    document.body.classList.add('touch');
+    // 대화창을 탭하면 다음 대사
+    document.getElementById('dialog').addEventListener('touchstart', (e) => { e.preventDefault(); this.ui.advance(); }, { passive: false });
+    document.getElementById('gameover').addEventListener('touchstart', (e) => { e.preventDefault(); if (this.state === 'dead') this.retry(); }, { passive: false });
     const stick = document.getElementById('stick');
     const knob = stick.firstElementChild;
     this.touchMove = { x: 0, z: 0 };
