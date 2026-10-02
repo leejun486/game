@@ -239,7 +239,7 @@ export class Player {
     if (this.level < SKILL_LEVEL[slot]) return;
     if (this[key] > 0) return;
     if (this.attack && this.attack.t < 0.6) return;
-    this[key] = slot === 2 ? this.cd2Max : this.cd3Max;
+    this[key] = (slot === 2 ? this.cd2Max : this.cd3Max) * this.game.skillCdMul(this, slot);
     this.yaw = this.aimYaw(input);
     this.combo = 0;
     this.buffered = false;
@@ -260,7 +260,7 @@ export class Player {
   startSkill(input) {
     if (this.dead || this.skillCd > 0 || this.dashT > 0) return;
     if (this.cls !== 'sword') {
-      this.skillCd = this.skillMax;
+      this.skillCd = this.skillMax * this.game.skillCdMul(this, 1);
       this.yaw = this.aimYaw(input);
       this.combo = 0;
       if (this.cls === 'mage') {
@@ -273,7 +273,7 @@ export class Player {
       this.lastCombat = this.game.time;
       return;
     }
-    this.skillCd = this.skillMax;
+    this.skillCd = this.skillMax * this.game.skillCdMul(this, 1);
     this.yaw = this.aimYaw(input);
     const fromSheath = this.rig.sheathed;
     if (fromSheath) this.drawCut();
@@ -457,15 +457,15 @@ const TYPES = {
   // 궁궐
   blue: { hp: 46, speed: 2.7, dmg: 10, range: 1.5, windup: 0.5, recover: 0.6, radius: 0.46, exp: 10, ai: 'melee', make: () => makeDokkaebi('blue'), pal: PAL.blue },
   red: { hp: 72, speed: 3.1, dmg: 15, range: 1.6, windup: 0.42, recover: 0.5, radius: 0.48, exp: 16, ai: 'melee', make: () => makeDokkaebi('red'), pal: PAL.blue },
-  wisp: { hp: 28, speed: 3.2, dmg: 9, range: 7, windup: 0.6, recover: 1.6, radius: 0.35, exp: 12, ai: 'wisp', pal: PAL.blue },
+  wisp: { hp: 28, speed: 1.9, dmg: 9, range: 7, windup: 0.6, recover: 1.6, radius: 0.35, exp: 12, ai: 'wisp', pal: PAL.blue },
   boss: { hp: 900, speed: 2.35, dmg: 24, range: 2.7, windup: 0.85, recover: 0.8, radius: 0.95, exp: 200, ai: 'boss', boss: 'dokkaebi', make: () => makeDokkaebi('boss'), pal: PAL.blue, name: '도깨비 대왕 두억시니', summon: ['red', 'blue'] },
   // 죽림
   fox: { hp: 44, speed: 4.4, dmg: 10, range: 1.5, windup: 0.34, recover: 0.5, radius: 0.42, exp: 14, ai: 'melee', lunge: true, make: () => makeFox('fox'), pal: PAL.fox },
-  foxfire: { hp: 32, speed: 3.6, dmg: 10, range: 7, windup: 0.5, recover: 1.4, radius: 0.35, exp: 14, ai: 'wisp', pal: PAL.fox },
+  foxfire: { hp: 32, speed: 2.1, dmg: 10, range: 7, windup: 0.5, recover: 1.4, radius: 0.35, exp: 14, ai: 'wisp', pal: PAL.fox },
   gumiho: { hp: 1150, speed: 3.1, dmg: 22, range: 2.4, windup: 0.6, recover: 0.7, radius: 0.95, exp: 320, ai: 'boss', boss: 'gumiho', make: () => makeFox('gumiho'), pal: PAL.fox, name: '천년 구미호', summon: ['fox', 'foxfire'] },
   // 설원 폐사찰
   jiangshi: { hp: 92, speed: 3.2, dmg: 15, range: 1.5, windup: 0.45, recover: 0.6, radius: 0.45, exp: 20, ai: 'melee', hop: true, make: makeJiangshi, pal: PAL.ghost },
-  ghost: { hp: 48, speed: 3.0, dmg: 12, range: 6.5, windup: 0.6, recover: 1.6, radius: 0.4, exp: 20, ai: 'wisp', teleport: true, make: makeGhost, pal: PAL.ghost },
+  ghost: { hp: 48, speed: 1.8, dmg: 12, range: 6.5, windup: 0.6, recover: 1.6, radius: 0.4, exp: 20, ai: 'wisp', teleport: true, make: makeGhost, pal: PAL.ghost },
   reaper: { hp: 1500, speed: 2.7, dmg: 26, range: 2.8, windup: 0.7, recover: 0.8, radius: 1.0, exp: 450, ai: 'boss', boss: 'reaper', make: makeReaper, pal: PAL.ghost, name: '저승사자', summon: ['ghost', 'jiangshi'] },
 };
 
@@ -499,7 +499,7 @@ export class Enemy {
     this.strafe = Math.random() < 0.5 ? 1 : -1;
     this.leapCd = 6;
     this.patCd = 3;
-    this.tpCd = rand(3, 6);
+    this.tpCd = rand(6, 9);
     this.hopPh = Math.random();
     this.summoned = 0;
     if (T.make) {
@@ -861,24 +861,26 @@ export class Enemy {
         const d = g.world.clearLine(this.pos.x, this.pos.z, p.pos.x, p.pos.z, this.moveR) ? null : g.world.navDir(this.pos, 0);
         if (d) { mx = d.x; mz = d.z; } else { mx = ux; mz = uz; }
       }
-      else if (dist < 4.5) { mx = -ux; mz = -uz; }
-      mx += -uz * this.strafe * 0.6; mz += ux * this.strafe * 0.6;
+      else if (dist < 3.5) { mx = -ux * 0.6; mz = -uz * 0.6; }
+      // 옆걸음은 느릿하게 (원거리 몹이 너무 정신없이 움직이지 않게)
+      mx += -uz * this.strafe * 0.3; mz += ux * this.strafe * 0.3;
       if (Math.random() < dt * 0.3) this.strafe *= -1;
       if (this.attackCd <= 0 && dist < 10 && !p.dead) { this.state = 'windup'; this.st = 0; g.audio.play('orb'); }
     } else if (this.state === 'windup') {
       if (Math.random() < 0.8) g.fx.add.emit({ x: this.pos.x + rand(-0.6, 0.6), y: this.y + 1.3 + rand(-0.6, 0.6), z: this.pos.z + rand(-0.6, 0.6), vx: 0, vy: 0, vz: 0, life: 0.3, size: 2, color: this.T.pal.trail });
       if (this.st >= this.T.windup) {
         g.spawnOrb(this);
-        this.state = 'chase'; this.st = 0; this.attackCd = rand(2.0, 3.0);
+        this.state = 'chase'; this.st = 0; this.attackCd = rand(2.6, 3.6);
       }
     }
     const len = Math.hypot(mx, mz);
-    if (len > 0.01) g.world.move(this.pos, (mx / len) * this.T.speed * dt, (mz / len) * this.T.speed * dt, this.moveR);
+    // 옆걸음·뒷걸음만 할 때는 그만큼 느리게 (정규화하지 않음)
+    if (len > 0.01) { const k = Math.min(1, len) / len; g.world.move(this.pos, mx * k * this.T.speed * dt, mz * k * this.T.speed * dt, this.moveR); }
     // 원귀: 가끔 사라졌다가 플레이어 옆에 나타남
     if (this.T.teleport && this.state === 'chase') {
       this.tpCd -= dt;
       if (this.tpCd <= 0 && !p.dead) {
-        this.tpCd = rand(5, 8);
+        this.tpCd = rand(8, 12);
         const a = Math.random() * Math.PI * 2;
         const tx = p.pos.x + Math.cos(a) * 3.5, tz = p.pos.z + Math.sin(a) * 3.5;
         const th = g.world.heightAt(tx, tz);
@@ -1034,6 +1036,7 @@ export class Enemy {
 export class NPC {
   constructor(game, kind, x, z, yaw, name, lines) {
     this.game = game;
+    this.kind = kind;
     this.rig = kind === 'guard' ? makeGuard()
       : kind === 'herb' ? makeLady({ robe: '#c8b890', sleeve: '#c8b890', cuff: '#5a7a3a', skirt: '#6a5a3a', pants: '#6a5a3a', hair: '#3a2a20' })
       : kind === 'hermit' ? makeMage({ robe: '#c8c8c0', sleeve: '#c8c8c0', cuff: '#4a4a5a', belt: '#4a4a5a', pants: '#5a5a62', hair: '#e8e8e8' })

@@ -33,6 +33,7 @@ export class World {
     this.drums = [];
     this.windows = [];
     this.spawnPoints = [];
+    this.gates = {};     // 퀘스트로 열리는 문 {rect, open, t, anim(k)}
     this.makeMaterials();
     for (const R of REGIONS) this.buildRegion(R);
     this.root = this.top;
@@ -60,8 +61,26 @@ export class World {
     for (const c of this.circles.slice(n.circles)) [c.x, c.z] = f(c.x, c.z);
     const v = (p) => { const [x, z] = f(p.x, p.z); p.x = x; p.z = z; };
     for (const d of this.drums.slice(n.drums)) { v(d.pos); d.region = R.id; }
-    for (const p of this.lanterns.slice(n.lanterns)) v(p);
+    for (const p of this.lanterns.slice(n.lanterns)) { v(p); p.region = R.id; }
     for (const p of this.spawnPoints.slice(n.spawnPoints)) v(p);
+  }
+
+  // 퀘스트 문: anim(k)는 0(닫힘)~1(열림) 사이 모습을 그림
+  addGate(id, rect, anim) {
+    this.blockRects.push(rect);
+    this.gates[id] = { rect, anim, open: false, k: 0 };
+    anim(0);
+  }
+
+  // 열고 닫음. 길찾기 격자도 다시 만듦 (instant: 애니메이션 없이)
+  setGate(id, open, instant = false) {
+    const G = this.gates[id];
+    if (!G || G.open === open) return false;
+    G.open = open;
+    G.rect.off = open;
+    if (instant) { G.k = open ? 1 : 0; G.anim(G.k); }
+    if (this.nav) this.buildNav();
+    return true;
   }
 
   // 월드 좌표가 속한 지역
@@ -147,7 +166,7 @@ export class World {
   isBlocked(x, z, r, fromH) {
     // 지역 경계 (궁궐은 정문 통로로만 바깥과 이어짐)
     if (!this.inside(x, z, r)) return true;
-    for (const b of this.blockRects) if (x > b.x0 - r && x < b.x1 + r && z > b.z0 - r && z < b.z1 + r) return true;
+    for (const b of this.blockRects) if (!b.off && x > b.x0 - r && x < b.x1 + r && z > b.z0 - r && z < b.z1 + r) return true;
     for (const c of this.circles) {
       const dx = x - c.x, dz = z - c.z, rr = c.r + r;
       if (dx * dx + dz * dz < rr * rr && Math.abs((c.y || 0) - fromH) < 1.5) return true;
@@ -769,6 +788,27 @@ export class World {
     }
     B.add(boxGeo(7.9, 0.5, 0.8, 4), M.dancheong, mat4(0, 3.5, 21.9));
     this.roof({ cx: 0, cy: 3.75, cz: 21.9, w: 8, d: 1.1, h: 0.9, overhang: 0.8, lift: 0.3, ridge: true });
+    // 남문 문짝: 궁을 지키기 전엔 닫혀 있음 (퀘스트로 열림). 경첩은 기둥 쪽
+    const doors = [];
+    for (const s of [-1, 1]) {
+      const hinge = new THREE.Group();
+      hinge.position.set(s * 3.25, 0, 21.9);
+      const leaf = new THREE.Mesh(boxGeo(3.2, 3.1, 0.14, 2), M.darkWood);
+      leaf.position.set(-s * 1.6, 1.6, 0);
+      const band = new THREE.Mesh(boxGeo(3.2, 0.12, 0.17, 1), M.bronzeDark);
+      band.position.set(-s * 1.6, 2.3, 0);
+      const band2 = band.clone(); band2.position.y = 0.9;
+      const knob = new THREE.Mesh(new THREE.SphereGeometry(0.1, 6, 4), M.gold);
+      knob.position.set(-s * 3.0, 1.6, 0.12);
+      hinge.add(leaf, band, band2, knob);
+      hinge.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+      this.root.add(hinge);
+      doors.push([hinge, s]);
+    }
+    this.addGate('south', { x0: -3.25, x1: 3.25, z0: 21.6, z1: 22.2 }, (k) => {
+      // 바깥(남쪽)으로 활짝 열림
+      for (const [h, s] of doors) h.rotation.y = s * k * 1.75;
+    });
   }
 
   scatterGrass() {
@@ -977,6 +1017,10 @@ export class World {
   }
 
   update(dt, t) {
+    for (const G of Object.values(this.gates)) {
+      const tk = G.open ? 1 : 0;
+      if (G.k !== tk) { G.k = tk > G.k ? Math.min(1, G.k + dt * 0.8) : Math.max(0, G.k - dt * 0.8); G.anim(G.k); }
+    }
     for (const d of this.drums) {
       if (d.shake > 0) {
         d.shake = Math.max(0, d.shake - dt * 2.5);
@@ -994,6 +1038,52 @@ const OFFS = [[1, 0], [-1, 0], [0, 1], [0, -1]];
 export const NAV_R = [0.36, 0.7];
 const NDI = [1, -1, 0, 0, 1, 1, -1, -1];
 const NDJ = [0, 0, 1, -1, 1, -1, 1, -1];
+
+// 두 바닥 사이를 도트 디더링으로 섞는 띠: zSolid 쪽은 꽉 차고 zClear 쪽으로 갈수록 성기게 사라짐
+let ditherCache = null;
+function ditherAlpha() {
+  if (ditherCache) return ditherCache;
+  const W = 16, H = 96;
+  const c = document.createElement('canvas');
+  c.width = W; c.height = H;
+  const g = c.getContext('2d');
+  const img = g.createImageData(W, H);
+  const bayer = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const k = y / (H - 1); // 0 = 위(북) 투명, 1 = 아래(남) 불투명
+    const n = (Math.sin(x * 12.9 + y * 78.2) * 43758.5) % 1;
+    const th = (bayer[(y % 4) * 4 + (x % 4)] + 0.5) / 16 * 0.7 + Math.abs(n) * 0.3;
+    const v = k > th ? 255 : 0;
+    const i = (y * W + x) * 4;
+    img.data[i] = img.data[i + 1] = img.data[i + 2] = v; img.data[i + 3] = 255;
+  }
+  g.putImageData(img, 0, 0);
+  const t = new THREE.CanvasTexture(c);
+  t.magFilter = t.minFilter = THREE.NearestFilter;
+  t.generateMipmaps = false;
+  t.wrapS = THREE.RepeatWrapping;
+  ditherCache = t;
+  return t;
+}
+
+export function blendStrip(W, baseMat, x0, x1, zSolid, zClear, y = -0.01) {
+  const w = x1 - x0, d = Math.abs(zSolid - zClear);
+  const map = baseMat.map.clone();
+  map.needsUpdate = true;
+  map.wrapS = map.wrapT = THREE.RepeatWrapping;
+  map.repeat.set(w / 2, d / 2);
+  const alpha = ditherAlpha().clone();
+  alpha.needsUpdate = true;
+  alpha.repeat.set(w, 1);
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(w, d), toon({ map, alphaMap: alpha, alphaTest: 0.5 }));
+  m.rotation.x = -Math.PI / 2;
+  // 판의 위쪽(uv.y=1)이 북쪽(-z): 불투명한 쪽이 남쪽이 아니면 뒤집음
+  if (zSolid < zClear) m.rotation.z = Math.PI;
+  m.position.set((x0 + x1) / 2, y, (zSolid + zClear) / 2);
+  m.receiveShadow = true;
+  W.root.add(m);
+  return m;
+}
 
 export function mat4(x, y, z, ry = 0, rx = 0, rz = 0, s = null) {
   const m = new THREE.Matrix4();

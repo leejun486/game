@@ -4,7 +4,7 @@ import { toon, animateMesh, ANIM } from './materials.js';
 import { boxGeo, cylGeo, Batcher, latheGeo } from './geom.js';
 import * as T from './textures.js';
 import { mulberry32 } from './util.js';
-import { mat4 } from './world.js';
+import { mat4, blendStrip } from './world.js';
 
 const C = (h) => new THREE.Color(h);
 const at = (m, x, y, z) => { m.position.set(x, y, z); return m; };
@@ -61,6 +61,7 @@ function disc(W, mat, x, z, r) {
   m.position.set(x, 0.01, z);
   m.receiveShadow = true;
   W.root.add(m);
+  return m;
 }
 
 // 울리면 웨이브가 시작되는 물건 (북과 같은 역할)
@@ -98,6 +99,15 @@ export function buildBamboo(W) {
   pathStrip(W, M.fpath, pts, 3.6);
   disc(W, M.fpath, 0, 1, 8.5);
   disc(W, M.fpath, 0, -15, 4.2);
+  // 지역 이음새: 북쪽은 궁궐 밖 흙길 위로 풀밭이 번지고, 남쪽 끝은 눈이 내려앉아 설원으로 이어짐
+  blendStrip(W, M.fgrass, -60, 60, -25.6, -31.6, -0.012);
+  blendStrip(W, M.snow, -60, 60, 22.6, 12, 0.004);
+  const Rs = mulberry32(17);
+  for (let i = 0; i < 18; i++) {
+    const z = 6 + Rs() * 14, x = (Rs() - 0.5) * 36;
+    if (Math.abs(x - pathX(z)) < 2.5) continue;
+    disc(W, M.snow, x, z, 0.6 + Rs() * 1.2 * (z - 4) / 16).position.y = 0.006;
+  }
 
   // 대나무 숲: 덩어리(그로브)마다 충돌 원 하나, 줄기는 인스턴싱
   const stalks = [];
@@ -106,6 +116,7 @@ export function buildBamboo(W) {
     if (Math.hypot(x, z - 1) < 11.5) continue;           // 공터
     if (Math.abs(x - pathX(z)) < 4.2) continue;         // 길
     if (Math.hypot(x, z + 15) < 7) continue;            // 서낭당
+    if (z < -18.5 && Math.abs(x) < 10) continue;        // 궁궐 쪽 어귀는 트인 풀밭
     const gr = 1.4 + R() * 1.4;
     const n = Math.floor(gr * 6);
     for (let i = 0; i < n; i++) {
@@ -118,8 +129,9 @@ export function buildBamboo(W) {
   for (let i = 0; i < 160; i++) {
     const side = Math.floor(R() * 4);
     const x = side < 2 ? (side ? 1 : -1) * (21 + R() * 6) : (R() - 0.5) * 50;
-    const z = side >= 2 ? (side === 2 ? -28 - R() * 5 : 23 + R() * 5) : (R() - 0.5) * 56;
-    if (side === 3 && Math.abs(x - pathX(z)) < 3) continue;
+    const z = side >= 2 ? (side === 2 ? -27 - R() * 3 : 20 + R() * 2.5) : (R() - 0.5) * 56;
+    // 남북 끝은 가장자리에만 (궁궐 남문 앞과 폐사찰 입구를 막지 않게)
+    if (side >= 2 && Math.abs(x) < 12) continue;
     stalks.push([x, z, 3.5 + R() * 2.8]);
   }
   const geo = new THREE.CylinderGeometry(0.085, 0.1, 1, 6);
@@ -134,7 +146,7 @@ export function buildBamboo(W) {
     for (let k = 0; k < 3; k++) {
       const y = h * (0.62 + k * 0.14);
       const a = R() * Math.PI * 2;
-      W.foliage.add(new THREE.IcosahedronGeometry(1, 0), k % 2 ? M.bambooLeaf : M.bambooLeaf2,
+      W.foliage.add(new THREE.IcosahedronGeometry(1, 0), z > 12 && k % 2 ? M.snowLeaf : k % 2 ? M.bambooLeaf : M.bambooLeaf2,
         new THREE.Matrix4().compose(new THREE.Vector3(x + Math.cos(a) * 0.35, y, z + Math.sin(a) * 0.35), new THREE.Quaternion().setFromEuler(new THREE.Euler(0, a, 0.3)), new THREE.Vector3(0.55, 0.12, 0.28)));
     }
   });
@@ -174,13 +186,16 @@ export function buildBamboo(W) {
   bell.add(body);
   trigger(W, bell, body, 2.4, -13.2, '방울', 'bell', 3.2, 0.9);
 
-  // 장승 한 쌍 (입구)
+  // 장승 한 쌍: 궁궐 쪽 어귀와 설원 쪽 출구
   for (const s of [-1, 1]) jangseung(W, s * 3.2, 17.5, s);
+  for (const s of [-1, 1]) jangseung(W, pathX(-21) + s * 3, -21, s);
+  // 어귀의 소나무 몇 그루와 풀밭
+  for (const [x, z, sc, sd] of [[-7.5, -23, 1.0, 41], [8, -22.5, 1.1, 42], [-11, -19.5, 0.9, 43], [12, -20, 0.95, 44]]) W.pine(x, 0, z, sc, sd);
   // 돌탑과 석등
   cairn(W, -8, 6, 1.1, 7); cairn(W, 8.4, -4, 1, 8); cairn(W, 7, 8.5, 0.8, 9);
   for (const [x, z] of [[-7.5, -5], [7.6, 3], [-6, 9], [5.6, -8.5]]) W.stoneLantern(x, 0, z);
   // 풀
-  W.grassAreas = [];
+  W.grassAreas = [{ x0: -9, x1: -4, z0: -25, z1: -20, y: 0 }, { x0: 4.5, x1: 9.5, z0: -24.5, z1: -19.5, y: 0 }];
   for (let i = 0; i < 10; i++) {
     const a = R() * Math.PI * 2, d = 9 + R() * 3;
     const x = Math.cos(a) * d, z = 1 + Math.sin(a) * d;
@@ -263,7 +278,45 @@ export function buildTemple(W) {
   B.add(boxGeo(2.4, 0.12, 2.4, 2), M.snow, mat4(-11.5, 4.5, 4));
 
   // 무너진 담장
-  for (const [x0, x1, z] of [[-19, -8, 18], [8, 19, 18], [-19, -12, -24], [6, 19, -24]]) {
+  // 절 바깥 담장과 일주문 (입구, 대숲 쪽). 문에는 금줄이 쳐져 있어 도사가 걷어 줘야 들어갈 수 있음
+  for (const s of [-1, 1]) {
+    for (let x = 2.9; x < 19.6; x += 2.2) {
+      const xx = s * (x + 1.1), h = 1.25 + R() * 0.45;
+      B.add(boxGeo(2.2, h, 0.7, 2), M.blockDark, mat4(xx, h / 2, 20.5));
+      B.add(boxGeo(2.3, 0.14, 0.85, 2), M.stoneLight, mat4(xx, h + 0.05, 20.5));
+      B.add(boxGeo(2.2, 0.12, 0.8, 2), M.snow, mat4(xx, h + 0.18, 20.5));
+    }
+    W.blockRects.push({ x0: s > 0 ? 2.75 : -19.8, x1: s > 0 ? 19.8 : -2.75, z0: 20.1, z1: 20.9 });
+    // 일주문 기둥
+    B.add(cylGeo(0.3, 0.32, 3.6, 10), M.wood, mat4(s * 2.4, 1.8, 20.5));
+    B.add(cylGeo(0.5, 0.55, 0.3, 10), M.stoneLight, mat4(s * 2.4, 0.15, 20.5));
+    W.circles.push({ x: s * 2.4, z: 20.5, r: 0.45, y: 0 });
+  }
+  B.add(boxGeo(5.6, 0.45, 0.7, 4), M.dancheong, mat4(0, 3.55, 20.5));
+  B.add(boxGeo(1.6, 0.7, 0.1, 1), M.darkWood, mat4(0, 3.1, 20.88));
+  const ir = W.roof({ cx: 0, cy: 3.8, cz: 20.5, w: 6.2, d: 1.6, h: 1.0, overhang: 0.9, lift: 0.45, ridge: true });
+  ir.group.traverse((o) => { if (o.isMesh) o.castShadow = true; });
+  B.add(boxGeo(5.4, 0.12, 1.4, 2), M.snow, mat4(0, 4.75, 20.5));
+  // 금줄: 새끼줄에 흰 종이 술
+  const rope = new THREE.Group();
+  const straw = toon({ color: C('#c8a868') });
+  rope.add(at(new THREE.Mesh(boxGeo(4.4, 0.07, 0.07, 1), straw), 0, 1.9, 20.5));
+  for (let i = 0; i < 9; i++) {
+    const paper = new THREE.Mesh(new THREE.PlaneGeometry(0.14, 0.32), M.cloth[3]);
+    paper.position.set(-1.9 + i * 0.48, 1.7, 20.55);
+    paper.rotation.z = (i % 2 ? 0.2 : -0.2);
+    animateMesh(paper, ANIM.flag);
+    rope.add(paper);
+  }
+  W.root.add(rope);
+  W.addGate('temple', { x0: -2.2, x1: 2.2, z0: 20.2, z1: 20.8 }, (k) => {
+    // 금줄이 툭 끊어져 떨어지며 사라짐
+    rope.visible = k < 0.99;
+    rope.position.y = -k * 1.6;
+    rope.rotation.x = k * 0.6;
+  });
+
+  for (const [x0, x1, z] of [[-19, -12, -24], [6, 19, -24]]) {
     for (let x = x0; x < x1; x += 2.2) {
       if (R() < 0.25) continue;
       const h = 0.6 + R() * 1.2;

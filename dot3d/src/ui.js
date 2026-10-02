@@ -1,5 +1,5 @@
 import { item, itemDesc, drawItemIcon, RARITY, WEAPONS, OUTFITS } from './items.js';
-import { EVOS, branchOf } from './evolve.js';
+import { EVOS, branchOf, rankOf, freePoints, RANK_NAME, MAX_RANK } from './evolve.js';
 import { expNeed, SKILL_LEVEL } from './entities.js';
 
 // HTML HUD: 체력, 스킬, 임무, 배너, 대화창, 보스 체력, 적 체력바, 상호작용 표시
@@ -37,7 +37,7 @@ export class UI {
       // 파생 기술을 수련했으면 그 이름으로
       const slot = { skill: 1, skill2: 2, skill3: 3 }[k];
       const br = slot && pr ? branchOf(pr, cfg.id, pl?.level ?? 1, slot) : null;
-      const t = br ? EVOS[cfg.id][slot][br].short : cfg.labels[k];
+      const t = br ? EVOS[cfg.id][slot][br].short + RANK_NAME[rankOf(pr, cfg.id, pl?.level ?? 1, slot)] : cfg.labels[k];
       document.getElementById('sk-' + k).textContent = t;
       document.querySelectorAll('.lbl-' + k).forEach((el) => (el.textContent = t));
     }
@@ -108,24 +108,46 @@ export class UI {
     const body = document.getElementById('skills-body');
     if (!body || !document.getElementById('skills').classList.contains('show')) return;
     const pr = g.progressOf(p.cls);
-    body.innerHTML = '';
+    const pts = freePoints(pr, p.level);
+    body.innerHTML = `<div class="evo-pts">수련점 <b>${pts}</b> <small>레벨이 오를 때마다 1점 · 단계마다 1점</small></div>`;
     const keys = { 1: 'K', 2: 'L', 3: 'I' };
     for (const slot of [1, 2, 3]) {
       const E = EVOS[p.cls][slot];
-      const locked = p.level < E.lv;
+      const r = pr.rank?.[slot] || (pr.evo?.[slot] ? 1 : 0);
+      const br = pr.evo?.[slot];
+      const next = r < MAX_RANK ? E.lv[r] : null;
+      const canTrain = br && next && p.level >= next && pts > 0;
       const row = document.createElement('div');
-      row.className = 'evo-row' + (locked ? ' locked' : '');
-      row.innerHTML = `<div class="evo-head"><span class="key">${keys[slot]}</span>${E.base} → 파생 기술<small>${locked ? `Lv.${E.lv}에 수련 가능 (지금 Lv.${p.level})` : pr.evo?.[slot] ? '수련함 · 다른 갈래로 바꿀 수 있음' : '<b style="color:#ffd76a">수련 가능!</b> 하나를 고르세요'}</small></div>`;
+      row.className = 'evo-row' + (p.level < E.lv[0] ? ' locked' : '');
+      const pips = Array.from({ length: MAX_RANK }, (_, i) => `<i class="${i < r ? 'on' : ''}">${RANK_NAME[i + 1]}</i>`).join('');
+      let status;
+      if (p.level < E.lv[0]) status = `Lv.${E.lv[0]}에 수련 가능 (지금 Lv.${p.level})`;
+      else if (!br) status = pts > 0 ? '<b style="color:#ffd76a">수련 가능!</b> 갈래를 고르세요' : '수련점이 없어요';
+      else if (!next) status = '<b style="color:#ffd76a">각성 완료</b>';
+      else status = `다음 단계 ${RANK_NAME[r + 1]}: Lv.${next}`;
+      row.innerHTML = `<div class="evo-head"><span class="key">${keys[slot]}</span>${E.base}<span class="pips">${pips}</span><small>${status}</small></div>`;
       const opts = document.createElement('div');
       opts.className = 'evo-opts';
       for (const b of ['a', 'b']) {
+        const B = E[b];
         const o = document.createElement('div');
-        o.className = 'evo-opt' + (pr.evo?.[slot] === b ? ' on' : '');
-        o.innerHTML = `<b>${E[b].name}</b><span>${E[b].desc}</span>`;
-        if (!locked) o.addEventListener('click', (e) => { e.stopPropagation(); g.chooseEvo(slot, b); });
+        const mine = br === b;
+        o.className = 'evo-opt' + (mine ? ' on' : '');
+        const steps = [
+          [1, B.desc], [2, '피해 증가 · 재사용 단축'], [3, '강화: ' + B.r3], [4, '피해 증가 · 재사용 단축'], [5, B.r5],
+        ].map(([k, t]) => `<li class="${mine && r >= k ? 'got' : ''}"><em>${RANK_NAME[k]}</em> ${t}</li>`).join('');
+        o.innerHTML = `<b>${B.name}</b><ul>${steps}</ul>`;
+        if (p.level >= E.lv[0]) o.addEventListener('click', (e) => { e.stopPropagation(); g.chooseEvo(slot, b); });
         opts.append(o);
       }
       row.append(opts);
+      if (br && next) {
+        const btn = document.createElement('button');
+        btn.className = 'evo-train' + (canTrain ? '' : ' off');
+        btn.textContent = canTrain ? `${E[br].name} ${RANK_NAME[r + 1]}단계 수련 (수련점 1)` : p.level < next ? `${RANK_NAME[r + 1]}단계는 Lv.${next}부터` : '수련점이 부족해요';
+        if (canTrain) btn.addEventListener('click', (e) => { e.stopPropagation(); g.trainEvo(slot); });
+        row.append(btn);
+      }
       body.append(row);
     }
   }
@@ -255,11 +277,11 @@ export class UI {
     if (etEl.textContent !== et) etEl.textContent = et;
     document.getElementById('bag-dot').classList.toggle('hidden', !this.newItem);
     this.setCd('dash', p.dashCd, p.dashMax || 0.5);
-    this.setCd('skill', p.skillCd, p.skillMax);
+    this.setCd('skill', p.skillCd, p.skillMax * g.skillCdMul(p, 1));
     for (const slot of [2, 3]) {
       const key = 'skill' + slot;
       if (p.level < SKILL_LEVEL[slot]) this.setLock(key, SKILL_LEVEL[slot]);
-      else { this.setLock(key, 0); this.setCd(key, (slot === 2 ? p.cd2 : p.cd3) || 0, slot === 2 ? p.cd2Max : p.cd3Max); }
+      else { this.setLock(key, 0); this.setCd(key, (slot === 2 ? p.cd2 : p.cd3) || 0, (slot === 2 ? p.cd2Max : p.cd3Max) * g.skillCdMul(p, slot)); }
     }
     el.kills.textContent = g.kills;
     if (el.best) el.best.textContent = g.bestCombo;
