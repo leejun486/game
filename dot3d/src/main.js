@@ -200,7 +200,7 @@ class Game {
     });
     stage.addEventListener('contextmenu', (e) => e.preventDefault());
     // 가방 버튼·창: 클릭이 공격으로 새지 않게
-    for (const id of ['bag-btn', 'bag', 'evo-btn', 'skills']) {
+    for (const id of ['bag-btn', 'bag', 'evo-btn', 'skills', 'hunt-btn', 'quest']) {
       const el = document.getElementById(id);
       el.addEventListener('mousedown', (e) => e.stopPropagation());
       el.addEventListener('touchstart', (e) => e.stopPropagation(), { passive: true });
@@ -213,6 +213,8 @@ class Game {
       this.salvageGear(this.gear.filter((g) => g.tier <= 1).map((g) => g.uid));
     });
     document.getElementById('evo-btn').addEventListener('click', () => { if (this.state === 'play') this.toggleSkills(); });
+    document.getElementById('hunt-btn').addEventListener('click', () => { if (this.state === 'play') this.setAutoHunt(!this.autoHunt); });
+    document.getElementById('quest').addEventListener('click', () => { if (this.state === 'play') this.toggleAutoMove(); });
     document.getElementById('skills-close').addEventListener('click', () => this.toggleSkills(false));
     stage.addEventListener('wheel', (e) => { this.pixel.zoom(e.deltaY > 0 ? -1 : 1); this.saveT = Math.min(this.saveT, 2); }, { passive: true });
     this.setupTouch();
@@ -881,6 +883,8 @@ class Game {
       case 'Tab': this.updateTarget(true); break;
       case 'KeyB': this.toggleBag(); break;
       case 'KeyT': case 'skills': this.toggleSkills(); break;
+      case 'KeyF': this.toggleAutoMove(); break;
+      case 'KeyH': case 'hunt': this.setAutoHunt(!this.autoHunt); break;
       case 'KeyG': this.godMode = !this.godMode; this.ui.toast(this.godMode ? '무적 (디버그)' : '무적 해제'); break;
     }
   }
@@ -1069,6 +1073,134 @@ class Game {
     } else {
       ui.setQuest('모든 지역 평정', '<b>수문장</b>에게 현상수배를 받거나, 북·방울·범종을 다시 울려 <b>' + (this.round + 1) + '회차</b>에 도전하자');
     }
+  }
+
+  // ---------- 자동 이동 · 자동 사냥 ----------
+  toggleAutoMove() {
+    if (this.autoMove) { this.stopAutoMove('자동 이동을 멈췄어요'); return; }
+    this.startAutoMove();
+  }
+
+  startAutoMove() {
+    if (this.waveActive) { this.ui.toast('싸우는 중에는 자동 이동을 할 수 없어요', 2); return; }
+    const T = this.questTargets();
+    const p = this.player.pos;
+    if (!T.length) { this.ui.toast('지금은 갈 곳이 없어요', 2); return; }
+    let best = null, bd = Infinity;
+    for (const t of T) {
+      // 사냥 지역 안에 이미 있으면 바로 자동 사냥
+      if (t.area && this.world.regionAt(p.x, p.z).id === t.area) { this.setAutoHunt(true); return; }
+      const d = Math.hypot(t.pos.x - p.x, t.pos.z - p.z);
+      if (d < bd) { bd = d; best = t; }
+    }
+    this.autoMove = { pos: V(best.pos.x, 0, best.pos.z), area: best.area, stuck: 0, last: p.clone() };
+    this.world.updateFlow(best.pos.x, best.pos.z, 0, 2, 4000);
+    if (bd > 3 && !this.world.navDir(p, 0, 2)) { this.autoMove = null; this.ui.toast('길이 막혀 있어요 (닫힌 문이 있나 봐요)', 2.4); return; }
+    document.getElementById('quest').classList.add('moving');
+    this.ui.toast(`자동 이동: ${this.curQuest()?.title || '현상수배'}`, 1.8);
+  }
+
+  stopAutoMove(msg) {
+    this.autoMove = null;
+    document.getElementById('quest').classList.remove('moving');
+    if (msg) this.ui.toast(msg, 1.6);
+  }
+
+  setAutoHunt(on) {
+    this.autoHunt = on;
+    document.getElementById('hunt-btn').classList.toggle('on', on);
+    this.ui.toast(on ? '자동 사냥 켜짐 — 가까운 적을 찾아 싸워요 (H로 끄기)' : '자동 사냥 꺼짐', 2);
+  }
+
+  // 손으로 움직이면 자동 이동은 멈추고, 자동 사냥은 손을 놓을 때까지 잠시 쉼
+  autoControl(inp, dt) {
+    if (inp.moveLen > 0.1) { if (this.autoMove) this.stopAutoMove('자동 이동을 멈췄어요'); return inp; }
+    if (this.ui.inDialog || this.player.dead) return inp;
+    if (this.autoMove) return this.autoMoveStep(inp, dt);
+    if (this.autoHunt) return this.autoHuntStep(inp, dt);
+    return inp;
+  }
+
+  // 길찾기 흐름장을 따라 한 걸음 (가까우면 곧장)
+  steerTo(inp, tx, tz, slot = 2, maxD = 4000) {
+    const p = this.player.pos;
+    const dx = tx - p.x, dz = tz - p.z, d = Math.hypot(dx, dz) || 1;
+    let mx = dx / d, mz = dz / d;
+    if (!(d < 7 && this.world.clearLine(p.x, p.z, tx, tz, 0.4))) {
+      this.world.updateFlow(tx, tz, 0, slot, maxD);
+      const nd = this.world.navDir(p, 0, slot);
+      if (nd) { mx = nd.x; mz = nd.z; }
+    }
+    inp.mx = mx; inp.mz = mz; inp.moveLen = 1; inp.mouseRecent = false; inp.mouseWorld = null;
+    return inp;
+  }
+
+  autoMoveStep(inp, dt) {
+    const A = this.autoMove, p = this.player;
+    const d = Math.hypot(A.pos.x - p.pos.x, A.pos.z - p.pos.z);
+    // 자동 사냥 중이면 덤벼드는 적부터 처리
+    if (this.autoHunt && this.nearestEnemy(6, true)) return this.autoHuntStep(inp, dt);
+    if (d < (A.area ? 3.5 : 1.9)) {
+      this.stopAutoMove();
+      if (A.area) { if (!this.autoHunt) this.setAutoHunt(true); return inp; }
+      // 도착: 퀘스트 대상(사람·석등·북)과 바로 상호작용 (옆의 다른 물건 말고)
+      const Q = this.curQuest();
+      const pp = p.pos;
+      let it = null;
+      if (!Q) { const n = this.npcs.find((x) => x.kind === 'guard'); it = { kind: 'npc', npc: n }; }
+      else if (Q.type === 'talk') it = { kind: 'npc', npc: this.npcs.find((x) => x.kind === Q.npc) };
+      else if (Q.type === 'wave') it = { kind: 'drum', drum: this.world.drums.find((x) => x.region === Q.region) };
+      else if (Q.type === 'light') {
+        let bi = -1, bd2 = 3;
+        this.world.lanterns.forEach((L, i) => { const k = Math.hypot(L.x - pp.x, L.z - pp.z); if (L.region === 'temple' && !this.quest.lit.includes(i) && k < bd2) { bd2 = k; bi = i; } });
+        if (bi >= 0) it = { kind: 'lantern', idx: bi };
+      }
+      if (it) { this.nearInteract = it; this.interact(); }
+      // 석등은 여러 개라 남은 것이 있으면 계속
+      if (Q && Q.type === 'light' && this.curQuest() === Q) this.after(0.4, () => this.startAutoMove());
+      return inp;
+    }
+    // 오래 제자리면 포기
+    A.stuck = Math.hypot(p.pos.x - A.last.x, p.pos.z - A.last.z) < dt * 0.6 ? A.stuck + dt : 0;
+    A.last.copy(p.pos);
+    if (A.stuck > 2.5) { this.stopAutoMove('길을 찾지 못했어요'); return inp; }
+    return this.steerTo(inp, A.pos.x, A.pos.z);
+  }
+
+  nearestEnemy(R, aggroOnly = false) {
+    const p = this.player.pos;
+    let best = null, bd = R;
+    for (const e of this.enemies) {
+      if (e.dead || e.spawning || (aggroOnly && e.field && !e.aggro)) continue;
+      const d = Math.hypot(e.pos.x - p.x, e.pos.z - p.z);
+      if (d < bd && Math.abs(e.pos.y - p.y) < 1.6) { bd = d; best = e; }
+    }
+    return best;
+  }
+
+  // 자동 사냥: 가까운 적에게 다가가 공격, 쓸 수 있는 스킬은 바로, 적이 없으면 떨어진 장비 줍기
+  autoHuntStep(inp, dt) {
+    const p = this.player;
+    const range = { sword: 1.6, mage: 6.5, elf: 7.5 }[p.cls];
+    const t = this.validTarget(this.target) && Math.hypot(this.target.pos.x - p.pos.x, this.target.pos.z - p.pos.z) < 24 ? this.target : this.nearestEnemy(24);
+    if (!t) {
+      let dr = null, dd = 14;
+      for (const d of this.drops) { const k = Math.hypot(d.g.position.x - p.pos.x, d.g.position.z - p.pos.z); if (k < dd) { dd = k; dr = d; } }
+      if (dr && dd > 1.2) return this.steerTo(inp, dr.g.position.x, dr.g.position.z, 2, 60);
+      return inp;
+    }
+    this.target = t;
+    const d = Math.hypot(t.pos.x - p.pos.x, t.pos.z - p.pos.z);
+    if (d > range) return this.steerTo(inp, t.pos.x, t.pos.z, 2, 80);
+    // 사거리 안: 바라보고 공격
+    p.yaw = Math.atan2(t.pos.x - p.pos.x, t.pos.z - p.pos.z);
+    const crowd = this.enemiesIn(p.pos, 5).length;
+    const lv = p.level;
+    if (p.skillCd <= 0) p.startSkill(inp);
+    else if (lv >= SKILL_LEVEL[2] && (p.cd2 || 0) <= 0 && (crowd >= 2 || t.isBoss)) p.startExtraSkill(inp, 2);
+    else if (lv >= SKILL_LEVEL[3] && (p.cd3 || 0) <= 0 && (crowd >= 3 || t.isBoss)) p.startExtraSkill(inp, 3);
+    else p.startAttack(inp);
+    return inp;
   }
 
   // ---------- 퀘스트 ----------
@@ -2595,6 +2727,7 @@ class Game {
 
   onPlayerDeath() {
     this.state = 'dead';
+    if (this.autoMove) this.stopAutoMove();
     setTimeout(() => document.getElementById('gameover').classList.add('show'), 900);
   }
 
@@ -2815,7 +2948,8 @@ class Game {
     if (Math.abs(this.night - this.nightTarget) < 0.002) this.night = this.nightTarget;
     this.alarm = Math.max(0, this.alarm - dt);
 
-    const inp = this.readInput();
+    let inp = this.readInput();
+    if (this.state === 'play' && !this.paused) inp = this.autoControl(inp, wdt);
     if (this.state !== 'title' && !this.paused) this.simulate(wdt, inp);
     else this.player.update(wdt, inp);
     for (const n of this.npcs) n.update(wdt);

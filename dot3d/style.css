@@ -414,3 +414,16 @@ body.touch #gameover .s b::after { content: ' / 화면 탭'; }
 
 .gfx-btn { position: absolute; left: 16px; bottom: 14px; padding: 5px 10px; font-family: var(--font); font-size: 11px; cursor: pointer; background: rgba(20, 14, 30, 0.8); color: #c8bea8; border: 2px solid #4a3e2a; }
 .gfx-btn:hover { color: #ffd76a; border-color: var(--gold-dark); }
+
+/* 자동 이동·자동 사냥 */
+#quest { pointer-events: auto; cursor: pointer; }
+#quest:hover { border-color: var(--gold); }
+#quest-go { margin-top: 6px; font-size: 11px; color: #bfe8ff; }
+#quest-go span { font-size: 10px; color: var(--gold); margin-left: 4px; }
+#quest.moving #quest-go { color: #7aff8a; }
+#hunt-btn { position: absolute; left: 16px; top: 204px; pointer-events: auto; cursor: pointer; padding: 6px 10px; color: #fff; font-family: var(--font); font-size: 12px; }
+#hunt-btn span { margin-left: 6px; font-size: 10px; color: var(--gold); }
+#hunt-btn.on { background: #2a5a2a; border-color: #7aff8a; color: #c8ffd0; box-shadow: 0 0 10px rgba(122, 255, 138, 0.5); }
+#hunt-btn.on::after { content: ' 켜짐'; font-size: 10px; }
+@media (max-width: 600px) { #hunt-btn { top: 134px; left: auto; right: 8px; } }
+@media (max-height: 520px) { #hunt-btn { top: 64px; left: 148px; padding: 4px 8px; font-size: 11px; } }

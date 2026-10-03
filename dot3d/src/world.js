@@ -898,7 +898,8 @@ export class World {
       ok[0][k] = this.isBlocked(x, z, NAV_R[0], hh) ? 0 : 1;
       ok[1][k] = this.isBlocked(x, z, NAV_R[1], hh) ? 0 : 1;
     }
-    this.nav = { cs, x0, z0, nx, nz, h, ok, dist: [new Float32Array(N), new Float32Array(N)], target: [-1, -1], heap: new Int32Array(N * 8), hd: new Float32Array(N * 8) };
+    // dist[0]/[1]: 적(작은·큰 몸)이 플레이어에게 가는 길, dist[2]: 플레이어 자동 이동 길
+    this.nav = { cs, x0, z0, nx, nz, h, ok, dist: [new Float32Array(N), new Float32Array(N), new Float32Array(N)], target: [-1, -1, -1], heap: new Int32Array(N * 8), hd: new Float32Array(N * 8) };
   }
 
   navCell(x, z) {
@@ -915,7 +916,7 @@ export class World {
   }
 
   // 플레이어 위치로 향하는 흐름장 갱신 (목표 칸이 바뀔 때만)
-  updateFlow(tx, tz, big) {
+  updateFlow(tx, tz, big, slot = big, maxD = 140) {
     const n = this.nav;
     if (!n) return;
     let t = this.navCell(tx, tz);
@@ -933,9 +934,9 @@ export class World {
       if (best < 0) return;
       t = best;
     }
-    if (n.target[big] === t) return;
-    n.target[big] = t;
-    const D = n.dist[big];
+    if (n.target[slot] === t) return;
+    n.target[slot] = t;
+    const D = n.dist[slot];
     D.fill(Infinity);
     D[t] = 0;
     // 이진 힙 다익스트라
@@ -966,7 +967,7 @@ export class World {
       const d0 = hd[0];
       const a = pop();
       if (d0 > D[a]) continue;
-      if (d0 > 140) break; // 70유닛 밖은 계산하지 않음 (넓은 오픈월드)
+      if (d0 > maxD) break; // 기본 70유닛 밖은 계산하지 않음 (넓은 오픈월드)
       const ai = a % nx, aj = (a - ai) / nx;
       for (let k = 0; k < 8; k++) {
         const di = NDI[k], dj = NDJ[k];
@@ -983,12 +984,12 @@ export class World {
   }
 
   // 흐름장을 따라 몇 칸 앞을 내다본 이동 방향. 길이 없으면 null
-  navDir(pos, big) {
+  navDir(pos, big, slot = big) {
     const n = this.nav;
     if (!n) return null;
     let c = this.navCell(pos.x, pos.z);
     if (c < 0) return null;
-    const D = n.dist[big];
+    const D = n.dist[slot];
     if (!isFinite(D[c])) {
       // 내 칸이 막힌 칸(벽에 살짝 걸침)이면 이웃 중 가장 좋은 칸에서 시작
       let best = -1, bd = Infinity;
