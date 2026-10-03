@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { disposeTree, drop } from './dispose.js';
 import { Rig, makeDokkaebi, makeGuard, makeLady, makeMage, makeFox, makeJiangshi, makeGhost, makeReaper, makeWaterGhost, makeToad, makeImugi, makeStoneGolem, makeBulgasari, makeYeomra } from './character.js';
 import { CLASSES } from './classes.js';
 import { outfitLook, gearLook } from './character.js';
@@ -76,6 +77,7 @@ export class Player {
     this.rig = this.cfg.make({ wstyle: w?.style, ...outfitLook(type, o), ...gearLook(gl) });
     if (old) {
       this.game.scene.remove(old.root);
+      disposeTree(old.root);
       this.rig.root.position.copy(old.root.position);
       this.rig.root.rotation.y = old.root.rotation.y;
     }
@@ -1321,9 +1323,10 @@ export class Enemy {
   }
 
   dispose() {
+    this.removed = true;
     this.clearTele();
-    if (this.ice) { this.game.scene.remove(this.ice); this.ice = null; }
-    this.game.scene.remove(this.root);
+    if (this.ice) { drop(this.game.scene, this.ice); this.ice = null; }
+    drop(this.game.scene, this.root);
   }
 }
 

@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { disposeTree } from './dispose.js';
 import { CLASSES } from './classes.js';
 import { item } from './items.js';
 import { outfitLook, gearLook } from './character.js';
@@ -57,7 +58,7 @@ export class ClassPreview {
   // 착용 장비가 바뀌었을 수 있으니 리그를 새로 만듦 (불러오기·기록 삭제 뒤)
   rebuild() {
     for (const c of this.cards) {
-      if (c.rig) this.scene.remove(c.rig.root);
+      if (c.rig) { this.scene.remove(c.rig.root); disposeTree(c.rig.root); }
       const pr = this.game.progressOf(c.cls);
       const w = item(pr.weapon), o = item(pr.outfit);
       const gl = {};

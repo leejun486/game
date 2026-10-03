@@ -20,6 +20,8 @@ import { MAPS, BOSS_TYPES, BOSS_NAME, WIN_LINE } from './maps.js';
 import { PROLOGUE, SHARD_LINES, SHARD_MAX, ENDING, CREDITS, fillStory } from './story.js';
 import { clamp, lerp, rand, angleDiff, damp } from './util.js';
 import { initLang, watchDom, tr, LANG } from './i18n.js';
+import { Coach } from './coach.js';
+import { drop } from './dispose.js';
 import { spearHit, lancerSkill1, lancerSkill2, lancerSkill3, updateLancer, clearLancer } from './lancer.js';
 
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
@@ -111,6 +113,8 @@ class Game {
     this.saveT = 15;
     this.selectedCls = 'sword';
     this.setupClassSelect();
+    this.flags = {};    // 한 번만 보여 주는 것들 (튜토리얼·도움말)
+    this.coach = new Coach(this);
     this.applySave(loadSave());
     this.preview = new ClassPreview(this);
     this.ui.setClass(this.player.cfg);
@@ -227,7 +231,7 @@ class Game {
     stage.addEventListener('contextmenu', (e) => e.preventDefault());
     document.getElementById('story').addEventListener('click', () => { if (this.story && !this.story.credits) this.storyNext(); });
     // 가방 버튼·창: 클릭이 공격으로 새지 않게
-    for (const id of ['bag-btn', 'bag', 'evo-btn', 'skills', 'hunt-btn', 'quest', 'pause', 'menu-btn']) {
+    for (const id of ['bag-btn', 'bag', 'evo-btn', 'skills', 'hunt-btn', 'quest', 'pause', 'menu-btn', 'coach']) {
       const el = document.getElementById(id);
       el.addEventListener('mousedown', (e) => e.stopPropagation());
       el.addEventListener('touchstart', (e) => e.stopPropagation(), { passive: true });
@@ -435,7 +439,9 @@ class Game {
     const lv = 1 + MAPS[R.id].lvl + Math.floor((p.level - 1) / 3);
     for (let i = 0; i < n; i++) {
       const pos = (i && this.world.randomWalkable(at.x, at.z, 0.8, 2.5)) || at;
-      this.enemies.push(new Enemy(this, type, pos, lv, { field: true }));
+      const fe = new Enemy(this, type, pos, lv, { field: true });
+      this.earlyEase(fe);
+      this.enemies.push(fe);
     }
   }
 
@@ -472,7 +478,8 @@ class Game {
   targetRange() { return this.player.cls === 'sword' ? 7 : this.player.cls === 'lancer' ? 8.5 : 12; }
 
   validTarget(e) {
-    if (!e || e.dead || e.spawning) return false;
+    // removed: 지역을 옮기거나 다시 일어설 때 정리된 적 (목록에서 빠졌는데 겨냥이 남지 않게)
+    if (!e || e.dead || e.spawning || e.removed) return false;
     const p = this.player.pos;
     return Math.hypot(e.pos.x - p.x, e.pos.z - p.z) < this.targetRange() + 2;
   }
@@ -533,7 +540,7 @@ class Game {
     }
     // 수련점이 생겼으니 기술 창 버튼에 알림
     const E1 = Object.values(EVOS[pl.cls]).filter((E) => E.lv.some((lv) => pl.level - n < lv && pl.level >= lv));
-    if (E1.length) setTimeout(() => this.ui.toast(`새 수련 단계: ${E1.map((E) => E.base).join(', ')} (T 키)`, 4), 1800);
+    if (E1.length) { setTimeout(() => this.ui.toast(`새 수련 단계: ${E1.map((E) => E.base).join(', ')} (T 키)`, 4), 1800); this.coach.tip('evo', 3); }
     document.getElementById('evo-dot').classList.remove('hidden');
     this.ui.setClass(pl.cfg, pl);
     this.save(false);
@@ -584,7 +591,7 @@ class Game {
         d.g.position.z += (p.pos.z - d.g.position.z) * k;
       }
       if (d.t > 0.8 && dist < 0.7) {
-        this.scene.remove(d.g);
+        drop(this.scene, d.g);
         this.drops.splice(i, 1);
         this.pickup(d.id);
       }
@@ -617,6 +624,7 @@ class Game {
 
   // ---------- 방어구·장신구 ----------
   pickupGear(g) {
+    this.coach.tip('bag', 1.2);
     const r = rarityOf(g);
     const p = this.player;
     this.audio.play('coin');
@@ -753,6 +761,7 @@ class Game {
     this.audio.play('levelup');
     this.ui.banner('수련', `${nm} ${RANK_NAME[r + 1]}단계`, 2, 'win-banner');
     this.ui.toast(`${RANK_NAME[r + 1]}단계 각인(${RUNES[r + 1].title})을 골라 보세요`, 2.4);
+    if (r + 1 === 2) this.coach.tip('rune', 0.4);
     const at = V(p.pos.x, p.y, p.pos.z);
     this.fx.circle(at, 2, r + 1 === 5 ? '#ffd040' : '#bfe8ff', 1.2, 3);
     this.ui.setClass(p.cfg, p);
@@ -913,6 +922,8 @@ class Game {
     if (!d.quest?.shards) this.quest.shards = Object.keys(this.cleared).filter((k) => SHARD_LINES[k]);
     if (this.quest.step > 0 || this.round > 0) this.quest.prologue = true;
     this.playTime = d.playTime || 0;
+    this.flags = d.flags || {};
+    if (!d.flags && (this.quest.step > 0 || this.round > 0)) this.flags.tut = 1; // 이미 해 본 사람은 튜토리얼 생략
     this.quest.lit.forEach((i) => this.world.lanterns[i] && this.addFlame(this.world.lanterns[i]));
     this.updateGates(true);
     // 마지막 위치에서 이어서 (예전 기록은 그 지역 입구에서)
@@ -955,6 +966,7 @@ class Game {
       cleared: this.cleared,
       towerBest: this.towerBest || 0,
       playTime: Math.round(this.playTime || 0),
+      flags: this.flags,
       inv: [...this.inv],
       gear: this.gear,
       music: this.audio.musicOn,
@@ -1070,7 +1082,7 @@ class Game {
   // 기록을 모두 지우고 처음 상태로 (선택 화면에서)
   resetProgress() {
     clearSave();
-    this.kills = 0; this.round = 0; this.stage = 0; this.bestCombo = 0; this.playTime = 0;
+    this.kills = 0; this.round = 0; this.stage = 0; this.bestCombo = 0; this.playTime = 0; this.flags = {};
     this.progress = {}; this.inv = new Set(['sw0', 'mg0', 'bw0', 'sp0', 'ot0']); this.gear = [];
     this.cleared = {};
     this.quest = { step: 0, prog: {}, lit: [], bounty: null, shards: [], prologue: false, ended: false };
@@ -1226,6 +1238,7 @@ class Game {
         <div class="pz-row"><label>그래픽 모드</label>${seg('gfx', [['hd', '고화질'], ['pixel', '도트']], GFX.hd ? 'hd' : 'pixel')}</div>
         <div class="pz-row"><label>화질</label>${seg('quality', [['high', '높음'], ['mid', '보통'], ['low', '낮음']], S.quality)}</div>
         <div class="pz-row"><label>화면 흔들림</label>${seg('shake', [[1, '보통'], [0.5, '약하게'], [0, '끔']], S.shake)}</div>
+        <div class="pz-row"><label>도움말</label>${seg('tips', [[1, '보이기'], [0, '숨기기']], S.tips === false ? 0 : 1)}</div>
         <div class="pz-row"><label>데미지 숫자</label>${seg('numbers', [[1, '보이기'], [0, '숨기기']], S.numbers ? 1 : 0)}</div>
         ${GFX.hd ? '' : `<div class="pz-row"><label>외곽선</label>${seg('outline', [[1, '켜기'], [0, '끄기']], this.pixel.compMat.uniforms.outline.value ? 1 : 0)}</div>`}
         <div class="pz-note">화질 '낮음'은 해상도를 줄이고 그늘(AO)·계단 현상 제거·그림자 해상도를 낮춰 저사양 노트북·휴대폰에서 부드럽게 돌아가요. 그래픽 모드와 그림자 해상도는 새로고침해야 바뀝니다.</div>`;
@@ -1236,16 +1249,19 @@ class Game {
         if (k === 'quality') { this.setSetting((s) => { s.quality = v; }); this.pixel.setQuality(v); }
         if (k === 'shake') this.setSetting((s) => { s.shake = +v; });
         if (k === 'numbers') this.setSetting((s) => { s.numbers = v === '1'; });
+        if (k === 'tips') this.setSetting((s) => { s.tips = v === '1'; });
         if (k === 'outline') { this.pixel.compMat.uniforms.outline.value = +v; this.save(false); }
         this.pausePane('screen');
       });
     } else if (tab === 'keys') {
       el.innerHTML = `<h3>조작 · 키 바꾸기</h3>${ACTIONS.map(([a, n]) => `<div class="pz-row"><label>${n}</label><button class="pz-key${this.rebind === a ? ' wait' : ''}" data-a="${a}">${this.rebind === a ? '키를 누르세요…' : keyName(keyOf(S, a))}</button></div>`).join('')}
         <div class="pz-row"><button class="pz-btn" id="pz-keyreset">기본 키로 되돌리기</button></div>
+        ${this.state === 'play' ? '<div class="pz-row"><button class="pz-btn" id="pz-tut">튜토리얼 다시 하기</button></div>' : ''}
         <div class="pz-note">이동은 WASD·방향키 고정. 원래 키(J/Z, Space/Shift, K/X, L/Q, I/R 등)도 계속 쓸 수 있어요.<br>
         <b>게임패드</b> — 왼쪽 스틱 이동 · A 공격 · B 피하기 · X 기술1 · Y 기술2 · RB 기술3 · RT 고유 기술 · LB 대화 · LT 타겟 변경 · Back 가방 · Start 일시정지 · 십자키 ↑ 자동 이동 / ↓ 자동 사냥 / ← 기술 수련. 메뉴에서는 십자키로 고르고 A로 누르고 B로 닫아요.</div>`;
       for (const b of el.querySelectorAll('[data-a]')) b.addEventListener('click', () => { this.rebind = b.dataset.a; this.pausePane('keys'); });
       el.querySelector('#pz-keyreset').addEventListener('click', () => { this.setSetting((s) => { s.binds = {}; }); this.pausePane('keys'); });
+      el.querySelector('#pz-tut')?.addEventListener('click', () => { this.flags.tut = 0; this.togglePause(false); this.coach.startTutorial(); });
     } else if (tab === 'data') {
       const has = !!exportSave();
       el.innerHTML = `<h3>저장 파일</h3>
@@ -1366,7 +1382,10 @@ class Game {
     this.save(false);
     document.getElementById('title').classList.add('hide');
     this.ui.showHud(true);
-    const open = () => this.ui.banner('월하궁', '도깨비 야행', 2.8, 'title-banner');
+    const open = () => {
+      this.ui.banner('월하궁', '도깨비 야행', 2.8, 'title-banner');
+      if (!this.flags.tut && this.quest.step === 0) this.after(2.6, () => this.coach.startTutorial());
+    };
     if (!this.quest.prologue) this.playStory(PROLOGUE, { moon: true, onDone: () => { this.quest.prologue = true; this.save(false); open(); } });
     else open();
   }
@@ -1630,7 +1649,9 @@ class Game {
     const d = Math.hypot(A.pos.x - p.pos.x, A.pos.z - p.pos.z);
     // 자동 사냥 중이면 덤벼드는 적부터 처리
     if (this.autoHunt && this.nearestEnemy(6, true)) return this.autoHuntStep(inp, dt);
-    if (d < (A.area ? 3.5 : 1.9)) {
+    // 도착: 가까이 왔거나, 충분히 가까운데 더 다가갈 수 없을 때 (종각 안의 범종처럼 둘러싸인 것)
+    const blockedNear = !A.area && d < 3.2 && A.stuck > 0.5;
+    if (d < (A.area ? 3.5 : 1.9) || blockedNear) {
       this.stopAutoMove();
       if (A.area) { if (!this.autoHunt) this.setAutoHunt(true); return inp; }
       // 도착: 퀘스트 대상(사람·석등·북)과 바로 상호작용 (옆의 다른 물건 말고)
@@ -1730,6 +1751,7 @@ class Game {
     this.updateQuest();
     if (!Q) return;
     this.ui.banner('새 임무', Q.title, 2.2, '');
+    if (Q.type === 'kill' || Q.type === 'collect') this.coach.tip('hunt', 4);
     this.audio.play('wave');
     // 다른 대화(달거울 조각 이야기 등)가 열려 있으면 닫힐 때까지 기다렸다가
     const say = () => { if (this.curQuest() !== Q || this.state !== 'play') return; if (this.ui.inDialog || this.story) return this.after(0.5, say); this.sayLines(Q.startLines); };
@@ -1945,6 +1967,7 @@ class Game {
   // 등장 연출: 화면 위아래 검은 띠, 카메라가 보스를 비추고 이름이 크게 뜸. 다른 적·투사체는 멈춤
   bossIntro(e) {
     if (this.cine) return;
+    this.coach.tip('boss', 4);
     this.seenBoss = this.seenBoss || {};
     const first = !this.seenBoss[e.type];
     this.seenBoss[e.type] = true;
@@ -2312,6 +2335,11 @@ class Game {
     this.updateQuest();
   }
 
+  // 처음 하는 사람 배려: 첫 회차의 궁궐·죽림에서는 적이 조금 덜 아프게 때림
+  earlyEase(e) {
+    if (this.round === 0 && !this.tower?.active && (this.mapId === 'palace' || this.mapId === 'bamboo')) e.dmg = Math.max(1, Math.round(e.dmg * 0.8));
+  }
+
   spawnEnemy(type, opt = {}) {
     const p = this.player.pos;
     const isBoss = BOSS_TYPES.has(type);
@@ -2320,6 +2348,7 @@ class Game {
     // 시련탑은 층수가 곧 강함 (회차와 무관)
     const lv = this.tower?.active ? 1 + this.tower.floor + Math.floor((this.player.level - 1) / 3) : 1 + this.round + this.map.lvl + Math.floor((this.player.level - 1) / 3);
     const e = new Enemy(this, type, pos, lv, { elite: opt.elite });
+    this.earlyEase(e);
     if (isBoss) { e.name = this.tower?.active ? `${e.T.name} · ${this.tower.floor}층` : this.round > 0 ? `${e.T.name} +${this.round}` : e.T.name; this.ui.setBoss(e); this.shake(0.5); this.bossIntro(e); }
     this.enemies.push(e);
   }
@@ -3374,8 +3403,8 @@ class Game {
 
   // ---------- 파생 기술 효과 ----------
   clearSkillFx() {
-    for (const o of this.orbits) for (const b of o.blades) this.scene.remove(b);
-    for (const m of this.marks) this.scene.remove(m.mesh);
+    for (const o of this.orbits) for (const b of o.blades) drop(this.scene, b);
+    for (const m of this.marks) drop(this.scene, m.mesh);
     this.storms = []; this.fires = []; this.orbits = []; this.marks = [];
     clearLancer(this);
   }
@@ -3516,7 +3545,7 @@ class Game {
           this.audio.play('swing');
         }
       }
-      if (O.t >= O.dur || pl.dead) { for (const b of O.blades) this.scene.remove(b); this.orbits.splice(i, 1); }
+      if (O.t >= O.dur || pl.dead) { for (const b of O.blades) drop(this.scene, b); this.orbits.splice(i, 1); }
     }
     // 낙인
     for (let i = this.marks.length - 1; i >= 0; i--) {
@@ -3528,7 +3557,7 @@ class Game {
       M.mesh.lookAt(this.pixel.camera.position);
       M.mesh.scale.setScalar(1 + M.t * 0.6 + Math.sin(M.t * 30) * 0.08);
       if (M.t >= M.dur || e.dead) {
-        this.scene.remove(M.mesh);
+        drop(this.scene, M.mesh);
         this.marks.splice(i, 1);
         if (e.dead && M.t < M.dur * 0.5) continue;
         const at = V(e.pos.x, e.y, e.pos.z);
@@ -3822,12 +3851,13 @@ class Game {
 
   retry() {
     document.getElementById('gameover').classList.remove('show');
+    this.coach.tip('death', 0.6);
     this.state = 'play';
     this.player.reset();
     for (const e of this.enemies) e.dispose();
     this.enemies = [];
     this.spawnQueue = [];
-    for (const pr of this.projectiles) if (pr.mesh) this.scene.remove(pr.mesh);
+    for (const pr of this.projectiles) if (pr.mesh) drop(this.scene, pr.mesh);
     this.projectiles = [];
     this.timers = [];
     for (const r of this.rains) this.fx.removeRing(r.tele);
@@ -3923,7 +3953,7 @@ class Game {
         if (pr.kind === 'talisman') this.talismanBurst(pr);
         if (pr.kind === 'arrow' && pr.boom) this.boomAt(V(pr.pos.x, this.world.heightAt(pr.pos.x, pr.pos.z), pr.pos.z), 2.6, Math.round(60 * (pr.mul || 1)), '#e8ffc8');
         if (pr.mesh) {
-          this.scene.remove(pr.mesh);
+          drop(this.scene, pr.mesh);
           if (pr.kind === 'orb') this.fx.blueFire(pr.pos.x, pr.pos.y - 0.2, pr.pos.z, 10, 0.2);
           if (pr.kind === 'arrow') this.fx.spark(pr.pos.x, pr.pos.y, pr.pos.z, 3, '#e8dcc0', 2);
         }
@@ -4066,6 +4096,7 @@ class Game {
     this.updateSoundScene(dt);
     // 15초마다 자동 저장
     if (this.state === 'play') { this.saveT -= dt; if (this.saveT <= 0) this.save(); if (!this.paused) this.playTime = (this.playTime || 0) + dt; }
+    this.coach.update(dt);
 
     // 히트스톱: 월드 시간 멈춤
     let wdt = dt;

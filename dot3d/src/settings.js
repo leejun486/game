@@ -21,6 +21,7 @@ export const DEFAULTS = {
   quality: 'high',     // high | mid | low (고화질 모드에서만)
   shake: 1,            // 0 끔, 0.5 약하게, 1 보통
   numbers: true,       // 데미지 숫자
+  tips: true,          // 처음 겪는 순간의 도움말
   binds: {},           // 동작 → 사용자가 바꾼 키 코드
   lang: 'auto',        // ko | en | auto (브라우저 언어)
 };

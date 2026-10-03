@@ -98,6 +98,7 @@ export class Rig {
     const cloth = (color, h = 0.4, kind = cfg.pattern) => {
       if (!kind) return mat({ color: C(color), ...fab });
       const t = clothTex(kind, color, cfg.patA || '#ffffff', cfg.patB || '#ffd040').clone();
+      t.userData.owned = true; // 이 캐릭터만 쓰는 복제본 → 캐릭터를 지울 때 함께 해제
       t.needsUpdate = true;
       t.repeat.set(1, kind === 'saekdong' ? Math.max(0.25, h * 0.7) : Math.max(0.2, h * 0.45));
       return mat({ map: t, ...fab });

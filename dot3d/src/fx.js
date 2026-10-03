@@ -1,5 +1,6 @@
 // 이펙트: 도트 파티클, 검기 호, 충격파, 지면 경고, 데미지 숫자
 import * as THREE from 'three';
+import { disposeSkeletons } from './dispose.js';
 import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { rand } from './util.js';
 
@@ -567,7 +568,7 @@ export class FX {
       gh.t += dt;
       const k = gh.t / gh.dur;
       gh.mat.opacity = 0.55 * Math.max(0, 1 - k);
-      if (k >= 1) { this.scene.remove(gh.c); gh.mat.dispose(); this.ghosts.splice(i, 1); }
+      if (k >= 1) { this.scene.remove(gh.c); gh.mat.dispose(); disposeSkeletons(gh.c); this.ghosts.splice(i, 1); }
     }
     for (let i = this.numbers.length - 1; i >= 0; i--) {
       const n = this.numbers[i];

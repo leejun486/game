@@ -552,3 +552,20 @@ html[lang="en"] .it.worn::after { content: 'worn'; }
 html[lang="en"] #hunt-btn.on::after { content: ' on'; }
 html[lang="en"] .eqs .sl { width: 54px; }
 html[lang="en"] .rune-line { grid-template-columns: 18px 46px repeat(3, 1fr); }
+
+/* 튜토리얼·도움말 카드 */
+#coach { position: absolute; left: 50%; bottom: 64px; transform: translate(-50%, 8px); width: min(480px, 88vw); padding: 10px 14px 10px; background: rgba(16, 12, 24, 0.92); border: 2px solid var(--gold-dark, #8a6a2a); box-shadow: 0 0 0 1px #000, 0 6px 18px rgba(0, 0, 0, 0.5); color: #f2e8d0; z-index: 12; opacity: 0; pointer-events: none; transition: opacity 0.25s, transform 0.25s; }
+#coach.show { opacity: 1; transform: translate(-50%, 0); }
+#coach.tut.show { pointer-events: auto; }
+#coach .c-t { font-size: 11px; color: var(--gold, #ffd76a); letter-spacing: 1px; margin-bottom: 4px; }
+#coach .c-m { font-size: 14px; line-height: 1.5; }
+#coach .c-p { margin-top: 6px; display: flex; gap: 4px; align-items: center; font-size: 11px; color: #c8bea8; }
+#coach .c-p i { width: 18px; height: 4px; background: #3a3040; }
+#coach .c-p i.on { background: #ffd76a; }
+#coach .c-p i.done { background: #8a7a4a; }
+#coach .c-p b { margin-left: 6px; color: #ffd76a; font-weight: normal; }
+#coach #coach-skip { display: none; position: absolute; right: 8px; top: 7px; font-family: var(--font); font-size: 10px; padding: 2px 8px; background: transparent; color: #a89e8a; border: 1px solid #4a3e2a; cursor: pointer; }
+#coach.tut #coach-skip { display: block; }
+#coach #coach-skip:hover { color: #ffd76a; border-color: #ffd76a; }
+@media (max-width: 600px) { #coach { bottom: 190px; } #coach .c-m { font-size: 12px; } }
+#app.cine-on #coach, #app:has(#dialog.show) #coach { opacity: 0; }
