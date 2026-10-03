@@ -11,6 +11,7 @@ import { CLASSES, CLASS_ORDER } from './classes.js';
 import { ClassPreview } from './preview.js';
 import { EVOS, branchOf, rankOf, freePoints, rankMul, rankCd, RANK_NAME } from './evolve.js';
 import { QUESTS, BOUNTIES, KILL_NAME } from './quests.js';
+import { makeGear, rollGearTier, gearScore, salvageExp, BAG_MAX, GEAR_SLOTS, slotKind } from './gear.js';
 import { item, rollDrop, bossDrop, RARITY, itemDesc, WEAPONS, OUTFITS } from './items.js';
 import { expNeed, SKILL_LEVEL } from './entities.js';
 import { MAPS, BOSS_TYPES } from './maps.js';
@@ -58,6 +59,7 @@ class Game {
     // 직업별 레벨·경험치·착용 장비, 공용 가방
     this.progress = {};
     this.inv = new Set(['sw0', 'mg0', 'bw0', 'ot0']);
+    this.gear = [];    // 방어구·장신구 (무작위 옵션이 붙은 낱개). 착용 여부는 직업별 progress.eq
     this.drops = [];
     this.target = null;
     this.paused = false;
@@ -201,6 +203,11 @@ class Game {
     }
     document.getElementById('bag-btn').addEventListener('click', () => { if (this.state === 'play') this.toggleBag(); });
     document.getElementById('bag-close').addEventListener('click', () => this.toggleBag(false));
+    document.querySelectorAll('.bag-tabs button').forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); this.ui.tab(b.dataset.tab); }));
+    document.getElementById('salvage-low').addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.salvageGear(this.gear.filter((g) => g.tier <= 1).map((g) => g.uid));
+    });
     document.getElementById('evo-btn').addEventListener('click', () => { if (this.state === 'play') this.toggleSkills(); });
     document.getElementById('skills-close').addEventListener('click', () => this.toggleSkills(false));
     stage.addEventListener('wheel', (e) => { this.pixel.zoom(e.deltaY > 0 ? -1 : 1); this.saveT = Math.min(this.saveT, 2); }, { passive: true });
@@ -480,7 +487,7 @@ class Game {
 
   // 적이 떨어뜨린 장비: 빛기둥과 함께 바닥에서 빙글빙글, 가까이 가면 빨려와 획득
   spawnDrop(pos, id) {
-    const it = item(id);
+    const it = typeof id === 'object' ? id : item(id);
     const col = new THREE.Color(RARITY[it.tier].color);
     const g = new THREE.Group();
     const box = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.34, 0.34), new THREE.MeshBasicMaterial({ color: col }));
@@ -530,6 +537,7 @@ class Game {
   }
 
   pickup(id) {
+    if (typeof id === 'object') { this.pickupGear(id); return; }
     const it = item(id);
     const r = RARITY[it.tier];
     const p = this.player;
@@ -549,6 +557,97 @@ class Game {
       this.ui.newItem = true;
       this.ui.refreshBag();
     }
+    this.save(false);
+  }
+
+  // ---------- 방어구·장신구 ----------
+  pickupGear(g) {
+    const r = RARITY[g.tier];
+    const p = this.player;
+    this.audio.play('coin');
+    this.fx.spark(p.pos.x, p.y + 1, p.pos.z, 14, r.color, 4);
+    if (this.gear.filter((x) => !this.isEquipped(x)).length >= BAG_MAX) {
+      // 가방이 꽉 차면 바로 분해
+      const ex = salvageExp(g);
+      p.addExp(ex);
+      this.ui.toast(`가방이 가득 차서 ${g.name}을(를) 분해 → 경험치 +${ex}`, 2.4);
+      return;
+    }
+    this.gear.push(g);
+    const cur = this.gearInSlot(g.kind === 'ring' ? this.worseRingSlot() : g.kind);
+    const better = gearScore(g) > gearScore(cur);
+    this.ui.toast(`획득! [${r.name}] ${g.name}${better ? ' ▲ 지금 것보다 좋아요' : ''}`, 2.6);
+    if (g.tier >= 3) { this.audio.play('levelup'); this.fx.ring(p.pos, 2, r.color, 0.5); }
+    this.ui.newItem = true;
+    this.ui.refreshBag();
+    this.save(false);
+  }
+
+  eqOf(cls = this.player.cls) { const pr = this.progressOf(cls); return (pr.eq ||= {}); }
+
+  gearByUid(uid) { return this.gear.find((g) => g.uid === uid) || null; }
+
+  gearInSlot(slot, cls) { return this.gearByUid(this.eqOf(cls)[slot]); }
+
+  equippedGear(cls) { const eq = this.eqOf(cls); return GEAR_SLOTS.map((s) => this.gearByUid(eq[s])).filter(Boolean); }
+
+  isEquipped(g, cls = this.player.cls) { return Object.values(this.eqOf(cls)).includes(g.uid); }
+
+  // 반지는 빈 칸부터, 둘 다 차 있으면 점수가 낮은 쪽
+  worseRingSlot() {
+    const a = this.gearInSlot('ring1'), b = this.gearInSlot('ring2');
+    if (!a) return 'ring1';
+    if (!b) return 'ring2';
+    return gearScore(a) <= gearScore(b) ? 'ring1' : 'ring2';
+  }
+
+  equipGear(uid, slot) {
+    const g = this.gearByUid(uid);
+    if (!g) return;
+    const p = this.player;
+    const eq = this.eqOf();
+    if (this.isEquipped(g)) return;
+    // 다른 직업이 끼고 있던 것이면 그쪽에서 벗김
+    for (const c of CLASS_ORDER) if (c !== p.cls) { const e2 = this.eqOf(c); for (const k of Object.keys(e2)) if (e2[k] === uid) delete e2[k]; }
+    slot = slot || (g.kind === 'ring' ? this.worseRingSlot() : g.kind);
+    eq[slot] = uid;
+    this.afterGearChange(RARITY[g.tier].color);
+    this.audio.play('coin');
+  }
+
+  unequipGear(slot) {
+    const eq = this.eqOf();
+    if (!eq[slot]) return;
+    delete eq[slot];
+    this.afterGearChange('#a89e8a');
+  }
+
+  salvageGear(uids) {
+    let ex = 0, n = 0;
+    for (const uid of uids) {
+      const g = this.gearByUid(uid);
+      if (!g || this.isEquipped(g) || CLASS_ORDER.some((c) => this.isEquipped(g, c))) continue;
+      ex += salvageExp(g); n++;
+      this.gear.splice(this.gear.indexOf(g), 1);
+    }
+    if (!n) return;
+    this.player.addExp(ex);
+    this.audio.play('crit');
+    this.ui.toast(`${n}개 분해 → 경험치 +${ex}`, 2);
+    this.ui.refreshBag();
+    this.ui.setClass(this.player.cfg, this.player);
+    this.save(false);
+  }
+
+  afterGearChange(color) {
+    const p = this.player;
+    p.buildRig();
+    p.recalc();
+    const pos = V(p.pos.x, p.y, p.pos.z);
+    this.fx.ring(pos, 1.6, color, 0.4);
+    for (let i = 0; i < 20; i++) this.fx.add.emit({ x: pos.x + rand(-0.4, 0.4), y: pos.y + rand(0, 1.6), z: pos.z + rand(-0.4, 0.4), vy: rand(0.5, 2), life: rand(0.4, 0.8), size: 2, color: '#ffffff', color2: color });
+    this.ui.setClass(p.cfg, p);
+    this.ui.refreshBag();
     this.save(false);
   }
 
@@ -615,7 +714,7 @@ class Game {
   }
 
   // 단계에 따른 재사용 대기 배수 (플레이어가 스킬을 쓸 때)
-  skillCdMul(pl, slot) { return rankCd(this.rank(pl, slot)); }
+  skillCdMul(pl, slot) { return rankCd(this.rank(pl, slot)) * (1 - (pl.gear?.cdr || 0)); }
 
   equipItem(id) {
     const p = this.player;
@@ -647,6 +746,7 @@ class Game {
     if (d.night) { this.nightTarget = 1; this.night = 1; }
     if (d.progress) for (const k of Object.keys(CLASSES)) if (d.progress[k]) Object.assign(this.progressOf(k), d.progress[k]);
     if (Array.isArray(d.inv)) for (const id of d.inv) if (item(id)) this.inv.add(id);
+    if (Array.isArray(d.gear)) this.gear = d.gear.filter((g) => g && g.uid && g.stats);
     if (d.cleared) this.cleared = { ...d.cleared };
     else if (d.round > 0) this.cleared = { palace: true };
     // 퀘스트: 예전 기록은 평정한 지역으로 진행 단계를 짐작
@@ -690,6 +790,7 @@ class Game {
       quest: this.quest,
       cleared: this.cleared,
       inv: [...this.inv],
+      gear: this.gear,
       music: this.audio.musicOn,
       outline: this.pixel.compMat.uniforms.outline.value,
       zoom: this.pixel.userZoom,
@@ -704,7 +805,7 @@ class Game {
       if (code === 'Delete' || code === 'Backspace') {
         clearSave();
         this.kills = 0; this.round = 0; this.stage = 0; this.bestCombo = 0;
-        this.progress = {}; this.inv = new Set(['sw0', 'mg0', 'bw0', 'ot0']);
+        this.progress = {}; this.inv = new Set(['sw0', 'mg0', 'bw0', 'ot0']); this.gear = [];
         this.cleared = {};
         this.quest = { step: 0, prog: {}, lit: [], bounty: null };
         for (const f of this.flames) this.scene.remove(f);
@@ -1245,11 +1346,20 @@ class Game {
     if (perks?.has('rage') && pl.hp < pl.maxHp * 0.4) mul *= 1.35;
     const exec = perks?.has('execute') && e.hp < e.maxHp * 0.35;
     if (exec) mul *= 1.6;
+    // 장비 옵션: 치명타 확률·치명타 피해
+    const G = pl.gear || {};
+    if (!crit && G.crit && Math.random() < G.crit) { crit = true; mul *= 1.8; }
+    if (crit && G.critDmg) mul *= 1 + G.critDmg;
     dmg = Math.max(1, Math.round(dmg * mul));
     const dir = V(e.pos.x - pl.pos.x, 0, e.pos.z - pl.pos.z).normalize();
     if (!e.hit(dmg, dir, knock, stun)) return;
     const c = e.center().clone();
     if (perks?.size) this.weaponPerks(e, c, base, dmg, exec);
+    // 장비 옵션: 흡혈
+    if (G.ls && !pl.dead && pl.hp < pl.maxHp) {
+      pl.lsAcc = (pl.lsAcc || 0) + dmg * G.ls;
+      if (pl.lsAcc >= 1) { const h = Math.floor(pl.lsAcc); pl.lsAcc -= h; pl.hp = Math.min(pl.maxHp, pl.hp + h); }
+    }
     this.fx.spark(c.x, c.y, c.z, crit ? 18 : 10, crit ? '#fff07a' : '#ffffff', crit ? 8 : 6);
     this.fx.number(c.clone().add(V(0, 0.5 * (e.isBoss ? 2 : 1), 0)), dmg, crit ? 'crit' : 'normal');
     this.audio.play(crit ? 'crit' : 'hit');
@@ -2339,6 +2449,12 @@ class Game {
     // 보스는 전용 장비를 하나 더 떨어뜨림
     const bd = e.isBoss && bossDrop(e.type, this.player.cls, this.inv);
     if (bd) this.spawnDrop(e.pos, bd);
+    // 방어구·장신구: 일반 몬스터는 가끔, 보스는 두세 개 (등급이 높게)
+    const gearN = e.isBoss ? 2 + (Math.random() < 0.5 ? 1 : 0) : Math.random() < (e.field ? 0.16 : 0.12) ? 1 : 0;
+    for (let i = 0; i < gearN; i++) {
+      const strong = e.isBoss ? 0.6 : e.T.hp > 60 ? 0.12 : 0;
+      this.spawnDrop(e.pos, makeGear(Math.max(1, e.lvl || 1) + this.round, rollGearTier(strong, this.round)));
+    }
     const pl = this.player;
     if (pl.perks?.has('soul') && !pl.dead && pl.hp < pl.maxHp) {
       const h = Math.min(Math.ceil(pl.maxHp * 0.04), pl.maxHp - pl.hp);
@@ -2585,6 +2701,9 @@ class Game {
     shared.time.value += dt;
     this.simulate(dt, { mx: 0, mz: 0, moveLen: 0, mouseRecent: false, mouseWorld: null });
   }
+
+  // 테스트·디버그용: 장비 하나 만들기
+  testGear(kind, tier, lv = 5) { return makeGear(lv, tier, kind); }
 
   spawnEnemyAt(type, x, z) {
     const e = new Enemy(this, type, V(x, this.world.heightAt(x, z), z), 1 + this.round);

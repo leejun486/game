@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 import { makeDokkaebi, makeGuard, makeLady, makeMage, makeFox, makeJiangshi, makeGhost, makeReaper } from './character.js';
 import { CLASSES } from './classes.js';
-import { outfitLook } from './character.js';
+import { outfitLook, gearLook } from './character.js';
+import { sumStats, gearColor } from './gear.js';
 import { item, WEAPONS, perksOf } from './items.js';
 
 // 스킬 해금 레벨
@@ -70,7 +71,9 @@ export class Player {
     const w = item(pr.weapon), o = item(pr.outfit);
     const type = { sword: 'hero', mage: 'mage', elf: 'elf' }[this.cls];
     const old = this.rig;
-    this.rig = this.cfg.make({ wstyle: w?.style, ...outfitLook(type, o) });
+    const gl = {};
+    for (const g of this.game.equippedGear(this.cls)) if (g.kind !== 'ring') gl[g.kind] = gearColor(g);
+    this.rig = this.cfg.make({ wstyle: w?.style, ...outfitLook(type, o), ...gearLook(gl) });
     if (old) {
       this.game.scene.remove(old.root);
       this.rig.root.position.copy(old.root.position);
@@ -84,10 +87,13 @@ export class Player {
     const pr = this.game.progressOf(this.cls);
     const w = item(pr.weapon), o = item(pr.outfit);
     const ratio = this.maxHp ? this.hp / this.maxHp : 1;
-    this.maxHp = Math.round(this.cfg.hp + (this.level - 1) * 12 + (o?.hp || 0));
-    this.atkMul = (1 + (this.level - 1) * 0.08) * (1 + (w?.atk || 0));
-    this.def = o?.def || 0;
+    // 방어구·장신구 옵션 합계
+    const gs = (this.gear = sumStats(this.game.equippedGear(this.cls)));
+    this.maxHp = Math.round(this.cfg.hp + (this.level - 1) * 12 + (o?.hp || 0) + (gs.hp || 0));
+    this.atkMul = (1 + (this.level - 1) * 0.08) * (1 + (w?.atk || 0)) * (1 + (gs.atk || 0));
+    this.def = Math.min(0.7, 1 - (1 - (o?.def || 0)) * (1 - (gs.def || 0)));
     this.perks = perksOf(pr.weapon, pr.outfit);
+    for (const g of this.game.equippedGear(this.cls)) if (g.perk) this.perks.add(g.perk);
     this.dashMax = this.cfg.dashCd * (this.perks.has('swift') ? 0.7 : 1);
     this.hp = full ? this.maxHp : Math.max(1, Math.round(this.maxHp * ratio));
   }
@@ -104,7 +110,7 @@ export class Player {
   }
 
   addExp(n) {
-    this.exp += n;
+    this.exp += Math.round(n * (1 + (this.gear?.exp || 0)));
     let up = 0;
     while (this.exp >= expNeed(this.level)) { this.exp -= expNeed(this.level); this.level++; up++; }
     const pr = this.game.progressOf(this.cls);
@@ -336,7 +342,7 @@ export class Player {
         if (this.cls === 'elf' && Math.random() < 0.6) g.fx.norm.emit({ x: this.pos.x + rand(-0.3, 0.3), y: this.pos.y + rand(0.2, 0.9), z: this.pos.z + rand(-0.3, 0.3), vx: rand(-1, 1), vy: rand(0.5, 1.5), vz: rand(-1, 1), wob: 1.5, life: rand(0.5, 0.9), size: 2, color: Math.random() < 0.5 ? '#8ad06a' : '#c8e88a' });
       } else {
         const slow = this.attack ? (this.attack.kind === 5 ? 0.7 : this.attack.skill ? (this.cls === 'sword' ? 0.1 : 0.25) : this.cls === 'sword' ? 0.22 : 0.45) : 1;
-        const sp = 4.6 * slow * (this.perks?.has('swift') ? 1.15 : 1);
+        const sp = 4.6 * slow * (this.perks?.has('swift') ? 1.15 : 1) * (1 + (this.gear?.spd || 0));
         if (input.moveLen > 0.1) {
           mv = 1;
           const dx = input.mx * sp, dz = input.mz * sp;
@@ -405,6 +411,8 @@ export class Player {
 
     // 자연 회복
     if (!this.dead && g.time - this.lastCombat > 4 && this.hp < this.maxHp) this.hp = Math.min(this.maxHp, this.hp + dt * 6);
+    // 장비 옵션: 초당 체력 회복 (싸우는 중에도)
+    if (!this.dead && this.gear?.regen && this.hp < this.maxHp) this.hp = Math.min(this.maxHp, this.hp + dt * this.gear.regen);
 
     // 리그
     const r = this.rig;
@@ -473,6 +481,7 @@ export class Enemy {
   constructor(game, type, pos, level = 1, opts = {}) {
     this.game = game;
     this.type = type;
+    this.lvl = level;
     const T = (this.T = TYPES[type]);
     const lv = 1 + (level - 1) * 0.25;
     this.maxHp = Math.round(T.hp * lv);

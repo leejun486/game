@@ -162,7 +162,9 @@ export class Rig {
       if (cfg.cuff) g.add(mesh(new THREE.CylinderGeometry(0.08, 0.085, 0.05, 8), mat({ color: C(cfg.cuff) }), 0, -0.26, 0));
       const hand = new THREE.Group();
       hand.position.y = -0.31;
-      hand.add(mesh(new THREE.SphereGeometry(0.065 * (cfg.limb || 1), 6, 5), skin));
+      // 장갑을 끼면 손과 손목 토시가 장갑 색으로
+      hand.add(mesh(new THREE.SphereGeometry(0.065 * (cfg.limb || 1) * (cfg.gloves ? 1.12 : 1), 6, 5), cfg.gloves ? (this.gloveMat ||= mat({ color: C(cfg.gloves) })) : skin));
+      if (cfg.gloves) g.add(mesh(new THREE.CylinderGeometry(0.078, 0.082, 0.08, 8), this.gloveMat, 0, -0.25, 0));
       g.add(hand);
       g.userData.hand = hand;
       this.chest.add(g);
@@ -916,6 +918,15 @@ export function makeHero(o = {}) {
 }
 
 // 옷 팔레트를 직업별 리그 색 설정으로 바꿈
+// 방어구 → 리그 설정: 장갑 색, 각반(바지·신발) 색, 허리띠 색
+export function gearLook(eq) {
+  const c = {};
+  if (eq.gloves) c.gloves = eq.gloves;
+  if (eq.legs) { c.pants = eq.legs; c.shoes = '#1e1a1c'; }
+  if (eq.belt) c.belt = eq.belt;
+  return c;
+}
+
 // 옷 아이템 → 리그 설정 (색, 갑옷, 무늬, 장식)
 export function outfitLook(type, o) {
   if (!o || !o.pal) return {};

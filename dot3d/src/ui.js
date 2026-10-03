@@ -1,5 +1,6 @@
 import { item, itemDesc, drawItemIcon, RARITY, WEAPONS, OUTFITS } from './items.js';
 import { EVOS, branchOf, rankOf, freePoints, RANK_NAME, MAX_RANK } from './evolve.js';
+import { drawGearIcon, gearLines, gearScore, SLOT_NAME, STATS, BAG_MAX, salvageExp, GEAR_SLOTS } from './gear.js';
 import { expNeed, SKILL_LEVEL } from './entities.js';
 
 // HTML HUD: 체력, 스킬, 임무, 배너, 대화창, 보스 체력, 적 체력바, 상호작용 표시
@@ -177,18 +178,61 @@ export class UI {
     if (!g || !g.player || !document.getElementById('bag').classList.contains('show')) return;
     const p = g.player;
     const pr = g.progressOf(p.cls);
-    document.getElementById('bag-stats').innerHTML =
-      `${p.cfg.title} ${p.cfg.name} <b>Lv.${p.level}</b><br>경험치 <b>${Math.floor(p.exp)}</b> / ${expNeed(p.level)}<br>` +
-      `최대 체력 <b>${p.maxHp}</b><br>공격력 <b>×${p.atkMul.toFixed(2)}</b><br>받는 피해 <b>-${Math.round(p.def * 100)}%</b>`;
-    for (const [elId, id] of [['eq-weapon', pr.weapon], ['eq-outfit', pr.outfit]]) {
-      const el = document.getElementById(elId);
-      el.innerHTML = '';
-      const r = this.itemRow(id, 'on');
-      el.append(...r.childNodes);
+    const G = p.gear || {};
+    const pct = (v) => `${((v || 0) * 100).toFixed(1)}%`;
+    const st = [
+      ['레벨', `Lv.${p.level} (${Math.floor(p.exp)}/${expNeed(p.level)})`], ['최대 체력', p.maxHp], ['공격력', `×${p.atkMul.toFixed(2)}`],
+      ['받는 피해', `-${Math.round(p.def * 100)}%`], ['치명타 확률', `+${pct(G.crit)}`], ['치명타 피해', `+${Math.round((G.critDmg || 0) * 100)}%`],
+      ['이동 속도', `+${pct(G.spd)}`], ['스킬 재사용', `-${pct(G.cdr)}`], ['흡혈', pct(G.ls)], ['체력 회복', `+${(G.regen || 0).toFixed(1)}/초`], ['경험치', `+${Math.round((G.exp || 0) * 100)}%`],
+    ];
+    document.getElementById('bag-stats').innerHTML = `<div style="color:#ffd76a;margin-bottom:2px">${p.cfg.title} ${p.cfg.name}</div>` + st.map(([k, v]) => `<div class="st"><span>${k}</span><b>${v}</b></div>`).join('');
+    // 장비 칸 7개
+    const eqEl = document.getElementById('bag-eq');
+    eqEl.innerHTML = '';
+    const slotRow = (label, icon, name, color, onClick, sel) => {
+      const d = document.createElement('div');
+      d.className = 'eqs' + (sel ? ' sel' : '');
+      const cv = document.createElement('canvas'); cv.width = cv.height = 16;
+      if (icon) icon(cv);
+      d.append(cv);
+      d.insertAdjacentHTML('beforeend', `<span class="sl">${label}</span>` + (name ? `<span style="color:${color}">${name}</span>` : '<span class="empty">비어 있음</span>'));
+      if (onClick) d.addEventListener('click', (e) => { e.stopPropagation(); onClick(); });
+      eqEl.append(d);
+    };
+    for (const [slot, id] of [['무기', pr.weapon], ['갑옷', pr.outfit]]) {
+      const it = item(id);
+      slotRow(slot, (cv) => drawItemIcon(cv, id), it?.name, RARITY[it?.tier ?? 0].color, () => { this.tab('main'); });
     }
+    for (const slot of GEAR_SLOTS) {
+      const it = g.gearInSlot(slot);
+      slotRow(SLOT_NAME[slot], it ? (cv) => drawGearIcon(cv, it) : null, it?.name, it ? RARITY[it.tier].color : '', it ? () => { this.pick = it.uid; this.pickSlot = slot; this.tab('gear'); this.refreshBag(); } : null, it && this.pick === it.uid);
+    }
+    // 방어구·장신구 목록 (착용한 것 먼저, 등급 높은 순)
+    const free = g.gear.filter((x) => !CLASS_ORDER_EQ(g, x));
+    document.getElementById('gear-count').textContent = `${free.length}/${BAG_MAX}`;
+    const gl = document.getElementById('bag-gear');
+    gl.innerHTML = '';
+    const list = [...g.gear].sort((a, b) => (g.isEquipped(b) - g.isEquipped(a)) || b.tier - a.tier || gearScore(b) - gearScore(a));
+    for (const it of list) {
+      const row = document.createElement('div');
+      const worn = g.isEquipped(it);
+      const other = !worn && CLASS_ORDER_EQ(g, it);
+      row.className = 'it' + (worn ? ' worn' : '') + (this.pick === it.uid ? ' pick' : '');
+      const cv = document.createElement('canvas'); cv.width = cv.height = 16;
+      drawGearIcon(cv, it);
+      const cur = g.gearInSlot(it.kind === 'ring' ? g.worseRingSlot() : it.kind);
+      const better = !worn && gearScore(it) > gearScore(cur);
+      const txt = document.createElement('div');
+      txt.innerHTML = `<span style="color:${RARITY[it.tier].color}">${it.name}</span><small>${RARITY[it.tier].name} ${SLOT_NAME[it.kind]}${other ? ' · 다른 직업 착용' : ''}</small>`;
+      row.append(cv, txt);
+      if (better) row.insertAdjacentHTML('beforeend', '<span class="better">▲</span>');
+      row.addEventListener('click', (e) => { e.stopPropagation(); this.pick = it.uid; this.pickSlot = null; this.refreshBag(); });
+      gl.append(row);
+    }
+    this.gearDetail();
+    // 무기·갑옷 (예전 목록)
     const wl = document.getElementById('bag-weapons'), ol = document.getElementById('bag-outfits');
     wl.innerHTML = ''; ol.innerHTML = '';
-    // 내 직업 무기 먼저, 다른 직업 무기는 흐리게. 아직 없는 장비는 자리만 보여줌
     for (const cls of [p.cls, ...Object.keys(WEAPONS).filter((c) => c !== p.cls)]) {
       for (const w of WEAPONS[cls]) {
         if (!g.inv.has(w.id)) { if (cls === p.cls) wl.append(this.itemRow(w.id, 'locked-it')); continue; }
@@ -200,6 +244,47 @@ export class UI {
       if (!g.inv.has(o.id)) { ol.append(this.itemRow(o.id, 'locked-it')); continue; }
       ol.append(this.itemRow(o.id, pr.outfit === o.id ? 'on' : '', () => g.equipItem(o.id)));
     }
+  }
+
+  tab(name) {
+    document.querySelectorAll('.bag-tabs button').forEach((b) => b.classList.toggle('on', b.dataset.tab === name));
+    document.getElementById('tab-gear').classList.toggle('hidden', name !== 'gear');
+    document.getElementById('tab-main').classList.toggle('hidden', name !== 'main');
+    document.getElementById('gear-detail').classList.toggle('hidden', name !== 'gear');
+  }
+
+  // 고른 장비의 옵션과, 지금 그 칸에 낀 것과의 비교
+  gearDetail() {
+    const g = this.game;
+    const el = document.getElementById('gear-detail');
+    const it = this.pick && g.gearByUid(this.pick);
+    if (!it) { el.innerHTML = ''; return; }
+    const worn = g.isEquipped(it);
+    const slot = worn ? Object.entries(g.eqOf()).find(([, u]) => u === it.uid)[0] : it.kind === 'ring' ? g.worseRingSlot() : it.kind;
+    const cur = worn ? null : g.gearInSlot(slot);
+    const lines = (x) => gearLines(x).join('<br>');
+    let cmp = '';
+    if (cur) {
+      // 옵션별 차이 (새 것 - 지금 것)
+      const keys = new Set([...Object.keys(it.stats), ...Object.keys(cur.stats)]);
+      cmp = [...keys].map((k) => {
+        const d = (it.stats[k] || 0) - (cur.stats[k] || 0);
+        if (Math.abs(d) < 1e-6) return '';
+        const cls = d > 0 ? 'up' : 'down'; // 모든 옵션은 클수록 좋음
+        return `<span class="${cls}">${STATS[k].name} ${d > 0 ? '▲' : '▼'} ${STATS[k].fmt(Math.abs(d)).replace(/^[+-]/, '')}</span>`;
+      }).filter(Boolean).join('<br>');
+    }
+    el.innerHTML = `<div class="gd"><div class="gd-top"><canvas width="16" height="16"></canvas><div><div class="gd-name" style="color:${RARITY[it.tier].color}">${it.name}</div><small>${RARITY[it.tier].name} ${SLOT_NAME[it.kind]} · 아이템 레벨 ${it.lv}${worn ? ' · 착용 중' : ''}</small></div></div>` +
+      `<div class="cmp"><div>${lines(it)}</div>${cur ? `<div><small>지금 낀 ${cur.name}과 비교</small><br>${cmp || '<small>차이 없음</small>'}</div>` : ''}</div>` +
+      `<div class="btns">${worn ? '<button data-a="off" class="sub">벗기</button>' : `<button data-a="on">${cur ? '바꿔 끼기' : '착용'}</button>`}${worn ? '' : `<button data-a="salvage" class="sub">분해 (경험치 +${salvageExp(it)})</button>`}</div></div>`;
+    drawGearIcon(el.querySelector('canvas'), it);
+    el.querySelectorAll('button').forEach((b) => b.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const a = b.dataset.a;
+      if (a === 'on') g.equipGear(it.uid, it.kind === 'ring' ? slot : null);
+      else if (a === 'off') { g.unequipGear(slot); }
+      else if (a === 'salvage') { this.pick = null; g.salvageGear([it.uid]); }
+    }));
   }
 
   // 쿨타임 중에 누르면 칸이 붉게 흔들림
@@ -433,6 +518,9 @@ const PORTRAITS = {
     col: { h: '#e8e4c8', s: '#fbe2cc', e: '#2a6a4a', W: '#ffffff', p: '#f8a8b8', m: '#c86a60', g: '#5aa84e', l: '#bfe07a', f: '#ff9ac0', F: '#fff0a0' },
   },
 };
+
+// 어느 직업이든 끼고 있는지
+function CLASS_ORDER_EQ(g, x) { return ['sword', 'mage', 'elf'].some((c) => g.isEquipped(x, c)); }
 
 export function drawPortrait(cv, cls = 'sword') {
   if (!cv) return;

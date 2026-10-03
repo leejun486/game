@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 import { CLASSES } from './classes.js';
 import { item } from './items.js';
-import { outfitLook } from './character.js';
+import { outfitLook, gearLook } from './character.js';
+import { gearColor } from './gear.js';
 
 // 직업 선택 카드의 전신 미리보기.
 // 게임과 같은 리그(착용 장비 포함)를 작은 렌더 타깃에 그린 뒤 픽셀을 읽어
@@ -48,7 +49,9 @@ export class ClassPreview {
       if (c.rig) this.scene.remove(c.rig.root);
       const pr = this.game.progressOf(c.cls);
       const w = item(pr.weapon), o = item(pr.outfit);
-      c.rig = CLASSES[c.cls].make({ wstyle: w?.style, ...outfitLook(TYPE[c.cls], o) });
+      const gl = {};
+      for (const g of this.game.equippedGear(c.cls)) if (g.kind !== 'ring') gl[g.kind] = gearColor(g);
+      c.rig = CLASSES[c.cls].make({ wstyle: w?.style, ...outfitLook(TYPE[c.cls], o), ...gearLook(gl) });
       c.rig.root.visible = false;
       this.scene.add(c.rig.root);
     }
