@@ -21,6 +21,7 @@ import { PROLOGUE, SHARD_LINES, SHARD_MAX, ENDING, CREDITS, fillStory } from './
 import { clamp, lerp, rand, angleDiff, damp } from './util.js';
 import { initLang, watchDom, tr, LANG } from './i18n.js';
 import { Coach } from './coach.js';
+import { Records, newStats } from './records.js';
 import { drop } from './dispose.js';
 import { spearHit, lancerSkill1, lancerSkill2, lancerSkill3, updateLancer, clearLancer } from './lancer.js';
 
@@ -115,6 +116,8 @@ class Game {
     this.setupClassSelect();
     this.flags = {};    // 한 번만 보여 주는 것들 (튜토리얼·도움말)
     this.coach = new Coach(this);
+    this.stats = newStats(); // 누적 기록 (업적·도감)
+    this.records = new Records(this);
     this.applySave(loadSave());
     this.preview = new ClassPreview(this);
     this.ui.setClass(this.player.cfg);
@@ -600,6 +603,7 @@ class Game {
 
   pickup(id) {
     if (typeof id === 'object') { this.pickupGear(id); return; }
+    this.records.item(id);
     const it = item(id);
     const r = RARITY[it.tier];
     const p = this.player;
@@ -625,6 +629,7 @@ class Game {
   // ---------- 방어구·장신구 ----------
   pickupGear(g) {
     this.coach.tip('bag', 1.2);
+    this.records.gear(g);
     const r = rarityOf(g);
     const p = this.player;
     this.audio.play('coin');
@@ -923,6 +928,8 @@ class Game {
     if (this.quest.step > 0 || this.round > 0) this.quest.prologue = true;
     this.playTime = d.playTime || 0;
     this.flags = d.flags || {};
+    this.stats = { ...newStats(), ...(d.stats || {}) };
+    this.stats.kills = Math.max(this.stats.kills, this.kills); // 기록이 생기기 전 퇴치 수
     if (!d.flags && (this.quest.step > 0 || this.round > 0)) this.flags.tut = 1; // 이미 해 본 사람은 튜토리얼 생략
     this.quest.lit.forEach((i) => this.world.lanterns[i] && this.addFlame(this.world.lanterns[i]));
     this.updateGates(true);
@@ -967,6 +974,7 @@ class Game {
       towerBest: this.towerBest || 0,
       playTime: Math.round(this.playTime || 0),
       flags: this.flags,
+      stats: this.stats,
       inv: [...this.inv],
       gear: this.gear,
       music: this.audio.musicOn,
@@ -1055,6 +1063,7 @@ class Game {
       case 'Tab': this.updateTarget(true); break;
       case 'KeyB': this.toggleBag(); break;
       case 'KeyT': case 'skills': this.toggleSkills(); break;
+      case 'KeyY': case 'records': this.togglePause(true); this.pausePane('records'); break;
       case 'KeyF': case 'auto': this.toggleAutoMove(); break;
       case 'Escape': case 'KeyP': case 'pause': this.togglePause(true); break;
       case 'KeyH': case 'hunt': this.setAutoHunt(!this.autoHunt); break;
@@ -1082,7 +1091,7 @@ class Game {
   // 기록을 모두 지우고 처음 상태로 (선택 화면에서)
   resetProgress() {
     clearSave();
-    this.kills = 0; this.round = 0; this.stage = 0; this.bestCombo = 0; this.playTime = 0; this.flags = {};
+    this.kills = 0; this.round = 0; this.stage = 0; this.bestCombo = 0; this.playTime = 0; this.flags = {}; this.stats = newStats();
     this.progress = {}; this.inv = new Set(['sw0', 'mg0', 'bw0', 'sp0', 'ot0']); this.gear = [];
     this.cleared = {};
     this.quest = { step: 0, prog: {}, lit: [], bounty: null, shards: [], prologue: false, ended: false };
@@ -1253,6 +1262,8 @@ class Game {
         if (k === 'outline') { this.pixel.compMat.uniforms.outline.value = +v; this.save(false); }
         this.pausePane('screen');
       });
+    } else if (tab === 'records') {
+      this.records.render(el);
     } else if (tab === 'keys') {
       el.innerHTML = `<h3>조작 · 키 바꾸기</h3>${ACTIONS.map(([a, n]) => `<div class="pz-row"><label>${n}</label><button class="pz-key${this.rebind === a ? ' wait' : ''}" data-a="${a}">${this.rebind === a ? '키를 누르세요…' : keyName(keyOf(S, a))}</button></div>`).join('')}
         <div class="pz-row"><button class="pz-btn" id="pz-keyreset">기본 키로 되돌리기</button></div>
@@ -1838,6 +1849,7 @@ class Game {
         this.quest.bounty = null;
         this.giveReward({ exp: 150 + this.round * 30, item: rollDrop('boss', this.round, this.player.cls) });
         this.ui.banner('현상수배 완료', BOUNTIES[B.i].title, 2.2, 'win-banner');
+        this.records.bounty();
         this.updateQuest(); this.save(false);
       });
     } else if (B) {
@@ -2115,6 +2127,7 @@ class Game {
   perfectDodge(from) {
     if (this.time - (this.lastDodge || -9) < 1.2) return;
     this.lastDodge = this.time;
+    this.records.perfect();
     const p = this.player;
     this.slowmoT = 0.9;
     this.counterT = this.time + 2.5;
@@ -2432,7 +2445,9 @@ class Game {
       if (this.time - (e.clankT || 0) > 0.25) { e.clankT = this.time; this.audio.play('block'); const cc = e.center(); this.fx.spark(cc.x, cc.y, cc.z, 8, '#ffe0a0', 5); }
     }
     const dir = V(e.pos.x - pl.pos.x, 0, e.pos.z - pl.pos.z).normalize();
+    const hpBefore = e.hp;
     if (!e.hit(dmg, dir, knock, stun)) return;
+    this.records.hit(Math.min(dmg, Math.max(0, hpBefore))); // 실제로 깎인 체력 (즉사 효과의 큰 수치는 빼고)
     const c = e.center().clone();
     if (perks?.size) this.weaponPerks(e, c, base, dmg, exec);
     // 장비 옵션: 흡혈
@@ -3769,6 +3784,7 @@ class Game {
 
   onEnemyKilled(e) {
     this.kills++;
+    this.records.kill(e);
     const exp = Math.round(e.T.exp * (1 + this.round * 0.25) * (e.elite ? 3 : 1) * (this.tower?.active ? 1 + this.tower.floor * 0.06 : 1));
     this.player.addExp(exp);
     this.fx.number(V(e.pos.x, e.y + (e.isBoss ? 4 : 2.2), e.pos.z), `+${exp} EXP`, 'exp');
@@ -3845,6 +3861,7 @@ class Game {
 
   onPlayerDeath() {
     this.state = 'dead';
+    this.records.death();
     if (this.autoMove) this.stopAutoMove();
     setTimeout(() => document.getElementById('gameover').classList.add('show'), 900);
   }
@@ -4097,6 +4114,7 @@ class Game {
     // 15초마다 자동 저장
     if (this.state === 'play') { this.saveT -= dt; if (this.saveT <= 0) this.save(); if (!this.paused) this.playTime = (this.playTime || 0) + dt; }
     this.coach.update(dt);
+    this.records.update(dt);
 
     // 히트스톱: 월드 시간 멈춤
     let wdt = dt;

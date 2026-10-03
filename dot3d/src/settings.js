@@ -12,6 +12,7 @@ export const ACTIONS = [
   ['act', '대화·조사', 'KeyE'],
   ['bag', '가방', 'KeyB'],
   ['skills', '기술 수련', 'KeyT'],
+  ['records', '기록', 'KeyY'],
   ['auto', '자동 이동', 'KeyF'],
   ['hunt', '자동 사냥', 'KeyH'],
 ];
