@@ -3,11 +3,14 @@ import { CLASSES } from './classes.js';
 import { item } from './items.js';
 import { outfitLook, gearLook } from './character.js';
 import { gearColor } from './gear.js';
+import { GFX } from './gfx.js';
 
 // 직업 선택 카드의 전신 미리보기.
 // 게임과 같은 리그(착용 장비 포함)를 작은 렌더 타깃에 그린 뒤 픽셀을 읽어
 // 카드의 2D 캔버스에 외곽선을 둘러 찍음. WebGL 컨텍스트를 하나 더 만들지 않음.
-const W = 48, H = 72;
+// 고화질 모드에서는 카드도 크게, 오른쪽 큰 그림은 따로 고해상도(MSAA)로 그림
+const W = GFX.hd ? 96 : 48, H = GFX.hd ? 144 : 72;
+const BW = 336, BH = 504;
 const TYPE = { sword: 'hero', mage: 'mage', elf: 'elf' };
 
 // 선형 → sRGB (렌더 타깃은 선형 색으로 남음)
@@ -21,8 +24,15 @@ export class ClassPreview {
   constructor(game) {
     this.game = game;
     this.renderer = game.pixel.renderer;
-    this.target = new THREE.WebGLRenderTarget(W, H, { magFilter: THREE.NearestFilter, minFilter: THREE.NearestFilter });
+    const filt = GFX.hd ? THREE.LinearFilter : THREE.NearestFilter;
+    this.target = new THREE.WebGLRenderTarget(W, H, { magFilter: filt, minFilter: filt, samples: GFX.hd ? 4 : 0 });
     this.buf = new Uint8Array(W * H * 4);
+    if (GFX.hd) {
+      this.bigTarget = new THREE.WebGLRenderTarget(BW, BH, { samples: 4 });
+      this.bigBuf = new Uint8Array(BW * BH * 4);
+      const big = document.getElementById('cls-big');
+      if (big) { big.width = BW; big.height = BH; big.classList.add('hd'); this.bigCtx = big.getContext('2d'); this.bigImg = this.bigCtx.createImageData(BW, BH); }
+    }
     this.scene = new THREE.Scene();
     // 카드는 정면에서 살짝 내려다보는 정사영
     const cam = (this.camera = new THREE.OrthographicCamera(-0.78, 0.78, 1.17, -1.17, 0.1, 20));
@@ -38,6 +48,7 @@ export class ClassPreview {
       const cv = el.querySelector('canvas');
       cv.width = W; cv.height = H;
       cv.classList.add('full');
+      if (GFX.hd) cv.classList.add('hd');
       return { el, cls: el.dataset.cls, ctx: cv.getContext('2d'), img: cv.getContext('2d').createImageData(W, H), rig: null, yaw: 0.5, t: Math.random() * 5 };
     });
     this.rebuild();
@@ -79,17 +90,43 @@ export class ClassPreview {
       r.clear();
       r.render(this.scene, this.camera);
       r.readRenderTargetPixels(this.target, 0, 0, W, H, this.buf);
+      // 고른 캐릭터는 오른쪽 큰 그림에도 (고화질은 큰 타깃에 다시 그림)
+      if (sel && this.bigTarget && this.bigCtx) {
+        r.setRenderTarget(this.bigTarget);
+        r.clear();
+        r.render(this.scene, this.camera);
+        r.readRenderTargetPixels(this.bigTarget, 0, 0, BW, BH, this.bigBuf);
+        this.copySmooth(this.bigBuf, this.bigImg, BW, BH);
+        this.bigCtx.putImageData(this.bigImg, 0, 0);
+      }
       rig.root.visible = false;
       this.blit(c, sel);
-      // 고른 캐릭터는 오른쪽 큰 그림에도
-      if (sel) { this.bigCtx ||= document.getElementById('cls-big')?.getContext('2d'); this.bigCtx?.putImageData(c.img, 0, 0); }
+      if (sel && !this.bigTarget) { this.bigCtx ||= document.getElementById('cls-big')?.getContext('2d'); this.bigCtx?.putImageData(c.img, 0, 0); }
     }
     r.setRenderTarget(prevTarget);
     r.setClearColor(prevClear, prevAlpha);
   }
 
+  // 고화질: 위아래 뒤집고 sRGB로, 반투명 가장자리는 알파를 되돌려 부드럽게
+  copySmooth(src, img, w, h) {
+    const d = img.data;
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const o = (y * w + x) * 4, s = ((h - 1 - y) * w + x) * 4;
+        const a = src[s + 3];
+        if (!a) { d[o + 3] = 0; continue; }
+        const k = 255 / a;
+        d[o] = SRGB[Math.min(255, Math.round(src[s] * k))];
+        d[o + 1] = SRGB[Math.min(255, Math.round(src[s + 1] * k))];
+        d[o + 2] = SRGB[Math.min(255, Math.round(src[s + 2] * k))];
+        d[o + 3] = a;
+      }
+    }
+  }
+
   // 위아래 뒤집어 복사 + 1픽셀 외곽선
   blit(c, sel) {
+    if (GFX.hd) { this.copySmooth(this.buf, c.img, W, H); c.ctx.putImageData(c.img, 0, 0); return; }
     const src = this.buf, d = c.img.data;
     const a = (x, y) => (x < 0 || y < 0 || x >= W || y >= H ? 0 : src[((H - 1 - y) * W + x) * 4 + 3]);
     const line = sel ? [26, 18, 10] : [10, 8, 16];

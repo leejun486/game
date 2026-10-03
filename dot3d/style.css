@@ -427,3 +427,5 @@ body.touch #gameover .s b::after { content: ' / 화면 탭'; }
 #hunt-btn.on::after { content: ' 켜짐'; font-size: 10px; }
 @media (max-width: 600px) { #hunt-btn { top: 134px; left: auto; right: 8px; } }
 @media (max-height: 520px) { #hunt-btn { top: 64px; left: 148px; padding: 4px 8px; font-size: 11px; } }
+/* 고화질 모드: 선택창 캐릭터를 부드럽게 */
+.cls canvas.hd, #title .cls canvas.hd, #cls-big.hd { image-rendering: auto; }
