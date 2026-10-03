@@ -1089,7 +1089,8 @@ export function makeReaper() {
 // 네 발 짐승 (여우 / 구미호)
 export class QuadRig {
   constructor(variant = 'fox') {
-    const boss = variant === 'gumiho';
+    // clone: 구미호가 2단계에서 만드는 반투명 분신
+    const boss = variant === 'gumiho' || variant === 'clone';
     const pal = boss
       ? { fur: '#f4ecdc', belly: '#ffffff', tip: '#7fd8ff', dark: '#3a3040', mark: '#c8302c' }
       : { fur: '#d8742a', belly: '#f6eedc', tip: '#ffffff', dark: '#3a2a20', mark: '#2a1a14' };
@@ -1099,7 +1100,7 @@ export class QuadRig {
     const tipM = boss ? toon({ color: C(pal.tip), emissive: C('#2a7aff') }) : mat({ color: C(pal.tip) });
     this.root = new THREE.Group();
     this.body = new THREE.Group();
-    this.body.scale.setScalar(boss ? 2.1 : 1.1);
+    this.body.scale.setScalar(variant === 'clone' ? 1.35 : boss ? 2.1 : 1.1);
     this.root.add(this.body);
     this.torso = new THREE.Group();
     this.torso.position.y = 0.42;
@@ -1153,6 +1154,7 @@ export class QuadRig {
       this.legs.push(g);
     }
     this.root.traverse((o) => { if (o.isMesh) o.castShadow = true; });
+    if (variant === 'clone') this.root.traverse((o) => { if (o.isMesh) { o.material = o.material.clone(); o.material.transparent = true; o.material.opacity = 0.55; o.castShadow = false; } });
     this.phase = 0;
     this.idleT = Math.random() * 10;
     this.deadT = 0;

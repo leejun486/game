@@ -23,6 +23,17 @@ const V = (x, y, z) => new THREE.Vector3(x, y, z);
 // 시련탑 안에서 저장하면 협곡(저승 문 앞)에서 이어지게
 function _noTower(g) { return g.tower?.active ? { mapId: 'canyon' } : {}; }
 
+// 보스 등장 연출의 별칭 / 단계 전환 대사
+const BOSS_EPITHET = { boss: '도깨비들의 왕', gumiho: '천 년을 산 여우', reaper: '명부를 든 저승의 사자', imugi: '용이 되지 못한 뱀', bulgasari: '쇠를 먹고 자라는 괴물', yeomra: '저승을 다스리는 왕' };
+const BOSS_PHASE_LINE = {
+  boss: ['"금 나와라, 뚝딱! 금덩이 맛 좀 봐라!"', '"이놈! 혼쭐을 내주마!" — 쉬지 않고 뛰어내린다'],
+  gumiho: ['"내 아이들아, 나와라" — 분신이 나타났다', '아홉 꼬리에서 여우불이 사방으로 쏟아진다'],
+  reaper: ['명부에 이름이 적히면 낙인이 따라붙는다', '사방이 어둠에 잠긴다…'],
+  imugi: ['늪 곳곳에서 물기둥이 솟는다', '"용이 되지 못할 바엔!" — 꼬리를 휘두른다'],
+  bulgasari: ['쇠바늘이 달아올라 지나간 자리가 불탄다', '세 번 연달아 들이받는다!'],
+  yeomra: ['"판관들아, 나와라" — 판결이 다섯 번 내려친다', '지옥의 불이 사방으로 터져 나간다'],
+};
+
 class Game {
   constructor() {
     this.pixel = new PixelRenderer(document.getElementById('stage'));
@@ -1472,6 +1483,173 @@ class Game {
     }
   }
 
+  // ---------- 보스 연출 · 단계 ----------
+  // 등장 연출: 화면 위아래 검은 띠, 카메라가 보스를 비추고 이름이 크게 뜸. 다른 적·투사체는 멈춤
+  bossIntro(e) {
+    if (this.cine) return;
+    this.seenBoss = this.seenBoss || {};
+    const first = !this.seenBoss[e.type];
+    this.seenBoss[e.type] = true;
+    const dur = first ? 2.8 : 1.7;
+    this.cine = { e, t: 0, dur };
+    e.introRoar = true;
+    for (const q of this.spawnQueue) q.at += dur;
+    if (this.autoMove) this.stopAutoMove();
+    const el = document.getElementById('cine');
+    el.querySelector('.cine-sub').textContent = BOSS_EPITHET[e.type] || '';
+    el.querySelector('.cine-name').textContent = e.T.name;
+    el.className = 'show' + (first ? ' first' : '');
+    document.getElementById('app').classList.add('cine-on');
+    this.audio.play('gong');
+  }
+
+  updateCine(dt) {
+    const C = this.cine;
+    C.t += dt;
+    this.player.invuln = Math.max(this.player.invuln, 0.4);
+    if (C.t >= C.dur || C.e.dead) {
+      this.cine = null;
+      document.getElementById('cine').className = '';
+      document.getElementById('app').classList.remove('cine-on');
+    }
+  }
+
+  // 단계 전환: 포효하며 무적, 플레이어를 밀쳐내고 새 기술을 꺼냄
+  bossPhase(e, n) {
+    e.clearTele();
+    e.state = 'roar'; e.st = 0; e.jumpY = 0; e.root.visible = true; e.root.scale.setScalar(1);
+    const p = this.player;
+    const at = V(e.pos.x, e.y, e.pos.z);
+    this.audio.play(e.T.pal.fire[0] === '#9ff0ff' ? 'laugh' : e.T.boss === 'gumiho' ? 'howl' : 'wail');
+    this.audio.play('gong');
+    this.shake(0.9);
+    this.ui.flash(n === 3 ? '#ff3a3a' : '#ffffff', 0.5);
+    this.hitstop = Math.max(this.hitstop, 0.15);
+    for (let r = 0; r < 3; r++) this.fx.ring(at, 3 + r * 2.2, n === 3 ? '#ff6a5a' : e.T.pal.fire[0], 0.4 + r * 0.15);
+    const dx = p.pos.x - at.x, dz = p.pos.z - at.z, d = Math.hypot(dx, dz) || 1;
+    if (d < 7) p.vel.add(V((dx / d) * 14, 0, (dz / d) * 14));
+    const line = (BOSS_PHASE_LINE[e.type] || [])[n - 2];
+    this.ui.banner(`${n}단계`, line || '', 2.2, 'boss-banner');
+    this.ui.setBoss(e, true);
+    // 단계마다 붙는 것들
+    if (e.type === 'gumiho' && n === 2) {
+      for (const s of [-1, 1]) {
+        const x = e.pos.x + s * 3.5, z = e.pos.z;
+        const pos = this.world.randomWalkable(x, z, 0, 2) || V(e.pos.x, e.y, e.pos.z);
+        this.enemies.push(new Enemy(this, 'foxclone', pos, e.lvl));
+      }
+      this.ui.toast('구미호가 분신을 만들었다! 분신은 금방 쓰러진다', 2.4);
+    }
+    if (e.type === 'yeomra' && n === 2) for (let i = 0; i < 2; i++) this.spawnQueue.push({ type: i ? 'ghost' : 'jiangshi', elite: true, at: this.time + 1 + i * 0.4 });
+    if (e.type === 'reaper' && n === 3) this.ui.toast('사방이 어두워진다… 저승사자의 영역이다', 2.4);
+  }
+
+  // 화면 어둠 (저승사자 3단계) / 붉은 테 (염라대왕 3단계): 플레이어 주변만 밝게
+  updateDarkness() {
+    const el = this.darkEl || (this.darkEl = document.getElementById('darkness'));
+    let mode = null;
+    for (const e of this.enemies) if (!e.dead && e.phase === 3) { if (e.type === 'reaper') mode = 'dark'; else if (e.type === 'yeomra' && !mode) mode = 'red'; }
+    if (!mode || this.state === 'title') { if (el.className) el.className = ''; return; }
+    const sp = this.pixel.project(V(this.player.pos.x, this.player.y + 0.8, this.player.pos.z));
+    const c = mode === 'dark' ? 'rgba(4, 2, 10, 0.88)' : 'rgba(80, 0, 10, 0.55)';
+    el.className = 'on';
+    el.style.background = `radial-gradient(circle at ${sp.x.toFixed(0)}px ${sp.y.toFixed(0)}px, transparent ${mode === 'dark' ? 150 : 260}px, ${c} ${mode === 'dark' ? 330 : 560}px)`;
+  }
+
+  // 위험 지대: 예고 원을 보여 준 뒤 터짐 (여러 보스가 함께 씀)
+  hazards(spots, { r = 1.4, delay = 1.0, color = '#ff6a2a', dmg = 20, step = 0.08, onHit, boom } = {}) {
+    const p = this.player;
+    spots.forEach((at, i) => {
+      this.fx.circle(at, r, color, delay + i * step, 3);
+      this.after(delay + i * step, () => {
+        boom ? boom(at) : (this.fx.spark(at.x, at.y + 0.3, at.z, 14, color, 6), this.fx.ring(at, r, color, 0.3));
+        this.audio.play('impact');
+        if (!p.dead && Math.hypot(p.pos.x - at.x, p.pos.z - at.z) < r + p.radius && p.damage(dmg, at) && onHit) onHit();
+      });
+    });
+  }
+
+  aroundPlayer(n, rMin, rMax, includeSelf = true) {
+    const p = this.player, out = includeSelf ? [V(p.pos.x, p.y, p.pos.z)] : [];
+    while (out.length < n) {
+      const a = Math.random() * Math.PI * 2, d = rand(rMin, rMax);
+      const x = p.pos.x + Math.cos(a) * d, z = p.pos.z + Math.sin(a) * d;
+      out.push(V(x, this.world.heightAt(x, z), z));
+    }
+    return out;
+  }
+
+  // 두억시니: "금 나와라 뚝딱!" 금덩이가 쏟아져 터짐
+  goldRain(w) {
+    this.hazards(this.aroundPlayer(w.phase === 3 ? 9 : 6, 1.5, 5), {
+      r: 1.5, delay: 1.0, color: '#ffd040', dmg: Math.round(w.dmg * 0.7),
+      boom: (at) => { this.fx.coins(at.x, at.y + 0.5, at.z, 10); this.fx.colorFire(at.x, at.y + 0.2, at.z, 20, 0.6, '#fff0a0', '#ffa000'); this.fx.ring(at, 1.6, '#ffe080', 0.3); },
+    });
+  }
+
+  // 사방으로 퍼지는 구슬 고리
+  orbRing(w, n, rot = 0) {
+    for (let i = 0; i < n; i++) this.spawnOrb(w, rot + (i / n) * Math.PI * 2);
+  }
+
+  // 이무기 2단계: 주위에서 물기둥이 솟음 (맞으면 느려짐)
+  geysers(w) {
+    const p = this.player;
+    this.hazards(this.aroundPlayer(5, 2, 6), {
+      r: 1.3, delay: 1.1, color: '#2affd0', dmg: Math.round(w.dmg * 0.6), step: 0.12, onHit: () => p.slowFor(1.4, '물기둥에 휩쓸렸다!'),
+      boom: (at) => { for (let k = 0; k < 30; k++) this.fx.add.emit({ x: at.x + rand(-0.5, 0.5), y: at.y + 0.2, z: at.z + rand(-0.5, 0.5), vx: rand(-0.6, 0.6), vy: rand(6, 11), vz: rand(-0.6, 0.6), g: 14, life: 0.8, size: rand(3, 5), endSize: 1, color: '#e8fff8', color2: '#2a9aaa' }); },
+    });
+  }
+
+  // 저승사자 2단계: 명부 낙인이 플레이어를 쫓아 네 번 찍힘
+  markChase(w) {
+    const p = this.player;
+    for (let i = 0; i < 4; i++) this.after(0.3 + i * 0.45, () => {
+      if (w.dead) return;
+      this.hazards([V(p.pos.x, p.y, p.pos.z)], { r: 1.6, delay: 0.75, color: '#c84aff', dmg: Math.round(w.dmg * 0.6),
+        boom: (at) => { this.fx.cross(V(at.x, at.y + 1, at.z), '#c890ff', 3, 0.35); this.fx.colorFire(at.x, at.y + 0.2, at.z, 18, 0.5, '#e0c8ff', '#4a0a8a'); } });
+    });
+  }
+
+  // 불타는 땅 (불가사리 2단계 돌진 자국): 밟으면 불이 붙음
+  addBurnZone(x, z, r, t) {
+    this.burnZones = this.burnZones || [];
+    if (this.burnZones.length > 40) this.burnZones.shift();
+    this.burnZones.push({ x, z, r, t });
+    this.fx.scorch(V(x, this.world.heightAt(x, z), z), r, '#2a0a04', t);
+  }
+
+  updateBurnZones(dt) {
+    if (!this.burnZones?.length) return;
+    const p = this.player;
+    for (const b of this.burnZones) {
+      b.t -= dt;
+      if (Math.random() < dt * 6) this.fx.add.emit({ x: b.x + rand(-b.r, b.r) * 0.7, y: 0.1, z: b.z + rand(-b.r, b.r) * 0.7, vy: rand(1, 2), life: 0.5, size: 3, endSize: 1, color: '#ffc060', color2: '#ff2a00' });
+      if (!p.dead && p.dashT <= 0 && Math.hypot(p.pos.x - b.x, p.pos.z - b.z) < b.r) p.burnFor(1.5);
+    }
+    this.burnZones = this.burnZones.filter((b) => b.t > 0);
+  }
+
+  // 완벽한 회피: 시간이 느려지고, 쿨타임이 줄고, 다음 한 방이 반격(확정 치명타)
+  perfectDodge(from) {
+    if (this.time - (this.lastDodge || -9) < 1.2) return;
+    this.lastDodge = this.time;
+    const p = this.player;
+    this.slowmoT = 0.9;
+    this.counterT = this.time + 2.5;
+    p.dashCd = 0;
+    p.skillCd = Math.max(0, p.skillCd - 1.5);
+    p.cd2 = Math.max(0, (p.cd2 || 0) - 1.5);
+    p.cd3 = Math.max(0, (p.cd3 || 0) - 1.5);
+    p.ultCd = Math.max(0, (p.ultCd || 0) - 3);
+    this.fx.ghost(p.rig, '#9ff0ff', 0.5);
+    this.fx.ring(V(p.pos.x, p.y, p.pos.z), 2.4, '#bff4ff', 0.4);
+    this.fx.number(p.pos.clone().add(V(0, 2.2, 0)), '완벽한 회피!', 'alert');
+    this.ui.flash('#8ad8ff', 0.3);
+    this.audio.play('blink');
+    this.audio.play('skillhit');
+  }
+
   // ---------- 저승 시련탑 (엔드게임) ----------
   // 층마다 섞인 적 무리, 5층마다 지역 보스, 10층마다 염라대왕. 5층 단위로 이어서 도전
   towerUnlocked() { return !!this.cleared.canyon; }
@@ -1601,10 +1779,10 @@ class Game {
     this.save(false);
   }
 
-  // 염라대왕의 판결: 플레이어 자리에 붉은 벼락이 세 번 연달아 떨어짐
-  verdict(w) {
+  // 염라대왕의 판결: 플레이어 자리에 붉은 벼락이 연달아 떨어짐 (2단계부터 다섯 번)
+  verdict(w, n = 3) {
     const p = this.player;
-    for (let i = 0; i < 3; i++) this.after(i * 0.55, () => {
+    for (let i = 0; i < n; i++) this.after(i * (n > 3 ? 0.42 : 0.55), () => {
       if (w.dead) return;
       const at = V(p.pos.x + p.vel.x * 0.25, p.y, p.pos.z + p.vel.z * 0.25);
       this.fx.circle(at, 2.2, '#ff3a4a', 0.9, 3);
@@ -1683,7 +1861,7 @@ class Game {
     // 시련탑은 층수가 곧 강함 (회차와 무관)
     const lv = this.tower?.active ? 1 + this.tower.floor + Math.floor((this.player.level - 1) / 3) : 1 + this.round + this.map.lvl + Math.floor((this.player.level - 1) / 3);
     const e = new Enemy(this, type, pos, lv, { elite: opt.elite });
-    if (isBoss) { e.name = this.tower?.active ? `${e.T.name} · ${this.tower.floor}층` : this.round > 0 ? `${e.T.name} +${this.round}` : e.T.name; this.ui.setBoss(e); this.shake(0.5); }
+    if (isBoss) { e.name = this.tower?.active ? `${e.T.name} · ${this.tower.floor}층` : this.round > 0 ? `${e.T.name} +${this.round}` : e.T.name; this.ui.setBoss(e); this.shake(0.5); this.bossIntro(e); }
     this.enemies.push(e);
   }
 
@@ -1755,6 +1933,8 @@ class Game {
     if (exec) mul *= 1.6;
     // 장비 옵션: 치명타 확률·치명타 피해
     const G = pl.gear || {};
+    // 완벽한 회피 뒤 반격: 다음 한 방은 반드시 치명타 + 40%
+    if (this.counterT > this.time) { this.counterT = 0; if (!crit) { crit = true; mul *= 1.8; } mul *= 1.4; this.fx.number(e.center().clone().add(V(0, 1.2, 0)), '반격!', 'alert'); }
     if (!crit && G.crit && Math.random() < G.crit) { crit = true; mul *= 1.8; }
     if (crit && G.critDmg) mul *= 1 + G.critDmg;
     dmg = Math.max(1, Math.round(dmg * mul));
@@ -3199,8 +3379,10 @@ class Game {
   updateProjectiles(dt) {
     for (let i = this.projectiles.length - 1; i >= 0; i--) {
       const pr = this.projectiles[i];
-      pr.life -= dt;
-      pr.pos.addScaledVector(pr.dir, pr.speed * dt);
+      // 완벽한 회피의 느린 시간·등장 연출 중엔 적 투사체도 느려짐
+      const pdt = pr.owner === 'enemy' ? (this.cine ? 0 : this.slowmoT > 0 ? dt * 0.25 : dt) : dt;
+      pr.life -= pdt;
+      pr.pos.addScaledVector(pr.dir, pr.speed * pdt);
       if (pr.kind === 'orb') {
         pr.mesh.position.copy(pr.pos);
         const P = pr.pal || { orb: '#d8fbff', trail: '#8ff0ff', trail2: '#1a40ff' };
@@ -3258,7 +3440,7 @@ class Game {
         }
       } else if (pr.owner === 'enemy') {
         const p = this.player;
-        if (Math.hypot(p.pos.x - pr.pos.x, p.pos.z - pr.pos.z) < pr.radius + p.radius * 0.5 && p.dashT <= 0) {
+        if (Math.hypot(p.pos.x - pr.pos.x, p.pos.z - pr.pos.z) < pr.radius + p.radius * 0.5) {
           if (p.damage(pr.dmg, pr.pos)) { pr.life = 0; if (pr.slow) p.slowFor(pr.slow, '독에 중독되어 몸이 무겁다!'); }
         }
       }
@@ -3346,10 +3528,13 @@ class Game {
       this.world.updateFlow(pp.x, pp.z, 0);
       if (this.enemies.some((e) => e.isBoss && !e.dead)) this.world.updateFlow(pp.x, pp.z, 1);
     }
+    const ek = this.slowmoT > 0 ? 0.25 : 1;
     for (let i = this.enemies.length - 1; i >= 0; i--) {
       const e = this.enemies[i];
-      if (!e.update(wdt)) { e.dispose(); this.enemies.splice(i, 1); }
+      const edt = this.cine && e !== this.cine.e ? 0 : wdt * ek;
+      if (!e.update(edt)) { e.dispose(); this.enemies.splice(i, 1); }
     }
+    this.updateBurnZones(wdt);
     this.separate();
     this.updateProjectiles(wdt);
     this.updateSkills(wdt);
@@ -3420,6 +3605,8 @@ class Game {
 
     let inp = this.readInput();
     if (this.state === 'play' && !this.paused) inp = this.autoControl(inp, wdt);
+    if (this.cine) { inp = { mx: 0, mz: 0, moveLen: 0, mouseRecent: false, mouseWorld: null }; this.updateCine(dt); }
+    if (this.slowmoT > 0) this.slowmoT -= dt;
     if (this.state !== 'title' && !this.paused) this.simulate(wdt, inp);
     else this.player.update(wdt, inp);
     for (const n of this.npcs) n.update(wdt);
@@ -3443,6 +3630,7 @@ class Game {
       this.lead.x = damp(this.lead.x, p.vel.x * 0.28, 3, dt);
       this.lead.z = damp(this.lead.z, p.vel.z * 0.28, 3, dt);
       target = V(p.pos.x + this.lead.x, p.y + 0.6, p.pos.z + this.lead.z - 0.8);
+      if (this.cine) { const b = this.cine.e; target = V(lerp(p.pos.x, b.pos.x, 0.85), b.y + 1.2, lerp(p.pos.z, b.pos.z, 0.85) - 0.8); }
       this.focus.x = damp(this.focus.x, target.x, 7, dt);
       this.focus.y = damp(this.focus.y, target.y, 5, dt);
       this.focus.z = damp(this.focus.z, target.z, 7, dt);
@@ -3451,6 +3639,7 @@ class Game {
     const sh = this.shakeAmt * this.shakeAmt * 0.45;
     const camFocus = this.focus.clone().add(V(rand(-sh, sh), 0, rand(-sh, sh) * 0.6));
     this.pixel.setFocus(camFocus);
+    this.updateDarkness();
     this.updateLights(dt);
     this.ui.update(dt);
     this.pixel.render(this.scene);

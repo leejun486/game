@@ -213,6 +213,7 @@ export class Player {
     this.yaw = Math.atan2(dir.x, dir.z);
     if (this.cls === 'mage') { this.blink(dir); return; }
     this.dashT = 0.2;
+    this.dashAt = this.game.time; this.dodged = false;
     this.dashCd = this.dashMax ?? 0.5;
     this.invuln = Math.max(this.invuln, 0.3);
     this.attack = null;
@@ -230,6 +231,7 @@ export class Player {
     g.world.move(this.pos, dir.x * 3.6, dir.z * 3.6, this.moveR);
     this.vel.set(0, 0, 0);
     this.dashCd = this.dashMax;
+    this.dashAt = g.time; this.dodged = false;
     this.invuln = Math.max(this.invuln, 0.35);
     this.attack = null;
     this.buffered = false;
@@ -332,7 +334,11 @@ export class Player {
   }
 
   damage(dmg, from) {
-    if (this.invuln > 0 || this.dead || this.game.godMode) return false;
+    if (this.invuln > 0 || this.dead || this.game.godMode) {
+      // 완벽한 회피: 피하기 직후(0.35초 안) 공격을 흘려보내면 시간이 느려지고 반격 기회
+      if (this.invuln > 0 && !this.dead && !this.dodged && this.game.time - (this.dashAt ?? -9) < 0.35) { this.dodged = true; this.game.perfectDodge(from); }
+      return false;
+    }
     // 용비늘: 10초마다 한 번 공격을 막음
     if (this.perks?.has('scales') && this.game.time - (this.scaleT ?? -99) > 10) {
       this.scaleT = this.game.time;
@@ -563,6 +569,7 @@ const TYPES = {
   // 설원 폐사찰
   jiangshi: { hp: 92, speed: 3.2, dmg: 15, range: 1.5, windup: 0.45, recover: 0.6, radius: 0.45, exp: 20, ai: 'melee', hop: true, make: makeJiangshi, pal: PAL.ghost },
   ghost: { hp: 48, speed: 1.8, dmg: 12, range: 6.5, windup: 0.6, recover: 1.6, radius: 0.4, exp: 20, ai: 'wisp', teleport: true, make: makeGhost, pal: PAL.ghost },
+  foxclone: { hp: 70, speed: 2.4, dmg: 12, range: 7, windup: 0.6, recover: 1.5, radius: 0.6, exp: 4, ai: 'wisp', make: () => makeFox('clone'), pal: PAL.fox },
   // 물안개 늪: 물귀신은 물속에서 빨라지고 붙잡아 느리게 함, 두꺼비는 독침(맞으면 느려짐)
   waterghost: { hp: 110, speed: 2.9, dmg: 16, range: 1.5, windup: 0.5, recover: 0.6, radius: 0.42, exp: 26, ai: 'melee', aquatic: true, grab: true, make: makeWaterGhost, pal: PAL.water },
   toad: { hp: 120, speed: 1.6, dmg: 14, range: 7, windup: 0.7, recover: 1.6, radius: 0.55, exp: 26, ai: 'wisp', poison: true, make: makeToad, pal: PAL.water },
@@ -610,6 +617,7 @@ export class Enemy {
     this.tpCd = rand(6, 9);
     this.hopPh = Math.random();
     this.summoned = 0;
+    this.phase = 1;
     if (T.make) {
       this.rig = T.make();
       game.scene.add(this.rig.root);
@@ -659,8 +667,13 @@ export class Enemy {
   center() { return tmp.set(this.pos.x, this.y + (this.isBoss ? 2.0 : this.isWisp ? (this.rig ? 1.2 : 1.3) : 0.8), this.pos.z); }
 
   hit(dmg, dir, knock = 5, stun = 0.25) {
-    if (this.dead || this.spawning || this.state === 'submerged') return false;
+    if (this.dead || this.spawning || this.state === 'submerged' || this.state === 'roar') return false;
     this.hp -= dmg;
+    // 보스 단계: 체력 66%·33% 아래로 떨어지면 포효하며 다음 단계로
+    if (this.isBoss && this.hp > 0) {
+      const ph = this.hp < this.maxHp * 0.33 ? 3 : this.hp < this.maxHp * 0.66 ? 2 : 1;
+      if (ph > this.phase) { this.phase = ph; this.game.bossPhase(this, ph); }
+    }
     this.flashT = 0.12;
     if (!this.isBoss || this.state === 'chase') {
       const k = this.isBoss ? knock * 0.15 : knock;
@@ -752,6 +765,7 @@ export class Enemy {
         if (this.hp <= 0) { this.die(); return true; }
       }
     }
+    if (this.isBoss && this.phase > 1 && !this.dead && Math.random() < dt * (this.phase === 3 ? 30 : 14)) { const c = this.phase === 3 ? ['#ff8a6a', '#c80a1a'] : this.T.pal.fire; g.fx.add.emit({ x: this.pos.x + rand(-1, 1), y: this.y + rand(0.3, 3), z: this.pos.z + rand(-1, 1), vy: rand(1, 2.5), life: 0.6, size: rand(3, 4), endSize: 1, color: c[0], color2: c[1] }); }
     if (this.elite && !this.dead && Math.random() < dt * 8) g.fx.add.emit({ x: this.pos.x + rand(-0.5, 0.5), y: this.y + rand(0.2, 1.6), z: this.pos.z + rand(-0.5, 0.5), vy: rand(0.6, 1.4), life: 0.6, size: 3, endSize: 1, color: '#fff0a0', color2: '#ffb000' });
     // 불가사리: 체력이 줄수록 쇠바늘이 달아오름
     if (this.T.boss === 'bulgasari' && this.rig.setHeat) this.rig.setHeat(clamp((0.6 - this.hp / this.maxHp) / 0.4, 0, 1));
@@ -782,7 +796,7 @@ export class Enemy {
       const k = smooth(clamp(this.st / 0.7, 0, 1));
       this.root.scale.setScalar(Math.max(0.01, k) * this.sizeMul);
       if (Math.random() < 0.6) g.fx.colorFire(this.pos.x, this.pos.y, this.pos.z, 2, this.isBoss ? 1 : 0.4, ...this.T.pal.fire);
-      if (this.st >= 0.7) { this.spawning = false; this.state = 'chase'; this.st = 0; this.root.scale.setScalar(this.sizeMul); if (!this.field && (Math.random() < 0.4 || this.isBoss)) g.audio.play(this.T.pal === PAL.blue ? 'laugh' : this.T.pal === PAL.fox ? 'howl' : 'wail'); }
+      if (this.st >= 0.7) { this.spawning = false; this.state = this.introRoar ? 'roar' : 'chase'; this.st = 0; this.root.scale.setScalar(this.sizeMul); if (!this.field && (Math.random() < 0.4 || this.isBoss)) g.audio.play(this.T.pal === PAL.blue ? 'laugh' : this.T.pal === PAL.fox ? 'howl' : 'wail'); }
       if (this.isWisp && !this.rig) this.root.position.set(this.pos.x, this.pos.y + 1.3 * k, this.pos.z);
       else this.place(dt, 0);
       return true;
@@ -816,15 +830,15 @@ export class Enemy {
         // 플레이어가 쓰러지면 제자리에서 웃음
         speed = 0;
         this.yaw = dampAngle(this.yaw, toYaw, 8, dt);
-      } else if ((T.boss === 'dokkaebi' || T.leap) && this.leapCd <= 0 && dist > 4.5 && dist < 14) {
+      } else if ((T.boss === 'dokkaebi' || T.leap) && this.leapCd <= 0 && dist > (this.phase === 3 ? 1.5 : 4.5) && dist < 14) {
         this.state = 'leapPrep'; this.st = 0;
         this.leapTarget = p.pos.clone();
         this.tele = g.fx.ring(this.leapTarget, 3.6, '#ff4a3a', 1, 1);
-      } else if (this.isBoss && T.boss !== 'dokkaebi' && this.bossPattern(dt, dist, toYaw)) {
+      } else if (this.isBoss && this.bossPattern(dt, dist, toYaw)) {
         // 보스 고유 패턴 시작
         // 구미호·저승사자 고유 패턴 시작
       } else if (dist > T.range * 0.85 || !sameLevel) {
-        let sp = T.speed * (this.isBoss && this.hp < this.maxHp * 0.4 ? 1.25 : 1) * this.waterMul();
+        let sp = T.speed * (this.isBoss ? 1 + 0.14 * (this.phase - 1) : 1) * this.waterMul();
         if (T.hop) {
           // 강시: 뛰어오른 동안만 앞으로 감
           this.hopPh = (this.hopPh + dt * 1.8) % 1;
@@ -893,11 +907,12 @@ export class Enemy {
         g.fx.add.emit({ x: this.pos.x + rand(-1.5, 1.5), y: this.y + rand(0.5, 3), z: this.pos.z + rand(-1.5, 1.5), vx: (this.pos.x - this.pos.x), vy: 0.5, life: 0.35, size: 3, endSize: 1, color: f1, color2: f2 });
       }
       if (this.st >= 0.7) {
-        if (T.boss === 'gumiho') for (let k = -3; k <= 3; k++) g.spawnOrb(this, k * 0.2);
-        else if (T.boss === 'imugi') for (let k = -4; k <= 4; k++) g.spawnOrb(this, k * 0.16, { slow: 1.2 });
-        else if (T.boss === 'bulgasari') g.ironRain(this);
-        else if (T.boss === 'yeomra') { if (this.castKind === 'verdict') g.verdict(this); else g.spawnDarkWaves(this); }
-        else g.spawnDarkWaves(this);
+        if (T.boss === 'dokkaebi') g.goldRain(this);
+        else if (T.boss === 'gumiho') { for (let k = -3; k <= 3; k++) g.spawnOrb(this, k * 0.2); if (this.phase === 3) g.orbRing(this, 16, 0.3); }
+        else if (T.boss === 'imugi') { for (let k = -4; k <= 4; k++) g.spawnOrb(this, k * 0.16, { slow: 1.2 }); if (this.phase >= 2) g.geysers(this); }
+        else if (T.boss === 'bulgasari') { g.ironRain(this); if (this.phase === 3) g.after(0.7, () => { if (!this.dead) g.ironRain(this); }); }
+        else if (T.boss === 'yeomra') { if (this.castKind === 'verdict') g.verdict(this, this.phase >= 2 ? 5 : 3); else g.spawnDarkWaves(this); if (this.phase === 3) g.orbRing(this, 20, 0); }
+        else { g.spawnDarkWaves(this); if (this.phase >= 2) g.markChase(this); if (this.phase === 3) g.after(0.5, () => { if (!this.dead) g.spawnDarkWaves(this); }); }
         this.state = 'recover'; this.st = 0;
       }
     } else if (this.state === 'chargePrep') {
@@ -910,7 +925,20 @@ export class Enemy {
       speed = sp;
       if (Math.random() < 0.9) g.fx.colorFire(this.pos.x, this.pos.y + 0.5, this.pos.z, 2, 0.8, ...T.pal.fire);
       if (!this.chargeHit && Math.hypot(p.pos.x - this.pos.x, p.pos.z - this.pos.z) < 1.6 + p.radius) { this.chargeHit = true; p.damage(Math.round(this.dmg * 1.1), this.pos); }
-      if (this.st >= 0.55 || !moved) { this.state = 'recover'; this.st = 0; g.fx.dust(this.pos.x, this.pos.y, this.pos.z, 12); g.shake(0.3); }
+      if (T.boss === 'bulgasari' && this.phase >= 2 && Math.random() < dt * 12) g.addBurnZone(this.pos.x, this.pos.z, 1.0, 4);
+      if (this.st >= 0.55 || !moved) {
+        this.state = 'recover'; this.st = 0; g.fx.dust(this.pos.x, this.pos.y, this.pos.z, 12); g.shake(0.3);
+        // 불가사리 3단계: 세 번 연달아 들이받음
+        if (T.boss === 'bulgasari' && this.phase === 3) {
+          this.chargeLeft = (this.chargeLeft ?? 3) - 1;
+          if (this.chargeLeft > 0) {
+            this.state = 'chargePrep'; this.st = 0.25;
+            this.yaw = toYaw;
+            const from = new THREE.Vector3(this.pos.x, this.y + 0.1, this.pos.z);
+            g.fx.streak(from, from.clone().add(new THREE.Vector3(Math.sin(toYaw) * 9, 0, Math.cos(toYaw) * 9)), '#ff6a2a', 0.5, 2.2);
+          } else this.chargeLeft = undefined;
+        }
+      }
     } else if (this.state === 'vanish') {
       // 저승사자: 연기 속으로 사라졌다가 플레이어 등 뒤에서 나타남
       const k = clamp(this.st / 0.5, 0, 1);
@@ -933,6 +961,21 @@ export class Enemy {
         this.tele = g.fx.ring(f, 2.6, '#c84aff', 1, 1);
         this.smashAt = f;
       }
+    } else if (this.state === 'roar') {
+      // 단계 전환: 몸을 크게 젖히며 포효 (이 동안은 무적)
+      attackAnim = { t: 0.28 * clamp(this.st / 0.4, 0, 1), kind: 2 };
+      this.yaw = dampAngle(this.yaw, toYaw, 4, dt);
+      if (this.st >= 1.3 && !g.cine) { this.state = 'chase'; this.st = 0; this.introRoar = false; this.patCd = 0.6; this.attackCd = 0.5; }
+    } else if (this.state === 'spin') {
+      // 이무기: 꼬리를 크게 휘둘러 주위를 쓸어버림
+      if (this.tele) this.tele.mat.uniforms.uProg.value = this.st / 1.0;
+      this.yaw += dt * (this.st < 1 ? 1.5 : 14);
+      if (this.st >= 1.0 && !this.struck) {
+        this.struck = true;
+        this.clearTele();
+        g.bossSlam(this, new THREE.Vector3(this.pos.x, this.y, this.pos.z), 5, Math.round(this.dmg * 1.1), true);
+      }
+      if (this.st >= 1.45) { this.state = 'recover'; this.st = 0; this.struck = false; }
     } else if (this.state === 'dive') {
       // 이무기: 물보라를 일으키며 땅(물) 속으로
       const k = clamp(this.st / 0.6, 0, 1);
@@ -985,7 +1028,16 @@ export class Enemy {
         if (g.world.isBlocked(this.pos.x, this.pos.z, this.moveR * 0.7, h)) this.pos.copy(this.leapFrom);
         g.bossSlam(this, this.pos.clone(), 3.6, Math.round(this.dmg * 1.2), true);
         this.state = 'recover'; this.st = 0;
-        this.leapCd = rand(6, 9);
+        this.leapCd = rand(6, 9) * (this.phase === 2 ? 0.8 : 1);
+        // 3단계: 쉬지 않고 세 번 연달아 뛰어내림
+        if (this.phase === 3) {
+          this.leapLeft = (this.leapLeft ?? 3) - 1;
+          if (this.leapLeft > 0 && !g.player.dead) {
+            this.state = 'leapPrep'; this.st = 0.3;
+            this.leapTarget = g.player.pos.clone();
+            this.tele = g.fx.ring(this.leapTarget, 3.6, '#ff4a3a', 1, 1);
+          } else { this.leapLeft = undefined; this.leapCd = rand(4, 6); }
+        }
       }
     }
 
@@ -998,8 +1050,22 @@ export class Enemy {
     const g = this.game, T = this.T;
     this.patCd -= dt;
     if (this.patCd > 0 || g.player.dead) return false;
-    this.patCd = rand(3.2, 4.6) * (this.hp < this.maxHp * 0.4 ? 0.7 : 1);
+    this.patCd = rand(3.2, 4.6) * (this.phase === 3 ? 0.6 : this.phase === 2 ? 0.8 : 1);
+    if (T.boss === 'dokkaebi') {
+      // 두억시니 2단계부터: "금 나와라 뚝딱!" 금덩이를 뿌려 터뜨림
+      if (this.phase < 2 || Math.random() < 0.4) { this.patCd *= 0.5; return false; }
+      this.yaw = toYaw;
+      this.state = 'cast'; this.st = 0; g.audio.play('laugh');
+      return true;
+    }
     this.yaw = toYaw;
+    // 이무기 3단계: 꼬리 휘두르기 (주위 큰 원)
+    if (T.boss === 'imugi' && this.phase === 3 && dist < 5 && Math.random() < 0.45) {
+      this.state = 'spin'; this.st = 0;
+      this.tele = g.fx.ring(new THREE.Vector3(this.pos.x, this.y, this.pos.z), 5, '#2affd0', 1, 1);
+      g.audio.play('charge');
+      return true;
+    }
     if (T.boss === 'gumiho') {
       if (dist > 4 && Math.random() < 0.5) {
         this.state = 'chargePrep'; this.st = 0;
@@ -1036,7 +1102,7 @@ export class Enemy {
       return true;
     }
     if (T.boss === 'reaper') {
-      if (dist > 3 && Math.random() < 0.45) { this.state = 'vanish'; this.st = 0; this.reappeared = false; g.fx.smoke(this.pos.x, this.y + 0.6, this.pos.z, 20); g.audio.play('wail'); }
+      if (dist > 3 && Math.random() < (this.phase === 3 ? 0.65 : 0.45)) { this.state = 'vanish'; this.st = 0; this.reappeared = false; g.fx.smoke(this.pos.x, this.y + 0.6, this.pos.z, 20); g.audio.play('wail'); }
       else { this.state = 'cast'; this.st = 0; g.audio.play('charge'); }
       return true;
     }

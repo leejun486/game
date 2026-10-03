@@ -352,10 +352,11 @@ export class UI {
     }
   }
 
-  setBoss(enemy) {
+  setBoss(enemy, keepLag = false) {
     this.bossEnemy = enemy;
     this.el.boss.classList.toggle('show', !!enemy);
-    if (enemy) { this.el.bossName.textContent = enemy.name || '도깨비 대왕'; this.bossLag = 1; }
+    if (enemy) { this.el.bossName.textContent = (enemy.name || '도깨비 대왕') + (enemy.phase > 1 ? ` · ${enemy.phase}단계` : ''); if (!keepLag) this.bossLag = 1; }
+    this.el.boss.dataset.phase = enemy?.phase || 1;
   }
 
   update(dt) {
