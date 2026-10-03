@@ -6,7 +6,8 @@ import { Audio } from './audio.js';
 import { UI } from './ui.js';
 import { Player, Enemy, NPC, Bird } from './entities.js';
 import { shared } from './materials.js';
-import { loadSave, writeSave, clearSave } from './save.js';
+import { loadSave, writeSave, clearSave, exportSave, importSave } from './save.js';
+import { loadSettings, saveSettings, ACTIONS, keyOf, bindMap, keyName, DEFAULTS } from './settings.js';
 import { CLASSES, CLASS_ORDER } from './classes.js';
 import { ClassPreview } from './preview.js';
 import { GFX, setGfx } from './gfx.js';
@@ -70,6 +71,8 @@ class Game {
     this.world = new World(scene);
     this.fx = new FX(scene, this.pixel);
     this.audio = new Audio();
+    this.settings = loadSettings();
+    this.applySettings();
     this.ui = new UI(this);
     // 직업별 레벨·경험치·착용 장비, 공용 가방
     this.progress = {};
@@ -99,6 +102,7 @@ class Game {
     this.world.buildNav();
     this.flowT = 0;
     this.setupInput();
+    this.setupPause();
     this.bestCombo = 0;
     this.saveT = 15;
     this.selectedCls = 'sword';
@@ -122,7 +126,8 @@ class Game {
     s.add(this.hemi);
     const sun = (this.sun = new THREE.DirectionalLight('#fff0d6', 2.5));
     sun.castShadow = true;
-    sun.shadow.mapSize.set(GFX.hd ? 4096 : 2048, GFX.hd ? 4096 : 2048);
+    const smap = GFX.hd ? { high: 4096, mid: 2048, low: 1024 }[this.settings?.quality || 'high'] : 2048;
+    sun.shadow.mapSize.set(smap, smap);
     if (GFX.hd) sun.shadow.radius = 3;
     const sc = sun.shadow.camera;
     sc.left = -30; sc.right = 30; sc.top = 30; sc.bottom = -30; sc.near = 1; sc.far = 140;
@@ -193,9 +198,12 @@ class Game {
     this.mouse = { x: 0, y: 0, t: -10 };
     window.addEventListener('keydown', (e) => {
       if (e.code === 'Tab') e.preventDefault();
+      // 설정에서 키를 바꾸는 중: 다음에 누른 키를 그 동작에 배정
+      if (this.rebind) { e.preventDefault(); this.finishRebind(e.code); return; }
       if (e.repeat) { this.keys.add(e.code); return; }
       this.keys.add(e.code);
-      this.onKey(e.code, e);
+      const act = this.binds[e.code];
+      this.onKey(act || e.code, e);
     });
     window.addEventListener('keyup', (e) => this.keys.delete(e.code));
     window.addEventListener('blur', () => this.keys.clear());
@@ -214,7 +222,7 @@ class Game {
     });
     stage.addEventListener('contextmenu', (e) => e.preventDefault());
     // 가방 버튼·창: 클릭이 공격으로 새지 않게
-    for (const id of ['bag-btn', 'bag', 'evo-btn', 'skills', 'hunt-btn', 'quest']) {
+    for (const id of ['bag-btn', 'bag', 'evo-btn', 'skills', 'hunt-btn', 'quest', 'pause', 'menu-btn']) {
       const el = document.getElementById(id);
       el.addEventListener('mousedown', (e) => e.stopPropagation());
       el.addEventListener('touchstart', (e) => e.stopPropagation(), { passive: true });
@@ -286,6 +294,7 @@ class Game {
     if (k.has('KeyW') || k.has('ArrowUp')) z -= 1;
     if (k.has('KeyS') || k.has('ArrowDown')) z += 1;
     if (this.touchMove && (this.touchMove.x || this.touchMove.z)) { x = this.touchMove.x; z = this.touchMove.z; }
+    if (this.padMove && (this.padMove.x || this.padMove.z)) { x = this.padMove.x; z = this.padMove.z; this.mouse.t = -10; }
     const l = Math.hypot(x, z);
     const inp = this.input;
     inp.moveLen = Math.min(1, l);
@@ -822,6 +831,7 @@ class Game {
   save(show = true) {
     // 선택 화면에서 한 번도 시작하지 않았으면 빈 기록을 만들지 않음
     if (this.state === 'title' && !this.hasSave) return;
+    if (this.noSave) return; // 저장 파일을 불러와 새로고침하는 중엔 덮어쓰지 않음
     this.hasSave = true;
     const ok = writeSave({
       kills: this.kills,
@@ -862,6 +872,7 @@ class Game {
         if (info) info.textContent = '기록을 지웠습니다. 처음부터 시작합니다.';
         return;
       }
+      if (this.pauseOpen) { if (code === 'Escape' || code === 'pause') this.togglePause(false); return; }
       const i = CLASS_ORDER.indexOf(this.selectedCls);
       if (code === 'ArrowLeft' || code === 'KeyA') { this.selectClass(CLASS_ORDER[(i + 2) % 3]); this.audio.unlock(); this.audio.play('talk'); return; }
       if (code === 'ArrowRight' || code === 'KeyD') { this.selectClass(CLASS_ORDER[(i + 1) % 3]); this.audio.unlock(); this.audio.play('talk'); return; }
@@ -879,6 +890,10 @@ class Game {
       this.pixel.compMat.uniforms.outline.value = this.pixel.compMat.uniforms.outline.value ? 0 : 1;
       this.ui.toast(this.pixel.compMat.uniforms.outline.value ? '외곽선 켜짐' : '외곽선 꺼짐');
       this.save(false);
+      return;
+    }
+    if (this.pauseOpen) {
+      if (code === 'Escape' || code === 'KeyP' || code === 'pause') this.togglePause(false);
       return;
     }
     if (this.paused) {
@@ -914,7 +929,8 @@ class Game {
       case 'Tab': this.updateTarget(true); break;
       case 'KeyB': this.toggleBag(); break;
       case 'KeyT': case 'skills': this.toggleSkills(); break;
-      case 'KeyF': this.toggleAutoMove(); break;
+      case 'KeyF': case 'auto': this.toggleAutoMove(); break;
+      case 'Escape': case 'KeyP': case 'pause': this.togglePause(true); break;
       case 'KeyH': case 'hunt': this.setAutoHunt(!this.autoHunt); break;
       case 'KeyG': this.godMode = !this.godMode; this.ui.toast(this.godMode ? '무적 (디버그)' : '무적 해제'); break;
     }
@@ -969,6 +985,208 @@ class Game {
   }
 
   // 고화질 ↔ 도트 (재질을 다시 만들어야 해서 저장 후 새로고침)
+  // ---------- 게임패드 ----------
+  // 표준 배치: A 공격 · B 피하기 · X 기술1 · Y 기술2 · RB 기술3 · RT 고유 기술 · LB 대화 · LT 타겟 · Back 가방 · Start 일시정지
+  pollPad() {
+    const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+    let gp = null;
+    for (const p of pads) if (p && p.connected) { gp = p; break; }
+    if (!gp) { if (this.padMove) this.padMove.x = this.padMove.z = 0; return; }
+    if (!this.padPrev) { this.padPrev = []; this.padIdx = 0; this.ui.toast('게임패드가 연결되었어요', 2); document.body.classList.add('pad'); }
+    const dz = (v) => (Math.abs(v) < 0.22 ? 0 : (v - Math.sign(v) * 0.22) / 0.78);
+    const menu = this.padMenu();
+    this.padMove = menu ? { x: 0, z: 0 } : { x: dz(gp.axes[0] || 0), z: dz(gp.axes[1] || 0) };
+    const pressed = gp.buttons.map((b) => b.pressed || b.value > 0.5);
+    // 메뉴에서는 스틱도 십자키처럼 (한 번씩)
+    const sy = gp.axes[1] || 0, sx = gp.axes[0] || 0;
+    pressed[100] = sy < -0.6; pressed[101] = sy > 0.6; pressed[102] = sx < -0.6; pressed[103] = sx > 0.6;
+    for (let i = 0; i < pressed.length; i++) if (pressed[i] && !this.padPrev[i]) this.padButton(i, menu);
+    this.padPrev = pressed;
+  }
+
+  // 지금 게임패드로 조작할 창
+  padMenu() {
+    if (this.pauseOpen) return document.getElementById('pause');
+    if (document.getElementById('confirm').classList.contains('show')) return document.getElementById('confirm');
+    if (this.ui.bagOpen) return document.getElementById('bag');
+    if (this.ui.skillsOpen) return document.getElementById('skills');
+    return null;
+  }
+
+  padButton(i, menu) {
+    this.audio.unlock();
+    const dir = { 12: -1, 100: -1, 13: 1, 101: 1, 14: -1, 102: -1, 15: 1, 103: 1 }[i];
+    if (menu) {
+      const els = [...menu.querySelectorAll('button:not([disabled]), input[type=range], .it, .eqs, .evo-opt, .evo-train')].filter((e) => e.offsetParent !== null && getComputedStyle(e).visibility !== 'hidden');
+      for (const e of menu.querySelectorAll('.pad-focus')) e.classList.remove('pad-focus');
+      if (!els.length) { if (i === 1 || i === 9) this.onKey('Escape'); return; }
+      this.padIdx = Math.max(0, Math.min(els.length - 1, this.padIdx || 0));
+      let cur = els[this.padIdx];
+      if (dir !== undefined) {
+        // 슬라이더에서 좌우는 값 조절
+        if (cur.type === 'range' && (i === 14 || i === 15 || i === 102 || i === 103)) { cur.value = +cur.value + dir * 5; cur.dispatchEvent(new Event('input')); }
+        else { this.padIdx = (this.padIdx + dir + els.length) % els.length; cur = els[this.padIdx]; this.audio.play('talk'); }
+      } else if (i === 0) { cur.click(); this.padIdx = Math.min(this.padIdx, els.length - 1); }
+      else if (i === 1 || i === 9) { if (this.pauseOpen) this.togglePause(false); else if (menu.id === 'confirm') this.showConfirm(false); else this.onKey('Escape'); }
+      else if (i === 8 && menu.id === 'bag') this.toggleBag(false);
+      requestAnimationFrame(() => {
+        const list = [...menu.querySelectorAll('button:not([disabled]), input[type=range], .it, .eqs, .evo-opt, .evo-train')].filter((e) => e.offsetParent !== null);
+        const el = list[Math.min(this.padIdx, list.length - 1)];
+        if (el) { el.classList.add('pad-focus'); el.scrollIntoView?.({ block: 'nearest' }); }
+      });
+      return;
+    }
+    if (this.state === 'title') {
+      if (i === 0) this.onKey('Enter');
+      else if (i === 2) document.getElementById('btn-new').click();
+      else if (i === 9) this.togglePause(true);
+      else if (i === 14 || i === 102) this.onKey('ArrowLeft');
+      else if (i === 15 || i === 103) this.onKey('ArrowRight');
+      return;
+    }
+    if (this.state === 'dead') { if (i === 0 || i === 9) this.onKey('act'); return; }
+    const MAP = { 0: 'atk', 1: 'dash', 2: 'skill', 3: 'skill2', 5: 'skill3', 7: 'ult', 4: 'act', 6: 'Tab', 8: 'bag', 9: 'pause', 12: 'auto', 13: 'hunt', 14: 'skills' };
+    const act = MAP[i];
+    if (act) this.onKey(act);
+  }
+
+  // ---------- 설정 · 일시정지 ----------
+  applySettings() {
+    const S = this.settings;
+    this.binds = bindMap(S);
+    this.audio.setVolumes(S.vol);
+    document.body.classList.toggle('no-dmg', !S.numbers);
+  }
+
+  setSetting(fn) {
+    fn(this.settings);
+    saveSettings(this.settings);
+    this.applySettings();
+  }
+
+  togglePause(open = !this.pauseOpen) {
+    if (open && this.state === 'play') { if (this.ui.bagOpen) this.toggleBag(false); if (this.ui.skillsOpen) this.toggleSkills(false); if (this.autoMove) this.stopAutoMove(); }
+    this.pauseOpen = open;
+    this.rebind = null;
+    if (this.state === 'play') this.paused = open;
+    document.getElementById('pause').classList.toggle('show', open);
+    // 선택 화면에서 열면 '선택 화면으로'는 감춤
+    document.querySelector('#pause [data-p="title"]').style.display = this.state === 'title' ? 'none' : '';
+    document.querySelector('#pause [data-p="resume"]').textContent = this.state === 'title' ? '닫기' : '계속하기';
+    if (open) this.pausePane(this.state === 'title' ? 'sound' : 'sound');
+    this.audio.play('talk');
+  }
+
+  pausePane(tab) {
+    this.pzTab = tab;
+    for (const b of document.querySelectorAll('#pause .pz-menu button')) b.classList.toggle('on', b.dataset.p === tab);
+    const el = document.getElementById('pz-pane');
+    const S = this.settings;
+    if (tab === 'sound') {
+      const row = (k, name) => `<div class="pz-row"><label>${name}</label><input type="range" min="0" max="100" value="${Math.round(S.vol[k] * 100)}" data-v="${k}"><span class="val">${Math.round(S.vol[k] * 100)}</span></div>`;
+      el.innerHTML = `<h3>소리</h3>${row('master', '전체')}${row('music', '배경음악')}${row('sfx', '효과음')}${row('amb', '환경음')}
+        <div class="pz-row"><label>음악</label><div class="pz-seg"><button data-m="1" class="${this.audio.musicOn ? 'on' : ''}">켜기</button><button data-m="0" class="${this.audio.musicOn ? '' : 'on'}">끄기</button></div></div>`;
+      for (const r of el.querySelectorAll('input[type=range]')) r.addEventListener('input', () => {
+        r.nextElementSibling.textContent = r.value;
+        this.setSetting((s) => { s.vol[r.dataset.v] = r.value / 100; });
+      });
+      for (const b of el.querySelectorAll('[data-m]')) b.addEventListener('click', () => { if ((b.dataset.m === '1') !== this.audio.musicOn) this.audio.toggleMusic(); this.save(false); this.pausePane('sound'); });
+    } else if (tab === 'screen') {
+      const seg = (key, opts, cur) => `<div class="pz-seg">${opts.map(([v, n]) => `<button data-k="${key}" data-val="${v}" class="${String(cur) === String(v) ? 'on' : ''}">${n}</button>`).join('')}</div>`;
+      el.innerHTML = `<h3>화면</h3>
+        <div class="pz-row"><label>그래픽 모드</label>${seg('gfx', [['hd', '고화질'], ['pixel', '도트']], GFX.hd ? 'hd' : 'pixel')}</div>
+        <div class="pz-row"><label>화질</label>${seg('quality', [['high', '높음'], ['mid', '보통'], ['low', '낮음']], S.quality)}</div>
+        <div class="pz-row"><label>화면 흔들림</label>${seg('shake', [[1, '보통'], [0.5, '약하게'], [0, '끔']], S.shake)}</div>
+        <div class="pz-row"><label>데미지 숫자</label>${seg('numbers', [[1, '보이기'], [0, '숨기기']], S.numbers ? 1 : 0)}</div>
+        ${GFX.hd ? '' : `<div class="pz-row"><label>외곽선</label>${seg('outline', [[1, '켜기'], [0, '끄기']], this.pixel.compMat.uniforms.outline.value ? 1 : 0)}</div>`}
+        <div class="pz-note">화질 '낮음'은 해상도를 줄이고 그늘(AO)·계단 현상 제거·그림자 해상도를 낮춰 저사양 노트북·휴대폰에서 부드럽게 돌아가요. 그래픽 모드와 그림자 해상도는 새로고침해야 바뀝니다.</div>`;
+      for (const b of el.querySelectorAll('[data-k]')) b.addEventListener('click', () => {
+        const k = b.dataset.k, v = b.dataset.val;
+        if (k === 'gfx') { if ((v === 'hd') !== GFX.hd) { this.save(false); setGfx(v); } return; }
+        if (k === 'quality') { this.setSetting((s) => { s.quality = v; }); this.pixel.setQuality(v); }
+        if (k === 'shake') this.setSetting((s) => { s.shake = +v; });
+        if (k === 'numbers') this.setSetting((s) => { s.numbers = v === '1'; });
+        if (k === 'outline') { this.pixel.compMat.uniforms.outline.value = +v; this.save(false); }
+        this.pausePane('screen');
+      });
+    } else if (tab === 'keys') {
+      el.innerHTML = `<h3>조작 · 키 바꾸기</h3>${ACTIONS.map(([a, n]) => `<div class="pz-row"><label>${n}</label><button class="pz-key${this.rebind === a ? ' wait' : ''}" data-a="${a}">${this.rebind === a ? '키를 누르세요…' : keyName(keyOf(S, a))}</button></div>`).join('')}
+        <div class="pz-row"><button class="pz-btn" id="pz-keyreset">기본 키로 되돌리기</button></div>
+        <div class="pz-note">이동은 WASD·방향키 고정. 원래 키(J/Z, Space/Shift, K/X, L/Q, I/R 등)도 계속 쓸 수 있어요.<br>
+        <b>게임패드</b> — 왼쪽 스틱 이동 · A 공격 · B 피하기 · X 기술1 · Y 기술2 · RB 기술3 · RT 고유 기술 · LB 대화 · LT 타겟 변경 · Back 가방 · Start 일시정지 · 십자키 ↑ 자동 이동 / ↓ 자동 사냥 / ← 기술 수련. 메뉴에서는 십자키로 고르고 A로 누르고 B로 닫아요.</div>`;
+      for (const b of el.querySelectorAll('[data-a]')) b.addEventListener('click', () => { this.rebind = b.dataset.a; this.pausePane('keys'); });
+      el.querySelector('#pz-keyreset').addEventListener('click', () => { this.setSetting((s) => { s.binds = {}; }); this.pausePane('keys'); });
+    } else if (tab === 'data') {
+      const has = !!exportSave();
+      el.innerHTML = `<h3>저장 파일</h3>
+        <div class="pz-note" style="margin-top:0">진행은 자동 저장되지만 브라우저 기록·캐시를 지우면 함께 사라질 수 있어요. 가끔 <b>저장 파일로 내보내 두면</b> 다른 기기·브라우저에서도 이어 할 수 있어요.</div>
+        <div class="pz-row"><button class="pz-btn main" id="pz-export" ${has ? '' : 'disabled'}>저장 파일 내보내기 (.json)</button></div>
+        <div class="pz-row"><button class="pz-btn" id="pz-import">저장 파일 불러오기</button></div>
+        <div class="pz-row"><button class="pz-btn" id="pz-backup">5분 전 예비 기록으로 되돌리기</button></div>
+        <div class="pz-note" id="pz-msg"></div>`;
+      const msg = (t) => { el.querySelector('#pz-msg').textContent = t; };
+      el.querySelector('#pz-export').addEventListener('click', () => {
+        if (this.state === 'play') this.save(false);
+        const json = exportSave();
+        if (!json) return msg('아직 저장된 기록이 없어요');
+        const d = new Date(), pad = (n) => String(n).padStart(2, '0');
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
+        a.download = `월하궁-저장-${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}.json`;
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+        msg('저장 파일을 내려받았어요.');
+      });
+      el.querySelector('#pz-import').addEventListener('click', () => document.getElementById('save-file').click());
+      el.querySelector('#pz-backup').addEventListener('click', () => {
+        let b = null;
+        try { b = localStorage.getItem('dot3d-palace-save-v1-backup'); } catch { /* 무시 */ }
+        if (!b) return msg('예비 기록이 없어요');
+        try { importSave(b); this.noSave = true; msg('예비 기록으로 되돌렸어요. 다시 불러옵니다…'); setTimeout(() => location.reload(), 900); } catch (e) { msg(e.message); }
+      });
+    }
+  }
+
+  finishRebind(code) {
+    const a = this.rebind;
+    this.rebind = null;
+    if (code !== 'Escape' && !['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(code)) {
+      this.setSetting((s) => {
+        for (const k of Object.keys(s.binds)) if (s.binds[k] === code) delete s.binds[k]; // 같은 키는 하나에만
+        s.binds[a] = code;
+      });
+    }
+    this.pausePane('keys');
+  }
+
+  setupPause() {
+    for (const b of document.querySelectorAll('#pause .pz-menu button')) b.addEventListener('click', () => {
+      const p = b.dataset.p;
+      if (p === 'resume') this.togglePause(false);
+      else if (p === 'title') { this.save(false); location.reload(); }
+      else this.pausePane(p);
+    });
+    document.getElementById('menu-btn').addEventListener('click', () => { if (this.state === 'play' && !this.player.dead) this.togglePause(true); });
+    document.getElementById('btn-settings').addEventListener('click', (e) => { e.stopPropagation(); this.audio.unlock(); this.togglePause(true); });
+    document.getElementById('save-file').addEventListener('change', (e) => {
+      const f = e.target.files[0];
+      e.target.value = '';
+      if (!f) return;
+      f.text().then((t) => {
+        try {
+          const d = importSave(t);
+          this.noSave = true;
+          const m = document.getElementById('pz-msg');
+          if (m) m.textContent = `불러왔어요 (${new Date(d.savedAt || Date.now()).toLocaleString()} 기록). 다시 시작합니다…`;
+          setTimeout(() => location.reload(), 1000);
+        } catch (err) {
+          const m = document.getElementById('pz-msg');
+          if (m) m.textContent = '불러오지 못했어요: ' + (err.message || '파일이 깨졌어요');
+        }
+      });
+    });
+  }
+
   toggleGfx() {
     if (this.state !== 'title') this.save(false);
     this.ui.toast(`그래픽을 ${GFX.hd ? '도트' : '고화질'}(으)로 바꿉니다…`, 2);
@@ -3371,7 +3589,7 @@ class Game {
     }
   }
 
-  shake(a) { this.shakeAmt = Math.min(1.2, Math.max(this.shakeAmt, a)); }
+  shake(a) { a *= this.settings?.shake ?? 1; this.shakeAmt = Math.min(1.2, Math.max(this.shakeAmt, a)); }
 
   screenFlash(dur, color) { this.ui.flash(color, 0.35); }
 
@@ -3588,6 +3806,7 @@ class Game {
     requestAnimationFrame(this.loop);
     let dt = Math.min(0.05, (now - this.last) / 1000);
     this.last = now;
+    this.pollPad();
     this.audio.update();
     this.updateSoundScene(dt);
     // 15초마다 자동 저장

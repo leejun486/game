@@ -5,7 +5,7 @@
 //  음원은 tools/audio/*.py 로 만들며, 같은 이름의 파일로 바꿔 넣으면 그대로 쓰임
 const BASE = 'audio/';
 const NO_DETUNE = new Set(['talk', 'levelup', 'victory', 'bigbell', 'coin', 'bell']);
-const VOL = { master: 0.7, music: 0.55, amb: 0.6, sfx: 0.95 };
+const DEFAULT_VOL = { master: 0.7, music: 0.55, amb: 0.6, sfx: 0.95 };
 
 export class Audio {
   constructor() {
@@ -22,6 +22,18 @@ export class Audio {
     this.layers = { music: null, amb: null };
     this.lastPlay = new Map();
     this.lastVar = new Map();
+    this.vol = { ...DEFAULT_VOL };
+  }
+
+  // 설정 메뉴의 음량 (0~1)
+  setVolumes(v) {
+    Object.assign(this.vol, v);
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    this.master.gain.setTargetAtTime(this.vol.master, t, 0.03);
+    this.sfx.gain.setTargetAtTime(this.vol.sfx, t, 0.03);
+    this.amb.gain.setTargetAtTime(this.vol.amb, t, 0.03);
+    this.music.gain.setTargetAtTime(this.musicOn ? this.vol.music : 0, t, 0.03);
   }
 
   get ext() {
@@ -145,19 +157,19 @@ export class Audio {
     if (!AC) return;
     const ctx = (this.ctx = new AC());
     this.master = ctx.createGain();
-    this.master.gain.value = VOL.master;
+    this.master.gain.value = this.vol.master;
     this.master.connect(ctx.destination);
     this.sfx = ctx.createGain();
-    this.sfx.gain.value = VOL.sfx;
+    this.sfx.gain.value = this.vol.sfx;
     this.sfx.connect(this.master);
     this.amb = ctx.createGain();
-    this.amb.gain.value = VOL.amb;
+    this.amb.gain.value = this.vol.amb;
     this.amb.connect(this.master);
     this.music = ctx.createGain();
-    this.music.gain.value = this.musicOn ? VOL.music : 0;
+    this.music.gain.value = this.musicOn ? this.vol.music : 0;
     // 합성 음악(대체용)은 따로 묶어 잔향을 걸고 음량을 맞춤
     this.procMusic = ctx.createGain();
-    this.procMusic.gain.value = 0.32 / VOL.music;
+    this.procMusic.gain.value = 0.32 / DEFAULT_VOL.music;
     this.procMusic.connect(this.music);
     // 음악에 살짝 잔향 (딜레이)
     const delay = ctx.createDelay();
@@ -443,7 +455,7 @@ export class Audio {
 
   toggleMusic() {
     this.musicOn = !this.musicOn;
-    if (this.music) this.music.gain.value = this.musicOn ? VOL.music : 0;
+    if (this.music) this.music.gain.value = this.musicOn ? this.vol.music : 0;
     this.applyScene();
     return this.musicOn;
   }

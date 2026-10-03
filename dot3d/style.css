@@ -1,3 +1,6 @@
+/* 갈무리11 (SIL OFL 1.1, fonts/OFL.md) — 게임 안에 포함해서 인터넷 없이도 나옴 */
+@font-face { font-family: 'Galmuri11'; src: url('fonts/Galmuri11.woff2') format('woff2'); font-weight: 400; font-display: swap; }
+@font-face { font-family: 'Galmuri11'; src: url('fonts/Galmuri11-Bold.woff2') format('woff2'); font-weight: 700; font-display: swap; }
 :root {
   --ink: #1a1622;
   --panel: rgba(22, 18, 30, 0.82);
@@ -463,3 +466,34 @@ em.ult { color: #ff9a7a; }
 /* 저승사자·염라대왕 3단계: 플레이어 주변만 밝은 어둠 */
 #darkness { position: absolute; inset: 0; pointer-events: none; z-index: 1; opacity: 0; transition: opacity 0.8s; }
 #darkness.on { opacity: 1; }
+
+/* 일시정지 · 설정 */
+#pause { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(760px, 94vw); max-height: 90vh; display: none; flex-direction: column; z-index: 40; pointer-events: auto; }
+#pause.show { display: flex; }
+#pause .pz-body { display: flex; gap: 14px; padding: 12px; overflow: hidden; min-height: 0; }
+#pause .pz-menu { display: flex; flex-direction: column; gap: 8px; width: 190px; flex: none; }
+#pause .pz-menu .tbtn { width: 100%; padding: 10px 12px; font-size: 15px; text-align: left; }
+#pause .pz-menu .tbtn.on { outline: 2px solid var(--gold); }
+#pause .pz-pane { flex: 1; overflow-y: auto; font-size: 13px; color: #e8dcc0; min-height: 260px; }
+.pz-pane h3 { margin: 0 0 10px; font-size: 15px; color: var(--gold); font-weight: normal; }
+.pz-row { display: flex; align-items: center; gap: 10px; margin: 8px 0; }
+.pz-row label { width: 110px; flex: none; }
+.pz-row input[type=range] { flex: 1; accent-color: #ffd76a; }
+.pz-row .val { width: 40px; text-align: right; color: #fff; }
+.pz-seg { display: flex; gap: 6px; flex-wrap: wrap; }
+.pz-seg button, .pz-key, .pz-btn { font-family: var(--font); font-size: 13px; padding: 6px 10px; cursor: pointer; border: 2px solid #4a3e2a; background: #2a2230; color: #e8dcc0; }
+.pz-seg button.on { background: #ffd76a; color: #2a1a08; border-color: #8a6a2a; }
+.pz-key { min-width: 72px; }
+.pz-key.wait { background: #c8302c; color: #fff; animation: blink 0.6s infinite; }
+.pz-note { color: #b8a888; font-size: 12px; line-height: 1.6; margin-top: 10px; }
+.pz-btn.main { background: #ffd76a; color: #2a1a08; border-color: #8a6a2a; }
+.pad-focus { outline: 3px solid #7ad8ff !important; outline-offset: 2px; }
+.set-btn { left: auto !important; right: 16px; }
+body.no-dmg .dmg.normal, body.no-dmg .dmg.crit, body.no-dmg .dmg.burn { display: none; }
+@media (max-width: 600px) { #pause .pz-body { flex-direction: column; } #pause .pz-menu { width: 100%; flex-direction: row; flex-wrap: wrap; } #pause .pz-menu .tbtn { width: auto; flex: 1 1 45%; font-size: 13px; padding: 8px; } }
+#menu-btn { position: absolute; left: 16px; top: 240px; pointer-events: auto; cursor: pointer; padding: 6px 10px; color: #fff; font-family: var(--font); font-size: 12px; }
+#menu-btn span { margin-left: 6px; font-size: 10px; color: var(--gold); }
+@media (max-width: 600px) { #menu-btn { top: 168px; left: auto; right: 8px; } }
+@media (max-height: 520px) { #menu-btn { top: 64px; left: 240px; padding: 4px 8px; font-size: 11px; } }
+#pause { background: #17121f; box-shadow: 0 0 0 100vmax rgba(4, 3, 8, 0.55), 6px 6px 0 rgba(0, 0, 0, 0.5); }
+#app:has(#pause.show) #banner { opacity: 0; }

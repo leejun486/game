@@ -1,0 +1,42 @@
+{
+  "name": "wolhagung",
+  "productName": "월하궁 도깨비 야행",
+  "version": "1.0.0",
+  "description": "월하궁: 도깨비 야행 — 데스크톱판",
+  "main": "main.js",
+  "private": true,
+  "scripts": {
+    "prepare-game": "node copy-game.js",
+    "start": "npm run prepare-game && electron .",
+    "dist:win": "npm run prepare-game && electron-builder --win zip --x64",
+    "dist:linux": "npm run prepare-game && electron-builder --linux AppImage --x64",
+    "dist:mac": "npm run prepare-game && electron-builder --mac dmg"
+  },
+  "devDependencies": {
+    "electron": "^33.4.11",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "kr.dot3d.wolhagung",
+    "productName": "월하궁 도깨비 야행",
+    "files": [
+      "main.js",
+      "preload.js",
+      "game/**/*"
+    ],
+    "directories": {
+      "output": "release"
+    },
+    "win": {
+      "signAndEditExecutable": false
+    },
+    "linux": {
+      "category": "Game"
+    },
+    "mac": {
+      "category": "public.app-category.action-games"
+    },
+    "executableName": "Wolhagung",
+    "artifactName": "Wolhagung-${version}-${os}-${arch}.${ext}"
+  }
+}

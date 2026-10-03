@@ -7,6 +7,7 @@ import * as THREE from 'three';
 import { cloudNoiseTex } from './textures.js';
 import { shared } from './materials.js';
 import { GFX } from './gfx.js';
+import { loadSettings } from './settings.js';
 
 export const PPU = 16; // 화면 픽셀 / 월드 유닛
 
@@ -220,6 +221,7 @@ void main() {
 
 export class PixelRenderer {
   constructor(container) {
+    this.quality = loadSettings().quality;
     this.container = container;
     this.canvas = document.createElement('canvas');
     this.canvas.className = 'view';
@@ -341,13 +343,20 @@ export class PixelRenderer {
   }
 
   // 고화질: 화면 해상도 그대로(기기 배율 최대 1.5배, 화소 수 상한) 렌더. 확대 단계는 화면에 보이는 크기만 바꿈
+  setQuality(q) {
+    this.quality = q;
+    if (this.hd) this.resize();
+  }
+
   resizeHD() {
     const ps = (this.pixelSize = Math.max(1.5, this.autoPixelSize()));
     const cw = window.innerWidth, ch = window.innerHeight;
-    let sc = Math.min(window.devicePixelRatio || 1, 1.5);
+    // 화질 단계(설정): 높음은 기기 배율 1.5배까지, 낮음은 화소 수를 크게 줄이고 AO·MSAA를 끔
+    const Q = this.quality || 'high';
+    let sc = Math.min(window.devicePixelRatio || 1, { high: 1.5, mid: 1.0, low: 0.85 }[Q]);
     // 휴대폰은 화소 수를 줄여 발열·배터리 부담을 덜어 줌
     const touch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-    const maxPx = touch ? 1.1e6 : 2.4e6;
+    const maxPx = { high: touch ? 1.1e6 : 2.4e6, mid: touch ? 0.8e6 : 1.4e6, low: touch ? 0.5e6 : 0.8e6 }[Q];
     if (cw * ch * sc * sc > maxPx) sc = Math.sqrt(maxPx / (cw * ch));
     const RW = (this.RW = Math.round(cw * sc)), RH = (this.RH = Math.round(ch * sc));
     this.W = RW; this.H = RH; this.cssScale = sc;
@@ -355,7 +364,8 @@ export class PixelRenderer {
     Object.assign(this.canvas.style, { width: cw + 'px', height: ch + 'px', transform: 'none' });
     const lin = { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, type: THREE.HalfFloatType };
     for (const t of ['colorTarget', 'normalTarget', 'blurA', 'blurB']) this[t]?.dispose();
-    this.colorTarget = new THREE.WebGLRenderTarget(RW, RH, { ...lin, samples: 4 });
+    this.colorTarget = new THREE.WebGLRenderTarget(RW, RH, { ...lin, samples: { high: 4, mid: 2, low: 0 }[Q] });
+    if (this.hdMat) this.hdMat.uniforms.aoOn.value = Q === 'low' ? 0 : 1;
     this.normalTarget = new THREE.WebGLRenderTarget(RW, RH, { minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter });
     this.normalTarget.depthTexture = new THREE.DepthTexture(RW, RH);
     this.normalTarget.depthTexture.type = THREE.UnsignedIntType;

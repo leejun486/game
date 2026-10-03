@@ -4,7 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>월하궁: 도깨비 야행</title>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/galmuri@latest/dist/galmuri.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@900&display=swap">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -43,6 +44,7 @@
       <div id="quest-go">▶ 눌러서 자동 이동 <span>F</span></div>
     </div>
     <button id="hunt-btn" class="panel" data-k="hunt">자동 사냥<span>H</span></button>
+    <button id="menu-btn" class="panel">메뉴<span>Esc</span></button>
 
     <div id="logo"><span class="han">월하궁</span><span class="sub">도깨비 야행</span></div>
 
@@ -52,7 +54,7 @@
 
     <div id="help">
       <span><b>WASD</b> 이동</span><span><b>J</b>/<b>클릭</b> <i class="lbl-atk">베기</i></span><span><b>Space</b> <i class="lbl-dash">회피</i></span><span><b>K</b>/<b>우클릭</b> <i class="lbl-skill">검기</i></span><span><b>L</b>/<b>Q</b> <i class="lbl-skill2">일섬</i></span><span><b>I</b>/<b>R</b> <i class="lbl-skill3">회오리</i></span><span class="ult hidden"><b>U</b> 고유 기술</span>
-      <span><b>E</b> 대화·북</span><span><b>Tab</b> 타겟 변경</span><span><b>B</b> 가방</span><span><b>N</b> 낮/밤</span><span><b>휠</b> 확대</span><span><b>O</b> 외곽선</span><span><b>M</b> 음악</span>
+      <span><b>E</b> 대화·북</span><span><b>Tab</b> 타겟 변경</span><span><b>B</b> 가방</span><span><b>N</b> 낮/밤</span><span><b>휠</b> 확대</span><span><b>O</b> 외곽선</span><span><b>M</b> 음악</span><span><b>Esc</b> 일시정지·설정</span>
     </div>
   </div>
 
@@ -90,6 +92,22 @@
     <div id="skills-body"></div>
   </div>
 
+  <div id="pause" class="panel">
+    <div class="bag-head">일시정지 <small>Esc · P · 게임패드 Start</small></div>
+    <div class="pz-body">
+      <div class="pz-menu">
+        <button data-p="resume" class="tbtn main">계속하기</button>
+        <button data-p="sound" class="tbtn">소리</button>
+        <button data-p="screen" class="tbtn">화면</button>
+        <button data-p="keys" class="tbtn">조작 · 키 바꾸기</button>
+        <button data-p="data" class="tbtn">저장 파일</button>
+        <button data-p="title" class="tbtn">선택 화면으로</button>
+      </div>
+      <div class="pz-pane" id="pz-pane"></div>
+    </div>
+  </div>
+  <input type="file" id="save-file" accept=".json,application/json" hidden>
+
   <div id="title">
     <div class="logo-big"><span class="han">월하궁</span><span class="kr">달빛 아래 궁궐</span><span class="sub">— 도깨비 야행 —</span></div>
     <div id="select">
@@ -122,6 +140,7 @@
       <div class="cf-b"><button id="cf-yes" class="tbtn">지우고 새로 시작</button><button id="cf-no" class="tbtn main">취소</button></div>
     </div>
     <button id="btn-gfx" class="gfx-btn">그래픽: 고화질</button>
+    <button id="btn-settings" class="gfx-btn set-btn">설정 · 저장 파일</button>
     <div class="credit">3D 액션 · Three.js</div>
   </div>
 
