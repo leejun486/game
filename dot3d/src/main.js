@@ -17,7 +17,9 @@ import { makeGear, rollGearTier, gearScore, salvageExp, BAG_MAX, GEAR_SLOTS, slo
 import { item, rollDrop, bossDrop, RARITY, itemDesc, WEAPONS, OUTFITS, ULTS } from './items.js';
 import { expNeed, SKILL_LEVEL } from './entities.js';
 import { MAPS, BOSS_TYPES, BOSS_NAME, WIN_LINE } from './maps.js';
+import { PROLOGUE, SHARD_LINES, SHARD_MAX, ENDING, CREDITS, fillStory } from './story.js';
 import { clamp, lerp, rand, angleDiff, damp } from './util.js';
+import { initLang, watchDom, tr, LANG } from './i18n.js';
 
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
 
@@ -90,7 +92,7 @@ class Game {
     this.cleared = {};
     this.regionBanner = {};
     // 퀘스트 진행: step = QUESTS 순번, prog = 이 단계 진행도, lit = 밝힌 석등, bounty = 현상수배
-    this.quest = { step: 0, prog: {}, lit: [], bounty: null };
+    this.quest = { step: 0, prog: {}, lit: [], bounty: null, shards: [], prologue: false, ended: false };
     this.flames = [];
     this.fieldT = 0;
     this.themeCur = this.cloneTheme(MAPS.palace.theme);
@@ -221,6 +223,7 @@ class Game {
       if (e.button === 2 && !this.cdCheck('skill', this.player.skillCd)) this.player.startSkill(this.readInput());
     });
     stage.addEventListener('contextmenu', (e) => e.preventDefault());
+    document.getElementById('story').addEventListener('click', () => { if (this.story && !this.story.credits) this.storyNext(); });
     // 가방 버튼·창: 클릭이 공격으로 새지 않게
     for (const id of ['bag-btn', 'bag', 'evo-btn', 'skills', 'hunt-btn', 'quest', 'pause', 'menu-btn']) {
       const el = document.getElementById(id);
@@ -319,6 +322,8 @@ class Game {
     btn('cf-yes', () => this.newGame(true));
     btn('cf-no', () => this.showConfirm(false));
     btn('btn-gfx', () => this.toggleGfx());
+    btn('btn-lang', () => this.setLang(LANG === 'ko' ? 'en' : 'ko'));
+    document.getElementById('btn-lang').textContent = LANG === 'ko' ? 'English' : '한국어';
     document.getElementById('btn-gfx').textContent = `그래픽: ${GFX.hd ? '고화질' : '도트'} (G)`;
     document.getElementById('confirm').addEventListener('mousedown', (e) => e.stopPropagation());
     this.selectClass(this.selectedCls);
@@ -896,11 +901,15 @@ class Game {
     if (d.cleared) this.cleared = { ...d.cleared };
     else if (d.round > 0) this.cleared = { palace: true };
     // 퀘스트: 예전 기록은 평정한 지역으로 진행 단계를 짐작
-    if (d.quest && typeof d.quest.step === 'number') this.quest = { step: d.quest.step, prog: d.quest.prog || {}, lit: d.quest.lit || [], bounty: d.quest.bounty || null };
+    if (d.quest && typeof d.quest.step === 'number') this.quest = { step: d.quest.step, prog: d.quest.prog || {}, lit: d.quest.lit || [], bounty: d.quest.bounty || null, shards: d.quest.shards || [], prologue: !!d.quest.prologue, ended: !!d.quest.ended };
     else {
       const c = this.cleared;
       this.quest.step = c.temple ? 11 : c.bamboo ? 7 : c.palace ? 2 : (d.stage | 0) >= 1 ? 1 : 0;
     }
+    // 이야기가 생기기 전 기록: 이미 평정한 지역의 조각은 가진 것으로, 프롤로그는 건너뜀
+    if (!d.quest?.shards) this.quest.shards = Object.keys(this.cleared).filter((k) => SHARD_LINES[k]);
+    if (this.quest.step > 0 || this.round > 0) this.quest.prologue = true;
+    this.playTime = d.playTime || 0;
     this.quest.lit.forEach((i) => this.world.lanterns[i] && this.addFlame(this.world.lanterns[i]));
     this.updateGates(true);
     // 마지막 위치에서 이어서 (예전 기록은 그 지역 입구에서)
@@ -918,7 +927,7 @@ class Game {
     if (info) {
       const when = new Date(d.savedAt || Date.now());
       const pad = (n) => String(n).padStart(2, '0');
-      info.innerHTML = `이어하기 · ${this.player.cfg.title} <b>Lv.${this.player.level}</b> · <b>${this.round + 1}회차</b> · 퇴치 <b>${this.kills}</b> · 최고 연속 <b>${this.bestCombo}</b>` +
+      info.innerHTML = `이어하기 · ${this.player.cfg.title} <b>Lv.${this.player.level}</b> · <b>${this.round + 1}회차</b> · 퇴치 <b>${this.kills}</b> · 최고 연속 <b>${this.bestCombo}</b>` + (this.quest.ended ? ' · <b>달거울 복원</b>' : '') +
         `<small>${when.getMonth() + 1}/${when.getDate()} ${pad(when.getHours())}:${pad(when.getMinutes())} 자동 저장 · Delete 키: 기록 지우기</small>`;
     }
     this.refreshTitle();
@@ -942,6 +951,7 @@ class Game {
       quest: this.quest,
       cleared: this.cleared,
       towerBest: this.towerBest || 0,
+      playTime: Math.round(this.playTime || 0),
       inv: [...this.inv],
       gear: this.gear,
       music: this.audio.musicOn,
@@ -954,6 +964,11 @@ class Game {
   }
 
   onKey(code) {
+    if (this.story) {
+      if (code === 'Escape' || code === 'pause') this.storySkip();
+      else if (['Space', 'Enter', 'KeyJ', 'KeyE', 'atk', 'act', 'dash'].includes(code)) this.storyNext();
+      return;
+    }
     if (this.state === 'title') {
       if (document.getElementById('confirm').classList.contains('show')) {
         if (code === 'Escape') this.showConfirm(false);
@@ -1052,10 +1067,10 @@ class Game {
   // 기록을 모두 지우고 처음 상태로 (선택 화면에서)
   resetProgress() {
     clearSave();
-    this.kills = 0; this.round = 0; this.stage = 0; this.bestCombo = 0;
+    this.kills = 0; this.round = 0; this.stage = 0; this.bestCombo = 0; this.playTime = 0;
     this.progress = {}; this.inv = new Set(['sw0', 'mg0', 'bw0', 'ot0']); this.gear = [];
     this.cleared = {};
-    this.quest = { step: 0, prog: {}, lit: [], bounty: null };
+    this.quest = { step: 0, prog: {}, lit: [], bounty: null, shards: [], prologue: false, ended: false };
     for (const f of this.flames) this.scene.remove(f);
     this.flames = [];
     this.updateGates(true);
@@ -1111,6 +1126,12 @@ class Game {
 
   padButton(i, menu) {
     this.audio.unlock();
+    if (this.story) {
+      if (this.story.credits) { if (i === 0 || i === 9) this.endStory(); }
+      else if (i === 0) this.storyNext();
+      else if (i === 1 || i === 9) this.storySkip();
+      return;
+    }
     const dir = { 12: -1, 100: -1, 13: 1, 101: 1, 14: -1, 102: -1, 15: 1, 103: 1 }[i];
     if (menu) {
       const els = [...menu.querySelectorAll('button:not([disabled]), input[type=range], .it, .eqs, .evo-opt, .evo-train')].filter((e) => e.offsetParent !== null && getComputedStyle(e).visibility !== 'hidden');
@@ -1154,6 +1175,14 @@ class Game {
     document.body.classList.toggle('no-dmg', !S.numbers);
   }
 
+  // 언어 바꾸기: 저장하고 새로고침
+  setLang(v) {
+    this.save(false);
+    this.setSetting((s) => { s.lang = v; });
+    this.noSave = true;
+    location.reload();
+  }
+
   setSetting(fn) {
     fn(this.settings);
     saveSettings(this.settings);
@@ -1190,6 +1219,7 @@ class Game {
     } else if (tab === 'screen') {
       const seg = (key, opts, cur) => `<div class="pz-seg">${opts.map(([v, n]) => `<button data-k="${key}" data-val="${v}" class="${String(cur) === String(v) ? 'on' : ''}">${n}</button>`).join('')}</div>`;
       el.innerHTML = `<h3>화면</h3>
+        <div class="pz-row"><label>언어</label>${seg('lang', [['ko', '한국어'], ['en', 'English']], LANG)}</div>
         <div class="pz-row"><label>그래픽 모드</label>${seg('gfx', [['hd', '고화질'], ['pixel', '도트']], GFX.hd ? 'hd' : 'pixel')}</div>
         <div class="pz-row"><label>화질</label>${seg('quality', [['high', '높음'], ['mid', '보통'], ['low', '낮음']], S.quality)}</div>
         <div class="pz-row"><label>화면 흔들림</label>${seg('shake', [[1, '보통'], [0.5, '약하게'], [0, '끔']], S.shake)}</div>
@@ -1199,6 +1229,7 @@ class Game {
       for (const b of el.querySelectorAll('[data-k]')) b.addEventListener('click', () => {
         const k = b.dataset.k, v = b.dataset.val;
         if (k === 'gfx') { if ((v === 'hd') !== GFX.hd) { this.save(false); setGfx(v); } return; }
+        if (k === 'lang') { if (v !== LANG) this.setLang(v); return; }
         if (k === 'quality') { this.setSetting((s) => { s.quality = v; }); this.pixel.setQuality(v); }
         if (k === 'shake') this.setSetting((s) => { s.shake = +v; });
         if (k === 'numbers') this.setSetting((s) => { s.numbers = v === '1'; });
@@ -1228,7 +1259,7 @@ class Game {
         const d = new Date(), pad = (n) => String(n).padStart(2, '0');
         const a = document.createElement('a');
         a.href = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
-        a.download = `월하궁-저장-${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}.json`;
+        a.download = `${LANG === 'en' ? 'wolhagung-save' : '월하궁-저장'}-${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}.json`;
         document.body.appendChild(a); a.click(); a.remove();
         setTimeout(() => URL.revokeObjectURL(a.href), 2000);
         msg('저장 파일을 내려받았어요.');
@@ -1332,7 +1363,105 @@ class Game {
     this.save(false);
     document.getElementById('title').classList.add('hide');
     this.ui.showHud(true);
-    this.ui.banner('월하궁', '도깨비 야행', 2.8, 'title-banner');
+    const open = () => this.ui.banner('월하궁', '도깨비 야행', 2.8, 'title-banner');
+    if (!this.quest.prologue) this.playStory(PROLOGUE, { moon: true, onDone: () => { this.quest.prologue = true; this.save(false); open(); } });
+    else open();
+  }
+
+  // ---------- 이야기 (프롤로그·엔딩) ----------
+  playStory(lines, opt = {}) {
+    const el = document.getElementById('story');
+    const cfg = { title: tr(this.player.cfg.title), name: tr(this.player.cfg.name) };
+    this.story = { lines: lines.map((l) => fillStory(tr(l), cfg)), i: -1, opt };
+    el.className = 'show';
+    el.querySelector('.story-moon').classList.toggle('broken', !!opt.mend); // 엔딩은 깨진 달에서 시작해 다시 차오름
+    this.paused = true;
+    this.storyNext();
+  }
+
+  storyNext() {
+    const S = this.story;
+    if (!S || S.credits) return;
+    S.i++;
+    const el = document.getElementById('story');
+    if (S.i >= S.lines.length) {
+      if (S.opt.credits) return this.showCredits();
+      return this.endStory();
+    }
+    const tx = el.querySelector('.story-text');
+    const line = S.lines[S.i];
+    const m = line.match(/^([^:]{1,6}):\s*(.*)$/);
+    tx.classList.remove('in');
+    // 글자가 바뀌는 동안 잠깐 어두워졌다가 다시 밝아짐
+    clearTimeout(this.storyFade);
+    this.storyFade = setTimeout(() => {
+      tx.innerHTML = m ? `<span class="who">${m[1]}</span>${m[2]}` : line;
+      tx.classList.add('in');
+    }, S.i ? 260 : 60);
+    if (S.opt.moon && S.i === 2) el.querySelector('.story-moon').classList.add('broken');
+    if (S.opt.mend && S.i === 3) el.querySelector('.story-moon').classList.remove('broken');
+    this.audio.play('talk');
+  }
+
+  storySkip() {
+    const S = this.story;
+    if (!S || S.credits) return;
+    if (S.opt.credits) this.showCredits(); else this.endStory();
+  }
+
+  showCredits() {
+    const S = this.story;
+    S.credits = true;
+    const el = document.getElementById('story');
+    const p = this.player;
+    const t = Math.round(this.playTime || 0), hh = Math.floor(t / 3600), mm = Math.floor((t % 3600) / 60);
+    const stats = [['레벨', `Lv.${p.level}`], ['회차', `${this.round + 1}`], ['퇴치', `${this.kills}`], ['최고 연속', `${this.bestCombo}`], ['시련탑', `${this.towerBest || 0}층`], ['플레이 시간', hh ? `${hh}시간 ${mm}분` : `${mm}분`]];
+    const box = el.querySelector('.story-credits');
+    box.innerHTML = `<h2>월하궁</h2><div class="sub">도깨비 야행 · 달거울 복원</div>` +
+      `<div class="stats">${stats.map(([k, v]) => `<div>${k}<b>${v}</b></div>`).join('')}</div>` +
+      `<dl>${CREDITS.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('')}</dl>` +
+      `<div class="thanks">플레이해 주셔서 고맙습니다</div><button id="story-done">계속 지키기</button>`;
+    el.classList.add('credits');
+    box.querySelector('#story-done').addEventListener('click', (e) => { e.stopPropagation(); this.endStory(); });
+    this.audio.play('victory');
+  }
+
+  endStory() {
+    const S = this.story;
+    if (!S) return;
+    this.story = null;
+    clearTimeout(this.storyFade);
+    const el = document.getElementById('story');
+    el.className = '';
+    el.querySelector('.story-text').classList.remove('in');
+    this.paused = !!(this.ui.bagOpen || this.ui.skillsOpen);
+    S.opt.onDone?.();
+  }
+
+  // 지역 보스를 처음 물리치면 달거울 조각 하나
+  gainShard(id) {
+    const Q = this.quest;
+    if (!SHARD_LINES[id] || Q.shards.includes(id)) return;
+    Q.shards.push(id);
+    const n = Q.shards.length;
+    this.after(4.4, () => {
+      this.ui.banner('달거울 조각', `${n} / ${SHARD_MAX}`, 2.6, 'win-banner');
+      this.audio.play('levelup');
+      const at = V(this.player.pos.x, this.player.y, this.player.pos.z);
+      this.fx.ring(at, 2.2, '#fff2c0', 0.6);
+      for (let i = 0; i < 26; i++) this.fx.add.emit({ x: at.x + rand(-0.6, 0.6), y: at.y + rand(0.2, 2), z: at.z + rand(-0.6, 0.6), vy: rand(0.4, 1.6), life: rand(0.6, 1.2), size: 2.5, endSize: 1, color: '#ffffff', color2: '#f0d890' });
+      const say = () => { if (this.ui.inDialog || this.story) return this.after(0.5, say); this.ui.dialog('달거울', SHARD_LINES[id]); };
+      this.after(1.2, say);
+    });
+  }
+
+  // 시련탑에서 염라대왕을 처음 물리치면: 마지막 조각과 엔딩
+  playEnding() {
+    if (this.quest.ended) return;
+    this.quest.ended = true;
+    if (!this.quest.shards.includes('tower')) this.quest.shards.push('tower');
+    this.save(false);
+    this.playStory(ENDING, { moon: true, mend: true, credits: true, onDone: () => { this.ui.toast('엔딩을 봤어요! 시련탑은 계속 높아지고, 회차와 현상수배도 이어집니다', 4); this.save(false); } });
   }
 
   // ---------- 상호작용 ----------
@@ -1599,7 +1728,9 @@ class Game {
     if (!Q) return;
     this.ui.banner('새 임무', Q.title, 2.2, '');
     this.audio.play('wave');
-    if (Q.startLines && this.state === 'play') this.after(0.6, () => { if (!this.ui.inDialog) this.sayLines(Q.startLines); });
+    // 다른 대화(달거울 조각 이야기 등)가 열려 있으면 닫힐 때까지 기다렸다가
+    const say = () => { if (this.curQuest() !== Q || this.state !== 'play') return; if (this.ui.inDialog || this.story) return this.after(0.5, say); this.sayLines(Q.startLines); };
+    if (Q.startLines && this.state === 'play') this.after(0.6, say);
     this.save(false);
   }
 
@@ -2080,6 +2211,7 @@ class Game {
     if (next.mesh) next.mesh.visible = true;
     this.audio.play('victory');
     this.ui.banner(`${n}층 돌파!`, first ? `최고 기록 갱신 · 경험치 +${exp}` : `경험치 +${exp}`, 3, 'win-banner');
+    if (n % 10 === 0 && !this.quest.ended) this.after(3.2, () => this.playEnding());
     this.updateQuest();
     this.save(false);
   }
@@ -3659,6 +3791,7 @@ class Game {
     this.player.hp = this.player.maxHp;
     const first = !this.cleared[this.mapId];
     this.cleared[this.mapId] = true;
+    this.gainShard(this.mapId);
     const Q = this.curQuest();
     if (Q && Q.type === 'wave' && Q.region === this.mapId) this.after(2.0, () => this.completeStep());
     this.after(0.1, () => this.updateRegion(true));
@@ -3919,7 +4052,7 @@ class Game {
     this.audio.update();
     this.updateSoundScene(dt);
     // 15초마다 자동 저장
-    if (this.state === 'play') { this.saveT -= dt; if (this.saveT <= 0) this.save(); }
+    if (this.state === 'play') { this.saveT -= dt; if (this.saveT <= 0) this.save(); if (!this.paused) this.playTime = (this.playTime || 0) + dt; }
 
     // 히트스톱: 월드 시간 멈춤
     let wdt = dt;
@@ -3978,6 +4111,8 @@ const _a = new THREE.Vector3(), _b = new THREE.Vector3(), _c = new THREE.Vector3
 const _e = new THREE.Color();
 
 window.addEventListener('DOMContentLoaded', () => {
+  initLang();
+  watchDom();
   try {
     window.game = new Game();
   } catch (err) {

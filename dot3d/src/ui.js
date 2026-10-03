@@ -1,4 +1,5 @@
 import { item, itemDesc, drawItemIcon, RARITY, WEAPONS, OUTFITS, ULTS } from './items.js';
+import { tr } from './i18n.js';
 import { EVOS, RUNES, branchOf, rankOf, runeOf, freePoints, RANK_NAME, MAX_RANK } from './evolve.js';
 import { drawGearIcon, gearLines, gearScore, SLOT_NAME, STATS, BAG_MAX, salvageExp, GEAR_SLOTS, rarityOf, SETS, setBonuses } from './gear.js';
 import { expNeed, SKILL_LEVEL } from './entities.js';
@@ -350,6 +351,8 @@ export class UI {
   }
 
   dialog(name, lines, onDone) {
+    // 한 글자씩 찍히므로 화면 자동 번역 대신 넘겨받을 때 번역
+    name = tr(name); lines = lines.map((l) => tr(l));
     this.dialogState = { name, lines, i: 0, shown: 0, onDone, acc: 0 };
     this.el.dialog.classList.add('show');
     this.el.dName.textContent = name;

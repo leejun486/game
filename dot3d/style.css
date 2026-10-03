@@ -504,6 +504,7 @@ em.ult { color: #ff9a7a; }
 .pz-btn.main { background: #ffd76a; color: #2a1a08; border-color: #8a6a2a; }
 .pad-focus { outline: 3px solid #7ad8ff !important; outline-offset: 2px; }
 .set-btn { left: auto !important; right: 16px; }
+.lang-btn { left: auto !important; right: 16px; bottom: 46px !important; }
 body.no-dmg .dmg.normal, body.no-dmg .dmg.crit, body.no-dmg .dmg.burn { display: none; }
 @media (max-width: 600px) { #pause .pz-body { flex-direction: column; } #pause .pz-menu { width: 100%; flex-direction: row; flex-wrap: wrap; } #pause .pz-menu .tbtn { width: auto; flex: 1 1 45%; font-size: 13px; padding: 8px; } }
 #menu-btn { position: absolute; left: 16px; top: 240px; pointer-events: auto; cursor: pointer; padding: 6px 10px; color: #fff; font-family: var(--font); font-size: 12px; }
@@ -512,3 +513,42 @@ body.no-dmg .dmg.normal, body.no-dmg .dmg.crit, body.no-dmg .dmg.burn { display:
 @media (max-height: 520px) { #menu-btn { top: 64px; left: 240px; padding: 4px 8px; font-size: 11px; } }
 #pause { background: #17121f; box-shadow: 0 0 0 100vmax rgba(4, 3, 8, 0.55), 6px 6px 0 rgba(0, 0, 0, 0.5); }
 #app:has(#pause.show) #banner { opacity: 0; }
+
+/* 이야기: 프롤로그·엔딩 */
+#story { position: absolute; inset: 0; z-index: 60; display: none; background: radial-gradient(ellipse at 50% 35%, #1c1a34 0%, #08070f 70%); cursor: pointer; }
+#story.show { display: block; animation: storyIn 0.8s ease; }
+@keyframes storyIn { from { opacity: 0; } }
+#story .story-moon { position: absolute; left: 50%; top: 14vh; width: 120px; height: 120px; margin-left: -60px; border-radius: 50%; background: radial-gradient(circle at 40% 38%, #fffbe8, #f0dca0 55%, #c8a860); box-shadow: 0 0 60px 18px rgba(255, 230, 160, 0.25); opacity: 0.85; transition: clip-path 1.2s ease, opacity 1s; }
+#story .story-moon::before, #story .story-moon::after { content: ''; position: absolute; inset: 0; border-radius: 50%; opacity: 0; transition: opacity 1s; pointer-events: none;
+  background: linear-gradient(118deg, transparent 48.6%, rgba(40, 30, 50, 0.85) 49%, transparent 49.6%), linear-gradient(62deg, transparent 33.6%, rgba(40, 30, 50, 0.7) 34%, transparent 34.5%); }
+#story .story-moon::after { background: linear-gradient(20deg, transparent 63.6%, rgba(40, 30, 50, 0.75) 64%, transparent 64.5%); }
+#story .story-moon.broken { opacity: 0.6; box-shadow: 0 0 30px 6px rgba(255, 230, 160, 0.12); }
+#story .story-moon.broken::before, #story .story-moon.broken::after { opacity: 1; }
+#story .story-text { position: absolute; left: 50%; top: 52%; width: min(760px, 88vw); transform: translate(-50%, -50%); text-align: center; font-size: 20px; line-height: 1.75; color: #f2e8d0; text-shadow: 2px 2px 0 #000; opacity: 0; transition: opacity 0.6s ease, transform 0.6s ease; }
+#story .story-text.in { opacity: 1; }
+#story .story-text .who { display: block; font-size: 14px; letter-spacing: 4px; color: #ff9a7a; margin-bottom: 6px; }
+#story .story-hint { position: absolute; left: 0; right: 0; bottom: 5vh; text-align: center; font-size: 12px; color: #8a8098; }
+#story .story-credits { display: none; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(560px, 90vw); text-align: center; color: #e8dcc0; cursor: default; }
+#story.credits .story-credits { display: block; animation: storyIn 1.2s ease; }
+#story.credits .story-text, #story.credits .story-hint, #story.credits .story-moon { display: none; }
+.story-credits h2 { font-family: 'Noto Serif KR', var(--font); font-size: 40px; margin: 0 0 4px; color: #fff2d0; letter-spacing: 6px; text-shadow: 0 0 20px rgba(255, 210, 120, 0.5), 3px 3px 0 #000; }
+.story-credits .sub { font-size: 14px; color: #c8b890; letter-spacing: 4px; margin-bottom: 22px; }
+.story-credits .stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-bottom: 20px; }
+.story-credits .stats div { background: rgba(255, 255, 255, 0.05); border: 1px solid #3a3020; padding: 8px 4px; font-size: 11px; color: #a89e8a; }
+.story-credits .stats b { display: block; font-size: 18px; color: #ffd76a; font-weight: normal; margin-top: 2px; }
+.story-credits dl { margin: 0 0 22px; display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; text-align: left; font-size: 13px; }
+.story-credits dt { color: #a89e8a; text-align: right; }
+.story-credits dd { margin: 0; color: #f2e8d0; }
+.story-credits .thanks { font-size: 15px; color: #ffe8b0; margin-bottom: 14px; }
+.story-credits button { font-family: var(--font); font-size: 15px; padding: 10px 28px; background: #ffd76a; color: #2a1a08; border: 2px solid #8a6a2a; cursor: pointer; }
+@media (max-width: 600px) { #story .story-text { font-size: 16px; } .story-credits h2 { font-size: 28px; } .story-credits .stats { grid-template-columns: 1fr 1fr; } }
+
+/* 영어판: CSS에 박힌 글자와 좁은 이름표 */
+html[lang="en"] body.touch #gameover .s b::after { content: ' / tap'; }
+html[lang="en"] .it.on::after { content: 'equipped'; }
+html[lang="en"] .it.other::after { content: 'other class'; }
+html[lang="en"] .evo-opt.on b::after { content: ' · training'; }
+html[lang="en"] .it.worn::after { content: 'worn'; }
+html[lang="en"] #hunt-btn.on::after { content: ' on'; }
+html[lang="en"] .eqs .sl { width: 54px; }
+html[lang="en"] .rune-line { grid-template-columns: 18px 46px repeat(3, 1fr); }
