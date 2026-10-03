@@ -11,7 +11,7 @@ import { loadSettings, saveSettings, ACTIONS, keyOf, bindMap, keyName, DEFAULTS 
 import { CLASSES, CLASS_ORDER } from './classes.js';
 import { ClassPreview } from './preview.js';
 import { GFX, setGfx } from './gfx.js';
-import { EVOS, branchOf, rankOf, freePoints, rankMul, rankCd, RANK_NAME } from './evolve.js';
+import { EVOS, RUNES, branchOf, rankOf, featRank, runeOf, freePoints, rankMul, rankCd, RANK_NAME } from './evolve.js';
 import { QUESTS, BOUNTIES, KILL_NAME } from './quests.js';
 import { makeGear, rollGearTier, gearScore, salvageExp, BAG_MAX, GEAR_SLOTS, slotKind, rarityOf, makeSetPiece, setFor, SETS } from './gear.js';
 import { item, rollDrop, bossDrop, RARITY, itemDesc, WEAPONS, OUTFITS, ULTS } from './items.js';
@@ -744,7 +744,8 @@ class Game {
     pr.rank = { ...(pr.rank || {}), [slot]: r + 1 };
     const nm = E[pr.evo[slot]].name;
     this.audio.play('levelup');
-    this.ui.banner(r + 1 === 5 ? '각성!' : '수련', `${nm} ${RANK_NAME[r + 1]}단계`, 2, 'win-banner');
+    this.ui.banner('수련', `${nm} ${RANK_NAME[r + 1]}단계`, 2, 'win-banner');
+    this.ui.toast(`${RANK_NAME[r + 1]}단계 각인(${RUNES[r + 1].title})을 골라 보세요`, 2.4);
     const at = V(p.pos.x, p.y, p.pos.z);
     this.fx.circle(at, 2, r + 1 === 5 ? '#ffd040' : '#bfe8ff', 1.2, 3);
     this.ui.setClass(p.cfg, p);
@@ -757,12 +758,107 @@ class Game {
     return branchOf(this.progressOf(pl.cls), pl.cls, pl.level, slot);
   }
 
+  // 기술 모양을 정하는 단계 (강화·각성 각인을 안 골랐으면 그만큼 빠짐)
   rank(pl, slot) {
-    return rankOf(this.progressOf(pl.cls), pl.cls, pl.level, slot);
+    return featRank(this.progressOf(pl.cls), pl.cls, pl.level, slot);
+  }
+
+  // 수련한 단계 수에 따른 위력 배수
+  rankPow(pl, slot) {
+    return rankMul(rankOf(this.progressOf(pl.cls), pl.cls, pl.level, slot));
+  }
+
+  rune(pl, slot, rank) {
+    return runeOf(this.progressOf(pl.cls), pl.cls, pl.level, slot, rank);
   }
 
   // 단계에 따른 재사용 대기 배수 (플레이어가 스킬을 쓸 때)
-  skillCdMul(pl, slot) { return rankCd(this.rank(pl, slot)) * (1 - (pl.gear?.cdr || 0)); }
+  skillCdMul(pl, slot) {
+    const r = rankOf(this.progressOf(pl.cls), pl.cls, pl.level, slot);
+    return rankCd(r) * (this.rune(pl, slot, 4) === 'swift' ? 0.7 : 1) * (1 - (pl.gear?.cdr || 0));
+  }
+
+  // 각인 고르기: 이미 수련한 단계라 수련점은 들지 않고, 언제든 바꿀 수 있음
+  chooseRune(slot, rank, key) {
+    const p = this.player;
+    const pr = this.progressOf(p.cls);
+    if (rankOf(pr, p.cls, p.level, slot) < rank || !RUNES[rank]?.opts[key]) return;
+    if (runeOf(pr, p.cls, p.level, slot, rank) === key) return;
+    pr.rune = { ...(pr.rune || {}), [slot]: { ...(pr.rune?.[slot] || {}), [rank]: key } };
+    const E = EVOS[p.cls][slot], R = RUNES[rank].opts[key];
+    this.audio.play('levelup');
+    this.ui.toast(`${E[pr.evo[slot]].name} ${RANK_NAME[rank]}: ${R.name} 각인`, 1.8);
+    this.ui.setClass(p.cfg, p);
+    this.ui.refreshSkills();
+    this.save(false);
+  }
+
+  // 각인 효과: 기술이 발동하는 순간 한 번 (메아리로 다시 나갈 때는 빼고)
+  skillRunes(pl, slot, recast) {
+    if (this._echoing || pl.dead) return;
+    const el = this.rune(pl, slot, 2), mod = this.rune(pl, slot, 3), use = this.rune(pl, slot, 4), aw = this.rune(pl, slot, 5);
+    if (!el && !mod && !use && !aw) return;
+    const pow = this.rankPow(pl, slot) * (1 + pl.level * 0.04);
+    const c = this.aimPoint(pl, 4, 9);
+    if (el === 'fire') this.runeFire(c, pow);
+    else if (el === 'ice') this.runeIce(c, pow);
+    else if (el === 'volt') this.runeVolt(pl, pow);
+    if (mod === 'echo') {
+      this.after(1.2, () => {
+        if (pl.dead || this.state !== 'play') return;
+        this.fx.ghost(pl.rig, '#c8b0ff', 0.45);
+        this.fx.ring(V(pl.pos.x, pl.y, pl.pos.z), 1.8, '#c8b0ff', 0.35);
+        this._echoing = true;
+        try { recast(); } finally { this._echoing = false; }
+      });
+    } else if (mod === 'vamp') {
+      const n = this.enemiesIn(pl.pos, 6).length;
+      if (n && pl.hp < pl.maxHp) {
+        const h = Math.min(pl.maxHp - pl.hp, Math.round(pl.maxHp * Math.min(0.2, 0.04 * n)));
+        pl.hp += h;
+        for (const e of this.enemiesIn(pl.pos, 6)) { const ec = e.center(); this.fx.streak(ec.clone(), V(pl.pos.x, pl.y + 1, pl.pos.z), '#8aff9a', 0.4, 0.25); }
+        this.fx.number(pl.pos.clone().add(V(0, 2.1, 0)), `+${h}`, 'heal');
+      }
+    }
+    if (use === 'guard') { pl.guardT = 3; this.fx.ring(V(pl.pos.x, pl.y + 0.1, pl.pos.z), 1.3, '#ffe8a0', 0.5); }
+    else if (use === 'gale') { pl.galeT = 3; this.fx.ring(V(pl.pos.x, pl.y + 0.1, pl.pos.z), 1.3, '#a0ffd0', 0.4); }
+    if (aw === 'frenzy') {
+      for (const k of ['skillCd', 'cd2', 'cd3']) if (k !== ['', 'skillCd', 'cd2', 'cd3'][slot]) pl[k] = Math.max(0, (pl[k] || 0) - 3);
+      this.fx.spark(pl.pos.x, pl.y + 1.2, pl.pos.z, 12, '#ff6a8a', 5);
+    }
+  }
+
+  // 화염 각인: 겨냥한 자리에 3초 동안 불길
+  runeFire(c, pow) {
+    const R = 2.2;
+    this.fx.scorch(c, R, '#2a0a04', 3.2);
+    for (let i = 0; i < 6; i++) {
+      this.after(i * 0.5, () => {
+        this.fx.colorFire(c.x, c.y + 0.2, c.z, 16, R * 0.8, '#ffd070', '#ff3a10');
+        for (const e of this.enemiesIn(c, R)) { this.damageEnemy(e, Math.round(6 * pow), false, 0.3, 0.05); e.burnFor(2, Math.round(4 * pow)); }
+      });
+    }
+  }
+
+  // 서리 각인: 겨냥한 자리 주변을 잠깐 얼림
+  runeIce(c, pow) {
+    const R = 2.6;
+    this.fx.ring(c, R, '#bfeaff', 0.45);
+    for (let i = 0; i < 7; i++) { const a = (i / 7) * Math.PI * 2; this.fx.iceSpike(V(c.x + Math.cos(a) * R * 0.6, c.y, c.z + Math.sin(a) * R * 0.6), 0.8, 1.0); }
+    for (const e of this.enemiesIn(c, R)) { this.damageEnemy(e, Math.round(10 * pow), false, 0.5, 0.2); e.freeze(1.2); }
+    this.audio.play('block');
+  }
+
+  // 뇌전 각인: 가까운 적 셋에게 벼락
+  runeVolt(pl, pow) {
+    const list = this.enemiesIn(pl.pos, 8).sort((a, b) => Math.hypot(a.pos.x - pl.pos.x, a.pos.z - pl.pos.z) - Math.hypot(b.pos.x - pl.pos.x, b.pos.z - pl.pos.z)).slice(0, 3);
+    list.forEach((e, i) => this.after(0.08 + i * 0.1, () => {
+      if (e.dead) return;
+      this.fx.bolt(V(e.pos.x, this.world.heightAt(e.pos.x, e.pos.z), e.pos.z), 0.7);
+      this.damageEnemy(e, Math.round(14 * pow), false, 1.5, 0.45);
+    }));
+    if (list.length) this.audio.play('thunder');
+  }
 
   equipItem(id) {
     const p = this.player;
@@ -1454,15 +1550,25 @@ class Game {
     this.target = t;
     const d = Math.hypot(t.pos.x - p.pos.x, t.pos.z - p.pos.z);
     if (d > range) return this.steerTo(inp, t.pos.x, t.pos.z, 2, 80);
-    // 사거리 안: 바라보고 공격
+    // 사거리 안: 적을 바라보고 (마우스 방향 말고) 공격
     p.yaw = Math.atan2(t.pos.x - p.pos.x, t.pos.z - p.pos.z);
+    inp.mouseRecent = false; inp.mouseWorld = null;
     const crowd = this.enemiesIn(p.pos, 5).length;
+    const big = t.isBoss || t.elite || crowd >= 2;
     const lv = p.level;
-    if (p.ult && p.ultCd <= 0 && (crowd >= 3 || t.isBoss)) p.startUlt(inp);
-    else if (p.skillCd <= 0) p.startSkill(inp);
-    else if (lv >= SKILL_LEVEL[2] && (p.cd2 || 0) <= 0 && (crowd >= 2 || t.isBoss)) p.startExtraSkill(inp, 2);
-    else if (lv >= SKILL_LEVEL[3] && (p.cd3 || 0) <= 0 && (crowd >= 3 || t.isBoss)) p.startExtraSkill(inp, 3);
-    else p.startAttack(inp);
+    // 쓸 수 있는 기술이 있으면 기본 공격을 이어 치지 않고, 지금 동작이 끝나는 대로 기술부터
+    const ready = p.ult && p.ultCd <= 0 && big ? 'ult'
+      : p.skillCd <= 0 ? 1
+      : lv >= SKILL_LEVEL[2] && (p.cd2 || 0) <= 0 ? 2
+      : lv >= SKILL_LEVEL[3] && (p.cd3 || 0) <= 0 ? 3 : 0;
+    if (ready) {
+      if (p.attack && p.attack.t < 0.6) return inp;
+      if (ready === 'ult') p.startUlt(inp);
+      else if (ready === 1) p.startSkill(inp);
+      else p.startExtraSkill(inp, ready);
+      return inp;
+    }
+    p.startAttack(inp);
     return inp;
   }
 
@@ -2194,7 +2300,8 @@ class Game {
   // 검기: 발밑 충격파 + 칼끝 섬광 → 3겹 초승달 검기가 잔상·빛가루·바닥 서리를 남기며 날아감
   // 검객 K: 검기 / 삼연 검기 / 천열참 (단계가 오르면 줄기 수·불길·크기가 늘어남)
   skillSword1(pl) {
-    const br = this.branch(pl, 1), r = this.rank(pl, 1), M = rankMul(r);
+    this.skillRunes(pl, 1, () => this.skillSword1(pl));
+    const br = this.branch(pl, 1), r = this.rank(pl, 1), M = this.rankPow(pl, 1);
     if (br === 'a') {
       const n = r >= 5 ? 7 : r >= 3 ? 5 : 3, sp = n === 3 ? 0.34 : n === 5 ? 0.26 : 0.2;
       const gold = r >= 5 ? ['#ffa020', '#ffe8a0', '#ffffff'] : undefined;
@@ -2305,7 +2412,8 @@ class Game {
   }
 
   playerSkillHit(pl, a) {
-    const br = this.branch(pl, 1), r = this.rank(pl, 1), M = rankMul(r);
+    this.skillRunes(pl, 1, () => this.playerSkillHit(pl, a));
+    const br = this.branch(pl, 1), r = this.rank(pl, 1), M = this.rankPow(pl, 1);
     if (pl.cls === 'mage') {
       if (br === 'a') this.castLightning(pl, { mul: M, storm: { dur: r >= 3 ? 6 : 4.2, tick: r >= 3 ? 0.38 : 0.55, hits: r >= 5 ? 2 : 1, R: r >= 5 ? 6 : 4.6 } });
       else if (br === 'b') this.castLightning(pl, { R: 3.9, mult: 1.9, mul: M, stun: 1.3, big: true, after: r >= 3, chain: r >= 5 });
@@ -2721,8 +2829,9 @@ class Game {
 
   // ================= 추가 스킬 =================
   castSkill(pl, slot) {
+    this.skillRunes(pl, slot, () => this.castSkill(pl, slot));
     const k = pl.cls + slot;
-    const br = this.branch(pl, slot), r = this.rank(pl, slot), M = rankMul(r);
+    const br = this.branch(pl, slot), r = this.rank(pl, slot), M = this.rankPow(pl, slot);
     if (k === 'sword2') {
       if (br === 'a') {
         // 연섬: 꿰뚫고 곧바로 돌아서며 거듭 벰 (Ⅲ 세 번, Ⅴ 네 번 + 십자 섬광)

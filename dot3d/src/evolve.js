@@ -1,5 +1,5 @@
 // 파생 기술: 스킬마다 두 갈래 중 하나를 골라 Ⅰ~Ⅴ단계까지 다섯 번 수련
-//  Ⅰ 갈래 선택(기술이 바뀜) · Ⅱ, Ⅳ 피해↑ 재사용↓ · Ⅲ 강화 · Ⅴ 각성
+//  Ⅰ 갈래 선택(기술이 바뀜) · Ⅱ~Ⅴ 각인 선택(단계마다 효과가 다른 각인 중 하나를 고름, 언제든 바꿀 수 있음)
 //  단계마다 필요한 레벨(lv)이 있고, 레벨이 오를 때마다 수련점 1점을 얻어 한 단계에 1점씩 씀
 export const RANK_NAME = ['', 'Ⅰ', 'Ⅱ', 'Ⅲ', 'Ⅳ', 'Ⅴ'];
 export const MAX_RANK = 5;
@@ -60,6 +60,43 @@ export function freePoints(progress, level) {
   return Math.max(0, level - 1 - used);
 }
 
-// 단계별 위력: 피해 배수, 재사용 대기 배수
-export const rankMul = (r) => 1 + 0.12 * Math.max(0, r - 1);
-export const rankCd = (r) => 1 - 0.06 * Math.max(0, r - 1);
+// 단계별 위력: 피해 배수, 재사용 대기 배수 (각인이 주된 성장이고 이건 덤)
+export const rankMul = (r) => 1 + 0.08 * Math.max(0, r - 1);
+export const rankCd = (r) => 1 - 0.04 * Math.max(0, r - 1);
+
+// 각인: Ⅱ~Ⅴ단계에서 하나씩 고름. 'r3'·'r5'는 갈래 고유의 강화·각성 (EVOS의 r3, r5 설명)
+export const RUNES = {
+  2: { title: '속성', opts: {
+    fire: { name: '화염', desc: '겨냥한 자리에 불길이 3초 동안 남아 적을 태움' },
+    ice: { name: '서리', desc: '겨냥한 자리 주변 적이 1.2초 얼어붙음 (대왕은 피해만)' },
+    volt: { name: '뇌전', desc: '가까운 적 셋에게 벼락이 떨어짐' },
+  } },
+  3: { title: '변화', opts: {
+    r3: { name: '강화', desc: null },
+    echo: { name: '메아리', desc: '1.2초 뒤 같은 기술이 한 번 더 나감 (강화 효과 없음)' },
+    vamp: { name: '흡혼', desc: '쓸 때마다 주변 적 하나당 체력 4% 회복 (최대 20%) (강화 효과 없음)' },
+  } },
+  4: { title: '운용', opts: {
+    swift: { name: '신속', desc: '재사용 대기 30% 감소' },
+    guard: { name: '호신', desc: '쓴 뒤 3초 동안 받는 피해 40% 감소' },
+    gale: { name: '질풍', desc: '쓴 뒤 3초 동안 이동 속도 40% 증가' },
+  } },
+  5: { title: '각성', opts: {
+    r5: { name: '각성', desc: null },
+    frenzy: { name: '폭주', desc: '쓸 때마다 다른 두 기술의 재사용 대기가 3초 줄어듦 (각성 효과 없음)' },
+  } },
+};
+
+// 고른 각인 (그 단계에 못 미치면 null). Ⅲ·Ⅴ는 안 골랐으면 갈래 고유 강화·각성
+export function runeOf(progress, cls, level, slot, rank) {
+  if (rankOf(progress, cls, level, slot) < rank) return null;
+  return progress.rune?.[slot]?.[rank] ?? (rank === 3 ? 'r3' : rank === 5 ? 'r5' : null);
+}
+
+// 기술 모양을 정하는 단계: 강화(r3)·각성(r5)을 고르지 않았으면 그 효과는 빠짐
+export function featRank(progress, cls, level, slot) {
+  const r = rankOf(progress, cls, level, slot);
+  if (r >= 5 && runeOf(progress, cls, level, slot, 5) === 'r5') return 5;
+  if (r >= 3 && runeOf(progress, cls, level, slot, 3) === 'r3') return 3;
+  return Math.min(r, 2);
+}

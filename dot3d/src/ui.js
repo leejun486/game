@@ -1,5 +1,5 @@
 import { item, itemDesc, drawItemIcon, RARITY, WEAPONS, OUTFITS, ULTS } from './items.js';
-import { EVOS, branchOf, rankOf, freePoints, RANK_NAME, MAX_RANK } from './evolve.js';
+import { EVOS, RUNES, branchOf, rankOf, runeOf, freePoints, RANK_NAME, MAX_RANK } from './evolve.js';
 import { drawGearIcon, gearLines, gearScore, SLOT_NAME, STATS, BAG_MAX, salvageExp, GEAR_SLOTS, rarityOf, SETS, setBonuses } from './gear.js';
 import { expNeed, SKILL_LEVEL } from './entities.js';
 
@@ -110,7 +110,7 @@ export class UI {
     if (!body || !document.getElementById('skills').classList.contains('show')) return;
     const pr = g.progressOf(p.cls);
     const pts = freePoints(pr, p.level);
-    body.innerHTML = `<div class="evo-pts">수련점 <b>${pts}</b> <small>레벨이 오를 때마다 1점 · 단계마다 1점</small></div>`;
+    body.innerHTML = `<div class="evo-pts">수련점 <b>${pts}</b> <small>레벨이 오를 때마다 1점 · 단계마다 1점 · Ⅱ~Ⅴ단계마다 각인을 골라 효과를 바꿔요</small></div>`;
     const keys = { 1: 'K', 2: 'L', 3: 'I' };
     for (const slot of [1, 2, 3]) {
       const E = EVOS[p.cls][slot];
@@ -134,14 +134,35 @@ export class UI {
         const o = document.createElement('div');
         const mine = br === b;
         o.className = 'evo-opt' + (mine ? ' on' : '');
-        const steps = [
-          [1, B.desc], [2, '피해 증가 · 재사용 단축'], [3, '강화: ' + B.r3], [4, '피해 증가 · 재사용 단축'], [5, B.r5],
-        ].map(([k, t]) => `<li class="${mine && r >= k ? 'got' : ''}"><em>${RANK_NAME[k]}</em> ${t}</li>`).join('');
-        o.innerHTML = `<b>${B.name}</b><ul>${steps}</ul>`;
+        o.innerHTML = `<b>${B.name}</b><span>${B.desc}</span>`;
         if (p.level >= E.lv[0]) o.addEventListener('click', (e) => { e.stopPropagation(); g.chooseEvo(slot, b); });
         opts.append(o);
       }
       row.append(opts);
+      // Ⅱ~Ⅴ 각인: 단계마다 하나를 고름 (수련한 단계만, 언제든 바꿀 수 있음)
+      if (br) {
+        const rr = rankOf(pr, p.cls, p.level, slot);
+        const runes = document.createElement('div');
+        runes.className = 'evo-runes';
+        for (let k = 2; k <= MAX_RANK; k++) {
+          const R = RUNES[k], cur = runeOf(pr, p.cls, p.level, slot, k), open = rr >= k;
+          const line = document.createElement('div');
+          line.className = 'rune-line' + (open ? '' : ' locked') + (open && !cur ? ' pick' : '');
+          line.innerHTML = `<em>${RANK_NAME[k]}</em><span class="rt">${R.title}</span>`;
+          for (const [key, o] of Object.entries(R.opts)) {
+            const desc = o.desc ?? (key === 'r3' ? E[br].r3 : E[br].r5.replace(/^각성:\s*/, ''));
+            const bt = document.createElement('button');
+            bt.className = 'rune' + (cur === key ? ' on' : '');
+            bt.innerHTML = `<b>${o.name}</b><small>${desc}</small>`;
+            bt.title = desc;
+            if (open) bt.addEventListener('click', (e) => { e.stopPropagation(); g.chooseRune(slot, k, key); });
+            else bt.disabled = true;
+            line.append(bt);
+          }
+          runes.append(line);
+        }
+        row.append(runes);
+      }
       if (br && next) {
         const btn = document.createElement('button');
         btn.className = 'evo-train' + (canTrain ? '' : ' off');

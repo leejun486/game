@@ -350,7 +350,7 @@ export class Player {
       g.fx.number(this.pos.clone().add(new THREE.Vector3(0, 1.9, 0)), '비늘 막기!', 'alert');
       return false;
     }
-    dmg = Math.max(1, Math.round(dmg * (1 - (this.def || 0)) * (this.perks?.has('ironhide') ? 0.88 : 1)));
+    dmg = Math.max(1, Math.round(dmg * (1 - (this.def || 0)) * (this.perks?.has('ironhide') ? 0.88 : 1) * (this.guardT > 0 ? 0.6 : 1)));
     this.hp -= dmg;
     this.invuln = 0.7;
     this.blinkT = 0.7;
@@ -414,6 +414,9 @@ export class Player {
     this.invuln = Math.max(0, this.invuln - dt);
     this.hurtT = Math.max(0, this.hurtT - dt);
     this.comboTimer -= dt;
+    // 각인: 호신(피해 감소)·질풍(빠른 걸음)
+    if (this.guardT > 0) this.guardT -= dt;
+    if (this.galeT > 0) { this.galeT -= dt; if (Math.random() < dt * 14) g.fx.add.emit({ x: this.pos.x + rand(-0.3, 0.3), y: this.pos.y + 0.15, z: this.pos.z + rand(-0.3, 0.3), vy: 0.6, life: 0.35, size: 2, color: '#d0ffe8', color2: '#3ac890' }); }
 
     let speed = 0;
     if (!this.dead) {
@@ -433,7 +436,7 @@ export class Player {
         const slow = this.attack ? (this.attack.kind === 5 ? 0.7 : this.attack.skill ? (this.cls === 'sword' ? 0.1 : 0.25) : this.cls === 'sword' ? 0.22 : 0.45) : 1;
         // 얕은 물·붙잡힘·독: 걸음이 느려짐
         const wet = g.world.wet.length && g.world.inWater(this.pos.x, this.pos.z);
-        const sp = 4.6 * slow * (this.perks?.has('swift') ? 1.15 : 1) * (1 + (this.gear?.spd || 0)) * (wet ? 0.62 : 1) * (this.slowT > 0 ? 0.55 : 1);
+        const sp = 4.6 * slow * (this.perks?.has('swift') ? 1.15 : 1) * (1 + (this.gear?.spd || 0)) * (wet ? 0.62 : 1) * (this.slowT > 0 ? 0.55 : 1) * (this.galeT > 0 ? 1.4 : 1);
         if (wet && input.moveLen > 0.1 && Math.random() < dt * 14) g.fx.add.emit({ x: this.pos.x + rand(-0.3, 0.3), y: this.pos.y + 0.08, z: this.pos.z + rand(-0.3, 0.3), vx: rand(-1, 1), vy: rand(1, 2.2), vz: rand(-1, 1), g: 10, life: 0.35, size: 2, color: '#d8fff4', color2: '#4a9a9a' });
         if (input.moveLen > 0.1) {
           mv = 1;

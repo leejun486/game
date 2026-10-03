@@ -296,6 +296,21 @@ body.touch #gameover .s b::after { content: ' / 화면 탭'; }
 .evo-opt li.got { color: #ffe8b0; }
 .evo-opt li.got em { color: #ffd76a; }
 .evo-opt li:first-child { color: #c8bea8; }
+.evo-runes { margin-top: 6px; display: flex; flex-direction: column; gap: 4px; }
+.rune-line { display: grid; grid-template-columns: 18px 30px repeat(3, 1fr); gap: 4px; align-items: stretch; }
+.rune-line > em { font-style: normal; font-size: 10px; color: #ffd76a; align-self: center; text-align: center; }
+.rune-line .rt { font-size: 10px; color: #a89e8a; align-self: center; }
+.rune-line.locked { opacity: 0.4; }
+.rune-line.pick .rune { border-color: #8a6a2a; animation: runePulse 1.2s ease-in-out infinite; }
+@keyframes runePulse { 50% { border-color: #ffd76a; } }
+.rune { text-align: left; padding: 4px 6px; background: rgba(20, 14, 30, 0.8); border: 2px solid #3a3020; color: #e8dcc0; font-family: var(--font); cursor: pointer; }
+.rune:disabled { cursor: default; }
+.rune b { display: block; font-size: 11.5px; font-weight: normal; color: #fff3d0; }
+.rune small { display: block; font-size: 9.5px; color: #a89e8a; line-height: 1.35; margin-top: 1px; }
+.rune:not(:disabled):hover { border-color: var(--gold); }
+.rune.on { border-color: #ffd76a; background: rgba(60, 44, 20, 0.85); box-shadow: 0 0 0 1px #ffd76a inset; }
+.rune.on small { color: #ffe8b0; }
+@media (max-width: 600px) { .rune-line { grid-template-columns: 18px 1fr 1fr 1fr; } .rune-line .rt { display: none; } }
 .evo-train { margin-top: 6px; width: 100%; padding: 6px; font-family: var(--font); font-size: 12px; color: #2a1a08; background: #ffd76a; border: 2px solid #8a6a2a; cursor: pointer; }
 .evo-train.off { background: #3a3040; color: #8a8090; border-color: #4a3e2a; cursor: default; }
 
