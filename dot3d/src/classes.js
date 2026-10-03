@@ -1,5 +1,5 @@
 // 직업 설정
-import { makeHero, makeMage, makeElf } from './character.js';
+import { makeHero, makeMage, makeElf, makeLancer } from './character.js';
 
 export const CLASSES = {
   sword: {
@@ -20,6 +20,12 @@ export const CLASSES = {
     role: '활 · 원거리 연사', bars: { 체력: 3, 공격: 3, 사거리: 5, 기동: 5, 난이도: 2 }, desc: '바람화살, 하늘에서 쏟아지는 화살비, 적을 빨아들이는 회오리 정령',
     labels: { atk: '사격', dash: '구르기', skill: '바람화살', skill2: '화살비', skill3: '회오리 정령' }, hitWord: '연속 명중',
   },
+  lancer: {
+    id: 'lancer', title: '창술사', name: '한결', make: makeLancer,
+    hp: 110, skillCd: 3.0, dashCd: 0.55, skill2Cd: 7, skill3Cd: 9,
+    role: '창술 · 중거리 관통', bars: { 체력: 3, 공격: 4, 사거리: 2, 기동: 3, 난이도: 3 }, desc: '길게 꿰뚫는 찌르기, 용아창, 뛰어올라 내려찍는 낙화창, 하늘에서 창이 쏟아지는 천창우',
+    labels: { atk: '찌르기', dash: '회피', skill: '용아창', skill2: '낙화창', skill3: '천창우' }, hitWord: '연속 찌르기',
+  },
 };
 
-export const CLASS_ORDER = ['sword', 'mage', 'elf'];
+export const CLASS_ORDER = ['sword', 'mage', 'elf', 'lancer'];

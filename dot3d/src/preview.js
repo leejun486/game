@@ -11,7 +11,7 @@ import { GFX } from './gfx.js';
 // 고화질 모드에서는 카드도 크게, 오른쪽 큰 그림은 따로 고해상도(MSAA)로 그림
 const W = GFX.hd ? 96 : 48, H = GFX.hd ? 144 : 72;
 const BW = 336, BH = 504;
-const TYPE = { sword: 'hero', mage: 'mage', elf: 'elf' };
+const TYPE = { sword: 'hero', mage: 'mage', elf: 'elf', lancer: 'lancer' };
 
 // 선형 → sRGB (렌더 타깃은 선형 색으로 남음)
 const SRGB = new Uint8ClampedArray(256);
@@ -84,7 +84,7 @@ export class ClassPreview {
       rig.root.rotation.y = c.yaw;
       // 고른 카드는 이따금 공격 동작
       const cyc = c.t % 4;
-      const attack = sel && cyc > 3 ? { t: (cyc - 3), kind: c.cls === 'sword' ? 0 : c.cls === 'mage' ? 10 : 20 } : null;
+      const attack = sel && cyc > 3 ? { t: (cyc - 3), kind: c.cls === 'sword' ? 0 : c.cls === 'mage' ? 10 : c.cls === 'lancer' ? 30 : 20 } : null;
       rig.animate(dt, { speed: 0, attack, sheathing: 0, dash: false, hurt: 0, dead: false });
       r.setRenderTarget(this.target);
       r.clear();

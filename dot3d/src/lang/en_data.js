@@ -11,6 +11,22 @@ export default {
   '바람화살, 하늘에서 쏟아지는 화살비, 적을 빨아들이는 회오리 정령': 'Wind arrows, raining volleys and a whirlwind spirit that pulls foes in',
   '사격': 'Shoot', '구르기': 'Roll', '바람화살': 'Wind Arrow', '화살비': 'Arrow Rain', '회오리 정령': 'Whirl Spirit', '연속 명중': 'Hit Streak',
 
+  '창술사': 'Lancer', '한결': 'Hangyeol', '창술 · 중거리 관통': 'Spear · Mid-range Pierce',
+  '길게 꿰뚫는 찌르기, 용아창, 뛰어올라 내려찍는 낙화창, 하늘에서 창이 쏟아지는 천창우': 'Long piercing thrusts, Dragon Fang, the leaping slam Falling Blossom, and Spear Rain from the sky',
+  '찌르기': 'Thrust', '용아창': 'Dragon Fang', '낙화창': 'Falling Blossom', '천창우': 'Spear Rain', '연속 찌르기': 'Thrust Combo',
+  '연환창': 'Chain Thrust', '연환': 'Chain', '창기 셋을 눈 깜짝할 새 연달아 내지름.': 'Three spear beams in the blink of an eye.',
+  '네 번 연달아': 'Four in a row', '각성: 금빛 창기 다섯, 끝에서 터짐': 'Awakening: five golden beams that burst at the end',
+  '파천창': 'Heaven Piercer', '파천': 'Piercer', '하늘을 꿰뚫는 거대한 창기 하나. 두 배 피해로 멀리 밀어냄.': 'One giant beam that pierces the sky. Double damage and a long knockback.',
+  '지나간 자리에 벼락이 떨어짐': 'Lightning strikes along its path', '각성: 거대한 창기 세 줄기': 'Awakening: three giant beams',
+  '연화낙': 'Lotus Fall', '연화': 'Lotus', '내려찍은 뒤 꽃잎 충격파가 한 번 더 퍼짐.': 'After the slam, a petal shockwave spreads once more.',
+  '충격파가 넓고 두 겹으로': 'Wider shockwaves, twice', '각성: 주변 적 둘에게 연달아 뛰어듦': 'Awakening: leaps onto two more foes in a row',
+  '창룡출해': 'Rising Dragon', '창룡': 'Dragon', '내려찍은 자리에 창 기둥이 서서 적을 빨아들이다 터짐.': 'A spear pillar rises where you land, pulls foes in, then explodes.',
+  '더 넓게, 더 오래 빨아들임': 'Pulls wider and longer', '각성: 창 기둥 셋': 'Awakening: three pillars',
+  '만창진': 'Myriad Spears', '만창': 'Myriad', '훨씬 넓게 창 열둘이 쏟아짐.': 'Twelve spears rain over a much wider area.',
+  '창 열여섯': 'Sixteen spears', '각성: 창 스물둘, 마지막에 거대한 창이 내리꽂힘': 'Awakening: twenty-two spears, then a giant spear slams down',
+  '회선창': 'Whirling Spear', '회선': 'Whirl', '창을 던져 그 자리에서 회오리치며 계속 벰.': 'Throws the spear, which whirls in place and keeps cutting.',
+  '창 둘이 서로 맴돎, 더 오래': 'Two spears circle each other, longer', '각성: 끝에 큰 폭발': 'Awakening: a big explosion at the end',
+
   // 파생 기술
   '삼연 검기': 'Triple Wave', '삼연검': 'Triple', '검기 세 줄기를 부채꼴로 날림.': 'Fires three sword waves in a fan.',
   '검기가 다섯 줄기로': 'Five sword waves', '각성: 금빛 검기 일곱 줄기': 'Awakening: seven golden waves',

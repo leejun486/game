@@ -69,7 +69,7 @@ export class Player {
   buildRig() {
     const pr = this.game.progressOf(this.cls);
     const w = item(pr.weapon), o = item(pr.outfit);
-    const type = { sword: 'hero', mage: 'mage', elf: 'elf' }[this.cls];
+    const type = { sword: 'hero', mage: 'mage', elf: 'elf', lancer: 'lancer' }[this.cls];
     const old = this.rig;
     const gl = {};
     for (const g of this.game.equippedGear(this.cls)) if (g.kind !== 'ring') gl[g.kind] = gearColor(g);
@@ -131,7 +131,7 @@ export class Player {
     this.rig.deadT = 0;
   }
 
-  aimYaw(input, range = this.cls === 'sword' ? 3.6 : 11) {
+  aimYaw(input, range = this.cls === 'sword' ? 3.6 : this.cls === 'lancer' ? 5 : 11) {
     const g = this.game;
     // 0) 자동 타겟이 잡혀 있으면 그쪽으로
     const t = g.target;
@@ -162,6 +162,17 @@ export class Player {
     if (this.dead || this.dashT > 0) return;
     if (this.attack) {
       if (this.attack.t > 0.4) this.buffered = true;
+      return;
+    }
+    if (this.cls === 'lancer') {
+      // 창술사: 찌르기 → 찌르기 → 휘둘러 베기
+      const kind = [30, 31, 32][this.combo % 3];
+      this.combo++;
+      this.yaw = this.aimYaw(input);
+      this.attack = { t: 0, kind, dur: kind === 32 ? 0.46 : 0.34, hit: false, hitAt: kind === 32 ? 0.45 : 0.42 };
+      this.game.audio.play(kind === 32 ? 'swing3' : 'swing');
+      this.lastCombat = this.game.time;
+      this.sinceAttack = 0;
       return;
     }
     if (this.cls !== 'sword') {
@@ -261,6 +272,7 @@ export class Player {
       sword: { 2: { kind: 4, dur: 0.5, hitAt: 0.3 }, 3: { kind: 5, dur: 0.9, hitAt: 0.05 } },
       mage: { 2: { kind: 13, dur: 0.5, hitAt: 0.45 }, 3: { kind: 14, dur: 0.62, hitAt: 0.5 } },
       elf: { 2: { kind: 23, dur: 0.55, hitAt: 0.5 }, 3: { kind: 24, dur: 0.5, hitAt: 0.47 } },
+      lancer: { 2: { kind: 34, dur: 0.85, hitAt: 0.12 }, 3: { kind: 35, dur: 0.6, hitAt: 0.45 } },
     }[this.cls][slot];
     if (this.cls === 'sword' && this.rig.sheathed) this.drawCut();
     this.attack = { t: 0, kind: T.kind, dur: T.dur, hit: false, hitAt: T.hitAt, skill: true, slot };
@@ -282,7 +294,7 @@ export class Player {
     this.yaw = this.aimYaw(input);
     this.combo = 0;
     this.buffered = false;
-    const kind = { sword: 5, mage: 14, elf: 24 }[this.cls];
+    const kind = { sword: 5, mage: 14, elf: 24, lancer: 35 }[this.cls];
     if (this.cls === 'sword' && this.rig.sheathed) this.drawCut();
     this.attack = { t: 0, kind, dur: 0.7, hit: true, skill: true };
     this.sinceAttack = 0;
@@ -293,6 +305,15 @@ export class Player {
 
   startSkill(input) {
     if (this.dead || this.skillCd > 0 || this.dashT > 0) return;
+    if (this.cls === 'lancer') {
+      this.skillCd = this.skillMax * this.game.skillCdMul(this, 1);
+      this.yaw = this.aimYaw(input);
+      this.combo = 0;
+      this.attack = { t: 0, kind: 33, dur: 0.5, hit: false, hitAt: 0.42, skill: true };
+      this.lastCombat = this.game.time;
+      this.sinceAttack = 0;
+      return;
+    }
     if (this.cls !== 'sword') {
       this.skillCd = this.skillMax * this.game.skillCdMul(this, 1);
       this.yaw = this.aimYaw(input);
@@ -433,7 +454,7 @@ export class Player {
         if (this.ghostT <= 0) { this.ghostT = 0.045; g.fx.ghost(this.rig, this.cls === 'elf' ? '#7ad86a' : '#5ab8ff'); }
         if (this.cls === 'elf' && Math.random() < 0.6) g.fx.norm.emit({ x: this.pos.x + rand(-0.3, 0.3), y: this.pos.y + rand(0.2, 0.9), z: this.pos.z + rand(-0.3, 0.3), vx: rand(-1, 1), vy: rand(0.5, 1.5), vz: rand(-1, 1), wob: 1.5, life: rand(0.5, 0.9), size: 2, color: Math.random() < 0.5 ? '#8ad06a' : '#c8e88a' });
       } else {
-        const slow = this.attack ? (this.attack.kind === 5 ? 0.7 : this.attack.skill ? (this.cls === 'sword' ? 0.1 : 0.25) : this.cls === 'sword' ? 0.22 : 0.45) : 1;
+        const slow = this.attack ? (this.attack.kind === 5 ? 0.7 : this.attack.skill ? (this.cls === 'sword' || this.cls === 'lancer' ? 0.1 : 0.25) : this.cls === 'sword' || this.cls === 'lancer' ? 0.22 : 0.45) : 1;
         // 얕은 물·붙잡힘·독: 걸음이 느려짐
         const wet = g.world.wet.length && g.world.inWater(this.pos.x, this.pos.z);
         const sp = 4.6 * slow * (this.perks?.has('swift') ? 1.15 : 1) * (1 + (this.gear?.spd || 0)) * (wet ? 0.62 : 1) * (this.slowT > 0 ? 0.55 : 1) * (this.galeT > 0 ? 1.4 : 1);
@@ -449,7 +470,7 @@ export class Player {
           this.vel.z = lerp(this.vel.z, 0, 1 - Math.exp(-14 * dt));
         }
         // 공격 중 전진 스텝
-        if (this.attack && !this.attack.skill && this.cls === 'sword') {
+        if (this.attack && !this.attack.skill && (this.cls === 'sword' || this.cls === 'lancer')) {
           const a = this.attack;
           if (a.t > 0.25 && a.t < 0.5) {
             const lunge = a.kind === 2 ? 3.5 : 2.6;
@@ -473,6 +494,7 @@ export class Player {
           if (a.slot) g.castSkill(this, a.slot);
           else if (a.skill) g.playerSkillHit(this, a);
           else if (this.cls === 'sword') g.playerSwingHit(this, a.kind);
+          else if (this.cls === 'lancer') g.playerSpearHit(this, a.kind);
           else g.playerShoot(this, a.kind);
         }
         if (a.t >= 1) {
@@ -511,7 +533,7 @@ export class Player {
 
     // 리그
     const r = this.rig;
-    r.root.position.set(this.pos.x, this.y, this.pos.z);
+    r.root.position.set(this.pos.x, this.y + (this.hopH || 0), this.pos.z); // hopH: 낙화창 도약 높이
     // 회오리베기: 몸 전체가 세 바퀴 회전
     const spin = this.attack && this.attack.kind === 5 ? Math.min(1, this.attack.t / 0.85) * Math.PI * 6 : 0;
     r.root.rotation.y = this.yaw + spin;

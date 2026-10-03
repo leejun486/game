@@ -87,6 +87,19 @@ export const WEAPONS = {
     { id: 'bwB5', name: '쇠심줄 활', tier: 5, atk: 1.25, from: 'bulgasari', perk: 'molten', ult: 'meltdown', style: { wood: '#3a3a40', grip: '#8a4a2a', tips: '#ffb060', glow: '#ff5a10', big: 1.4 } },
     { id: 'bwB6', name: '업경 활', tier: 5, atk: 1.45, from: 'yeomra', perk: 'verdict', ult: 'hellfire', style: { wood: '#2a0a10', grip: '#ffd040', tips: '#ff8a9a', glow: '#ff2030', big: 1.45 } },
   ],
+  lancer: [
+    { id: 'sp0', name: '수련용 장창', tier: 0, atk: 0, style: {} },
+    { id: 'sp1', name: '강철 장창', tier: 1, atk: 0.15, style: { head: '#b8c2ce', shaft: '#3a2a20', tassel: '#2a4a8a' } },
+    { id: 'sp2', name: '청룡 언월창', tier: 2, atk: 0.32, style: { head: '#c8ecff', shaft: '#1e3a4a', tassel: '#3a9aff', ring: '#c8d4e0', glow: '#3a9aff', wings: true } },
+    { id: 'sp3', name: '자운 낭아창', tier: 3, atk: 0.5, style: { head: '#e0d0ff', shaft: '#2a1a3a', tassel: '#9a5aff', glow: '#9a5aff', wings: true, long: 1.08 } },
+    { id: 'sp4', name: '적룡 장창', tier: 4, atk: 0.75, style: { head: '#ffd0a0', shaft: '#2a1414', tassel: '#ff3a10', ring: '#ffd040', glow: '#ff3010', wings: true, long: 1.12, big: 1.2 } },
+    { id: 'spB1', name: '두억시니 뿔창', tier: 5, atk: 0.85, from: 'boss', perk: 'quake', ult: 'thunder', style: { head: '#9ad8ff', shaft: '#c8302c', tassel: '#ffd040', ring: '#ffd040', glow: '#3ac8ff', wings: true, long: 1.15, big: 1.25 } },
+    { id: 'spB2', name: '구미호 여우창', tier: 5, atk: 0.9, from: 'gumiho', perk: 'drain', ult: 'foxtail', style: { head: '#fff4ec', shaft: '#f0e8e0', tassel: '#ff7a2a', ring: '#ffb070', glow: '#ff7a2a', wings: true, long: 1.12, big: 1.2 } },
+    { id: 'spB3', name: '저승 명부창', tier: 5, atk: 1.0, from: 'reaper', perk: 'execute', ult: 'judgment', style: { head: '#c890ff', shaft: '#14101c', tassel: '#5a3a8a', ring: '#8a5ad8', glow: '#9a4aff', wings: true, long: 1.18, big: 1.25 } },
+    { id: 'spB4', name: '이무기 비늘창', tier: 5, atk: 1.12, from: 'imugi', perk: 'chill', ult: 'tidal', style: { head: '#bfeee0', shaft: '#1a3a3a', tassel: '#2affd0', ring: '#c8c09a', glow: '#2affd0', wings: true, long: 1.15, big: 1.25 } },
+    { id: 'spB5', name: '불가사리 쇠뼈창', tier: 5, atk: 1.25, from: 'bulgasari', perk: 'molten', ult: 'meltdown', style: { head: '#ffb060', shaft: '#3a3a40', tassel: '#ff5a10', ring: '#8a4a2a', glow: '#ff5a10', wings: true, long: 1.2, big: 1.3 } },
+    { id: 'spB6', name: '염라 판관창', tier: 5, atk: 1.45, from: 'yeomra', perk: 'verdict', ult: 'hellfire', style: { head: '#ff4a5a', shaft: '#2a0a10', tassel: '#ffd040', ring: '#ffd040', glow: '#ff2030', wings: true, long: 1.22, big: 1.35 } },
+  ],
 };
 
 // 옷: 색 팔레트(main 몸통, accent 띠·깃, trim 장식, dark 바지) + 갑옷 장식
@@ -160,7 +173,8 @@ export function rollDrop(enemyType, round, cls) {
   const r = Math.random() + round * 0.12 + strong;
   if (r > 1.35) tier = 4; else if (r > 1.05) tier = 3; else if (r > 0.7) tier = 2;
   if (Math.random() < 0.55) {
-    const pool = Math.random() < 0.8 ? cls : ['sword', 'mage', 'elf'][Math.floor(Math.random() * 3)];
+    const all = Object.keys(WEAPONS);
+    const pool = Math.random() < 0.8 ? cls : all[Math.floor(Math.random() * all.length)];
     return WEAPONS[pool][tier].id;
   }
   const pool = OUTFITS.filter((o) => o.tier === tier && !o.from);
@@ -187,6 +201,11 @@ export function drawItemIcon(cv, id) {
     for (let i = 0; i < 9; i++) { px(4 + i, 11 - i, blade); px(5 + i, 11 - i, s.edge || '#ffffff'); }
     px(3, 12, s.guard || '#d9a83a'); px(4, 13, s.guard || '#d9a83a'); px(2, 11, s.guard || '#d9a83a'); px(5, 12, s.guard || '#d9a83a');
     px(2, 13, s.wrap || '#1c1824'); px(1, 14, s.wrap || '#1c1824');
+  } else if (it.kind === 'weapon' && it.cls === 'lancer') {
+    for (let i = 0; i < 12; i++) px(2 + i, 14 - i, s.shaft || '#5a3a28');
+    const hd = s.head || '#d4dce6';
+    px(12, 3, hd); px(13, 2, hd); px(14, 1, '#ffffff'); px(13, 3, hd); px(12, 2, hd);
+    px(11, 4, s.tassel || '#c8302c'); px(10, 4, s.tassel || '#c8302c'); px(11, 5, s.tassel || '#c8302c');
   } else if (it.kind === 'weapon' && it.cls === 'mage') {
     for (let i = 0; i < 11; i++) px(3 + i * 0.8, 14 - i, s.wood || '#5a3e2a');
     g.fillStyle = s.moon || '#e0b040'; g.fillRect(10, 2, 4, 1); g.fillRect(13, 3, 1, 2);

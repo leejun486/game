@@ -562,10 +562,36 @@ const PORTRAITS = {
     ],
     col: { h: '#e8e4c8', s: '#fbe2cc', e: '#2a6a4a', W: '#ffffff', p: '#f8a8b8', m: '#c86a60', g: '#5aa84e', l: '#bfe07a', f: '#ff9ac0', F: '#fff0a0' },
   },
+  lancer: {
+    bg: '#6a2a2e',
+    rows: [
+      '..........hhh.......',
+      '.......hhhhhhhh.....',
+      '.....hhhhhhhhhhh....',
+      '....hhhhhhhhhhhhh...',
+      '...hhhhhhhhhhhhhh...',
+      '...wwwwwwRwwwwwww...',
+      '...hhhhsssshhhhhh...',
+      '...hhsssssssssshh...',
+      '...hssssssssssssh...',
+      '...hsseessssseessh..',
+      '...hsseWsssseeWsh...',
+      '...hsseessssseessh..',
+      '...hspssssssssspsh..',
+      '....ssssssmmsssss...',
+      '.....ssssssssssss...',
+      '......ssssssssss....',
+      '.......grrrrrrg.....',
+      '.....rrrgrrrrgrrr...',
+      '....rrrrrgrrgrrrrrr.',
+      '...rrrrrrrggrrrrrrrr',
+    ],
+    col: { h: '#16121a', w: '#f2ece0', R: '#d8283a', s: '#f4d0b0', e: '#3a1a14', W: '#ffffff', p: '#f0a0a0', m: '#b85a50', r: '#7a1e26', g: '#e0b040' },
+  },
 };
 
 // 어느 직업이든 끼고 있는지
-function CLASS_ORDER_EQ(g, x) { return ['sword', 'mage', 'elf'].some((c) => g.isEquipped(x, c)); }
+function CLASS_ORDER_EQ(g, x) { return ['sword', 'mage', 'elf', 'lancer'].some((c) => g.isEquipped(x, c)); }
 
 export function drawPortrait(cv, cls = 'sword') {
   if (!cv) return;

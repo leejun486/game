@@ -20,6 +20,7 @@ import { MAPS, BOSS_TYPES, BOSS_NAME, WIN_LINE } from './maps.js';
 import { PROLOGUE, SHARD_LINES, SHARD_MAX, ENDING, CREDITS, fillStory } from './story.js';
 import { clamp, lerp, rand, angleDiff, damp } from './util.js';
 import { initLang, watchDom, tr, LANG } from './i18n.js';
+import { spearHit, lancerSkill1, lancerSkill2, lancerSkill3, updateLancer, clearLancer } from './lancer.js';
 
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
 
@@ -60,6 +61,7 @@ class Game {
     this.storms = [];   // 뇌운
     this.fires = [];    // 폭염룡이 남긴 불길
     this.orbits = [];   // 검무 결계 칼날
+    this.lancerFx = []; // 창술사: 떨어지는 창, 창 기둥, 회선창, 도약
     this.marks = [];    // 낙인섬 낙인
     this.spawnQueue = [];
     this.wave = 0;
@@ -78,7 +80,7 @@ class Game {
     this.ui = new UI(this);
     // 직업별 레벨·경험치·착용 장비, 공용 가방
     this.progress = {};
-    this.inv = new Set(['sw0', 'mg0', 'bw0', 'ot0']);
+    this.inv = new Set(['sw0', 'mg0', 'bw0', 'sp0', 'ot0']);
     this.gear = [];    // 방어구·장신구 (무작위 옵션이 붙은 낱개). 착용 여부는 직업별 progress.eq
     this.drops = [];
     this.target = null;
@@ -467,7 +469,7 @@ class Game {
     this.marker = { g, ring, ticks, arrow };
   }
 
-  targetRange() { return this.player.cls === 'sword' ? 7 : 12; }
+  targetRange() { return this.player.cls === 'sword' ? 7 : this.player.cls === 'lancer' ? 8.5 : 12; }
 
   validTarget(e) {
     if (!e || e.dead || e.spawning) return false;
@@ -896,6 +898,7 @@ class Game {
     if (d.night) { this.nightTarget = 1; this.night = 1; }
     if (d.progress) for (const k of Object.keys(CLASSES)) if (d.progress[k]) Object.assign(this.progressOf(k), d.progress[k]);
     if (Array.isArray(d.inv)) for (const id of d.inv) if (item(id)) this.inv.add(id);
+    for (const list of Object.values(WEAPONS)) this.inv.add(list[0].id); // 새로 생긴 직업의 기본 무기
     if (Array.isArray(d.gear)) this.gear = d.gear.filter((g) => g && g.uid && g.stats);
     this.towerBest = d.towerBest | 0;
     if (d.cleared) this.cleared = { ...d.cleared };
@@ -985,9 +988,9 @@ class Game {
       }
       if (this.pauseOpen) { if (code === 'Escape' || code === 'pause') this.togglePause(false); return; }
       const i = CLASS_ORDER.indexOf(this.selectedCls);
-      if (code === 'ArrowLeft' || code === 'KeyA') { this.selectClass(CLASS_ORDER[(i + 2) % 3]); this.audio.unlock(); this.audio.play('talk'); return; }
-      if (code === 'ArrowRight' || code === 'KeyD') { this.selectClass(CLASS_ORDER[(i + 1) % 3]); this.audio.unlock(); this.audio.play('talk'); return; }
-      if (code === 'Digit1' || code === 'Digit2' || code === 'Digit3') { this.selectClass(CLASS_ORDER[+code.slice(-1) - 1]); return; }
+      if (code === 'ArrowLeft' || code === 'KeyA') { this.selectClass(CLASS_ORDER[(i + CLASS_ORDER.length - 1) % CLASS_ORDER.length]); this.audio.unlock(); this.audio.play('talk'); return; }
+      if (code === 'ArrowRight' || code === 'KeyD') { this.selectClass(CLASS_ORDER[(i + 1) % CLASS_ORDER.length]); this.audio.unlock(); this.audio.play('talk'); return; }
+      if (code === 'Digit1' || code === 'Digit2' || code === 'Digit3' || code === 'Digit4') { this.selectClass(CLASS_ORDER[+code.slice(-1) - 1]); return; }
       // Enter: 기록이 있으면 이어하기, 없으면 새로 시작
       if (code === 'Enter' || code === 'Space') { if (this.hasSave) this.start(); else this.newGame(true); }
       return;
@@ -1068,7 +1071,7 @@ class Game {
   resetProgress() {
     clearSave();
     this.kills = 0; this.round = 0; this.stage = 0; this.bestCombo = 0; this.playTime = 0;
-    this.progress = {}; this.inv = new Set(['sw0', 'mg0', 'bw0', 'ot0']); this.gear = [];
+    this.progress = {}; this.inv = new Set(['sw0', 'mg0', 'bw0', 'sp0', 'ot0']); this.gear = [];
     this.cleared = {};
     this.quest = { step: 0, prog: {}, lit: [], bounty: null, shards: [], prologue: false, ended: false };
     for (const f of this.flames) this.scene.remove(f);
@@ -1668,7 +1671,7 @@ class Game {
   // 자동 사냥: 가까운 적에게 다가가 공격, 쓸 수 있는 스킬은 바로, 적이 없으면 떨어진 장비 줍기
   autoHuntStep(inp, dt) {
     const p = this.player;
-    const range = { sword: 1.6, mage: 6.5, elf: 7.5 }[p.cls];
+    const range = { sword: 1.6, mage: 6.5, elf: 7.5, lancer: 2.6 }[p.cls];
     const t = this.validTarget(this.target) && Math.hypot(this.target.pos.x - p.pos.x, this.target.pos.z - p.pos.z) < 24 ? this.target : this.nearestEnemy(24);
     if (!t) {
       let dr = null, dd = 14;
@@ -2543,8 +2546,12 @@ class Game {
     }
   }
 
+  // 창술사 기본 공격 (lancer.js)
+  playerSpearHit(pl, kind) { spearHit(this, pl, kind); }
+
   playerSkillHit(pl, a) {
     this.skillRunes(pl, 1, () => this.playerSkillHit(pl, a));
+    if (pl.cls === 'lancer') { lancerSkill1(this, pl); return; }
     const br = this.branch(pl, 1), r = this.rank(pl, 1), M = this.rankPow(pl, 1);
     if (pl.cls === 'mage') {
       if (br === 'a') this.castLightning(pl, { mul: M, storm: { dur: r >= 3 ? 6 : 4.2, tick: r >= 3 ? 0.38 : 0.55, hits: r >= 5 ? 2 : 1, R: r >= 5 ? 6 : 4.6 } });
@@ -2995,6 +3002,10 @@ class Game {
       if (br === 'a') this.skillArrowRain(pl, { fire: true, mul: M, R: r >= 3 ? 3.8 : 3, dur: r >= 3 ? 2.0 : 1.4, burn: r >= 5 });
       else if (br === 'b') this.skillMeteor(pl, { n: r >= 5 ? 9 : r >= 3 ? 7 : 5, big: r >= 5, mul: M });
       else this.skillArrowRain(pl);
+    } else if (k === 'lancer2') {
+      lancerSkill2(this, pl);
+    } else if (k === 'lancer3') {
+      lancerSkill3(this, pl);
     } else if (k === 'elf3') {
       if (br === 'a') {
         const n = r >= 5 ? 4 : r >= 3 ? 3 : 2;
@@ -3287,6 +3298,7 @@ class Game {
 
   updateSkills(dt) {
     this.updateSkillFx(dt);
+    updateLancer(this, dt);
     // 화살비
     for (let i = this.rains.length - 1; i >= 0; i--) {
       const r = this.rains[i];
@@ -3365,6 +3377,7 @@ class Game {
     for (const o of this.orbits) for (const b of o.blades) this.scene.remove(b);
     for (const m of this.marks) this.scene.remove(m.mesh);
     this.storms = []; this.fires = []; this.orbits = []; this.marks = [];
+    clearLancer(this);
   }
 
   // 낙인섬: 붉은 낙인이 1초 뒤 터짐

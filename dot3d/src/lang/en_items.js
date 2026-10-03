@@ -31,6 +31,8 @@ export default {
   '두억시니 금방망이': 'Dueoksini Golden Club', '여우구슬 지팡이': 'Fox Bead Staff', '명부 지팡이': 'Ledger Staff', '여의주 지팡이': 'Dragon Pearl Staff', '용광로 지팡이': 'Furnace Staff', '명부 판관필': 'Judge\'s Brush',
   '버들 활': 'Willow Bow', '물소뿔 각궁': 'Horn Bow', '바람결 활': 'Windgrain Bow', '서리 활': 'Frost Bow', '월궁': 'Moon Bow',
   '두억시니 뿔활': 'Dueoksini Horn Bow', '구미 꼬리활': 'Ninetail Bow', '망령 활': 'Wraith Bow', '용수염 활': 'Dragon Whisker Bow', '쇠심줄 활': 'Ironsinew Bow', '업경 활': 'Karma Mirror Bow',
+  '수련용 장창': 'Training Spear', '강철 장창': 'Steel Spear', '청룡 언월창': 'Azure Crescent Spear', '자운 낭아창': 'Violet Wolf-fang Spear', '적룡 장창': 'Red Dragon Spear',
+  '두억시니 뿔창': 'Dueoksini Horn Spear', '구미호 여우창': 'Gumiho Fox Spear', '저승 명부창': 'Ledger Spear', '이무기 비늘창': 'Imugi Scale Spear', '불가사리 쇠뼈창': 'Bulgasari Ironbone Spear', '염라 판관창': 'Yeomra Judge Spear',
   // 옷
   '평상복': 'Everyday Clothes', '청룡 무관복': 'Azure Dragon Uniform', '자운 비단옷': 'Violet Silk Robe', '백호 전포': 'White Tiger War Robe', '흑월 갑주': 'Black Moon Armor',
   '색동 저고리': 'Rainbow Jacket', '벚꽃 한복': 'Cherry Blossom Hanbok', '구름학 창의': 'Cloud Crane Robe', '쪽빛 물결 무사복': 'Indigo Wave Garb', '홍매 궁중예복': 'Red Plum Court Robe',
