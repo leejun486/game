@@ -342,6 +342,11 @@ class Game {
         '숲 한가운데 서낭당 나무가 있는데, 거기 방울을 흔들면 여우 떼가 몰려온대요.',
         '그 끝엔 천년 묵은 구미호가… 아이고, 생각만 해도 무서워라.',
       ]),
+      new NPC(this, 'smith', 9.5, 179.5, 2.8, '대장장이 쇠돌이', [
+        '여기가 옛 대장간 터요. 불가사리란 놈이 쇠붙이란 쇠붙이는 죄다 먹어 치웠지.',
+        '바닥의 분화구가 벌겋게 달아오르면 곧 터지니 얼른 비키시오.',
+        '돌장승은 칼이 잘 안 먹히오. 얼리거나 기술로 몰아치시오.',
+      ]),
       new NPC(this, 'ferry', -12.5, 135.5, 2.4, '사공 영감', [
         '이 늪은 물이 얕아도 발이 푹푹 빠지오. 나무 다리를 따라 다니시오.',
         '물귀신은 물속에서 빨라지고, 두꺼비 요괴의 독침을 맞으면 몸이 무거워지오.',
@@ -1272,6 +1277,7 @@ class Game {
       south: ['drum', '남문이 열렸다! 남쪽으로 내려가면 죽림이다'],
       temple: ['bell', '금줄이 걷혔다! 일주문 너머 폐사찰로 들어갈 수 있다'],
       swamp: ['bell', '뒷문의 부적이 떨어졌다! 폐사찰 뒤편으로 가면 물안개 늪이다'],
+      canyon: ['slam', '무너진 바위가 치워졌다! 늪 남동쪽 길로 가면 불가사리 협곡이다'],
     };
     QUESTS.forEach((q, i) => {
       if (!q.gateAfter) return;
@@ -1584,6 +1590,11 @@ class Game {
     if (!crit && G.crit && Math.random() < G.crit) { crit = true; mul *= 1.8; }
     if (crit && G.critDmg) mul *= 1 + G.critDmg;
     dmg = Math.max(1, Math.round(dmg * mul));
+    // 돌장승 같은 단단한 적: 얼어 있지 않으면 피해가 줄고 쇳소리
+    if (e.T.armor && !(e.frozenT > 0)) {
+      dmg = Math.max(1, Math.round(dmg * (1 - e.T.armor)));
+      if (this.time - (e.clankT || 0) > 0.25) { e.clankT = this.time; this.audio.play('block'); const cc = e.center(); this.fx.spark(cc.x, cc.y, cc.z, 8, '#ffe0a0', 5); }
+    }
     const dir = V(e.pos.x - pl.pos.x, 0, e.pos.z - pl.pos.z).normalize();
     if (!e.hit(dmg, dir, knock, stun)) return;
     const c = e.center().clone();
@@ -2039,6 +2050,27 @@ class Game {
         const h = Math.min(pl.maxHp - pl.hp, Math.round(Math.max(0, hp0 - Math.max(0, e.hp)) * 0.25));
         if (h > 0) { pl.hp += h; healed += h; }
         if (i === 8 && healed > 0) this.fx.number(pl.pos.clone().add(V(0, 2.1, 0)), `+${healed}`, 'heal');
+      });
+    } else if (pl.ult === 'meltdown') {
+      // 쇳물 비: 앞쪽 넓은 곳에 녹은 쇳덩이가 쏟아지고 맞은 적은 불붙음
+      const c = this.aimPoint(pl);
+      this.audio.play('charge');
+      this.fx.circle(c, 4.2, '#ff6a2a', 1.4, 2);
+      for (let i = 0; i < 12; i++) this.after(0.25 + i * 0.09, () => {
+        if (pl.dead) return;
+        const a = Math.random() * Math.PI * 2, d = Math.sqrt(Math.random()) * 3.8;
+        const at = V(c.x + Math.cos(a) * d, 0, c.z + Math.sin(a) * d);
+        at.y = this.world.heightAt(at.x, at.z);
+        this.fx.streak(V(at.x - 1.5, at.y + 7, at.z), V(at.x, at.y + 0.2, at.z), '#ffb060', 0.25, 0.45);
+        this.fx.colorFire(at.x, at.y + 0.2, at.z, 18, 0.5, '#ffe080', '#ff2a00');
+        this.fx.ring(at, 1.6, '#ff8a3a', 0.3);
+        this.audio.play('impact');
+        if (i % 3 === 0) this.shake(0.2);
+        for (const o of this.enemiesIn(at, 1.6)) {
+          const crit = Math.random() < 0.2;
+          this.damageEnemy(o, Math.round(rand(40, 48) * (crit ? 1.8 : 1)), crit, 3, 0.3);
+          if (!o.dead) o.burnFor(3, 10);
+        }
       });
     } else if (pl.ult === 'tidal') {
       // 물기둥: 가까운 적 다섯의 발밑에서 차례로 솟구침
@@ -2753,6 +2785,56 @@ class Game {
   }
 
 
+  // 불가사리: 삼켰던 쇳조각을 뿜어 하늘에서 떨어뜨림 (떨어질 자리를 붉은 원으로 예고)
+  ironRain(w) {
+    const p = this.player;
+    const spots = [V(p.pos.x, p.y, p.pos.z)];
+    for (let i = 0; i < 6; i++) {
+      const a = Math.random() * Math.PI * 2, d = rand(1.8, 5);
+      const x = p.pos.x + Math.cos(a) * d, z = p.pos.z + Math.sin(a) * d;
+      spots.push(V(x, this.world.heightAt(x, z), z));
+    }
+    spots.forEach((at, i) => {
+      this.fx.circle(at, 1.3, '#ff6a2a', 1.0 + i * 0.08, 3);
+      this.after(1.0 + i * 0.08, () => {
+        this.fx.streak(V(at.x, at.y + 7, at.z), V(at.x, at.y + 0.2, at.z), '#ffb060', 0.25, 0.3);
+        this.fx.spark(at.x, at.y + 0.3, at.z, 16, '#ffd090', 7);
+        this.fx.ring(at, 1.4, '#ff8a3a', 0.3);
+        this.fx.dust(at.x, at.y, at.z, 6);
+        this.audio.play('impact');
+        if (Math.hypot(p.pos.x - at.x, p.pos.z - at.z) < 1.3 + p.radius) p.damage(Math.round(w.dmg * 0.75), at);
+      });
+    });
+  }
+
+  // 협곡 용암 분화구: 몇 초마다 붉게 달아올랐다가 불기둥을 뿜음 (플레이어·적 모두 다침)
+  updateVents(dt) {
+    const p = this.player;
+    if (this.mapId !== 'canyon' || !this.world.vents.length) return;
+    for (const v of this.world.vents) {
+      if (v.t === undefined) { v.t = Math.random() * 6; v.period = rand(6, 9); }
+      v.t += dt;
+      const warn = v.period - 1.3;
+      if (v.t >= warn && !v.warned) {
+        v.warned = true;
+        if (Math.hypot(v.x - p.pos.x, v.z - p.pos.z) < 22) this.fx.circle(V(v.x, 0, v.z), 1.9, '#ff4a1a', 1.3, 4);
+      }
+      v.mat.emissiveIntensity = v.t >= warn ? 0.6 + (v.t - warn) * 2.4 : 0.4 + Math.sin(this.time * 2 + v.x) * 0.1;
+      if (v.t >= v.period) {
+        v.t = 0; v.warned = false; v.period = rand(6, 9);
+        if (Math.hypot(v.x - p.pos.x, v.z - p.pos.z) > 26) continue;
+        for (let i = 0; i < 40; i++) this.fx.add.emit({ x: v.x + rand(-0.4, 0.4), y: 0.2, z: v.z + rand(-0.4, 0.4), vx: rand(-1.2, 1.2), vy: rand(6, 12), vz: rand(-1.2, 1.2), g: 12, life: rand(0.6, 1.1), size: rand(3, 5), endSize: 1, color: '#ffe080', color2: '#ff2a00' });
+        this.fx.ring(V(v.x, 0, v.z), 2, '#ff8a3a', 0.4);
+        if (Math.hypot(v.x - p.pos.x, v.z - p.pos.z) < 12) { this.audio.play('fire'); this.shake(0.15); }
+        if (Math.hypot(v.x - p.pos.x, v.z - p.pos.z) < 1.8 + p.radius && !p.dead) { if (p.damage(18 + this.round * 3, V(v.x, 0, v.z))) p.burnFor(2.5); }
+        for (const e of this.enemies) {
+          if (e.dead || e.spawning || e.isBoss) continue;
+          if (Math.hypot(e.pos.x - v.x, e.pos.z - v.z) < 1.9) { e.hit(40, V(e.pos.x - v.x, 0, e.pos.z - v.z).normalize(), 6, 0.4); e.burnFor(2, 8); this.fx.number(e.center().clone().add(V(0, 0.5, 0)), 40, 'burn'); }
+        }
+      }
+    }
+  }
+
   bossSlam(boss, at, radius, dmg, big = false) {
     this.audio.play('slam');
     this.shake(big ? 0.9 : 0.6);
@@ -2787,6 +2869,11 @@ class Game {
         }
         this.fx.norm.emit({ x: c.x, y: c.y, z: c.z, vx: (pl.pos.x - c.x) * 2, vy: 2, vz: (pl.pos.z - c.z) * 2, drag: 1, life: 0.5, size: 3, color: '#ffb070' });
       }
+    }
+    if (pl.perks.has('molten') && !e.dead && Math.random() < 0.22) {
+      // 쇳물: 맞은 적에 불을 붙임
+      e.burnFor(3, Math.max(6, base * 0.35));
+      this.fx.colorFire(c.x, c.y, c.z, 10, 0.3, '#ffd070', '#ff2a00');
     }
     if (pl.perks.has('chill') && !e.dead && !e.isBoss && Math.random() < 0.15) {
       // 찬물결: 맞은 적을 잠깐 얼림
@@ -3025,6 +3112,11 @@ class Game {
       for (let k = 0; k < 2; k++) if (Math.random() < dt * 30) this.fx.norm.emit({ x: f.x + rand(-20, 20), y: rand(6, 10), z: f.z + rand(-18, 12), vx: rand(-0.3, 0.6), vy: -1.2, vz: rand(-0.2, 0.2), wob: 0.8, life: 8, size: Math.random() < 0.3 ? 3 : 2, color: '#ffffff', floor: 0.02, alpha: 0.95 });
       return;
     }
+    if (amb === 'ember') {
+      // 협곡: 바닥에서 솟아오르는 불티와 재
+      if (Math.random() < dt * 16) this.fx.add.emit({ x: f.x + rand(-20, 20), y: rand(0, 1), z: f.z + rand(-16, 12), vx: rand(-0.3, 0.3), vy: rand(0.6, 1.6), vz: rand(-0.3, 0.3), wob: 0.8, life: rand(2, 4), size: 2, color: '#ffc060', color2: '#ff3a00', flicker: 0.6 });
+      if (Math.random() < dt * 5) this.fx.norm.emit({ x: f.x + rand(-20, 20), y: rand(5, 8), z: f.z + rand(-16, 10), vx: rand(0.2, 0.6), vy: -0.4, vz: rand(-0.2, 0.2), wob: 1, life: 8, size: 2, color: '#6a605a', floor: 0.02, alpha: 0.8 });
+    }
     if (amb === 'mist') {
       // 늪: 낮게 깔려 흐르는 물안개
       if (Math.random() < dt * 9) this.fx.norm.emit({ x: f.x + rand(-20, 20), y: rand(0.2, 1.2), z: f.z + rand(-16, 12), vx: rand(0.2, 0.6), vy: 0.02, vz: rand(-0.1, 0.1), wob: 0.3, life: rand(5, 8), size: rand(10, 16), endSize: 18, color: '#e8f4ec', alpha: 0.16 });
@@ -3047,6 +3139,7 @@ class Game {
     this.player.update(wdt, inp);
     this.updateDrops(wdt);
     this.updateRegion();
+    this.updateVents(wdt);
     this.updateField(wdt);
     this.updateQuestMarkers(wdt);
     // 길찾기 흐름장 (플레이어가 다른 칸으로 옮겼을 때만 실제로 다시 계산)
@@ -3106,7 +3199,7 @@ class Game {
     const night = this.night > 0.5;
     const region = id === 'palace' ? (night ? 'night' : 'palace') : id;
     const music = boss ? 'boss' : this.waveActive || this.combatHeat > 0 ? 'battle' : region;
-    const amb = id === 'palace' ? (night ? 'amb_night' : 'amb_day') : id === 'bamboo' ? (night ? 'amb_night' : 'amb_bamboo') : id === 'swamp' ? 'amb_swamp' : 'amb_temple';
+    const amb = id === 'palace' ? (night ? 'amb_night' : 'amb_day') : id === 'bamboo' ? (night ? 'amb_night' : 'amb_bamboo') : id === 'swamp' ? 'amb_swamp' : id === 'canyon' ? 'amb_canyon' : 'amb_temple';
     this.audio.setScene(music, amb);
   }
 

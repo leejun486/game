@@ -186,6 +186,43 @@ def swamp():
     return T, make_ir(3.8, 1.4, 4600, 1100, seed=19), 0.9
 
 
+def anvil(vel=0.8):
+    """모루: 망치로 쇠를 두드리는 '땡'"""
+    n = int(1.2 * SR)
+    t = np.arange(n) / SR
+    out = np.zeros(n)
+    for m, a, tau in ((1.0, 1.0, 0.35), (2.71, 0.6, 0.22), (4.1, 0.4, 0.15), (5.9, 0.25, 0.09)):
+        out += a * np.sin(2 * np.pi * 980 * m * t) * exp_env(n, tau)
+    out[:200] += highpass(noise(200), 2500)
+    return out * 0.14 * vel
+
+
+def canyon():
+    """불가사리 협곡: 자진모리, 계면조. 피리가 앞장서고 모루 소리가 장단을 두드림"""
+    sub, subs = 0.5 / 3, 12
+    cyc = 12
+    T = Track('canyon', sub * subs * cyc * 2, 91)
+    tonic, sc = 146.83, GYEMYEON
+    tune = make_tune(T.rng, subs, cyc, [3, 0, 3, 0, 7, 5, 3, 0], -1, 8)
+    P = sub * subs * cyc
+    lead(T, tune, 0, sub, subs, I_piri, tonic, sc, 'gyemyeon', pan=0.2, gain=0.9, send=0.35, octave=2, vel=0.8)
+    lead(T, tune, P, sub, subs, I_haegeum, tonic, sc, 'gyemyeon', pan=0.2, gain=0.95, send=0.35, octave=2, vel=0.8)
+    lead(T, tune, P, sub, subs, I_piri, tonic, sc, 'gyemyeon', pan=-0.25, gain=0.5, send=0.35, octave=1, vel=0.7)
+    for c in range(cyc * 2):
+        T.add(geomungo(freq(tonic / 2, sc, 0 if c % 4 < 2 else 3), subs * sub * 0.7, 0.85), c * subs * sub, -0.1, 0.85, 0.3)
+        for s0, v in ((0, 0.9), (6, 0.7)):
+            T.add(buk(v, low=s0 == 0), (c * subs + s0) * sub, 0.0, 0.6, 0.25)
+        # 모루: 땡— 땡 땡
+        for s0, v in ((3, 0.8), (9, 0.6), (10, 0.5)):
+            if c % 2 or s0 == 3:
+                T.add(anvil(v), (c * subs + s0) * sub, 0.45, 0.8, 0.3)
+        if c % 8 == 0:
+            T.add(jing(0.7, 4.0), c * subs * sub, 0.0, 0.7, 0.4)
+    gayageum_hetero(T, tune, 0, sub, subs, tonic, sc, 'gyemyeon', gain=0.7, busy=0.6)
+    janggu_part(T, 'jajinmori', 0, sub, cyc * 2, gain=0.6)
+    return T, make_ir(2.4, 0.9, 6000, 1600, seed=23), 0.6
+
+
 # ---------- 환경음 (지역 분위기) ----------
 
 def amb(name, L=32.0, seed=1):
@@ -278,6 +315,21 @@ def amb(name, L=32.0, seed=1):
             drop(x, at, r.uniform(-0.8, 0.8), 0.02)
         for c in range(2):
             out[:, c] += lowpass(noise(n), 300) * 0.02 * (0.7 + 0.3 * np.sin(2 * np.pi * t / L * 3 + c))
+    elif name == 'amb_canyon':
+        wind(0.04, 60, 400, 1.0)
+        # 용암 끓는 소리: 낮은 부글거림 + 톡톡 터지는 기포
+        for c in range(2):
+            out[:, c] += lowpass(noise(n), 160) * 0.05 * (0.7 + 0.3 * np.sin(2 * np.pi * t / L * 4 + c * 2))
+        for k in range(70):
+            at = r.random() * L
+            m = int(0.06 * SR)
+            tt = np.arange(m) / SR
+            x = np.sin(2 * np.pi * r.uniform(150, 420) * (1 + 3 * tt) * tt) * exp_env(m, 0.015)
+            drop(x, at, r.uniform(-0.8, 0.8), 0.04)
+        # 먼 땅울림
+        for at in (5.0, 19.0):
+            m = int(2.5 * SR)
+            drop(lowpass(noise(m), 90) * np.hanning(m), at, 0.0, 0.25)
     elif name == 'amb_temple':
         wind(0.06, 80, 900, 1.0)
         for at in (4.0, 15.0, 26.0):
@@ -315,8 +367,8 @@ def write(name, data, kbps_ogg_q=3, mp3='112k'):
     return {'samples': len(data), 'rate': SR, 'dur': round(len(data) / SR, 4)}
 
 
-TRACKS = {'title': title, 'palace': palace, 'night': night, 'bamboo': bamboo, 'temple': temple, 'swamp': swamp, 'battle': battle, 'boss': boss}
-AMBS = ['amb_day', 'amb_night', 'amb_bamboo', 'amb_temple', 'amb_swamp']
+TRACKS = {'title': title, 'palace': palace, 'night': night, 'bamboo': bamboo, 'temple': temple, 'swamp': swamp, 'canyon': canyon, 'battle': battle, 'boss': boss}
+AMBS = ['amb_day', 'amb_night', 'amb_bamboo', 'amb_temple', 'amb_swamp', 'amb_canyon']
 
 if __name__ == '__main__':
     want = sys.argv[1:]

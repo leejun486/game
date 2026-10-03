@@ -63,5 +63,15 @@
   "samples": 1389150,
   "rate": 44100,
   "dur": 31.5
+ },
+ "canyon": {
+  "samples": 2116800,
+  "rate": 44100,
+  "dur": 48.0
+ },
+ "amb_canyon": {
+  "samples": 1389150,
+  "rate": 44100,
+  "dur": 31.5
  }
 }

@@ -229,6 +229,23 @@ export function buildSwamp(W) {
   for (const [x, z] of [[-4, -14], [12, -8], [-13, 0], [12, 2], [-5, 16]]) W.circles.push({ x, z, r: 1.2, y: 0 });
   cairn(W, -10.5, -15, 1, 21); cairn(W, 6.5, -4.5, 0.9, 22);
 
+  // 남쪽 경계와 협곡으로 가는 길: 무너진 바위가 막고 있다가 퀘스트로 치워짐
+  W.blockRects.push({ x0: -20, x1: 9.4, z0: 21.9, z1: 23.1 }, { x0: 14.6, x1: 20, z0: 21.9, z1: 23.1 });
+  const rocks = new THREE.Group();
+  const Rr = mulberry32(55);
+  for (let i = 0; i < 9; i++) {
+    const r = new THREE.Mesh(new THREE.IcosahedronGeometry(0.5 + Rr() * 0.5, 0), i % 2 ? M.rock : M.rockDark);
+    r.position.set(9.8 + Rr() * 4.4, 0.3 + Rr() * 0.6, 21.8 + Rr() * 1.2);
+    r.rotation.set(Rr() * 6, Rr() * 6, 0);
+    r.castShadow = true;
+    rocks.add(r);
+  }
+  W.root.add(rocks);
+  W.addGate('canyon', { x0: 9.4, x1: 14.6, z0: 21.6, z1: 23.2 }, (k) => {
+    rocks.position.y = -k * 1.8;
+    rocks.visible = k < 0.99;
+  });
+
   // 경계: 빽빽한 고목·갈대 (북쪽 입구와 남동쪽 출구는 비움)
   const Rb = mulberry32(77);
   const border = [];
@@ -245,4 +262,170 @@ export function buildSwamp(W) {
 
   B.build(W.root);
   for (const m of W.foliage.build(W.root)) animateMesh(m, ANIM.foliage);
+}
+
+// ======================= 불가사리 협곡 =======================
+//  기믹: 바닥의 용암 분화구가 때때로 터짐(붉게 달아오르면 피할 것). 용암 강은 돌다리로만 건넘
+function canyonMaterials(W) {
+  const M = W.M;
+  M.ash = toon({ map: T.forestPathTex(), color: C('#5a4a44') });
+  M.basalt = toon({ map: T.stoneBlockTex([96, 88, 86]) });
+  M.basaltDark = toon({ color: C('#3a3432') });
+  if (GFX.hd) {
+    M.ash = toon({ ...HD.hdDirt([84, 70, 62]), roughness: 1 });
+    M.basalt = toon({ ...HD.hdBlock([92, 84, 82]), roughness: 0.95 });
+  }
+  M.lava = toon({ color: C('#ff7a1a'), emissive: C('#ff4a00'), emissiveIntensity: 1.4 });
+  M.lavaCrust = toon({ color: C('#2a1e1a'), emissive: C('#4a1200') });
+  M.ember = toon({ color: C('#ffb060'), emissive: C('#ff6a00'), emissiveIntensity: 2 });
+  M.iron = toon({ color: C('#4a4a50'), metalness: GFX.hd ? 0.8 : 0, roughness: 0.4 });
+  M.rust = toon({ color: C('#8a4a2a') });
+  W.lavaMats = W.lavaMats || [];
+  W.lavaMats.push({ mat: M.lava, base: 1.4 }, { mat: M.ember, base: 2 });
+}
+
+// 용암 흐름: 이어진 점들을 따라 넓적한 띠. 판정은 막힌 사각형들
+function lavaRiver(W, pts, width, gaps = []) {
+  const M = W.M;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const [x0, z0] = pts[i], [x1, z1] = pts[i + 1];
+    const len = Math.hypot(x1 - x0, z1 - z0) + width * 0.5;
+    const yaw = Math.atan2(x1 - x0, z1 - z0);
+    const crust = new THREE.Mesh(new THREE.PlaneGeometry(width + 1.0, len), M.lavaCrust);
+    crust.rotation.set(-Math.PI / 2, 0, yaw);
+    crust.position.set((x0 + x1) / 2, 0.015, (z0 + z1) / 2);
+    W.root.add(crust);
+    const lv = new THREE.Mesh(new THREE.PlaneGeometry(width, len), M.lava);
+    lv.rotation.set(-Math.PI / 2, 0, yaw);
+    lv.position.set((x0 + x1) / 2, 0.03, (z0 + z1) / 2);
+    lv.userData.noOutline = true;
+    W.root.add(lv);
+    // 판정: 띠를 0.8 간격 원으로 근사 (다리 자리는 비움)
+    const n = Math.ceil(len / 0.8);
+    for (let k = 0; k <= n; k++) {
+      const x = x0 + (x1 - x0) * (k / n), z = z0 + (z1 - z0) * (k / n);
+      if (gaps.some(([gx, gz, gr]) => Math.hypot(x - gx, z - gz) < gr)) continue;
+      W.circles.push({ x, z, r: width * 0.5 + 0.1, y: 0 });
+    }
+  }
+}
+
+function lavaPool(W, x, z, r) {
+  const M = W.M;
+  const c = new THREE.Mesh(new THREE.CircleGeometry(r + 0.6, 28), M.lavaCrust);
+  c.rotation.x = -Math.PI / 2; c.position.set(x, 0.015, z);
+  W.root.add(c);
+  const l = new THREE.Mesh(new THREE.CircleGeometry(r, 28), M.lava);
+  l.rotation.x = -Math.PI / 2; l.position.set(x, 0.03, z);
+  l.userData.noOutline = true;
+  W.root.add(l);
+  W.circles.push({ x, z, r: r + 0.1, y: 0 });
+}
+
+// 현무암 바위·절벽
+function crag(W, x, z, s, seed, collide = true) {
+  const M = W.M, B = W.batch;
+  const R = mulberry32(seed);
+  for (let i = 0; i < 4; i++) {
+    const h = (1.6 + R() * 2.6) * s, w = (0.8 + R() * 0.9) * s;
+    B.add(new THREE.CylinderGeometry(w * 0.7, w, h, 6), i % 2 ? M.basalt : M.basaltDark, mat4(x + (R() - 0.5) * s * 1.4, h / 2, z + (R() - 0.5) * s * 1.4, R() * 6, (R() - 0.5) * 0.15, (R() - 0.5) * 0.15));
+  }
+  if (collide) W.circles.push({ x, z, r: 1.1 * s, y: 0 });
+}
+
+// 땅에 꽂힌 부러진 칼·창 (불가사리가 먹다 남긴 쇠붙이)
+function scrap(W, x, z, seed) {
+  const M = W.M, B = W.batch;
+  const R = mulberry32(seed);
+  for (let i = 0; i < 5; i++) {
+    const a = R() * 6, d = R() * 0.9;
+    const h = 0.5 + R() * 0.7;
+    B.add(boxGeo(0.06, h, 0.02, 1), R() < 0.5 ? M.iron : M.rust, mat4(x + Math.cos(a) * d, h * 0.4, z + Math.sin(a) * d, R() * 6, (R() - 0.5) * 0.7, (R() - 0.5) * 0.7));
+  }
+  B.add(new THREE.IcosahedronGeometry(0.4, 0), M.rust, mat4(x, 0.1, z, R() * 6, 0, 0, [1, 0.4, 1]));
+}
+
+export function buildCanyon(W) {
+  extraMaterials(W);
+  canyonMaterials(W);
+  const M = W.M, B = (W.batch = new Batcher());
+  W.foliage = new Batcher();
+  W.vents = W.vents || [];
+  ground(W, M.ash);
+  if (M.marsh) blendStrip(W, M.marsh, -60, 60, -26.1, -20.5, 0.004);
+  pathStrip(W, M.basalt, [[12, -27], [10, -16], [3, -9], [0, -4], [0, 4], [-1, 10]], 2.6, 0.02);
+  disc(W, M.basalt, 0, 15, 6);
+
+  // 용암 강: 동서로 가로지름, 가운데 돌다리로만 건넘
+  lavaRiver(W, [[-22, -2], [-12, -5], [-4, -3.5], [4, -4.5], [12, -2.5], [22, -5]], 2.6, [[0, -4, 2.2]]);
+  // 돌다리
+  B.add(boxGeo(3.2, 0.25, 4.4, 2), M.basalt, mat4(0, 0.12, -4));
+  for (const s of [-1, 1]) {
+    B.add(boxGeo(0.3, 0.55, 4.4, 1), M.basaltDark, mat4(s * 1.55, 0.4, -4));
+    W.blockRects.push({ x0: s * 1.55 - 0.15, x1: s * 1.55 + 0.15, z0: -6.2, z1: -1.8 });
+  }
+  lavaPool(W, -12, 10, 3.6);
+  lavaPool(W, 14, 9, 2.6);
+  lavaPool(W, -14, -15, 2.2);
+
+  // 분화구 (때때로 터짐)
+  for (const [x, z] of [[6, -15], [-5, -12], [8, 4], [-5, 5], [4, 10], [-8, -20], [15, -11]]) {
+    const rim = new THREE.Mesh(new THREE.TorusGeometry(0.75, 0.22, 6, 14), M.basaltDark);
+    rim.rotation.x = -Math.PI / 2; rim.position.set(x, 0.08, z);
+    W.root.add(rim);
+    const glow = toon({ color: C('#3a1408'), emissive: C('#ff4a00'), emissiveIntensity: 0.4 });
+    const core = new THREE.Mesh(new THREE.CircleGeometry(0.6, 14), glow);
+    core.rotation.x = -Math.PI / 2; core.position.set(x, 0.05, z);
+    core.userData.noOutline = true;
+    W.root.add(core);
+    W.vents.push({ x, z, mat: glow, local: true });
+  }
+
+  // 대장간 터: 돌가마, 풀무(웨이브 장치), 모루, 쇠붙이 더미
+  B.add(new THREE.CylinderGeometry(2.0, 2.5, 3.2, 12, 1, true), M.basalt, mat4(-3.5, 1.6, 17));
+  B.add(new THREE.CylinderGeometry(1.2, 2.0, 1.4, 12), M.basaltDark, mat4(-3.5, 3.9, 17));
+  B.add(new THREE.CylinderGeometry(0.5, 0.8, 1.6, 8), M.basaltDark, mat4(-3.5, 5.2, 17));
+  const mouth = new THREE.Mesh(new THREE.CircleGeometry(0.85, 12, 0, Math.PI), M.ember);
+  mouth.position.set(-3.5, 0.6, 14.45);
+  W.root.add(mouth);
+  W.circles.push({ x: -3.5, z: 17, r: 2.4, y: 0 });
+  const bel = new THREE.Group();
+  bel.position.set(2.2, 0, 15);
+  bel.add(at(new THREE.Mesh(boxGeo(1.6, 0.7, 1.0, 1), M.darkWood), 0, 0.55, 0));
+  const lid = new THREE.Group();
+  lid.position.set(0, 0.95, 0);
+  lid.add(at(new THREE.Mesh(boxGeo(1.7, 0.12, 1.1, 1), M.wood), 0, 0, 0));
+  lid.add(at(new THREE.Mesh(boxGeo(0.12, 0.9, 0.12, 1), M.wood), 0.7, 0.45, 0));
+  lid.add(at(new THREE.Mesh(boxGeo(0.12, 0.12, 1.3, 1), M.wood), 0.7, 0.9, 0));
+  bel.add(lid);
+  bel.add(at(new THREE.Mesh(cylGeo(0.1, 0.12, 2.4, 6), M.iron), -1.6, 0.35, 0)).rotation.z = Math.PI / 2;
+  trigger(W, bel, lid, 2.2, 15, '풀무', 'fire', 2.8, 1.0);
+  // 모루
+  B.add(boxGeo(0.5, 0.6, 0.5, 1), M.basaltDark, mat4(5.5, 0.3, 17.5));
+  B.add(boxGeo(1.1, 0.3, 0.5, 1), M.iron, mat4(5.5, 0.75, 17.5));
+  B.add(new THREE.ConeGeometry(0.25, 0.5, 4), M.iron, mat4(6.25, 0.75, 17.5, 0, 0, Math.PI / 2));
+  W.circles.push({ x: 5.5, z: 17.5, r: 0.6, y: 0 });
+  for (const [x, z, sd] of [[7, 13, 1], [-7.5, 14, 2], [9, -10, 3], [-9, -9, 4], [2, -18, 5], [-2, 7, 6], [11, 18, 7]]) scrap(W, x, z, 30 + sd);
+  // 쇠사슬 기둥 (불가사리를 묶어 두었던)
+  for (const [x, z] of [[-7, 19], [7, 20]]) {
+    B.add(cylGeo(0.35, 0.45, 2.6, 8), M.basaltDark, mat4(x, 1.3, z));
+    for (let k = 0; k < 6; k++) B.add(new THREE.TorusGeometry(0.16, 0.04, 4, 8), M.iron, mat4(x + (x < 0 ? 1 : -1) * (0.4 + k * 0.28), 1.7 - k * 0.22, z - 0.1, 0, k % 2 ? Math.PI / 2 : 0, 0));
+    W.circles.push({ x, z, r: 0.5, y: 0 });
+  }
+
+  // 협곡 벽 (가장자리 바위 절벽)
+  const Rb = mulberry32(99);
+  for (let z = -26; z <= 23; z += 2.6) {
+    for (const s of [-1, 1]) crag(W, s * (18.5 + Rb() * 2.5), z, 1.4 + Rb() * 0.6, 400 + Math.round(z * 3) + s, false);
+  }
+  for (let x = -18; x <= 18; x += 2.8) {
+    if (Math.abs(x - 12) > 3.2) crag(W, x, -27 - Rb(), 1.2 + Rb() * 0.5, 500 + Math.round(x * 3), false);
+    crag(W, x, 23.5 + Rb(), 1.3 + Rb() * 0.5, 600 + Math.round(x * 3), false);
+  }
+  W.blockRects.push({ x0: -20, x1: 9.2, z0: -26.6, z1: -25.4 }, { x0: 14.8, x1: 20, z0: -26.6, z1: -25.4 });
+  // 안쪽 바위
+  for (const [x, z, s, sd] of [[-10, -18, 1.1, 1], [14, -18, 1.0, 2], [-15, 2, 1.2, 3], [16, 2, 1.0, 4], [-12, 18, 1.1, 5], [12, 12, 0.9, 6], [-2, -16, 0.7, 7]]) crag(W, x, z, s, 700 + sd);
+  cairn(W, 9, -20, 1, 31);
+
+  B.build(W.root);
 }

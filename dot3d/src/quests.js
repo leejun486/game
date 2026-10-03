@@ -62,10 +62,27 @@ export const QUESTS = [
     startLines: ['사공: 고맙소! 물안개를 걷으려면 섬마다 있는 석등에 불을 켜야 하오.', '사공: 셋이 다 켜지면 제단의 징을 울릴 수 있을 게요.'] },
   { title: '이무기의 징', type: 'wave', region: 'swamp', desc: '용왕 제단의 <b>징</b>을 울려 <b>천년 이무기</b>와 맞서자', reward: { exp: 500 },
     startLines: ['사공: 징을 치면 이무기가 깨어날 거요. 놈은 물속으로 숨었다가 발밑에서 솟구치니, 바닥의 푸른 원을 보면 피하시오!'] },
+  { title: '막힌 길', type: 'talk', npc: 'ferry', desc: '늪 어귀의 <b>사공 영감</b>에게 돌아가자',
+    lines: () => [
+      '이무기가 잠잠해지니 늪에 햇살이 다 드는구려! 정말 고맙소.',
+      '헌데 그놈이 날뛰는 통에 남쪽 협곡 길이 바위로 막혔다오. 내가 장정들을 불러 치워 두리다.',
+      '협곡엔 옛 대장간이 있소. 쇠를 먹는 괴물 불가사리가 깨어났다는 흉흉한 소문이…',
+    ], gateAfter: 'canyon', reward: { exp: 200 } },
+  { title: '대장장이', type: 'talk', npc: 'smith', desc: '늪 남동쪽 길 너머 <b>불가사리 협곡</b>의 <b>대장장이</b>를 찾아가자',
+    lines: () => [
+      '여기까지 왔으면 보통 솜씨가 아니구먼. 난 이 대장간을 지키던 쇠돌이요.',
+      '불가사리가 쇠를 먹어 치우더니 가마의 불이 화염 도깨비가 되고, 장승들이 돌덩이 병사가 됐소.',
+      '놈들부터 정리해 주시오. 분화구가 벌겋게 달아오르면 피하고!',
+    ] },
+  { title: '불씨 사냥', type: 'kill', region: 'canyon', need: { firedok: 6, stonegolem: 2 }, desc: '협곡의 <b>화염 도깨비</b>와 <b>돌장승</b>을 물리치자', reward: { exp: 380 } },
+  { title: '검은 쇳조각', type: 'collect', region: 'canyon', item: '검은 쇳조각', from: ['firedok', 'stonegolem'], chance: 0.5, n: 5, desc: '쓰러뜨린 적에게서 <b>검은 쇳조각</b>을 모으자', reward: { exp: 300, item: 'cls:4' },
+    startLines: ['쇠돌이: 불가사리를 불러내려면 놈이 좋아하는 검은 쇳조각이 있어야 하오.', '쇠돌이: 협곡의 놈들이 품고 있으니 다섯 개만 모아 오시오.'] },
+  { title: '불가사리의 풀무', type: 'wave', region: 'canyon', desc: '대장간의 <b>풀무</b>를 밟아 <b>불가사리</b>를 불러내자', reward: { exp: 700 },
+    startLines: ['쇠돌이: 쇳조각을 가마에 넣었소. 풀무를 밟으면 냄새를 맡고 불가사리가 올 거요.', '쇠돌이: 놈이 쇳조각을 뿜으면 붉은 원을 피하시오. 다치면 몸이 달아올라 더 사나워지오!'] },
   { title: '귀환', type: 'talk', npc: 'guard', desc: '월하궁의 <b>수문장</b>에게 돌아가 소식을 전하자',
     lines: (g) => [
-      `${g.player.cfg.title} 나리! 저승사자에 이무기까지 물리치셨다고요? 소문이 궁 안까지 퍼졌소!`,
-      '이제 궁도, 대숲도, 옛 절터도, 늪도 모두 평안하오. 참으로 고맙소.',
+      `${g.player.cfg.title} 나리! 저승사자에 이무기, 불가사리까지 물리치셨다고요? 소문이 궁 안까지 퍼졌소!`,
+      '이제 궁도, 대숲도, 옛 절터도, 늪과 협곡도 모두 평안하오. 참으로 고맙소.',
       '앞으로도 이 땅을 지켜 주시오. 현상수배가 붙으면 내게 오시오.',
       '(메인 퀘스트 완료! 수문장에게 현상수배를 받거나, 북·방울·범종을 다시 울려 회차를 올릴 수 있습니다)',
     ], reward: { exp: 400, item: 'cls:3' } },
@@ -79,6 +96,8 @@ export const BOUNTIES = [
   { region: 'temple', title: '현상수배: 강시 무리', need: { jiangshi: 10 } },
   { region: 'swamp', title: '현상수배: 늪의 물귀신', need: { waterghost: 8 } },
   { region: 'swamp', title: '현상수배: 독두꺼비', need: { toad: 6 } },
+  { region: 'canyon', title: '현상수배: 화염 도깨비', need: { firedok: 8 } },
+  { region: 'canyon', title: '현상수배: 걸어 다니는 장승', need: { stonegolem: 4 } },
 ];
 
-export const KILL_NAME = { fox: '여우', foxfire: '여우불', jiangshi: '강시', ghost: '원귀', waterghost: '물귀신', toad: '두꺼비 요괴', blue: '꼬마 도깨비', red: '붉은 도깨비', wisp: '도깨비불' };
+export const KILL_NAME = { fox: '여우', foxfire: '여우불', jiangshi: '강시', ghost: '원귀', waterghost: '물귀신', toad: '두꺼비 요괴', firedok: '화염 도깨비', stonegolem: '돌장승', blue: '꼬마 도깨비', red: '붉은 도깨비', wisp: '도깨비불' };

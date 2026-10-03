@@ -48,7 +48,7 @@ export const MAPS = {
 };
 
 MAPS.swamp = {
-  id: 'swamp', han: '물안개 늪', name: '물안개 늪', sub: '이무기의 잠', next: 'palace', prev: 'temple', lvl: 6,
+  id: 'swamp', han: '물안개 늪', name: '물안개 늪', sub: '이무기의 잠', next: 'canyon', prev: 'temple', lvl: 6,
   foe: '물귀신', night: ['이무기의 잠', '징 소리에 늪이 끓어오른다…'],
   summonLine: '이무기: "용이 되려던 천 년을… 감히 방해하느냐!"',
   field: { cap: 6, pack: 3, types: [['waterghost', 3], ['toad', 2]] },
@@ -63,6 +63,22 @@ MAPS.swamp = {
   },
 };
 
-export const BOSS_TYPES = new Set(['boss', 'gumiho', 'reaper', 'imugi']);
-export const BOSS_NAME = { palace: '도깨비 대왕 두억시니', bamboo: '천년 구미호', temple: '저승사자', swamp: '천년 이무기' };
-export const WIN_LINE = { palace: '도깨비들이 달아나고 동이 튼다', bamboo: '여우들이 숲 깊이 사라진다', temple: '망자들이 저승으로 돌아간다', swamp: '늪의 물안개가 걷히고 수면이 잠잠해진다' };
+MAPS.canyon = {
+  id: 'canyon', han: '불가사리 협곡', name: '불가사리 협곡', sub: '쇠를 먹는 괴물', next: 'palace', prev: 'swamp', lvl: 8,
+  foe: '화염 도깨비', night: ['풀무질', '꺼진 가마에 다시 불이 붙는다…'],
+  summonLine: '불가사리: "크르릉… 쇠! 쇠를 내놓아라!"',
+  field: { cap: 6, pack: 3, types: [['firedok', 3], ['stonegolem', 1]] },
+  waves(n, r) {
+    if (n === 1) return [['firedok', 4 + r], ['stonegolem', 1]];
+    if (n === 2) return [['firedok', 3 + r], ['stonegolem', 2 + Math.floor(r / 2)]];
+    return [['bulgasari', 1], ['firedok', 2 + r], ['stonegolem', 1 + Math.floor(r / 2)]];
+  },
+  theme: {
+    sun: ['#ffd0a0', '#c86a4a'], sunI: [2.1, 0.9], sky: ['#e8c8b0', '#4a2a2a'], ground: ['#5a4038', '#1a0e0c'],
+    hemiI: [1.0, 0.9], bg: ['#3a2622', '#120808'], ambient: 'ember',
+  },
+};
+
+export const BOSS_TYPES = new Set(['boss', 'gumiho', 'reaper', 'imugi', 'bulgasari']);
+export const BOSS_NAME = { palace: '도깨비 대왕 두억시니', bamboo: '천년 구미호', temple: '저승사자', swamp: '천년 이무기', canyon: '쇠먹는 불가사리' };
+export const WIN_LINE = { palace: '도깨비들이 달아나고 동이 튼다', bamboo: '여우들이 숲 깊이 사라진다', temple: '망자들이 저승으로 돌아간다', swamp: '늪의 물안개가 걷히고 수면이 잠잠해진다', canyon: '가마의 불이 사그라들고 쇳소리가 멎는다' };

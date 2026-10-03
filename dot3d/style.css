@@ -436,3 +436,4 @@ body.touch #gameover .s b::after { content: ' / 화면 탭'; }
 @media (max-height: 520px), (max-width: 600px) { #touch .btns button.ult { top: -64px; } }
 em.ult { color: #ff9a7a; }
 .ult.hidden, #touch .btns button.ult.hidden { display: none; }
+.dmg.burn { color: #ffa040; font-size: 15px; }

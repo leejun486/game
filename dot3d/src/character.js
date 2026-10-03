@@ -1208,6 +1208,7 @@ export function makeDokkaebi(variant = 'blue') {
     blue: { skin: '#5d8fd8', hair: '#e2522e', horns: 1, scale: 1.12 },
     red: { skin: '#d8574a', hair: '#2a2430', horns: 2, scale: 1.18 },
     boss: { skin: '#b03a5a', hair: '#f0e8d8', horns: 2, scale: 2.3, horn: '#f0c040' },
+    fire: { skin: '#3a2a2a', hair: '#ff7a1a', horns: 2, scale: 1.2, horn: '#ffb040' },
   }[variant];
   return new Rig({
     type: 'dokkaebi', skin: V.skin, hair: V.hair, horns: V.horns, horn: V.horn, scale: V.scale,
@@ -1455,3 +1456,211 @@ export class SerpentRig {
 }
 
 export function makeImugi() { return new SerpentRig(); }
+
+// ======================= 불가사리 협곡 =======================
+// 돌장승: 장승이 쇳물에 깨어나 걸어 다님. 네모난 몸, 부릅뜬 눈에 불빛, 바위 주먹
+export class StoneRig {
+  constructor() {
+    this.mats = [];
+    const mat = (o) => { const m = toon(o); this.mats.push(m); return m; };
+    const stone = mat({ color: C('#8a827a') }), dark = mat({ color: C('#5a544e') }), hat = mat({ color: C('#2a2624') });
+    const glow = toon({ color: C('#ffb060'), emissive: C('#ff5a00'), emissiveIntensity: 1.6 });
+    this.root = new THREE.Group();
+    this.body = new THREE.Group();
+    this.body.scale.setScalar(1.35);
+    this.root.add(this.body);
+    this.torso = new THREE.Group();
+    this.torso.position.y = 0.45;
+    this.body.add(this.torso);
+    this.torso.add(mesh(new THREE.BoxGeometry(0.62, 0.95, 0.5), stone, 0, 0.5, 0));
+    this.torso.add(mesh(new THREE.BoxGeometry(0.66, 0.08, 0.54), dark, 0, 0.2, 0));
+    // 얼굴: 관모, 부릅뜬 눈, 주먹코, 드러낸 이
+    this.torso.add(mesh(new THREE.CylinderGeometry(0.34, 0.36, 0.3, 10), hat, 0, 1.12, 0));
+    this.torso.add(mesh(new THREE.CylinderGeometry(0.46, 0.46, 0.05, 12), hat, 0, 0.98, 0));
+    for (const sx of [-1, 1]) {
+      this.torso.add(mesh(new THREE.SphereGeometry(0.1, 8, 6), stone, sx * 0.15, 0.78, 0.25));
+      this.torso.add(mesh(new THREE.SphereGeometry(0.055, 6, 4), glow, sx * 0.15, 0.78, 0.33));
+    }
+    this.torso.add(mesh(new THREE.SphereGeometry(0.1, 6, 4), dark, 0, 0.62, 0.28));
+    this.torso.add(mesh(new THREE.BoxGeometry(0.34, 0.06, 0.04), mat({ color: C('#e8e0d0') }), 0, 0.46, 0.26));
+    this.torso.add(mesh(new THREE.BoxGeometry(0.1, 0.5, 0.03), mat({ color: C('#a8302a') }), 0, 0.12, 0.26));
+    // 팔: 어깨 → 바위 주먹
+    this.arms = [];
+    for (const sx of [-1, 1]) {
+      const g = new THREE.Group();
+      g.position.set(sx * 0.42, 0.85, 0);
+      g.add(mesh(new THREE.BoxGeometry(0.2, 0.5, 0.22), dark, 0, -0.25, 0));
+      const fist = mesh(new THREE.IcosahedronGeometry(0.2, 0), stone, 0, -0.58, 0.02);
+      g.add(fist);
+      this.torso.add(g);
+      this.arms.push(g);
+    }
+    this.legs = [];
+    for (const sx of [-1, 1]) {
+      const g = new THREE.Group();
+      g.position.set(sx * 0.17, 0.45, 0);
+      g.add(mesh(new THREE.BoxGeometry(0.22, 0.42, 0.26), dark, 0, -0.22, 0));
+      g.add(mesh(new THREE.BoxGeometry(0.28, 0.1, 0.34), stone, 0, -0.42, 0.04));
+      this.body.add(g);
+      this.legs.push(g);
+    }
+    this.root.traverse((o) => { if (o.isMesh) o.castShadow = true; });
+    this.phase = Math.random() * 6;
+    this.deadT = 0;
+  }
+
+  setFlash(v) {
+    if (v === this._lastFlash) return;
+    this._lastFlash = v;
+    for (const m of this.mats) v > 0 ? m.emissive.setRGB(v, v * 0.9, v * 0.8) : m.emissive.set(0, 0, 0);
+  }
+
+  animate(dt, p) {
+    const s = p.speed || 0, walk = clamp(s / 2, 0, 1);
+    this.phase += dt * (2 + s * 1.6);
+    const w = Math.sin(this.phase) * walk;
+    this.legs[0].rotation.x = w * 0.5; this.legs[1].rotation.x = -w * 0.5;
+    this.torso.rotation.z = w * 0.08;
+    let arm = 0;
+    if (p.attack) {
+      const t = p.attack.t;
+      const up = smooth(clamp(t / 0.28, 0, 1)), down = smooth(clamp((t - 0.28) / 0.12, 0, 1)), rec = smooth(clamp((t - 0.62) / 0.38, 0, 1));
+      arm = (-2.6 * up + 3.2 * down) * (1 - rec);
+      this.torso.rotation.x = (-0.15 * up + 0.35 * down) * (1 - rec);
+    } else this.torso.rotation.x = 0;
+    for (const a of this.arms) a.rotation.x = arm + (p.attack ? 0 : -w * 0.4 * (a === this.arms[0] ? 1 : -1));
+    if (p.hurt > 0) this.torso.position.x = Math.sin(this.phase * 40) * 0.03 * p.hurt; else this.torso.position.x = 0;
+    if (p.dead) {
+      this.deadT += dt;
+      this.body.rotation.x = -smooth(clamp(this.deadT / 0.5, 0, 1)) * Math.PI / 2;
+    } else { this.deadT = 0; this.body.rotation.x = 0; }
+  }
+}
+
+export function makeStoneGolem() { return new StoneRig(); }
+
+// 불가사리: 쇠를 먹고 자라는 괴물. 곰의 몸, 코끼리 코, 등에 쇠바늘, 소꼬리, 범의 다리
+export class BeastRig {
+  constructor() {
+    this.mats = [];
+    const mat = (o) => { const m = toon(o); this.mats.push(m); return m; };
+    const hide = mat({ color: C('#4a4448') }), belly = mat({ color: C('#6a5e58') }), horn = mat({ color: C('#e8dcc0') });
+    this.spikeMat = toon({ color: C('#8a8a92'), emissive: C('#000000'), metalness: HDC ? 0.8 : 0, roughness: 0.35 });
+    this.mats.push(this.spikeMat);
+    const eyeM = toon({ color: C('#ffd040'), emissive: C('#ff6a00'), emissiveIntensity: 1.5 });
+    this.root = new THREE.Group();
+    this.body = new THREE.Group();
+    this.body.scale.setScalar(2.2);
+    this.root.add(this.body);
+    this.torso = new THREE.Group();
+    this.torso.position.y = 0.62;
+    this.body.add(this.torso);
+    const trunk = mesh(new THREE.CapsuleGeometry(0.34, 0.55, 6, 12), hide);
+    trunk.rotation.x = Math.PI / 2;
+    this.torso.add(trunk);
+    const hump = mesh(new THREE.SphereGeometry(0.34, 12, 8), hide, 0, 0.18, 0.12);
+    hump.scale.set(1, 0.8, 1.1);
+    this.torso.add(hump);
+    this.torso.add(mesh(new THREE.SphereGeometry(0.28, 10, 8), belly, 0, -0.14, 0.05)).scale.set(1, 0.6, 1.4);
+    // 등의 쇠바늘
+    for (let i = 0; i < 16; i++) {
+      const row = i % 4, col = Math.floor(i / 4);
+      const sp = mesh(new THREE.ConeGeometry(0.045, 0.32, 5), this.spikeMat, (row - 1.5) * 0.12, 0.38 - Math.abs(row - 1.5) * 0.06, 0.32 - col * 0.2);
+      sp.rotation.set(-0.5, 0, (row - 1.5) * -0.35);
+      this.torso.add(sp);
+    }
+    // 머리: 코끼리 코(마디), 엄니, 작은 눈, 귀
+    this.head = new THREE.Group();
+    this.head.position.set(0, 0.12, 0.55);
+    this.torso.add(this.head);
+    const sk = mesh(new THREE.SphereGeometry(0.26, 12, 10), hide);
+    sk.scale.set(1, 0.9, 1.05);
+    this.head.add(sk);
+    this.trunkSegs = [];
+    let parent = this.head, z = 0.2, y = -0.05;
+    for (let i = 0; i < 5; i++) {
+      const g = new THREE.Group();
+      g.position.set(0, y, z);
+      g.add(mesh(new THREE.CylinderGeometry(0.075 - i * 0.01, 0.09 - i * 0.01, 0.16, 8), belly, 0, -0.06, 0.02)).rotation.x = 0.4;
+      parent.add(g);
+      this.trunkSegs.push(g);
+      parent = g; z = 0.1; y = -0.11;
+    }
+    for (const sx of [-1, 1]) {
+      const t = mesh(new THREE.ConeGeometry(0.035, 0.26, 6), horn, sx * 0.12, -0.12, 0.2);
+      t.rotation.set(1.7, 0, sx * 0.3);
+      this.head.add(t);
+      this.head.add(mesh(new THREE.SphereGeometry(0.04, 6, 4), eyeM, sx * 0.13, 0.08, 0.2));
+      const ear = mesh(new THREE.SphereGeometry(0.1, 6, 4), hide, sx * 0.24, 0.12, -0.02);
+      ear.scale.set(0.4, 1, 0.9);
+      this.head.add(ear);
+    }
+    // 꼬리
+    this.tail = new THREE.Group();
+    this.tail.position.set(0, 0.05, -0.55);
+    this.torso.add(this.tail);
+    this.tail.add(mesh(new THREE.CylinderGeometry(0.025, 0.045, 0.4, 5), hide, 0, -0.15, -0.08)).rotation.x = -0.5;
+    this.tail.add(mesh(new THREE.SphereGeometry(0.07, 6, 4), mat({ color: C('#2a2426') }), 0, -0.32, -0.2));
+    // 범의 다리 (줄무늬 대신 굵고 짧게)
+    this.legs = [];
+    for (const [x, z] of [[-0.2, 0.32], [0.2, 0.32], [-0.22, -0.3], [0.22, -0.3]]) {
+      const g = new THREE.Group();
+      g.position.set(x, 0.5, z);
+      g.add(mesh(new THREE.CapsuleGeometry(0.1, 0.32, 4, 8), hide, 0, -0.22, 0));
+      g.add(mesh(new THREE.SphereGeometry(0.11, 8, 6), belly, 0, -0.45, 0.04)).scale.set(1, 0.5, 1.2);
+      for (let k = -1; k <= 1; k++) g.add(mesh(new THREE.ConeGeometry(0.02, 0.06, 4), horn, k * 0.05, -0.47, 0.14)).rotation.x = 1.5;
+      this.body.add(g);
+      this.legs.push(g);
+    }
+    this.root.traverse((o) => { if (o.isMesh) o.castShadow = true; });
+    this.phase = 0;
+    this.heat = 0;
+    this.deadT = 0;
+  }
+
+  setFlash(v) {
+    if (v === this._lastFlash) return;
+    this._lastFlash = v;
+    for (const m of this.mats) {
+      if (m === this.spikeMat) continue;
+      v > 0 ? m.emissive.setRGB(v, v * 0.95, v * 0.9) : m.emissive.set(0, 0, 0);
+    }
+  }
+
+  // 체력이 줄면 쇠바늘이 벌겋게 달아오름 (0~1)
+  setHeat(k) {
+    if (Math.abs(k - this.heat) < 0.01) return;
+    this.heat = k;
+    this.spikeMat.emissive.setRGB(1.0 * k, 0.32 * k, 0.04 * k);
+  }
+
+  animate(dt, p) {
+    const s = p.speed || 0, run = clamp(s / 5, 0, 1);
+    this.phase += dt * (2.2 + s * 1.4);
+    const ph = this.phase;
+    const g = Math.sin(ph) * (0.15 + run * 0.6);
+    const legs = [g, -g, -g, g];
+    let pitch = 0, bob = Math.abs(Math.sin(ph)) * 0.03 * (s > 0 ? 1 : 0);
+    if (p.attack) {
+      // 앞발을 들어 올렸다가 쾅 내려찍음
+      const t = p.attack.t;
+      const up = smooth(clamp(t / 0.28, 0, 1)), down = smooth(clamp((t - 0.28) / 0.1, 0, 1)), rec = smooth(clamp((t - 0.62) / 0.38, 0, 1));
+      pitch = (-0.55 * up + 0.7 * down) * (1 - rec);
+      legs[0] = legs[1] = (-1.1 * up + 1.2 * down) * (1 - rec);
+      bob = 0.12 * up * (1 - down);
+    }
+    if (p.hurt > 0) pitch = -0.15 * p.hurt;
+    const L = 1 - Math.exp(-20 * dt);
+    this.legs.forEach((lg, i) => (lg.rotation.x += (legs[i] - lg.rotation.x) * L));
+    this.torso.rotation.x += (pitch - this.torso.rotation.x) * L;
+    this.body.position.y = bob;
+    this.trunkSegs.forEach((sg, i) => (sg.rotation.x = 0.25 + Math.sin(ph * 0.8 - i * 0.6) * 0.18 + (p.attack ? -0.3 : 0)));
+    this.tail.rotation.y = Math.sin(ph * 0.7) * 0.5;
+    if (p.dead) {
+      this.deadT += dt;
+      this.body.rotation.z = smooth(clamp(this.deadT / 0.6, 0, 1)) * Math.PI / 2;
+    } else { this.deadT = 0; this.body.rotation.z = 0; }
+  }
+}
+
+export function makeBulgasari() { return new BeastRig(); }

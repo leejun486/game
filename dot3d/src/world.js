@@ -5,7 +5,7 @@ import { boxGeo, cylGeo, Batcher, roofGeometry, latheGeo } from './geom.js';
 import * as T from './textures.js';
 import { mulberry32 } from './util.js';
 import { buildBamboo, buildTemple } from './worlds2.js';
-import { buildSwamp } from './worlds3.js';
+import { buildSwamp, buildCanyon } from './worlds3.js';
 import { GFX } from './gfx.js';
 import * as HD from './hdtex.js';
 
@@ -16,7 +16,8 @@ export const REGIONS = [
   { id: 'palace', ox: 0, oz: 0, flip: false, x0: -21.6, x1: 21.6, z0: -33.3, z1: 30, gate: { z: 21.2, x0: -3.2, x1: 3.2 }, from: -1e9, to: 29.5, spawn: [0, 0.12, 16] },
   { id: 'bamboo', ox: 0, oz: 55.6, flip: false, x0: -19.6, x1: 19.6, z0: 29, z1: 78, from: 29.5, to: 77.2, spawn: [0, 0, 36] },
   { id: 'temple', ox: 0, oz: 98.8, flip: true, x0: -19.6, x1: 19.6, z0: 76.2, z1: 124.4, from: 77.2, to: 124.2, spawn: [0, 0, 84] },
-  { id: 'swamp', ox: 0, oz: 150.5, flip: false, x0: -19.6, x1: 19.6, z0: 122.4, z1: 172.6, from: 124.2, to: 1e9, spawn: [-11, 0, 133], center: [1, 147] },
+  { id: 'swamp', ox: 0, oz: 150.5, flip: false, x0: -19.6, x1: 19.6, z0: 122.4, z1: 172.6, from: 124.2, to: 172.6, spawn: [-11, 0, 133], center: [1, 147] },
+  { id: 'canyon', ox: 0, oz: 198.7, flip: false, x0: -19.6, x1: 19.6, z0: 170.6, z1: 220.8, from: 172.6, to: 1e9, spawn: [12, 0, 178], center: [0, 196] },
 ];
 
 export class World {
@@ -40,6 +41,8 @@ export class World {
     this.gates = {};     // 퀘스트로 열리는 문 {rect, open, t, anim(k)}
     this.wet = [];       // 얕은 물 (타원) {x,z,rx,rz} — 걸음이 느려짐
     this.boards = [];    // 물 위 나무 다리 선분 {x0,z0,x1,z1,w}
+    this.vents = [];     // 용암 분화구 {x,z,mat}
+    this.lavaMats = [];  // 일렁이는 용암 재질
     this.makeMaterials();
     for (const R of REGIONS) this.buildRegion(R);
     this.root = this.top;
@@ -52,11 +55,12 @@ export class World {
     if (R.flip) g.rotation.y = Math.PI;
     this.top.add(g);
     this.root = g;
-    const n = { wet: this.wet.length, boards: this.boards.length, rects: this.rects.length, ramps: this.ramps.length, blockRects: this.blockRects.length, circles: this.circles.length, drums: this.drums.length, lanterns: this.lanterns.length, spawnPoints: this.spawnPoints.length };
+    const n = { vents: this.vents.length, wet: this.wet.length, boards: this.boards.length, rects: this.rects.length, ramps: this.ramps.length, blockRects: this.blockRects.length, circles: this.circles.length, drums: this.drums.length, lanterns: this.lanterns.length, spawnPoints: this.spawnPoints.length };
     if (R.id === 'palace') this.build();
     else if (R.id === 'bamboo') buildBamboo(this);
     else if (R.id === 'temple') buildTemple(this);
     else if (R.id === 'swamp') buildSwamp(this);
+    else if (R.id === 'canyon') buildCanyon(this);
     const f = (x, z) => (R.flip ? [R.ox - x, R.oz - z] : [R.ox + x, R.oz + z]);
     const box = (r) => {
       const [ax, az] = f(r.x0, r.z0), [bx, bz] = f(r.x1, r.z1);
@@ -71,6 +75,7 @@ export class World {
     for (const p of this.lanterns.slice(n.lanterns)) { v(p); p.region = R.id; }
     for (const p of this.spawnPoints.slice(n.spawnPoints)) v(p);
     for (const w of this.wet.slice(n.wet)) v(w);
+    for (const w of this.vents.slice(n.vents)) v(w);
     for (const b of this.boards.slice(n.boards)) { const [ax, az] = f(b.x0, b.z0), [bx, bz] = f(b.x1, b.z1); b.x0 = ax; b.z0 = az; b.x1 = bx; b.z1 = bz; }
   }
 
@@ -1115,6 +1120,7 @@ export class World {
       }
     }
     if (this.water) this.water.material.uniforms.uNight.value = shared.night.value;
+    for (const L of this.lavaMats) L.mat.emissiveIntensity = L.base * (0.85 + 0.15 * Math.sin(t * 1.7) + 0.08 * Math.sin(t * 5.3));
   }
 }
 
