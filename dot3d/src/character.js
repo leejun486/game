@@ -71,9 +71,10 @@ class Spring {
   }
 }
 
-function mesh(geo, mat, x = 0, y = 0, z = 0) {
+function mesh(geo, mat, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0) {
   const m = new THREE.Mesh(geo, mat);
   m.position.set(x, y, z);
+  m.rotation.set(rx, ry, rz);
   m.castShadow = true;
   m.receiveShadow = true;
   return m;
@@ -292,7 +293,7 @@ export class Rig {
       if (HDC) {
         // 주먹 쥔 손: 살짝 납작한 손등 + 엄지
         palm.scale.set(0.92, 1.05, 0.85);
-        hand.add(mesh(new THREE.CapsuleGeometry(0.02 * (cfg.limb || 1), 0.035, 3, 8), handM, -side * 0.035, -0.005, 0.04)).rotation.set(0.6, 0, side * 0.5);
+        hand.add(mesh(new THREE.CapsuleGeometry(0.02 * (cfg.limb || 1), 0.035, 3, 8), handM, -side * 0.035, -0.005, 0.04, 0.6, 0, side * 0.5));
       }
       hand.add(palm);
       if (cfg.gloves) elbowB.add(mesh(new THREE.CylinderGeometry(0.078, 0.082, 0.08, 8), this.gloveMat, 0, -0.25 - EL, 0));
@@ -484,7 +485,7 @@ export class Rig {
       } else tail.add(mesh(new THREE.BoxGeometry(0.07, 0.36, 0.02), ribM, 0, -0.18, 0));
       this.head.add(tail);
       this.tail = tail;
-      if (HDC) this.head.add(mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.26, 6), this.mat({ color: C('#e0b040') }), 0, hr + 0.05, -0.06)).rotation.z = Math.PI / 2; // 동곳
+      if (HDC) this.head.add(mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.26, 6), this.mat({ color: C('#e0b040') }), 0, hr + 0.05, -0.06, 0, 0, Math.PI / 2)); // 동곳
     } else if (cfg.type === 'mage') {
       // 갓: 넓은 챙 + 높은 대우 + 갓끈 구슬
       const hatM = this.mat({ color: C('#16141c') });
@@ -518,7 +519,7 @@ export class Rig {
       if (HDC) {
         // 낮게 묶은 머리채 + 초록 댕기 (용수철로 흔들림)
         for (let i = -1; i <= 1; i++) tail.add(mesh(strand([[i * 0.03, 0, 0], [i * 0.05, -0.15, -0.04], [i * 0.035, -0.32, -0.02]], 0.06, 0.01), hairM));
-        tail.add(mesh(new THREE.TorusGeometry(0.05, 0.018, 6, 12), this.mat({ color: C('#3a8a4a') }), 0, -0.02, 0)).rotation.x = Math.PI / 2;
+        tail.add(mesh(new THREE.TorusGeometry(0.05, 0.018, 6, 12), this.mat({ color: C('#3a8a4a') }), 0, -0.02, 0, Math.PI / 2));
       } else tail.add(mesh(new THREE.BoxGeometry(0.3, 0.32, 0.06), hairM, 0, -0.16, 0));
       this.head.add(tail);
       this.tail = tail;
@@ -1180,10 +1181,12 @@ export class Rig {
       this.mouth.scale.x += (mx - this.mouth.scale.x) * Math.min(1, dt * 18);
       this.mouth.scale.y += (my - this.mouth.scale.y) * Math.min(1, dt * 18);
     }
-    // 고개: 어깨 비틀림을 조금 되돌려 앞을 보고, 오래 서 있으면 두리번거림
+    // 고개: 어깨 비틀림을 조금 되돌려 앞을 봄. 머리가 커서 많이 돌리면 얼굴이 옆으로 돌아간 것처럼 보이니
+    // 서 있을 때는 아주 살짝만 움직이고, 전체 각도도 좁게 묶음
     this.stillT = run > 0.05 || p.attack ? 0 : (this.stillT || 0) + dt;
-    const look = this.stillT > 3 ? Math.sin((this.stillT - 3) * 0.6) * 0.45 : 0;
-    this.head.rotation.y += (-this.chest.rotation.y * 0.45 + look - this.head.rotation.y) * Math.min(1, dt * 6);
+    const look = this.stillT > 4 ? Math.sin((this.stillT - 4) * 0.5) * 0.08 : 0;
+    const headYaw = clamp(-this.chest.rotation.y * 0.45 + look, -0.2, 0.2);
+    this.head.rotation.y += (headYaw - this.head.rotation.y) * Math.min(1, dt * 6);
     if (this.ribbonArc) this.ribbonArc.position.y = -0.02 + Math.sin(this.idleT * 1.8) * 0.025;
     if (this.foxTails) {
       this.foxTails.forEach((t, i) => {
