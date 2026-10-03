@@ -1664,3 +1664,12 @@ export class BeastRig {
 }
 
 export function makeBulgasari() { return new BeastRig(); }
+
+// ======================= 저승 시련탑 =======================
+// 염라대왕: 붉은 곤룡포, 면류관, 금빛 홀. 저승을 다스리는 왕
+export function makeYeomra() {
+  return new Rig({
+    type: 'mage', scale: 2.35, skin: '#e2c2a0', robe: '#9a1a22', sleeve: '#9a1a22', cuff: '#e0b040', belt: '#e0b040',
+    pants: '#3a0a10', hair: '#100c0c', eye: '#ff3020', weapon: 'goldclub', deco: ['crown', 'badge', 'cape'], decoA: '#1a1a1a', decoB: '#ffd040', trim: '#ffd040',
+  });
+}

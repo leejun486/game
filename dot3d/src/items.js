@@ -16,6 +16,7 @@ export const BOSS_SETS = {
   reaper: { boss: '저승사자', set: '저승' },
   imugi: { boss: '천년 이무기', set: '이무기' },
   bulgasari: { boss: '쇠먹는 불가사리', set: '불가사리' },
+  yeomra: { boss: '염라대왕 (시련탑 10층마다)', set: '염라' },
 };
 export const PERKS = {
   quake: '도깨비 벼락: 맞힐 때 20% 확률로 주변에 벼락 충격파',
@@ -27,6 +28,8 @@ export const PERKS = {
   chill: '찬물결: 맞힐 때 15% 확률로 적을 1초 얼림',
   scales: '용비늘: 10초마다 한 번, 받는 공격을 비늘이 막아냄',
   molten: '쇳물: 맞힐 때 22% 확률로 적에 불을 붙임 (3초)',
+  verdict: '판관: 보스·정예에게 주는 피해 +30%',
+  rebirth: '환생: 쓰러지면 한 번 체력 40%로 되살아남 (3분마다)',
   ironhide: '쇠가죽: 받는 피해 -12%, 밀려나지 않고 불에 덜 탐',
 };
 
@@ -34,6 +37,7 @@ export const PERKS = {
 export const ULTS = {
   thunder: { name: '도깨비 천둥', short: '천둥', cd: 24, desc: '방망이로 땅을 세 번 내려쳐 점점 넓어지는 벼락 충격파. 맞은 적은 기절' },
   foxtail: { name: '아홉 꼬리 여우불', short: '여우불', cd: 24, desc: '여우불 아홉 개가 차례로 가까운 적을 꿰뚫음. 준 피해의 25%만큼 체력 회복' },
+  hellfire: { name: '지옥불', short: '지옥불', cd: 28, desc: '몸 주위로 붉은 불꽃 고리가 세 겹 퍼져 나가며 닿은 적을 모두 태움. 보스에게도 큰 피해' },
   meltdown: { name: '쇳물 비', short: '쇳물비', cd: 24, desc: '앞쪽 넓은 곳에 녹은 쇳덩이 열두 개가 쏟아지고 맞은 적은 불붙음' },
   tidal: { name: '물기둥', short: '물기둥', cd: 22, desc: '가까운 적 다섯의 발밑에서 차례로 물기둥이 솟아 띄워 올림. 일반 몬스터는 잠시 얼어붙음' },
   judgment: { name: '명부 집행', short: '명부', cd: 26, desc: '주변 적 여섯에게 명부의 낙인. 잠시 뒤 큰 피해, 체력이 35% 아래로 떨어진 일반 몬스터는 즉사' },
@@ -55,6 +59,7 @@ export const WEAPONS = {
     { id: 'swB3', name: '저승 명부검', tier: 5, atk: 1.0, from: 'reaper', perk: 'execute', ult: 'judgment', style: { blade: '#14101c', edge: '#c890ff', guard: '#5a3a8a', wrap: '#1a1420', glow: '#9a4aff', long: 1.32 } },
     { id: 'swB4', name: '이무기 비늘검', tier: 5, atk: 1.12, from: 'imugi', perk: 'chill', ult: 'tidal', style: { blade: '#bfeee0', edge: '#ffffff', guard: '#2a6a6a', wrap: '#1a3a3a', glow: '#2affd0', long: 1.26 } },
     { id: 'swB5', name: '불가사리 쇠뼈검', tier: 5, atk: 1.25, from: 'bulgasari', perk: 'molten', ult: 'meltdown', style: { blade: '#3a3a40', edge: '#ffb060', guard: '#8a4a2a', wrap: '#2a1a14', glow: '#ff5a10', long: 1.34 } },
+    { id: 'swB6', name: '염라 판관검', tier: 5, atk: 1.45, from: 'yeomra', perk: 'verdict', ult: 'hellfire', style: { blade: '#2a0a10', edge: '#ff4a5a', guard: '#ffd040', wrap: '#7a0a14', glow: '#ff2030', long: 1.38 } },
   ],
   mage: [
     { id: 'mg0', name: '복숭아나무 지팡이', tier: 0, atk: 0, style: {} },
@@ -67,6 +72,7 @@ export const WEAPONS = {
     { id: 'mgB3', name: '명부 지팡이', tier: 5, atk: 1.0, from: 'reaper', perk: 'execute', ult: 'judgment', style: { wood: '#14101c', moon: '#8a5ad8', orb: '#e0c8ff', orbGlow: '#9a4aff', big: 1.7 } },
     { id: 'mgB4', name: '여의주 지팡이', tier: 5, atk: 1.12, from: 'imugi', perk: 'chill', ult: 'tidal', style: { wood: '#2a4a4a', moon: '#c8e8e0', orb: '#e8fff8', orbGlow: '#2affd0', big: 1.65 } },
     { id: 'mgB5', name: '용광로 지팡이', tier: 5, atk: 1.25, from: 'bulgasari', perk: 'molten', ult: 'meltdown', style: { wood: '#3a3a40', moon: '#ff8a3a', orb: '#ffd080', orbGlow: '#ff4a00', big: 1.75 } },
+    { id: 'mgB6', name: '명부 판관필', tier: 5, atk: 1.45, from: 'yeomra', perk: 'verdict', ult: 'hellfire', style: { wood: '#1a0a0e', moon: '#ffd040', orb: '#ff8a9a', orbGlow: '#ff2030', big: 1.8 } },
   ],
   elf: [
     { id: 'bw0', name: '버들 활', tier: 0, atk: 0, style: {} },
@@ -79,6 +85,7 @@ export const WEAPONS = {
     { id: 'bwB3', name: '망령 활', tier: 5, atk: 1.0, from: 'reaper', perk: 'execute', ult: 'judgment', style: { wood: '#1a1420', grip: '#8a5ad8', tips: '#e0c8ff', glow: '#9a4aff', big: 1.38 } },
     { id: 'bwB4', name: '용수염 활', tier: 5, atk: 1.12, from: 'imugi', perk: 'chill', ult: 'tidal', style: { wood: '#3a6a6a', grip: '#c8c09a', tips: '#e8fff8', glow: '#2affd0', big: 1.34 } },
     { id: 'bwB5', name: '쇠심줄 활', tier: 5, atk: 1.25, from: 'bulgasari', perk: 'molten', ult: 'meltdown', style: { wood: '#3a3a40', grip: '#8a4a2a', tips: '#ffb060', glow: '#ff5a10', big: 1.4 } },
+    { id: 'bwB6', name: '업경 활', tier: 5, atk: 1.45, from: 'yeomra', perk: 'verdict', ult: 'hellfire', style: { wood: '#2a0a10', grip: '#ffd040', tips: '#ff8a9a', glow: '#ff2030', big: 1.45 } },
   ],
 };
 
@@ -102,6 +109,7 @@ export const OUTFITS = [
   { id: 'otB2', name: '구미호 털옷', tier: 5, hp: 95, def: 0.16, from: 'gumiho', perk: 'swift', acc: 'fox', pal: { main: '#f4ece4', accent: '#ff7a2a', trim: '#ffb070', dark: '#c8a890' }, armor: 'light' },
   { id: 'otB4', name: '이무기 비늘갑옷', tier: 5, hp: 135, def: 0.21, from: 'imugi', perk: 'scales', pal: { main: '#2a4a5a', accent: '#3a8a8a', trim: '#c8c09a', dark: '#16222a' }, armor: 'heavy' },
   { id: 'otB5', name: '불가사리 쇠갑옷', tier: 5, hp: 160, def: 0.24, from: 'bulgasari', perk: 'ironhide', pal: { main: '#4a4448', accent: '#ff6a2a', trim: '#8a8a92', dark: '#2a2426' }, armor: 'heavy' },
+  { id: 'otB6', name: '염라 곤룡포', tier: 5, hp: 180, def: 0.25, from: 'yeomra', perk: 'rebirth', deco: ['badge', 'crown'], pal: { main: '#9a1a22', accent: '#ffd040', trim: '#ffd040', dark: '#3a0a10', decoA: '#1a1a1a', decoB: '#ffd040' } },
   { id: 'otB3', name: '저승사자 도포', tier: 5, hp: 120, def: 0.22, from: 'reaper', perk: 'soul', acc: 'gat', pal: { main: '#18141e', accent: '#5a3a8a', trim: '#c8b0ff', dark: '#0c0a10' } },
 ];
 
@@ -145,10 +153,10 @@ export function bossDrop(type, cls, inv, round = 0) {
 
 // 처치 보상: 적 종류·회차에 따라 등급이 오름. 무기는 지금 직업용 위주
 export function rollDrop(enemyType, round, cls) {
-  const chance = { blue: 0.07, red: 0.12, wisp: 0.1, fox: 0.09, foxfire: 0.1, jiangshi: 0.11, ghost: 0.11, waterghost: 0.12, toad: 0.12, firedok: 0.13, stonegolem: 0.2, boss: 1, gumiho: 1, reaper: 1, imugi: 1, bulgasari: 1 }[enemyType] ?? 0;
+  const chance = { blue: 0.07, red: 0.12, wisp: 0.1, fox: 0.09, foxfire: 0.1, jiangshi: 0.11, ghost: 0.11, waterghost: 0.12, toad: 0.12, firedok: 0.13, stonegolem: 0.2, boss: 1, gumiho: 1, reaper: 1, imugi: 1, bulgasari: 1, yeomra: 1 }[enemyType] ?? 0;
   if (Math.random() > chance) return null;
   let tier = 1;
-  const strong = { boss: 0.55, gumiho: 0.6, reaper: 0.7, imugi: 0.8, bulgasari: 0.9, red: 0.1, jiangshi: 0.15, ghost: 0.15, fox: 0.08, foxfire: 0.08, waterghost: 0.22, toad: 0.22, firedok: 0.3, stonegolem: 0.4 }[enemyType] || 0;
+  const strong = { boss: 0.55, gumiho: 0.6, reaper: 0.7, imugi: 0.8, bulgasari: 0.9, yeomra: 1.1, red: 0.1, jiangshi: 0.15, ghost: 0.15, fox: 0.08, foxfire: 0.08, waterghost: 0.22, toad: 0.22, firedok: 0.3, stonegolem: 0.4 }[enemyType] || 0;
   const r = Math.random() + round * 0.12 + strong;
   if (r > 1.35) tier = 4; else if (r > 1.05) tier = 3; else if (r > 0.7) tier = 2;
   if (Math.random() < 0.55) {

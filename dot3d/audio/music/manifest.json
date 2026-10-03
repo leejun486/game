@@ -73,5 +73,15 @@
   "samples": 1389150,
   "rate": 44100,
   "dur": 31.5
+ },
+ "tower": {
+  "samples": 1905119,
+  "rate": 44100,
+  "dur": 43.2
+ },
+ "amb_tower": {
+  "samples": 1389150,
+  "rate": 44100,
+  "dur": 31.5
  }
 }

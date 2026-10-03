@@ -223,6 +223,25 @@ def canyon():
     return T, make_ir(2.4, 0.9, 6000, 1600, seed=23), 0.6
 
 
+def tower():
+    """저승 시련탑 (층 사이 쉼): 느린 진양 느낌, 계면조. 범종·아쟁·대금, 심장 같은 북"""
+    sub, subs, cyc = 0.6, 12, 6
+    T = Track('tower', sub * subs * cyc, 101)
+    tonic, sc = 123.47, GYEMYEON
+    saved = RHYTHMS[12]
+    RHYTHMS[12] = LONG_ONLY[12]
+    tune = make_tune(T.rng, subs, cyc, [3, 0, 5, 3, 2, 0], -1, 7)
+    RHYTHMS[12] = saved
+    T.add(beomjong(0.8), 0.0, 0.0, 0.9, 0.6)
+    lead(T, tune, 0, sub, subs, I_daegeum, tonic, sc, 'gyemyeon', pan=0.15, gain=0.85, send=0.6, octave=2, vel=0.6)
+    for c in range(cyc):
+        T.add(ajaeng(freq(tonic / 2, sc, 0), subs * sub * 1.02, 0.55), c * subs * sub, -0.25, 0.85, 0.5)
+        for s0 in (0, 1, 6, 7):
+            T.add(buk(0.55 if s0 % 2 == 0 else 0.35, low=True), (c * subs + s0) * sub, 0.0, 0.5, 0.3)
+    T.add(jing(0.5, 5.0), 3 * subs * sub, 0.0, 0.5, 0.7)
+    return T, make_ir(4.8, 1.9, 4200, 900, seed=29), 1.0
+
+
 # ---------- 환경음 (지역 분위기) ----------
 
 def amb(name, L=32.0, seed=1):
@@ -330,6 +349,16 @@ def amb(name, L=32.0, seed=1):
         for at in (5.0, 19.0):
             m = int(2.5 * SR)
             drop(lowpass(noise(m), 90) * np.hanning(m), at, 0.0, 0.25)
+    elif name == 'amb_tower':
+        wind(0.05, 60, 500, 1.0)
+        # 멀리서 웅얼거리는 망자들 (포먼트 잡음)
+        for k in range(10):
+            at = r.random() * L
+            m = int(r.uniform(1.0, 2.0) * SR)
+            x = bandpass(noise(m), r.uniform(350, 700), 4) * np.hanning(m)
+            drop(x, at, r.uniform(-0.9, 0.9), 0.06)
+        for at in (8.0, 23.0):
+            drop(pungyeong(0.4), at, r.uniform(-0.5, 0.5), 0.3)
     elif name == 'amb_temple':
         wind(0.06, 80, 900, 1.0)
         for at in (4.0, 15.0, 26.0):
@@ -367,8 +396,8 @@ def write(name, data, kbps_ogg_q=3, mp3='112k'):
     return {'samples': len(data), 'rate': SR, 'dur': round(len(data) / SR, 4)}
 
 
-TRACKS = {'title': title, 'palace': palace, 'night': night, 'bamboo': bamboo, 'temple': temple, 'swamp': swamp, 'canyon': canyon, 'battle': battle, 'boss': boss}
-AMBS = ['amb_day', 'amb_night', 'amb_bamboo', 'amb_temple', 'amb_swamp', 'amb_canyon']
+TRACKS = {'title': title, 'palace': palace, 'night': night, 'bamboo': bamboo, 'temple': temple, 'swamp': swamp, 'canyon': canyon, 'tower': tower, 'battle': battle, 'boss': boss}
+AMBS = ['amb_day', 'amb_night', 'amb_bamboo', 'amb_temple', 'amb_swamp', 'amb_canyon', 'amb_tower']
 
 if __name__ == '__main__':
     want = sys.argv[1:]

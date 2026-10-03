@@ -351,6 +351,7 @@ export function buildCanyon(W) {
   const M = W.M, B = (W.batch = new Batcher());
   W.foliage = new Batcher();
   W.vents = W.vents || [];
+  W.portals = W.portals || [];
   ground(W, M.ash);
   if (M.marsh) blendStrip(W, M.marsh, -60, 60, -26.1, -20.5, 0.004);
   pathStrip(W, M.basalt, [[12, -27], [10, -16], [3, -9], [0, -4], [0, 4], [-1, 10]], 2.6, 0.02);
@@ -413,6 +414,12 @@ export function buildCanyon(W) {
     W.circles.push({ x, z, r: 0.5, y: 0 });
   }
 
+  // 저승 문: 불가사리를 물리치면 열리는 시련탑 입구
+  B.add(boxGeo(3.2, 0.3, 2.2, 2), M.basaltDark, mat4(-9.3, 0.15, 18));
+  const gate = portalMesh(W, -9.3, 18, 1.3, 0.3);
+  W.portals.push({ x: -9.3, z: 16.8, kind: 'enter', label: '저승 문 (시련탑)', promptY: 3.4, mesh: gate });
+  W.circles.push({ x: -10.7, z: 18, r: 0.35, y: 0 }, { x: -7.9, z: 18, r: 0.35, y: 0 });
+
   // 협곡 벽 (가장자리 바위 절벽)
   const Rb = mulberry32(99);
   for (let z = -26; z <= 23; z += 2.6) {
@@ -424,8 +431,102 @@ export function buildCanyon(W) {
   }
   W.blockRects.push({ x0: -20, x1: 9.2, z0: -26.6, z1: -25.4 }, { x0: 14.8, x1: 20, z0: -26.6, z1: -25.4 });
   // 안쪽 바위
-  for (const [x, z, s, sd] of [[-10, -18, 1.1, 1], [14, -18, 1.0, 2], [-15, 2, 1.2, 3], [16, 2, 1.0, 4], [-12, 18, 1.1, 5], [12, 12, 0.9, 6], [-2, -16, 0.7, 7]]) crag(W, x, z, s, 700 + sd);
+  for (const [x, z, s, sd] of [[-10, -18, 1.1, 1], [14, -18, 1.0, 2], [-15, 2, 1.2, 3], [16, 2, 1.0, 4], [-15, 19.5, 1.1, 5], [12, 12, 0.9, 6], [-2, -16, 0.7, 7]]) crag(W, x, z, s, 700 + sd);
   cairn(W, 9, -20, 1, 31);
 
   B.build(W.root);
+}
+
+// ======================= 저승 시련탑 =======================
+// 허공에 뜬 둥근 단. 층마다 몰려오는 적을 모두 물리치면 가운데 다음 층 문이 열림
+export function buildTower(W) {
+  extraMaterials(W);
+  const M = W.M, B = (W.batch = new Batcher());
+  W.foliage = new Batcher();
+  W.portals = W.portals || [];
+  const voidM = new THREE.MeshBasicMaterial({ color: C('#0c0812') });
+  const v = new THREE.Mesh(new THREE.PlaneGeometry(200, 120), voidM);
+  v.rotation.x = -Math.PI / 2; v.position.y = -2.5;
+  W.root.add(v);
+  const R0 = 15;
+  // 단: 박석 원판 + 둘레 석축 + 바닥 문양
+  const top = new THREE.Mesh(new THREE.CylinderGeometry(R0, R0 - 0.8, 2.5, 48), M.blockDark);
+  top.position.y = -1.25;
+  top.receiveShadow = true;
+  W.root.add(top);
+  const floor = new THREE.Mesh(new THREE.CircleGeometry(R0, 48), M.slab);
+  floor.geometry.attributes.uv.array.forEach((x, i, a) => (a[i] = x * R0));
+  floor.rotation.x = -Math.PI / 2; floor.position.y = 0.002;
+  floor.receiveShadow = true;
+  W.root.add(floor);
+  const sig = toon({ color: C('#3a1a4a'), emissive: C('#8a2aff'), emissiveIntensity: 0.6 });
+  for (const r of [4.2, 7.5]) {
+    const ring = new THREE.Mesh(new THREE.RingGeometry(r - 0.12, r + 0.12, 64), sig);
+    ring.rotation.x = -Math.PI / 2; ring.position.y = 0.01;
+    ring.userData.noOutline = true;
+    W.root.add(ring);
+  }
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * Math.PI * 2;
+    const spoke = new THREE.Mesh(new THREE.PlaneGeometry(0.2, 3.3), sig);
+    spoke.rotation.set(-Math.PI / 2, 0, a);
+    spoke.position.set(Math.sin(a) * 5.85, 0.012, Math.cos(a) * 5.85);
+    spoke.userData.noOutline = true;
+    W.root.add(spoke);
+  }
+  W.lavaMats = W.lavaMats || [];
+  W.lavaMats.push({ mat: sig, base: 0.6 });
+  // 둘레 판정: 원 모양 벽
+  for (let i = 0; i < 64; i++) {
+    const a = (i / 64) * Math.PI * 2;
+    W.circles.push({ x: Math.sin(a) * (R0 + 0.6), z: Math.cos(a) * (R0 + 0.6), r: 1.0, y: 0 });
+  }
+  // 도깨비불 기둥 열 개
+  const flame = toon({ color: C('#bfa0ff'), emissive: C('#7a3aff'), emissiveIntensity: 2 });
+  W.lavaMats.push({ mat: flame, base: 2 });
+  for (let i = 0; i < 10; i++) {
+    const a = (i / 10) * Math.PI * 2 + 0.31;
+    const x = Math.sin(a) * (R0 - 1.2), z = Math.cos(a) * (R0 - 1.2);
+    B.add(cylGeo(0.4, 0.5, 3.4, 8), M.blockDark, mat4(x, 1.7, z));
+    B.add(cylGeo(0.62, 0.5, 0.3, 8), M.stoneGrey, mat4(x, 3.5, z));
+    const f = new THREE.Mesh(new THREE.IcosahedronGeometry(0.34, 1), flame);
+    f.position.set(x, 3.95, z);
+    f.userData.noOutline = true;
+    animateMesh(f, ANIM.flag);
+    W.root.add(f);
+    W.lanterns.push(new THREE.Vector3(x, 3.95, z));
+    W.circles.push({ x, z, r: 0.55, y: 0 });
+  }
+  // 남쪽 홍살문 (나가는 문) + 가운데 다음 층 문
+  const red = toon({ color: C('#b02a2a') });
+  for (const s of [-1, 1]) B.add(cylGeo(0.16, 0.18, 4.4, 8), red, mat4(s * 2.2, 2.2, 12.6));
+  B.add(boxGeo(5.2, 0.22, 0.22, 1), red, mat4(0, 4.1, 12.6));
+  for (let i = 0; i < 9; i++) B.add(boxGeo(0.06, 1.0, 0.06, 1), red, mat4(-1.8 + i * 0.45, 4.6, 12.6));
+  B.add(new THREE.SphereGeometry(0.22, 8, 6), M.gold, mat4(0, 5.25, 12.6));
+  W.portals.push({ x: 0, z: 12.4, kind: 'exit', label: '시련탑 나가기', promptY: 3.2 });
+  const swirl = portalMesh(W, 0, 0, 1.6);
+  swirl.visible = false;
+  W.portals.push({ x: 0, z: 0, kind: 'next', label: '다음 층으로', promptY: 3.2, mesh: swirl });
+  B.build(W.root);
+}
+
+// 소용돌이 문 (세운 고리 + 빛나는 막)
+export function portalMesh(W, x, z, r = 1.4, y = 0) {
+  const M = W.M;
+  const g = new THREE.Group();
+  g.position.set(x, y, z);
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(r, 0.16, 8, 36), M.blockDark || M.rockDark);
+  ring.position.y = r + 0.1;
+  g.add(ring);
+  const film = new THREE.Mesh(new THREE.CircleGeometry(r - 0.05, 36), new THREE.MeshBasicMaterial({ color: C('#a070ff'), transparent: true, opacity: 0.55, side: THREE.DoubleSide, depthWrite: false }));
+  film.position.y = r + 0.1;
+  film.userData.noOutline = true;
+  film.userData.spin = true;
+  g.add(film);
+  for (let i = 0; i < 6; i++) {
+    const a = (i / 6) * Math.PI * 2;
+    g.add(at(new THREE.Mesh(new THREE.SphereGeometry(0.1, 6, 4), new THREE.MeshBasicMaterial({ color: C('#e0c8ff') })), Math.cos(a) * r, r + 0.1 + Math.sin(a) * r, 0));
+  }
+  W.root.add(g);
+  return g;
 }

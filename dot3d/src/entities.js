@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { Rig, makeDokkaebi, makeGuard, makeLady, makeMage, makeFox, makeJiangshi, makeGhost, makeReaper, makeWaterGhost, makeToad, makeImugi, makeStoneGolem, makeBulgasari } from './character.js';
+import { Rig, makeDokkaebi, makeGuard, makeLady, makeMage, makeFox, makeJiangshi, makeGhost, makeReaper, makeWaterGhost, makeToad, makeImugi, makeStoneGolem, makeBulgasari, makeYeomra } from './character.js';
 import { CLASSES } from './classes.js';
 import { outfitLook, gearLook } from './character.js';
 import { sumStats, gearColor, setBonuses } from './gear.js';
@@ -359,11 +359,26 @@ export class Player {
       tmp.subVectors(this.pos, from).setY(0).normalize();
       this.vel.addScaledVector(tmp, 7);
     }
-    if (this.hp <= 0) {
+    if (this.hp <= 0 && !this.tryRebirth()) {
       this.hp = 0;
       this.dead = true;
       g.onPlayerDeath();
     }
+    return true;
+  }
+
+  // 환생(염라 곤룡포): 쓰러질 피해를 받으면 3분에 한 번 체력 40%로 버팀
+  tryRebirth() {
+    const g = this.game;
+    if (!this.perks?.has('rebirth') || g.time - (this.rebirthT ?? -999) < 180) return false;
+    this.rebirthT = g.time;
+    this.hp = Math.round(this.maxHp * 0.4);
+    this.invuln = 2;
+    this.burnT = 0;
+    g.fx.ring(new THREE.Vector3(this.pos.x, this.pos.y, this.pos.z), 3, '#ff4a5a', 0.6);
+    g.fx.colorFire(this.pos.x, this.pos.y + 0.5, this.pos.z, 50, 0.8, '#ffd0d0', '#c8102a');
+    g.audio.play('levelup');
+    g.ui.banner('환생', '염라의 곤룡포가 목숨을 지켰다', 2, 'win-banner');
     return true;
   }
 
@@ -383,7 +398,7 @@ export class Player {
         const d = Math.max(1, Math.round(this.maxHp * 0.012));
         this.hp -= d;
         g.fx.number(this.pos.clone().add(new THREE.Vector3(0, 1.8, 0)), d, 'player');
-        if (this.hp <= 0) { this.hp = 0; this.dead = true; g.onPlayerDeath(); }
+        if (this.hp <= 0 && !this.tryRebirth()) { this.hp = 0; this.dead = true; g.onPlayerDeath(); }
       }
     }
     if (this.slowT > 0) {
@@ -530,6 +545,7 @@ const PAL = {
   blue: { core: '#bff4ff', hi: '#e8ffff', idle: '#9feaff', shell: '#3a8cff', trail: '#7fe0ff', trail2: '#1a40ff', orb: '#d8fbff', eye: 0x0a1030, fire: ['#9ff0ff', '#2050ff'] },
   fox: { core: '#ffe0c0', hi: '#fff4e0', idle: '#ffc89a', shell: '#ff6a2a', trail: '#ffb070', trail2: '#ff2a00', orb: '#ffe8c8', eye: 0x3a0a00, fire: ['#ffd08a', '#ff3a00'] },
   ghost: { core: '#f0e0ff', hi: '#ffffff', idle: '#d8c0ff', shell: '#8a4aff', trail: '#c8a0ff', trail2: '#4a1a9a', orb: '#ecdcff', eye: 0x1a0a2a, fire: ['#d8c0ff', '#5a1aaa'] },
+  hell: { core: '#ffd8d8', hi: '#ffffff', idle: '#ff9a9a', shell: '#c8102a', trail: '#ff6a6a', trail2: '#5a0010', orb: '#ffc8c8', eye: 0x2a0000, fire: ['#ff9a8a', '#7a0018'] },
   fire: { core: '#fff0c0', hi: '#ffffff', idle: '#ffc070', shell: '#ff5a1a', trail: '#ffa040', trail2: '#c82000', orb: '#ffd8a0', eye: 0x2a0800, fire: ['#ffd070', '#ff2a00'] },
   water: { core: '#c8fff0', hi: '#ffffff', idle: '#9af0d8', shell: '#2a9a8a', trail: '#8ae8d0', trail2: '#1a5a6a', orb: '#b8ffd8', eye: 0x062a20, fire: ['#a8ffe0', '#1a7a8a'] },
 };
@@ -555,6 +571,8 @@ const TYPES = {
   firedok: { hp: 130, speed: 3.3, dmg: 17, range: 1.6, windup: 0.42, recover: 0.5, radius: 0.48, exp: 32, ai: 'melee', burn: true, make: () => makeDokkaebi('fire'), pal: PAL.fire },
   stonegolem: { hp: 330, speed: 1.7, dmg: 26, range: 1.9, windup: 0.9, recover: 1.0, radius: 0.62, exp: 48, ai: 'melee', armor: 0.5, slam: 1.9, make: makeStoneGolem, pal: PAL.fire },
   bulgasari: { hp: 2900, speed: 2.5, dmg: 33, range: 3.1, windup: 0.8, recover: 0.8, radius: 1.2, exp: 900, ai: 'boss', boss: 'bulgasari', leap: true, make: makeBulgasari, pal: PAL.fire, name: '쇠먹는 불가사리', summon: ['firedok', 'stonegolem'] },
+  // 시련탑 10층마다: 염라대왕
+  yeomra: { hp: 4200, speed: 2.5, dmg: 36, range: 3.2, windup: 0.8, recover: 0.8, radius: 1.2, exp: 1500, ai: 'boss', boss: 'yeomra', make: makeYeomra, pal: PAL.hell, name: '염라대왕', summon: ['jiangshi', 'ghost'] },
   reaper: { hp: 1500, speed: 2.7, dmg: 26, range: 2.8, windup: 0.7, recover: 0.8, radius: 1.0, exp: 450, ai: 'boss', boss: 'reaper', make: makeReaper, pal: PAL.ghost, name: '저승사자', summon: ['ghost', 'jiangshi'] },
 };
 
@@ -604,6 +622,15 @@ export class Enemy {
     game.fx.ring(pos, this.isBoss ? 3 : 1.4, f1, 0.5);
     this.field = !!opts.field;
     this.aggro = !this.field;
+    // 정예: 더 크고 단단하고 아픔, 금빛 기운
+    this.sizeMul = 1;
+    if (opts.elite) {
+      this.elite = true;
+      this.maxHp = this.hp = Math.round(this.maxHp * 2.6);
+      this.dmg = Math.round(this.dmg * 1.4);
+      this.sizeMul = 1.25;
+      this.name = '정예';
+    }
     if (!this.field) game.audio.play('spawn');
   }
 
@@ -725,6 +752,7 @@ export class Enemy {
         if (this.hp <= 0) { this.die(); return true; }
       }
     }
+    if (this.elite && !this.dead && Math.random() < dt * 8) g.fx.add.emit({ x: this.pos.x + rand(-0.5, 0.5), y: this.y + rand(0.2, 1.6), z: this.pos.z + rand(-0.5, 0.5), vy: rand(0.6, 1.4), life: 0.6, size: 3, endSize: 1, color: '#fff0a0', color2: '#ffb000' });
     // 불가사리: 체력이 줄수록 쇠바늘이 달아오름
     if (this.T.boss === 'bulgasari' && this.rig.setHeat) this.rig.setHeat(clamp((0.6 - this.hp / this.maxHp) / 0.4, 0, 1));
 
@@ -752,9 +780,9 @@ export class Enemy {
     // 등장
     if (this.spawning) {
       const k = smooth(clamp(this.st / 0.7, 0, 1));
-      this.root.scale.setScalar(Math.max(0.01, k));
+      this.root.scale.setScalar(Math.max(0.01, k) * this.sizeMul);
       if (Math.random() < 0.6) g.fx.colorFire(this.pos.x, this.pos.y, this.pos.z, 2, this.isBoss ? 1 : 0.4, ...this.T.pal.fire);
-      if (this.st >= 0.7) { this.spawning = false; this.state = 'chase'; this.st = 0; this.root.scale.setScalar(1); if (!this.field && (Math.random() < 0.4 || this.isBoss)) g.audio.play(this.T.pal === PAL.blue ? 'laugh' : this.T.pal === PAL.fox ? 'howl' : 'wail'); }
+      if (this.st >= 0.7) { this.spawning = false; this.state = 'chase'; this.st = 0; this.root.scale.setScalar(this.sizeMul); if (!this.field && (Math.random() < 0.4 || this.isBoss)) g.audio.play(this.T.pal === PAL.blue ? 'laugh' : this.T.pal === PAL.fox ? 'howl' : 'wail'); }
       if (this.isWisp && !this.rig) this.root.position.set(this.pos.x, this.pos.y + 1.3 * k, this.pos.z);
       else this.place(dt, 0);
       return true;
@@ -868,6 +896,7 @@ export class Enemy {
         if (T.boss === 'gumiho') for (let k = -3; k <= 3; k++) g.spawnOrb(this, k * 0.2);
         else if (T.boss === 'imugi') for (let k = -4; k <= 4; k++) g.spawnOrb(this, k * 0.16, { slow: 1.2 });
         else if (T.boss === 'bulgasari') g.ironRain(this);
+        else if (T.boss === 'yeomra') { if (this.castKind === 'verdict') g.verdict(this); else g.spawnDarkWaves(this); }
         else g.spawnDarkWaves(this);
         this.state = 'recover'; this.st = 0;
       }
@@ -982,6 +1011,13 @@ export class Enemy {
       } else { this.state = 'cast'; this.st = 0; g.audio.play('charge'); }
       return true;
     }
+    if (T.boss === 'yeomra') {
+      // 사라졌다 등 뒤에서 / 판결(연달아 떨어지는 붉은 벼락) / 검은 초승달
+      const r = Math.random();
+      if (dist > 3 && r < 0.3) { this.state = 'vanish'; this.st = 0; this.reappeared = false; g.fx.smoke(this.pos.x, this.y + 0.6, this.pos.z, 20); g.audio.play('wail'); }
+      else { this.state = 'cast'; this.st = 0; this.castKind = r < 0.65 ? 'verdict' : 'waves'; g.audio.play('charge'); }
+      return true;
+    }
     if (T.boss === 'bulgasari') {
       // 들이받기 / 쇳조각 비 (돌진 경로·떨어질 자리를 미리 보여줌)
       if (dist > 4 && Math.random() < 0.45) {
@@ -1071,7 +1107,7 @@ export class Enemy {
     this.root.position.set(this.pos.x, this.y + 1.3 + bob, this.pos.z);
     this.root.rotation.y = this.yaw;
     const pulse = this.state === 'windup' ? 1 + Math.sin(this.st * 40) * 0.12 + this.st * 0.4 : 1;
-    this.root.scale.setScalar(pulse);
+    this.root.scale.setScalar(pulse * this.sizeMul);
     const P = this.T.pal;
     this.coreMat.color.set(this.flashT > 0 ? '#ffffff' : this.state === 'windup' ? P.hi : P.idle);
     if (Math.random() < 0.7) g.fx.add.emit({ x: this.pos.x + rand(-0.15, 0.15), y: this.y + 1.45 + bob, z: this.pos.z + rand(-0.15, 0.15), vx: rand(-0.3, 0.3), vy: rand(0.8, 1.6), vz: rand(-0.3, 0.3), life: rand(0.3, 0.6), size: rand(2, 4), endSize: 1, color: P.trail, color2: P.trail2 });
@@ -1116,7 +1152,7 @@ export class Enemy {
       this.y = lerp(this.y, h, 1 - Math.exp(-6 * dt));
       this.root.position.set(this.pos.x, this.y + 1.3 + Math.sin(g.time * 3 + this.strafe) * 0.15, this.pos.z);
       this.root.rotation.y = this.yaw;
-      this.root.scale.setScalar(1);
+      this.root.scale.setScalar(this.sizeMul);
       this.coreMat.color.set(this.flashT > 0 ? '#ffffff' : this.T.pal.idle);
     } else if (this.isWisp) {
       const h = g.world.heightAt(this.pos.x, this.pos.z);

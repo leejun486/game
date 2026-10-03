@@ -79,6 +79,16 @@ MAPS.canyon = {
   },
 };
 
-export const BOSS_TYPES = new Set(['boss', 'gumiho', 'reaper', 'imugi', 'bulgasari']);
+MAPS.tower = {
+  id: 'tower', han: '시련탑', name: '저승 시련탑', sub: '끝없는 저승의 탑', next: 'canyon', prev: 'canyon', lvl: 10,
+  foe: '망자', night: ['시련', ''], summonLine: '염라대왕: "명부에 적힌 이름은 지울 수 없느니라!"',
+  waves() { return []; },
+  theme: {
+    sun: ['#d8c8ff', '#8a6aff'], sunI: [1.8, 1.0], sky: ['#c8b8f0', '#3a2a6a'], ground: ['#2a1a3a', '#0c0612'],
+    hemiI: [1.0, 1.0], bg: ['#140c1e', '#06030a'], ambient: 'soul',
+  },
+};
+
+export const BOSS_TYPES = new Set(['boss', 'gumiho', 'reaper', 'imugi', 'bulgasari', 'yeomra']);
 export const BOSS_NAME = { palace: '도깨비 대왕 두억시니', bamboo: '천년 구미호', temple: '저승사자', swamp: '천년 이무기', canyon: '쇠먹는 불가사리' };
 export const WIN_LINE = { palace: '도깨비들이 달아나고 동이 튼다', bamboo: '여우들이 숲 깊이 사라진다', temple: '망자들이 저승으로 돌아간다', swamp: '늪의 물안개가 걷히고 수면이 잠잠해진다', canyon: '가마의 불이 사그라들고 쇳소리가 멎는다' };
