@@ -5,6 +5,8 @@ import { boxGeo, cylGeo, Batcher, latheGeo } from './geom.js';
 import * as T from './textures.js';
 import { mulberry32 } from './util.js';
 import { mat4, blendStrip } from './world.js';
+import { GFX } from './gfx.js';
+import * as HD from './hdtex.js';
 
 const C = (h) => new THREE.Color(h);
 const at = (m, x, y, z) => { m.position.set(x, y, z); return m; };
@@ -20,6 +22,13 @@ function extraMaterials(W) {
   M.snowLeaf = toon({ color: C('#eef4fa') });
   M.cloth = ['#c8302c', '#2f5aa8', '#e0b040', '#f0ece0', '#3a8a4a'].map((h) => toon({ color: C(h), side: THREE.DoubleSide }));
   M.wood2 = toon({ color: C('#8a6a4a') });
+  // 고화질: 숲 풀밭·흙길·눈밭도 고해상도 텍스처로
+  if (GFX.hd) {
+    M.fgrass = toon({ ...HD.hdGrass([70, 112, 58]), roughness: 1 });
+    M.fpath = toon({ ...HD.hdDirt([132, 104, 72]), roughness: 1 });
+    M.snow = toon({ ...HD.hdSnow(), roughness: 0.8, color: new THREE.Color(1.2, 1.2, 1.24) });
+    M.snowLeaf = toon({ ...HD.hdNeedle([226, 236, 244], true), roughness: 0.85 });
+  }
   M.ice = toon({ color: C('#bfe8ff'), emissive: C('#000000') });
   M.rock = toon({ color: C('#8a8478') });
   M.rockDark = toon({ color: C('#6a665e') });
@@ -29,6 +38,11 @@ function extraMaterials(W) {
 // 바닥: 큰 평면 + 길 조각들
 // 지역 길이(z -26.1..22.1)만큼만 깔아서 이웃 지역 바닥과 겹치지 않게
 function ground(W, mat, y = 0) {
+  // 고화질: 넓은 바닥은 텍스처를 4배 크게 깔아 반복 무늬가 덜 보이게
+  if (GFX.hd && mat.map) {
+    mat = mat.clone();
+    for (const k of ['map', 'normalMap']) if (mat[k]) { mat[k] = mat[k].clone(); mat[k].needsUpdate = true; mat[k].repeat.set(0.25, 0.25); }
+  }
   const g = new THREE.Mesh(new THREE.PlaneGeometry(120, 48.2), mat);
   g.geometry.attributes.uv.array.forEach((v, i, a) => (a[i] = v * (i % 2 === 0 ? 60 : 24.1)));
   g.rotation.x = -Math.PI / 2;

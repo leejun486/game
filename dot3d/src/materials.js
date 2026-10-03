@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { GFX } from './gfx.js';
 
 // 모든 셰이더가 공유하는 유니폼
 export const shared = {
@@ -19,7 +20,9 @@ export function gradientMap() {
   return gradient;
 }
 
+// 고화질 모드: 부드러운 물리 기반 음영 / 도트 모드: 4단계 툰 음영
 export function toon(opts = {}) {
+  if (GFX.hd) return new THREE.MeshStandardMaterial({ roughness: 0.86, metalness: 0, ...opts });
   return new THREE.MeshToonMaterial({ gradientMap: gradientMap(), ...opts });
 }
 

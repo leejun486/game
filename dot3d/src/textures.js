@@ -1,5 +1,6 @@
 // 모든 텍스처는 캔버스에서 절차적으로 그린 도트 텍스처 (1 유닛 = 16 텍셀 기준)
 import * as THREE from 'three';
+import { GFX } from './gfx.js';
 import { mulberry32 } from './util.js';
 
 export const TEXELS_PER_UNIT = 16;
@@ -37,6 +38,8 @@ function canvasToTexture(c, { repeat = true, linear = false } = {}) {
   t.magFilter = linear ? THREE.LinearFilter : THREE.NearestFilter;
   t.minFilter = linear ? THREE.LinearFilter : THREE.NearestFilter;
   t.generateMipmaps = false;
+  // 고화질: 멀리서도 지글거리지 않게 밉맵 + 비등방 필터 (작은 도트 텍스처는 가까이선 또렷하게)
+  if (GFX.hd && !linear) { t.minFilter = THREE.LinearMipmapLinearFilter; t.generateMipmaps = true; t.anisotropy = 8; t.magFilter = c.width >= 128 ? THREE.LinearFilter : THREE.NearestFilter; }
   t.colorSpace = linear ? THREE.NoColorSpace : THREE.SRGBColorSpace;
   if (repeat) t.wrapS = t.wrapT = THREE.RepeatWrapping;
   return t;

@@ -9,6 +9,7 @@ import { shared } from './materials.js';
 import { loadSave, writeSave, clearSave } from './save.js';
 import { CLASSES, CLASS_ORDER } from './classes.js';
 import { ClassPreview } from './preview.js';
+import { GFX, setGfx } from './gfx.js';
 import { EVOS, branchOf, rankOf, freePoints, rankMul, rankCd, RANK_NAME } from './evolve.js';
 import { QUESTS, BOUNTIES, KILL_NAME } from './quests.js';
 import { makeGear, rollGearTier, gearScore, salvageExp, BAG_MAX, GEAR_SLOTS, slotKind, rarityOf, makeSetPiece, setFor, SETS } from './gear.js';
@@ -107,7 +108,8 @@ class Game {
     s.add(this.hemi);
     const sun = (this.sun = new THREE.DirectionalLight('#fff0d6', 2.5));
     sun.castShadow = true;
-    sun.shadow.mapSize.set(2048, 2048);
+    sun.shadow.mapSize.set(GFX.hd ? 4096 : 2048, GFX.hd ? 4096 : 2048);
+    if (GFX.hd) sun.shadow.radius = 3;
     const sc = sun.shadow.camera;
     sc.left = -30; sc.right = 30; sc.top = 30; sc.bottom = -30; sc.near = 1; sc.far = 140;
     sun.shadow.bias = -0.0006;
@@ -130,10 +132,11 @@ class Game {
     const th = this.themeCur;
     const c = (pair) => _e.copy(pair[0]).lerp(pair[1], n);
     this.sun.color.copy(c(th.sun));
-    this.sun.intensity = lerp(th.sunI[0], th.sunI[1], n);
+    // 고화질은 하늘빛을 줄여 그림자 대비를 살림
+    this.sun.intensity = lerp(th.sunI[0], th.sunI[1], n) * (GFX.hd ? 0.95 : 1);
     this.hemi.color.copy(c(th.sky));
     this.hemi.groundColor.copy(c(th.ground));
-    this.hemi.intensity = lerp(th.hemiI[0], th.hemiI[1], n);
+    this.hemi.intensity = lerp(th.hemiI[0], th.hemiI[1], n) * (GFX.hd ? 0.62 : 1);
     this.scene.background.copy(c(th.bg));
     this.world.setNight(n);
 
@@ -142,7 +145,7 @@ class Game {
     const dir = _a.copy(this.sunOffset).normalize();
     const right = _b.crossVectors(_c.set(0, 1, 0), dir).normalize();
     const up = _c.crossVectors(dir, right).normalize();
-    const texel = 60 / 2048;
+    const texel = 60 / (GFX.hd ? 4096 : 2048);
     const rx = Math.round(f.dot(right) / texel) * texel;
     const uy = Math.round(f.dot(up) / texel) * texel;
     const dz = f.dot(dir);
@@ -290,6 +293,8 @@ class Game {
     btn('btn-new', () => this.newGame(false));
     btn('cf-yes', () => this.newGame(true));
     btn('cf-no', () => this.showConfirm(false));
+    btn('btn-gfx', () => this.toggleGfx());
+    document.getElementById('btn-gfx').textContent = `그래픽: ${GFX.hd ? '고화질' : '도트'} (G)`;
     document.getElementById('confirm').addEventListener('mousedown', (e) => e.stopPropagation());
     this.selectClass(this.selectedCls);
   }
@@ -820,6 +825,7 @@ class Game {
         else if (code === 'Enter') this.newGame(true);
         return;
       }
+      if (code === 'KeyG') { this.toggleGfx(); return; }
       if (code === 'Delete' || code === 'Backspace') {
         if (!this.hasSave) return;
         this.resetProgress();
@@ -836,6 +842,7 @@ class Game {
       return;
     }
     this.audio.unlock();
+    if (code === 'KeyG') { this.toggleGfx(); return; }
     if (code === 'KeyM') { const on = this.audio.toggleMusic(); this.ui.toast(on ? '음악 켜짐' : '음악 꺼짐'); this.save(false); return; }
     if (code === 'Equal' || code === 'NumpadAdd') { this.pixel.zoom(1); return; }
     if (code === 'Minus' || code === 'NumpadSubtract') { this.pixel.zoom(-1); return; }
@@ -924,6 +931,13 @@ class Game {
     this.showConfirm(false);
     if (this.hasSave) this.resetProgress();
     this.start();
+  }
+
+  // 고화질 ↔ 도트 (재질을 다시 만들어야 해서 저장 후 새로고침)
+  toggleGfx() {
+    if (this.state !== 'title') this.save(false);
+    this.ui.toast(`그래픽을 ${GFX.hd ? '도트' : '고화질'}(으)로 바꿉니다…`, 2);
+    setTimeout(() => setGfx(GFX.hd ? 'pixel' : 'hd'), 300);
   }
 
   showConfirm(v) { document.getElementById('confirm').classList.toggle('show', v); }

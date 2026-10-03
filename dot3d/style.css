@@ -411,3 +411,6 @@ body.touch #gameover .s b::after { content: ' / 화면 탭'; }
   #title .logo-big { display: none; }
   .cd-skills { display: none; }
 }
+
+.gfx-btn { position: absolute; left: 16px; bottom: 14px; padding: 5px 10px; font-family: var(--font); font-size: 11px; cursor: pointer; background: rgba(20, 14, 30, 0.8); color: #c8bea8; border: 2px solid #4a3e2a; }
+.gfx-btn:hover { color: #ffd76a; border-color: var(--gold-dark); }

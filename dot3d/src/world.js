@@ -5,6 +5,8 @@ import { boxGeo, cylGeo, Batcher, roofGeometry, latheGeo } from './geom.js';
 import * as T from './textures.js';
 import { mulberry32 } from './util.js';
 import { buildBamboo, buildTemple } from './worlds2.js';
+import { GFX } from './gfx.js';
+import * as HD from './hdtex.js';
 
 // 오픈월드: 세 지역을 남북으로 이어 붙임. 궁궐 남문 → 죽림 → 설원 폐사찰
 //  ox/oz: 지역 원점의 월드 위치, flip: 180° 돌려 놓음(폐사찰 입구가 죽림 쪽을 보게)
@@ -145,6 +147,28 @@ export class World {
       lattice: toon({ map: T.latticeTex(), emissiveMap: T.latticeTex(true), emissive: c('#000000') }),
       lampGlow: toon({ color: c('#f3e2b8'), emissive: c('#000000') }),
     };
+    // 고화질: 주요 바닥·벽·지붕을 고해상도 텍스처 + 노멀맵으로 교체
+    if (GFX.hd) {
+      const M = this.M;
+      const use = (k, t, o = {}) => { M[k] = toon({ ...t, ...o }); };
+      use('floor', HD.hdFloor(), { roughness: 0.9 });
+      use('slab', HD.hdSlab(), { roughness: 0.9 });
+      use('path', HD.hdPath(), { roughness: 0.88 });
+      use('block', HD.hdBlock(), { roughness: 0.92 });
+      use('blockDark', HD.hdBlock([140, 134, 120]), { roughness: 0.92 });
+      use('grass', HD.hdGrass(), { roughness: 1 });
+      use('dirt', HD.hdDirt(), { roughness: 1 });
+      use('wood', HD.hdWood(), { roughness: 0.6 });
+      use('darkWood', HD.hdWood([92, 60, 40]), { roughness: 0.7 });
+      use('roof', HD.hdRoof(), { roughness: 0.75 });
+      use('plaster', HD.hdPlaster(), { roughness: 0.95 });
+      for (const k of ['stoneLight', 'stoneGrey', 'mortar', 'pot']) M[k].roughness = 0.9;
+      use('bark', HD.hdBark(), { roughness: 0.95 });
+      use('leaf', HD.hdNeedle([46, 84, 50]), { roughness: 0.9 });
+      use('leaf2', HD.hdNeedle([68, 108, 60]), { roughness: 0.9 });
+      use('medallion', HD.hdMedallion(), { roughness: 0.92, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 });
+      for (const k of ['gold', 'bronze', 'bronzeDark']) { M[k].metalness = 0.55; M[k].roughness = 0.45; }
+    }
     this.glowMats.push({ mat: this.M.lattice, color: new THREE.Color('#ffb060'), k: 1.1 });
     this.glowMats.push({ mat: this.M.lampGlow, color: new THREE.Color('#ffc070'), k: 1.6 });
   }
@@ -552,10 +576,11 @@ export class World {
     B.add(cylGeo(0.055, 0.07, h, 6), M.black, mat4(x, y + h / 2, z));
     B.add(new THREE.ConeGeometry(0.1, 0.35, 6), M.gold, mat4(x, y + h + 0.15, z));
     // 깃발 (깃대 쪽이 로컬 x=-0.5)
-    const geo = new THREE.PlaneGeometry(1.1, 1.4, 8, 4);
-    const mat = toon({ map: T.bannerTex(kind), side: THREE.DoubleSide });
+    const fw = GFX.hd ? 1.5 : 1.1, fh = GFX.hd ? 1.9 : 1.4;
+    const geo = new THREE.PlaneGeometry(fw, fh, 10, 6);
+    const mat = toon({ map: GFX.hd ? HD.hdBanner(kind).map : T.bannerTex(kind), side: THREE.DoubleSide, roughness: 0.95 });
     const m = new THREE.Mesh(geo, mat);
-    m.position.set(x + side * 0.6, y + h - 0.9, z);
+    m.position.set(x + side * (fw / 2 + 0.05), y + h - fh * 0.62, z);
     if (side < 0) m.scale.x = -1;
     m.rotation.y = side < 0 ? 0.25 : -0.25;
     m.castShadow = true;
@@ -656,8 +681,10 @@ export class World {
       dir.normalize();
     }
     const pad = (c, sx, sy, sz, mat) => {
-      const geo = new THREE.IcosahedronGeometry(1, 1);
-      F.add(geo, mat, new THREE.Matrix4().compose(c, new THREE.Quaternion().setFromEuler(new THREE.Euler(0, R() * 6, 0)), new THREE.Vector3(sx, sy, sz)));
+      // 고화질: 가장자리가 들쭉날쭉한 납작한 솔잎층 (분재 소나무 느낌), 도트: 둥근 잎뭉치
+      const geo = GFX.hd ? needlePad(R) : new THREE.IcosahedronGeometry(1, 1);
+      const k = GFX.hd ? 1.12 : 1;
+      F.add(geo, mat, new THREE.Matrix4().compose(c, new THREE.Quaternion().setFromEuler(new THREE.Euler((R() - 0.5) * 0.15, R() * 6, (R() - 0.5) * 0.15)), new THREE.Vector3(sx * k, sy * (GFX.hd ? 0.9 : 1), sz * k)));
     };
     // 가지 + 잎뭉치 (우산형)
     for (let i = 2; i < segs; i++) {
@@ -665,15 +692,22 @@ export class World {
       const nb = 2;
       for (let b = 0; b < nb; b++) {
         const a = R() * Math.PI * 2;
-        const L = (1.2 + R() * 1.0) * s * (1 - (i - 2) * 0.18);
+        const L = (1.2 + R() * 1.0) * s * (1 - (i - 2) * 0.18) * (GFX.hd ? 1.2 : 1);
         const bd = new THREE.Vector3(Math.cos(a), 0.25 + R() * 0.3, Math.sin(a)).normalize();
         const end = base.clone().addScaledVector(bd, L);
         const geo = new THREE.CylinderGeometry(0.06 * s, 0.11 * s, L, 5);
         const q = new THREE.Quaternion().setFromUnitVectors(up, bd);
         B.add(geo, M.bark, new THREE.Matrix4().compose(base.clone().add(end).multiplyScalar(0.5), q, new THREE.Vector3(1, 1, 1)));
-        const ps = (0.8 + R() * 0.4) * s;
-        pad(end.clone().add(new THREE.Vector3(0, 0.15 * s, 0)), 1.25 * ps, 0.42 * ps, 1.05 * ps, M.leaf);
-        pad(end.clone().add(new THREE.Vector3(0.1, 0.42 * s, 0.05)), 0.85 * ps, 0.3 * ps, 0.75 * ps, snowy ? M.snowLeaf : M.leaf2);
+        const ps = (0.8 + R() * 0.4) * s * (GFX.hd ? 0.6 : 1);
+        if (GFX.hd) {
+          // 분재처럼: 가지 끝마다 납작한 솔잎층 두세 겹, 줄기가 비쳐 보이게
+          pad(end.clone().add(new THREE.Vector3(0, 0.05 * s, 0)), 1.25 * ps, 0.32 * ps, 1.05 * ps, M.leaf);
+          pad(end.clone().add(new THREE.Vector3((R() - 0.5) * 0.3, 0.32 * s, (R() - 0.5) * 0.3)), 0.85 * ps, 0.26 * ps, 0.75 * ps, snowy ? M.snowLeaf : M.leaf2);
+          if (R() < 0.5) pad(end.clone().add(new THREE.Vector3(0, 0.55 * s, 0)), 0.5 * ps, 0.2 * ps, 0.45 * ps, snowy ? M.snowLeaf : M.leaf2);
+        } else {
+          pad(end.clone().add(new THREE.Vector3(0, 0.15 * s, 0)), 1.25 * ps, 0.42 * ps, 1.05 * ps, M.leaf);
+          pad(end.clone().add(new THREE.Vector3(0.1, 0.42 * s, 0.05)), 0.85 * ps, 0.3 * ps, 0.75 * ps, snowy ? M.snowLeaf : M.leaf2);
+        }
       }
     }
     const top = pts[segs - 1];
@@ -832,7 +866,7 @@ export class World {
         const x = a.x0 + R() * (a.x1 - a.x0), z = a.z0 + R() * (a.z1 - a.z0);
         e.set(0, R() * Math.PI, 0);
         const s = 0.7 + R() * 0.7;
-        m4.compose(new THREE.Vector3(x, a.y, z), q.setFromEuler(e), new THREE.Vector3(s, s * (0.8 + R() * 0.6), s));
+        m4.compose(new THREE.Vector3(x, a.y, z), q.setFromEuler(e), new THREE.Vector3(s, s * (0.8 + R() * 0.6) * (GFX.hd ? 0.55 : 1), s));
         mesh.setMatrixAt(i, m4);
         const patch = Math.sin(x * 0.7) * Math.cos(z * 0.9) * 0.5 + 0.5;
         col.copy(greens[Math.floor(R() * greens.length)]).lerp(new THREE.Color('#a8b85a'), patch * 0.35);
@@ -1083,6 +1117,41 @@ export function blendStrip(W, baseMat, x0, x1, zSolid, zClear, y = -0.01) {
   m.receiveShadow = true;
   W.root.add(m);
   return m;
+}
+
+// 솔잎층 하나: 위는 낮은 돔, 아래는 납작, 가장자리는 들쭉날쭉 (반지름 1 기준)
+const padCache = [];
+function needlePad(R) {
+  const v = Math.floor(R() * 4);
+  if (padCache[v]) return padCache[v];
+  const seg = 22, pos = [], uv = [], idx = [];
+  const rr = [];
+  for (let i = 0; i < seg; i++) rr.push(0.82 + Math.random() * 0.3 + (i % 2) * 0.1);
+  pos.push(0, 0.42, 0); uv.push(0.5, 0.5);
+  for (let i = 0; i < seg; i++) {
+    const a = (i / seg) * Math.PI * 2;
+    pos.push(Math.cos(a) * rr[i] * 0.62, 0.3, Math.sin(a) * rr[i] * 0.62); uv.push(0.5 + Math.cos(a) * 0.3, 0.5 + Math.sin(a) * 0.3);
+  }
+  for (let i = 0; i < seg; i++) {
+    const a = (i / seg) * Math.PI * 2;
+    pos.push(Math.cos(a) * rr[i], 0, Math.sin(a) * rr[i]); uv.push(0.5 + Math.cos(a) * 0.5, 0.5 + Math.sin(a) * 0.5);
+  }
+  pos.push(0, -0.16, 0); uv.push(0.5, 0.5);
+  const top = 0, mid = 1, out = 1 + seg, bot = 1 + seg * 2;
+  for (let i = 0; i < seg; i++) {
+    const j = (i + 1) % seg;
+    idx.push(top, mid + j, mid + i);
+    idx.push(mid + i, mid + j, out + j, mid + i, out + j, out + i);
+    idx.push(bot, out + i, out + j);
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  g.setIndex(idx);
+  g.computeVertexNormals();
+  padCache[v] = g.toNonIndexed();
+  padCache[v].computeVertexNormals();
+  return padCache[v];
 }
 
 export function mat4(x, y, z, ry = 0, rx = 0, rz = 0, s = null) {
