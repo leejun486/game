@@ -614,9 +614,9 @@ export class Rig {
         ang -= 0.035;
       }
       // 칼끝(키사키): 비스듬히 깎인 끝
-      const tip = mesh(new THREE.ConeGeometry(0.036, 0.14, 4), edge, 0, y - 0.06, z - 0.002);
+      const tip = mesh(new THREE.ConeGeometry(0.036, 0.14, 4), edge, 0, y - Math.cos(ang) * 0.06, z - Math.sin(ang) * 0.06 - 0.002);
       tip.rotation.x = Math.PI + ang;
-      tip.scale.set(0.55, 1, 1);
+      tip.scale.set(0.55, 1, 0.8);
       w.add(tip);
       this.bladeMat = blade;
       this.edgeMat = edge;
@@ -627,9 +627,22 @@ export class Rig {
         saya.position.set(0.21, 0.1, 0.12);
         saya.rotation.set(1.22, 0, 0.18);
         const lac = this.mat({ color: C('#1a1420') });
-        const sl = 1.2 * (ws.long || 1);
-        saya.add(mesh(new THREE.BoxGeometry(0.046, sl, 0.088), lac, 0, -sl / 2, 0.004));
-        saya.add(mesh(new THREE.BoxGeometry(0.052, 0.045, 0.094), gold, 0, -sl + 0.02, 0.004));
+        // 칼날과 같은 곡률로 휘게 마디를 이어 붙임 (곧은 칼집이면 휜 칼끝이 옆·끝으로 삐져나옴)
+        // 칼날은 칼집 안 y=-0.02부터 시작 → 칼집 길이 = 칼날 + 칼끝 + 여유
+        const SN = 8, sl = L + 0.3;
+        let sy = 0, sz = 0.004, sa = 0;
+        for (let i = 0; i < SN; i++) {
+          const segL = sl / SN;
+          const g = new THREE.Group();
+          g.position.set(0, sy, sz);
+          g.rotation.x = sa;
+          g.add(mesh(new THREE.BoxGeometry(0.05, segL + 0.02, 0.108), lac, 0, -segL / 2, 0.008));
+          if (i === SN - 1) g.add(mesh(new THREE.BoxGeometry(0.056, 0.05, 0.088), gold, 0, -segL + 0.01, 0));
+          saya.add(g);
+          sy -= Math.cos(sa) * segL;
+          sz -= Math.sin(sa) * segL;
+          sa -= (0.035 * 7 / L) * segL; // 칼날과 같은 단위 길이당 휨
+        }
         saya.add(mesh(new THREE.BoxGeometry(0.052, 0.05, 0.096), this.mat({ color: C('#c8302c') }), 0, -0.12, 0.004));
         saya.add(mesh(new THREE.BoxGeometry(0.052, 0.03, 0.096), gold, 0, -0.015, 0.004));
         this.hips.add(saya);
