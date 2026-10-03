@@ -969,7 +969,7 @@ class Game {
     this.save(false);
     document.getElementById('title').classList.add('hide');
     this.ui.showHud(true);
-    this.ui.banner('月下宮', '도깨비 야행', 2.8, 'title-banner');
+    this.ui.banner('월하궁', '도깨비 야행', 2.8, 'title-banner');
   }
 
   // ---------- 상호작용 ----------
@@ -1329,7 +1329,7 @@ class Game {
     const list = this.waveDef(this.wave);
     const boss = this.wave === 3;
     const bossName = { palace: '도깨비 대왕 두억시니', bamboo: '천년 구미호', temple: '저승사자' }[this.mapId];
-    this.ui.banner(`제 ${['', '一', '二', '三'][this.wave]} 파`, boss ? `${bossName} 출현!` : `${this.map.foe} ${list.length}마리`, 2.4, boss ? 'boss-banner' : '');
+    this.ui.banner(`제${this.wave}파`, boss ? `${bossName} 출현!` : `${this.map.foe} ${list.length}마리`, 2.4, boss ? 'boss-banner' : '');
     this.audio.play(boss ? 'drum' : 'wave');
     let delay = 0.6;
     for (const t of list) {
@@ -2553,7 +2553,7 @@ class Game {
     if (this.wave >= 3) {
       this.after(1.5, () => this.victory());
     } else {
-      this.ui.banner('격퇴!', `제 ${['', '一', '二', '三'][this.wave]} 파 완료 · 경험치 +${20 + this.round * 10}`, 1.8);
+      this.ui.banner('격퇴!', `제${this.wave}파 완료 · 경험치 +${20 + this.round * 10}`, 1.8);
       this.player.addExp(20 + this.round * 10);
       this.after(2.6, () => { this.waveClearing = false; this.nextWave(); });
     }

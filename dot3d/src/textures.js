@@ -292,9 +292,9 @@ export function bannerTex(kind) {
     c.width = W; c.height = H;
     const g = c.getContext('2d');
     let bg, border, glyphCol, glyph, inner;
-    if (kind === 'red') { bg = '#b8302a'; border = '#e8b030'; glyphCol = '#f0c040'; glyph = '令'; inner = '#7a1c18'; }
-    else if (kind === 'white') { bg = '#ece6d4'; border = '#e0a828'; glyphCol = '#1a1a1a'; glyph = '龍'; inner = '#ece6d4'; }
-    else { bg = '#23305e'; border = '#c8342c'; glyphCol = '#e8e0d0'; glyph = '武'; inner = '#23305e'; }
+    if (kind === 'red') { bg = '#b8302a'; border = '#e8b030'; glyphCol = '#f0c040'; glyph = '령'; inner = '#7a1c18'; }
+    else if (kind === 'white') { bg = '#ece6d4'; border = '#e0a828'; glyphCol = '#1a1a1a'; glyph = '용'; inner = '#ece6d4'; }
+    else { bg = '#23305e'; border = '#c8342c'; glyphCol = '#e8e0d0'; glyph = '무'; inner = '#23305e'; }
     g.fillStyle = border; g.fillRect(0, 0, W, H);
     g.fillStyle = bg; g.fillRect(3, 3, W - 6, H - 6);
     if (kind === 'white') {

@@ -110,7 +110,7 @@ canvas.view { position: absolute; left: 0; top: 0; image-rendering: pixelated; i
 #title { position: absolute; inset: 0; z-index: 20; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 30px; background: radial-gradient(ellipse at center, rgba(10, 10, 20, 0.15), rgba(6, 6, 12, 0.7)); transition: opacity 0.6s; }
 #title.hide { opacity: 0; pointer-events: none; }
 .logo-big { text-align: center; line-height: 1; filter: drop-shadow(5px 5px 0 rgba(0, 0, 0, 0.6)); }
-.logo-big .han { display: block; font-family: 'Noto Serif KR', 'Noto Serif CJK KR', serif; font-size: min(140px, 22vw); font-weight: 900; color: #fff6e2; -webkit-text-stroke: 4px #15121c; paint-order: stroke fill; letter-spacing: -4px; }
+.logo-big .han { display: block; font-family: 'Noto Serif KR', 'Noto Serif CJK KR', serif; font-size: min(140px, 22vw); font-weight: 900; color: #fff6e2; -webkit-text-stroke: 4px #15121c; paint-order: stroke fill; letter-spacing: 4px; }
 .logo-big .kr { display: block; font-size: 22px; color: var(--gold); margin-top: 6px; letter-spacing: 12px; }
 .logo-big .sub { display: block; font-size: 18px; color: #bfe8ff; margin-top: 14px; letter-spacing: 4px; }
 #classes { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; max-width: 96vw; }
