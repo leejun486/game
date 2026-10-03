@@ -166,6 +166,13 @@ export class World {
       use('bark', HD.hdBark(), { roughness: 0.95 });
       use('leaf', HD.hdNeedle([46, 84, 50]), { roughness: 0.9 });
       use('leaf2', HD.hdNeedle([68, 108, 60]), { roughness: 0.9 });
+      // 단청 띠: 띠 높이(약 0.42) 하나에 무늬가 꽉 차게 세로 반복을 맞춤
+      const dc = HD.hdDancheong().map.clone(); dc.needsUpdate = true; dc.repeat.set(1, 1 / 0.105);
+      M.dancheong = toon({ map: dc, roughness: 0.7 });
+      M.roofUnder = toon({ ...HD.hdRafter(), roughness: 0.8 });
+      M.fascia = toon({ map: dc, side: THREE.DoubleSide, roughness: 0.7 });
+      M.carving = toon({ ...HD.hdCarving(), roughness: 0.9 });
+      M.lattice = toon({ map: HD.hdLattice().map, emissiveMap: HD.hdLattice(true).map, emissive: c('#000000'), roughness: 0.85 });
       use('medallion', HD.hdMedallion(), { roughness: 0.92, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 });
       for (const k of ['gold', 'bronze', 'bronzeDark']) { M[k].metalness = 0.55; M[k].roughness = 0.45; }
     }
@@ -482,6 +489,26 @@ export class World {
       }
     }
     for (let i = 0; i <= 8; i++) for (const s of [-1, 1]) B.add(boxGeo(0.6, 0.26, 0.3, 1), i % 2 ? M.dancheong : M.red, mat4(s * 9.95, 6.58, -21.7 + i * 0.8));
+    if (GFX.hd) {
+      // 고화질: 기둥머리(주두), 겹겹이 쌓인 공포, 처마 밖으로 나온 서까래 끝
+      for (let i = 0; i <= 6; i++) for (const z of [-16, -21]) {
+        B.add(boxGeo(0.62, 0.22, 0.62, 1), M.dancheong, mat4(-9 + i * 3, y0 + 3.62, z));
+        B.add(boxGeo(0.46, 0.12, 0.46, 1), M.red, mat4(-9 + i * 3, y0 + 3.79, z));
+      }
+      for (let i = 0; i <= 24; i++) {
+        const x = -9.6 + i * 0.8;
+        for (const [z, dz] of [[-15.1, 1], [-21.9, -1]]) {
+          // 첨차(가로 팔) 두 단 + 소로(작은 받침) + 앞으로 나온 쇠서
+          B.add(boxGeo(0.72, 0.1, 0.18, 1), M.dancheong, mat4(x, 6.4, z + dz * 0.12));
+          B.add(boxGeo(0.58, 0.1, 0.16, 1), M.red, mat4(x, 6.28, z + dz * 0.16));
+          for (const sx of [-0.28, 0.28]) B.add(boxGeo(0.12, 0.1, 0.14, 1), M.gold, mat4(x + sx, 6.5, z + dz * 0.12));
+          const tongue = new THREE.ConeGeometry(0.07, 0.42, 4);
+          B.add(tongue, M.dancheong, mat4(x, 6.36, z + dz * 0.42, 0, dz * Math.PI / 2, 0));
+        }
+      }
+      // 계단 앞 소맷돌 사이 답도는 이미 있음 → 기단 앞면에 장대석 줄
+      B.add(boxGeo(19.6, 0.12, 0.2, 2), M.stoneLight, mat4(0, 1.86, -15.32));
+    }
     // 아래 지붕
     this.roof({ cx: 0, cy: 6.72, cz: zc, w: 19.6, d: 6.4, h: 1.5, overhang: 1.5, lift: 0.7, ridge: false });
     // 2층

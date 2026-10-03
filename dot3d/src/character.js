@@ -1,6 +1,7 @@
 // 2.5등신 로우폴리 캐릭터 + 절차적 애니메이션
 import * as THREE from 'three';
 import { toon } from './materials.js';
+import { GFX } from './gfx.js';
 import { tigerTex, clothTex } from './textures.js';
 import { clamp, lerp, smooth } from './util.js';
 
@@ -12,6 +13,25 @@ const HAND_POS = new THREE.Vector3(0, 0, 0);
 const IDENT_Q = new THREE.Quaternion();
 const easeOut = (x) => 1 - Math.pow(1 - x, 3);
 const easeInOut = (x) => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
+
+const HDC = GFX.hd;
+
+// 주름 잡힌 치맛자락·도포 자락: 아래로 갈수록 골이 깊어지는 원뿔대 (고화질만)
+function pleat(rt, rb, h, folds = 12, amp = 0.06) {
+  const g = new THREE.CylinderGeometry(rt, rb, h, HDC ? 40 : 10, HDC ? 4 : 1);
+  if (HDC && amp) {
+    const p = g.attributes.position;
+    for (let i = 0; i < p.count; i++) {
+      const x = p.getX(i), y = p.getY(i), z = p.getZ(i);
+      if (Math.hypot(x, z) < 1e-4) continue;
+      const t = (h / 2 - y) / h;
+      const k = 1 + amp * t * Math.sin(Math.atan2(z, x) * folds);
+      p.setXYZ(i, x * k, y, z * k);
+    }
+    g.computeVertexNormals();
+  }
+  return g;
+}
 
 function mesh(geo, mat, x = 0, y = 0, z = 0) {
   const m = new THREE.Mesh(geo, mat);
@@ -52,8 +72,22 @@ export class Rig {
     for (const side of cfg.noLegs ? [] : [-1, 1]) {
       const g = new THREE.Group();
       g.position.set(side * 0.1 * (cfg.wide || 1), legLen, 0);
-      g.add(mesh(new THREE.CapsuleGeometry(0.075 * (cfg.limb || 1), legLen - 0.15, 3, 6), legMat, 0, -legLen / 2 + 0.02, 0));
-      g.add(mesh(new THREE.BoxGeometry(0.14, 0.08, 0.2), shoeMat, 0, -legLen + 0.04, 0.03));
+      if (HDC && !['dokkaebi'].includes(cfg.type)) {
+        // 넉넉한 바지 (허벅지 넓고 발목에서 모임) + 행전 + 앞코가 올라간 신
+        const L = cfg.limb || 1;
+        const prof = [[0.062, -legLen + 0.1], [0.08, -legLen * 0.72], [0.1, -legLen * 0.42], [0.098, -legLen * 0.15], [0.086, 0.04]].map(([r, y]) => new THREE.Vector2(r * L, y));
+        g.add(mesh(new THREE.LatheGeometry(prof, 16), legMat));
+        g.add(mesh(new THREE.CylinderGeometry(0.066 * L, 0.07 * L, 0.07, 14), this.mat({ color: C(cfg.wrap || '#ece4d0') }), 0, -legLen + 0.12, 0));
+        const shoe = mesh(new THREE.SphereGeometry(0.075, 14, 10), shoeMat, 0, -legLen + 0.045, 0.035);
+        shoe.scale.set(0.95, 0.55, 1.55);
+        g.add(shoe);
+        const toe = mesh(new THREE.ConeGeometry(0.025, 0.07, 8), shoeMat, 0, -legLen + 0.07, 0.15);
+        toe.rotation.x = 1.1;
+        g.add(toe);
+      } else {
+        g.add(mesh(new THREE.CapsuleGeometry(0.075 * (cfg.limb || 1), legLen - 0.15, 3, 6), legMat, 0, -legLen / 2 + 0.02, 0));
+        g.add(mesh(new THREE.BoxGeometry(0.14, 0.08, 0.2), shoeMat, 0, -legLen + 0.04, 0.03));
+      }
       this.body.add(g);
       this.legs.push(g);
     }
@@ -74,10 +108,10 @@ export class Rig {
       // 도사: 발목까지 내려오는 도포 + 금색 띠
       const robe = cloth(cfg.robe, 0.46), robe2 = cloth(cfg.robe, 0.4);
       const trim = mat({ color: C(cfg.belt) });
-      this.hips.add(mesh(new THREE.CylinderGeometry(0.17, 0.25, 0.46, 10), robe, 0, 0.2, 0));
-      this.hips.add(mesh(new THREE.CylinderGeometry(0.25, 0.36, 0.4, 12), robe2, 0, -0.14, 0));
-      this.hips.add(mesh(new THREE.CylinderGeometry(0.362, 0.37, 0.04, 12), trim, 0, -0.33, 0));
-      this.hips.add(mesh(new THREE.CylinderGeometry(0.228, 0.235, 0.06, 10), trim, 0, 0.1, 0));
+      this.hips.add(mesh(pleat(0.17, 0.25, 0.46, 0, 0), robe, 0, 0.2, 0));
+      this.hips.add(mesh(pleat(0.25, 0.36, 0.4, 14, 0.07), robe2, 0, -0.14, 0));
+      this.hips.add(mesh(pleat(0.362, 0.37, 0.04, 14, HDC ? 0.07 : 0), trim, 0, -0.33, 0));
+      this.hips.add(mesh(pleat(0.228, 0.235, 0.06, 0, 0), trim, 0, 0.1, 0));
       const collar = mat({ color: C('#f0ead8') });
       for (const s of [-1, 1]) {
         const cl = mesh(new THREE.BoxGeometry(0.06, 0.3, 0.04), collar, s * 0.05, 0.28, 0.19);
@@ -91,9 +125,9 @@ export class Rig {
       const top = cloth(cfg.robe, 0.42);
       const skirt = cloth(cfg.skirt, 0.2);
       const belt = mat({ color: C(cfg.belt) });
-      this.hips.add(mesh(new THREE.CylinderGeometry(0.15, 0.21, 0.42, 10), top, 0, 0.2, 0));
-      this.hips.add(mesh(new THREE.CylinderGeometry(0.21, 0.3, 0.2, 10), skirt, 0, -0.04, 0));
-      this.hips.add(mesh(new THREE.CylinderGeometry(0.212, 0.215, 0.05, 10), belt, 0, 0.08, 0));
+      this.hips.add(mesh(pleat(0.15, 0.21, 0.42, 0, 0), top, 0, 0.2, 0));
+      this.hips.add(mesh(pleat(0.21, 0.3, 0.2, 10, 0.09), skirt, 0, -0.04, 0));
+      this.hips.add(mesh(pleat(0.212, 0.215, 0.05, 0, 0), belt, 0, 0.08, 0));
       // 잎 모양 깃
       const leaf = mat({ color: C('#bfe07a') });
       for (const s of [-1, 1]) {
@@ -111,9 +145,17 @@ export class Rig {
     } else if (cfg.type === 'hero' || cfg.type === 'guard') {
       const robe = cloth(cfg.robe, 0.44), robe2 = cloth(cfg.robe, 0.24);
       const belt = mat({ color: C(cfg.belt) });
-      this.hips.add(mesh(new THREE.CylinderGeometry(0.17, 0.235, 0.44, 10), robe, 0, 0.2, 0));
-      this.hips.add(mesh(new THREE.CylinderGeometry(0.24, 0.31, 0.24, 10), robe2, 0, -0.04, 0));
-      this.hips.add(mesh(new THREE.CylinderGeometry(0.215, 0.225, 0.07, 10), belt, 0, 0.1, 0));
+      this.hips.add(mesh(pleat(0.17, 0.235, 0.44, 0, 0), robe, 0, 0.2, 0));
+      this.hips.add(mesh(pleat(0.24, 0.31, 0.24, 12, 0.08), robe2, 0, -0.04, 0));
+      this.hips.add(mesh(pleat(0.215, 0.225, 0.07, 0, 0), belt, 0, 0.1, 0));
+      if (HDC) {
+        // 자락 끝 선(색 띠)과 흰 동정, 허리띠 매듭과 늘어진 끈
+        this.hips.add(mesh(pleat(0.312, 0.318, 0.035, 12, 0.08), mat({ color: C(cfg.collar || cfg.belt) }), 0, -0.155, 0));
+        const dong = mat({ color: C('#f4efe2') });
+        for (const sx of [-1, 1]) { const d = mesh(new THREE.BoxGeometry(0.022, 0.2, 0.03), dong, sx * 0.085, 0.33, 0.2); d.rotation.z = sx * 0.5; this.hips.add(d); }
+        this.hips.add(mesh(new THREE.TorusGeometry(0.035, 0.016, 6, 12), belt, -0.12, 0.1, 0.2));
+        for (const [x, rz] of [[-0.135, 0.15], [-0.105, -0.1]]) { const t2 = mesh(new THREE.BoxGeometry(0.03, 0.16, 0.012), belt, x, 0.0, 0.215); t2.rotation.z = rz; this.hips.add(t2); }
+      }
       // 깃 (V자)
       const collar = mat({ color: C(cfg.collar || '#2a2a36') });
       const cl = mesh(new THREE.BoxGeometry(0.05, 0.26, 0.04), collar, 0.05, 0.3, 0.19);
@@ -128,7 +170,7 @@ export class Rig {
       const top = mat({ color: C(cfg.robe) });
       const skirt = mat({ color: C(cfg.skirt) });
       this.hips.add(mesh(new THREE.CylinderGeometry(0.15, 0.2, 0.22, 10), top, 0, 0.3, 0));
-      this.hips.add(mesh(new THREE.CylinderGeometry(0.17, 0.42, 0.62, 12), skirt, 0, -0.06, 0));
+      this.hips.add(mesh(pleat(0.17, 0.42, 0.62, 16, 0.06), skirt, 0, -0.06, 0));
       const ribbon = mat({ color: C('#c23a4a') });
       this.hips.add(mesh(new THREE.BoxGeometry(0.06, 0.2, 0.03), ribbon, 0.04, 0.18, 0.18));
     } else if (cfg.type === 'dokkaebi') {
@@ -145,7 +187,7 @@ export class Rig {
     this.head.position.y = cfg.neck ?? 0.27;
     this.chest.add(this.head);
     const hr = cfg.headR ?? 0.27;
-    const headMesh = mesh(new THREE.SphereGeometry(hr, 14, 10), skin);
+    const headMesh = mesh(new THREE.SphereGeometry(hr, HDC ? 28 : 14, HDC ? 20 : 10), skin);
     headMesh.scale.set(1, 0.93, 0.95);
     this.head.add(headMesh);
     this.buildFace(hr, cfg);
@@ -157,9 +199,18 @@ export class Rig {
     for (const side of [-1, 1]) {
       const g = new THREE.Group();
       g.position.set(side * (cfg.shoulder ?? 0.21), -0.03, 0);
-      const arm = mesh(new THREE.CapsuleGeometry(0.068 * (cfg.limb || 1), 0.2, 3, 6), sleeve, 0, -0.14, 0);
-      g.add(arm);
-      if (cfg.cuff) g.add(mesh(new THREE.CylinderGeometry(0.08, 0.085, 0.05, 8), mat({ color: C(cfg.cuff) }), 0, -0.26, 0));
+      const wide = HDC && ['hero', 'guard', 'mage', 'lady', 'jiangshi', 'reaper'].includes(cfg.type);
+      if (wide || (HDC && cfg.type === 'elf')) {
+        // 한복 소매: 어깨에서 소맷부리로 넓어지고 끝에 끝동
+        const rb = wide ? (cfg.type === 'mage' || cfg.type === 'reaper' ? 0.13 : 0.112) : 0.082;
+        g.add(mesh(new THREE.SphereGeometry(0.075, 14, 10), sleeve, 0, -0.02, 0));
+        g.add(mesh(new THREE.CylinderGeometry(0.07, rb, 0.26, 18), sleeve, 0, -0.15, 0));
+        if (cfg.cuff) g.add(mesh(new THREE.CylinderGeometry(rb + 0.004, rb + 0.006, 0.045, 18), mat({ color: C(cfg.cuff) }), 0, -0.27, 0));
+      } else {
+        const arm = mesh(new THREE.CapsuleGeometry(0.068 * (cfg.limb || 1), 0.2, 3, 6), sleeve, 0, -0.14, 0);
+        g.add(arm);
+        if (cfg.cuff) g.add(mesh(new THREE.CylinderGeometry(0.08, 0.085, 0.05, 8), mat({ color: C(cfg.cuff) }), 0, -0.26, 0));
+      }
       const hand = new THREE.Group();
       hand.position.y = -0.31;
       // 장갑을 끼면 손과 손목 토시가 장갑 색으로
@@ -224,6 +275,21 @@ export class Rig {
       }
       // 코
       this.head.add(mesh(new THREE.SphereGeometry(0.05, 5, 4), this.mat({ color: new THREE.Color(cfg.skin).multiplyScalar(0.8) }), 0, -0.02, z));
+    } else if (HDC) {
+      // 반짝이는 둥근 눈동자 + 하이라이트 두 점, 가는 눈썹, 작은 입
+      const glossy = toon({ color: C(cfg.eye || '#1b1416'), roughness: 0.25 });
+      const white = toon({ color: C('#ffffff'), emissive: C('#555555') });
+      for (const s of [-1, 1]) {
+        const e = mesh(new THREE.SphereGeometry(0.036, 14, 10), glossy, s * 0.095, -0.02, z - 0.025);
+        e.scale.set(0.95, 1.35, 0.6);
+        this.head.add(e);
+        this.head.add(mesh(new THREE.SphereGeometry(0.011, 8, 6), white, s * 0.095 + 0.012, 0.006, z - 0.004));
+        this.head.add(mesh(new THREE.SphereGeometry(0.006, 6, 4), white, s * 0.095 - 0.01, -0.035, z - 0.006));
+        const br = mesh(new THREE.BoxGeometry(0.07, 0.014, 0.012), this.mat({ color: C(cfg.hair || '#231c1e') }), s * 0.1, 0.06, z - 0.03);
+        br.rotation.z = s * -0.12;
+        this.head.add(br);
+      }
+      this.head.add(mesh(new THREE.BoxGeometry(0.035, 0.01, 0.01), this.mat({ color: C('#a04848') }), 0, -0.1, z - 0.035));
     } else {
       for (const s of [-1, 1]) {
         this.head.add(mesh(new THREE.BoxGeometry(0.05, 0.085, 0.03), eye, s * 0.095, -0.02, z - 0.01));
@@ -250,12 +316,25 @@ export class Rig {
       return;
     }
     // 뒷머리 캡
-    const cap = mesh(new THREE.SphereGeometry(hr * 1.06, 14, 8, 0, Math.PI * 2, 0, Math.PI * 0.5), hairM);
+    const cap = mesh(new THREE.SphereGeometry(hr * 1.06, HDC ? 28 : 14, HDC ? 14 : 8, 0, Math.PI * 2, 0, Math.PI * 0.5), hairM);
     cap.rotation.x = -0.35;
     cap.position.set(0, 0.02, -0.02);
     this.head.add(cap);
     // 앞머리
-    for (let i = -2; i <= 2; i++) {
+    if (HDC) {
+      // 끝이 뾰족한 머리 가닥들이 이마를 덮고, 귀 옆으로 옆머리
+      for (let i = -3; i <= 3; i++) {
+        const a = i * 0.24;
+        const b = mesh(new THREE.ConeGeometry(0.045, 0.17, 6), hairM, Math.sin(a) * hr * 0.82, hr * 0.5 - Math.abs(i) * 0.012, Math.cos(a) * hr * 0.82);
+        b.rotation.set(Math.PI - 0.55, a, -i * 0.08);
+        this.head.add(b);
+      }
+      for (const sx of [-1, 1]) {
+        const lock = mesh(new THREE.ConeGeometry(0.04, 0.22, 6), hairM, sx * hr * 0.92, hr * 0.05, hr * 0.25);
+        lock.rotation.set(Math.PI, 0, sx * -0.12);
+        this.head.add(lock);
+      }
+    } else for (let i = -2; i <= 2; i++) {
       const b = mesh(new THREE.BoxGeometry(0.09, 0.12, 0.06), hairM, i * 0.07, hr * 0.62, hr * 0.68);
       b.rotation.x = 0.5;
       b.rotation.z = i * 0.15;

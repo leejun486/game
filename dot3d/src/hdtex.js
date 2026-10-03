@@ -410,3 +410,120 @@ export function hdSnow() {
     return { map: tex(c), normalMap: normalFrom(hb[0], 0.9) };
   });
 }
+
+// 단청 띠 (창방·평방): 녹청 바탕 + 양끝 머리초(연꽃·석류 문양) + 가는 색띠. 가로 4유닛 × 띠 높이 하나
+export function hdDancheong() {
+  return cached('dancheong', () => {
+    const W = 1024, H = 128, R = mulberry32(2);
+    const [c, g] = canvas(W, H);
+    const col = { g: '#2e7a62', g2: '#225c4a', b: '#2c5296', r: '#b0342c', w: '#ece4ce', y: '#e2b640', o: '#d8742a', k: '#1e2a28' };
+    g.fillStyle = col.g; g.fillRect(0, 0, W, H);
+    // 위아래 테두리 띠 (빨강·흰·녹)
+    for (const [y, h, k] of [[0, 8, 'r'], [8, 4, 'w'], [12, 6, 'g2'], [H - 8, 8, 'r'], [H - 12, 4, 'w'], [H - 18, 6, 'g2']]) { g.fillStyle = col[k]; g.fillRect(0, y, W, h); }
+    // 머리초: 한 칸(256px = 1유닛)마다 가운데 연꽃, 양옆 겹 휘(파도) 무늬
+    for (let k = 0; k < 4; k++) {
+      const cx = k * 256 + 128, cy = H / 2;
+      for (const [rx, ry, kk] of [[86, 40, 'w'], [76, 34, 'b'], [62, 28, 'w'], [52, 23, 'r'], [38, 17, 'y'], [22, 10, 'o'], [10, 5, 'w']]) {
+        g.fillStyle = col[kk]; g.beginPath(); g.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); g.fill();
+      }
+      // 연꽃잎 8장
+      for (let i = 0; i < 8; i++) {
+        const a = (i / 8) * Math.PI * 2;
+        g.save(); g.translate(cx, cy); g.scale(1, 0.46); g.rotate(a);
+        g.fillStyle = i % 2 ? col.r : col.b;
+        g.beginPath(); g.moveTo(0, -24); g.quadraticCurveTo(14, -48, 0, -64); g.quadraticCurveTo(-14, -48, 0, -24); g.fill();
+        g.restore();
+      }
+      // 휘: 양옆으로 겹친 물결 띠
+      for (const s of [-1, 1]) for (let j = 0; j < 4; j++) {
+        const x = cx + s * (96 + j * 9);
+        g.strokeStyle = [col.w, col.b, col.w, col.r][j]; g.lineWidth = 5;
+        g.beginPath(); g.moveTo(x, 20); g.quadraticCurveTo(x + s * 10, cy, x, H - 20); g.stroke();
+      }
+    }
+    for (let i = 0; i < 1500; i++) { g.fillStyle = `rgba(0,0,0,${0.05 * R()})`; g.fillRect(R() * W, R() * H, 2, 2); }
+    return { map: tex(c) };
+  });
+}
+
+// 처마 밑: 나란한 서까래(녹청)와 끝의 붉은·흰 마구리
+export function hdRafter() {
+  return cached('rafter', () => {
+    const N = 256;
+    const [c, g] = canvas(N);
+    const [hc, hg] = canvas(N);
+    g.fillStyle = '#1e3a30'; g.fillRect(0, 0, N, N);
+    hg.fillStyle = '#303030'; hg.fillRect(0, 0, N, N);
+    const n = 8, w = N / n;
+    for (let i = 0; i < n; i++) {
+      const x = i * w + w * 0.15, ww = w * 0.7;
+      const gr = g.createLinearGradient(x, 0, x + ww, 0);
+      gr.addColorStop(0, '#2a6a52'); gr.addColorStop(0.5, '#3a8a6a'); gr.addColorStop(1, '#245a46');
+      g.fillStyle = gr; g.fillRect(x, 0, ww, N);
+      g.fillStyle = '#e8dcc0'; g.fillRect(x, N * 0.48, ww, 6);
+      g.fillStyle = '#b03028'; g.fillRect(x, N * 0.48 + 6, ww, 6);
+      const hgr = hg.createLinearGradient(x, 0, x + ww, 0);
+      hgr.addColorStop(0, '#606060'); hgr.addColorStop(0.5, '#f0f0f0'); hgr.addColorStop(1, '#606060');
+      hg.fillStyle = hgr; hg.fillRect(x, 0, ww, N);
+    }
+    return { map: tex(c), normalMap: normalFrom(hc, 2) };
+  });
+}
+
+// 꽃살문: 녹청 문틀, 비스듬히 엇갈린 살 사이 꽃 매듭, 창호지, 아래 궁판. glow면 창호지만 흰 발광 마스크
+export function hdLattice(glow = false) {
+  return cached('lattice' + glow, () => {
+    const W = 256, H = 384;
+    const [c, g] = canvas(W, H);
+    const frame = glow ? '#000' : '#2c6854', frameD = glow ? '#000' : '#1e4a3c';
+    g.fillStyle = glow ? '#ffd8a0' : '#e4d8b8'; g.fillRect(0, 0, W, H);
+    // 창호지 은은한 얼룩
+    if (!glow) for (let i = 0; i < 30; i++) { g.fillStyle = 'rgba(160,140,100,0.06)'; g.beginPath(); g.arc(Math.random() * W, Math.random() * H * 0.72, 10 + Math.random() * 20, 0, 7); g.fill(); }
+    const top = H * 0.74;
+    g.save(); g.beginPath(); g.rect(14, 14, W - 28, top - 20); g.clip();
+    g.strokeStyle = glow ? frame : '#3a7a62'; g.lineWidth = 4;
+    for (let k = -H; k < W + H; k += 34) {
+      g.beginPath(); g.moveTo(k, 0); g.lineTo(k + H, H); g.stroke();
+      g.beginPath(); g.moveTo(k, 0); g.lineTo(k - H, H); g.stroke();
+    }
+    // 살이 만나는 곳마다 꽃
+    if (!glow) for (let y = 0; y < top; y += 17) for (let x = (y / 17) % 2 ? 17 : 0; x < W; x += 34) {
+      g.fillStyle = '#d0a040'; g.beginPath(); g.arc(x, y, 5, 0, 7); g.fill();
+      g.fillStyle = '#b03a2c'; g.beginPath(); g.arc(x, y, 2.2, 0, 7); g.fill();
+    }
+    g.restore();
+    // 문틀과 궁판
+    g.fillStyle = frameD;
+    g.fillRect(0, 0, W, 14); g.fillRect(0, 0, 14, H); g.fillRect(W - 14, 0, 14, H); g.fillRect(0, top - 6, W, 12); g.fillRect(0, H - 14, W, 14);
+    g.fillStyle = glow ? '#000' : '#7a3a2a'; g.fillRect(14, top + 6, W - 28, H - top - 20);
+    if (!glow) { g.strokeStyle = '#c8963a'; g.lineWidth = 3; g.strokeRect(30, top + 20, W - 60, H - top - 48); }
+    const t = tex(c);
+    t.wrapS = t.wrapT = THREE.ClampToEdgeWrapping;
+    return { map: t };
+  });
+}
+
+// 답도(계단 가운데 돌판): 구름 속 봉황 대신 겹구름 돋을새김
+export function hdCarving() {
+  return cached('carving', () => {
+    const W = 256, H = 512, R = mulberry32(4);
+    const [c, g] = canvas(W, H);
+    const [hc, hg] = canvas(W, H);
+    g.fillStyle = '#bab29e'; g.fillRect(0, 0, W, H);
+    hg.fillStyle = '#707070'; hg.fillRect(0, 0, W, H);
+    for (const [x, col] of [[g, '#a49c88'], [hg, '#c0c0c0']]) { x.lineWidth = 12; x.strokeStyle = col; x.strokeRect(10, 10, W - 20, H - 20); }
+    for (let i = 0; i < 7; i++) {
+      const cx = 60 + R() * 136, cy = 50 + i * 66 + R() * 10;
+      for (const [x, col, lw] of [[g, '#968e7a', 7], [hg, '#e0e0e0', 9]]) {
+        x.lineWidth = lw; x.strokeStyle = col; x.beginPath();
+        for (let t = 0; t < 10; t += 0.2) { const r = 3 + t * 3.2; x.lineTo(cx + Math.cos(t) * r, cy + Math.sin(t) * r * 0.8); }
+        x.stroke();
+        x.beginPath(); x.moveTo(cx - 60, cy + 26); x.bezierCurveTo(cx - 20, cy + 6, cx + 20, cy + 46, cx + 70, cy + 22); x.stroke();
+      }
+    }
+    speckle(g, hg, W, H, R, 6000, 0.05);
+    const hb = canvas(W, H); hb[1].filter = 'blur(2px)'; hb[1].drawImage(hc, 0, 0);
+    const t = tex(c);
+    return { map: t, normalMap: normalFrom(hb[0], 3) };
+  });
+}
