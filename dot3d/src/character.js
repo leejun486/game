@@ -2,6 +2,7 @@
 import * as THREE from 'three';
 import { toon } from './materials.js';
 import { GFX } from './gfx.js';
+import { hdFabric } from './hdtex.js';
 import { tigerTex, clothTex } from './textures.js';
 import { clamp, lerp, smooth } from './util.js';
 
@@ -33,6 +34,43 @@ function pleat(rt, rb, h, folds = 12, amp = 0.06) {
   return g;
 }
 
+// 머리카락·댕기 가닥: 곡선을 따라 굵기가 줄어드는 관 (끝이 뾰족)
+function strand(points, r0, r1 = 0.004, radial = 6, seg = 10) {
+  const curve = new THREE.CatmullRomCurve3(points.map((p) => new THREE.Vector3(...p)));
+  const g = new THREE.TubeGeometry(curve, seg, 1, radial, false);
+  const pos = g.attributes.position;
+  const ring = radial + 1;
+  for (let i = 0; i <= seg; i++) {
+    const t = i / seg, c = curve.getPointAt(t);
+    const r = r0 + (r1 - r0) * Math.pow(t, 1.3);
+    for (let j = 0; j < ring; j++) {
+      const k = i * ring + j;
+      pos.setXYZ(k, c.x + (pos.getX(k) - c.x) * r, c.y + (pos.getY(k) - c.y) * r, c.z + (pos.getZ(k) - c.z) * r);
+    }
+  }
+  g.computeVertexNormals();
+  return g;
+}
+
+// 납작한 띠 (댕기·끈): 폭이 일정하고 끝이 갈라진 리본
+function ribbon(len, w, segs = 6) {
+  const g = new THREE.PlaneGeometry(w, len, 1, segs);
+  g.translate(0, -len / 2, 0);
+  const pos = g.attributes.position;
+  for (let i = 0; i < pos.count; i++) if (pos.getY(i) < -len + 0.001) pos.setY(i, pos.getY(i) + (pos.getX(i) > 0 ? 0.03 : 0) - 0.0);
+  return g;
+}
+
+// 감쇠 용수철 (옷자락·댕기·머리채가 움직임에 늦게 따라오며 출렁임)
+class Spring {
+  constructor(k = 60, c = 9) { this.k = k; this.c = c; this.x = 0; this.v = 0; }
+  step(target, dt) {
+    const n = Math.max(1, Math.ceil(dt / 0.008)), h = dt / n;
+    for (let i = 0; i < n; i++) { this.v += (-(this.x - target) * this.k - this.v * this.c) * h; this.x += this.v * h; }
+    return this.x;
+  }
+}
+
 function mesh(geo, mat, x = 0, y = 0, z = 0) {
   const m = new THREE.Mesh(geo, mat);
   m.position.set(x, y, z);
@@ -54,15 +92,19 @@ export class Rig {
     this.root.add(this.body);
 
     // 무늬 옷감: 옷에 pattern이 있으면 바탕색 위에 무늬 텍스처 (h = 감싸는 높이, 세로 반복 맞춤)
+    // 고화질: 옷감에 날실·씨실 결(노멀맵)을 입혀 플라스틱처럼 보이지 않게
+    const fab = HDC ? { normalMap: hdFabric(), normalScale: new THREE.Vector2(0.28, 0.28), roughness: 0.9 } : {};
     const cloth = (color, h = 0.4, kind = cfg.pattern) => {
-      if (!kind) return mat({ color: C(color) });
+      if (!kind) return mat({ color: C(color), ...fab });
       const t = clothTex(kind, color, cfg.patA || '#ffffff', cfg.patB || '#ffd040').clone();
       t.needsUpdate = true;
       t.repeat.set(1, kind === 'saekdong' ? Math.max(0.25, h * 0.7) : Math.max(0.2, h * 0.45));
-      return mat({ map: t });
+      return mat({ map: t, ...fab });
     };
     this.cloth = cloth;
+    this.fab = fab;
     const skin = mat({ color: C(cfg.skin) });
+    this.skinMat = skin;
     const legLen = cfg.legLen ?? 0.36;
     this.legLen = legLen;
     // 다리
@@ -109,8 +151,10 @@ export class Rig {
       const robe = cloth(cfg.robe, 0.46), robe2 = cloth(cfg.robe, 0.4);
       const trim = mat({ color: C(cfg.belt) });
       this.hips.add(mesh(pleat(0.17, 0.25, 0.46, 0, 0), robe, 0, 0.2, 0));
-      this.hips.add(mesh(pleat(0.25, 0.36, 0.4, 14, 0.07), robe2, 0, -0.14, 0));
-      this.hips.add(mesh(pleat(0.362, 0.37, 0.04, 14, HDC ? 0.07 : 0), trim, 0, -0.33, 0));
+      this.skirt = mesh(pleat(0.25, 0.36, 0.4, 14, 0.07), robe2, 0, -0.14, 0); this.skirtH = 0.4;
+      this.hips.add(this.skirt);
+      this.skirtParts = [mesh(pleat(0.362, 0.37, 0.04, 14, HDC ? 0.07 : 0), trim, 0, -0.33, 0)];
+      this.hips.add(this.skirtParts[0]);
       this.hips.add(mesh(pleat(0.228, 0.235, 0.06, 0, 0), trim, 0, 0.1, 0));
       const collar = mat({ color: C('#f0ead8') });
       for (const s of [-1, 1]) {
@@ -126,7 +170,8 @@ export class Rig {
       const skirt = cloth(cfg.skirt, 0.2);
       const belt = mat({ color: C(cfg.belt) });
       this.hips.add(mesh(pleat(0.15, 0.21, 0.42, 0, 0), top, 0, 0.2, 0));
-      this.hips.add(mesh(pleat(0.21, 0.3, 0.2, 10, 0.09), skirt, 0, -0.04, 0));
+      this.skirt = mesh(pleat(0.21, 0.3, 0.2, 10, 0.09), skirt, 0, -0.04, 0); this.skirtH = 0.2;
+      this.hips.add(this.skirt);
       this.hips.add(mesh(pleat(0.212, 0.215, 0.05, 0, 0), belt, 0, 0.08, 0));
       // 잎 모양 깃
       const leaf = mat({ color: C('#bfe07a') });
@@ -146,11 +191,13 @@ export class Rig {
       const robe = cloth(cfg.robe, 0.44), robe2 = cloth(cfg.robe, 0.24);
       const belt = mat({ color: C(cfg.belt) });
       this.hips.add(mesh(pleat(0.17, 0.235, 0.44, 0, 0), robe, 0, 0.2, 0));
-      this.hips.add(mesh(pleat(0.24, 0.31, 0.24, 12, 0.08), robe2, 0, -0.04, 0));
+      this.skirt = mesh(pleat(0.24, 0.31, 0.24, 12, 0.08), robe2, 0, -0.04, 0); this.skirtH = 0.24;
+      this.hips.add(this.skirt);
       this.hips.add(mesh(pleat(0.215, 0.225, 0.07, 0, 0), belt, 0, 0.1, 0));
       if (HDC) {
         // 자락 끝 선(색 띠)과 흰 동정, 허리띠 매듭과 늘어진 끈
-        this.hips.add(mesh(pleat(0.312, 0.318, 0.035, 12, 0.08), mat({ color: C(cfg.collar || cfg.belt) }), 0, -0.155, 0));
+        this.skirtParts = [mesh(pleat(0.312, 0.318, 0.035, 12, 0.08), mat({ color: C(cfg.collar || cfg.belt) }), 0, -0.155, 0)];
+        this.hips.add(this.skirtParts[0]);
         const dong = mat({ color: C('#f4efe2') });
         for (const sx of [-1, 1]) { const d = mesh(new THREE.BoxGeometry(0.022, 0.2, 0.03), dong, sx * 0.085, 0.33, 0.2); d.rotation.z = sx * 0.5; this.hips.add(d); }
         this.hips.add(mesh(new THREE.TorusGeometry(0.035, 0.016, 6, 12), belt, -0.12, 0.1, 0.2));
@@ -170,7 +217,8 @@ export class Rig {
       const top = mat({ color: C(cfg.robe) });
       const skirt = mat({ color: C(cfg.skirt) });
       this.hips.add(mesh(new THREE.CylinderGeometry(0.15, 0.2, 0.22, 10), top, 0, 0.3, 0));
-      this.hips.add(mesh(pleat(0.17, 0.42, 0.62, 16, 0.06), skirt, 0, -0.06, 0));
+      this.skirt = mesh(pleat(0.17, 0.42, 0.62, 16, 0.06), skirt, 0, -0.06, 0); this.skirtH = 0.62;
+      this.hips.add(this.skirt);
       const ribbon = mat({ color: C('#c23a4a') });
       this.hips.add(mesh(new THREE.BoxGeometry(0.06, 0.2, 0.03), ribbon, 0.04, 0.18, 0.18));
     } else if (cfg.type === 'dokkaebi') {
@@ -195,29 +243,62 @@ export class Rig {
 
     // 팔
     this.arms = [];
-    const sleeve = cfg.sleevePat ? cloth(cfg.sleeve || cfg.robe, 0.5, cfg.sleevePat) : cfg.pattern && cfg.sleeve === cfg.robe ? cloth(cfg.robe, 0.3) : mat({ color: C(cfg.sleeve || cfg.robe || cfg.skin) });
+    const sleeveFab = cfg.sleeve && cfg.sleeve !== cfg.skin ? fab : {};
+    const sleeve = cfg.sleevePat ? cloth(cfg.sleeve || cfg.robe, 0.5, cfg.sleevePat) : cfg.pattern && cfg.sleeve === cfg.robe ? cloth(cfg.robe, 0.3) : mat({ color: C(cfg.sleeve || cfg.robe || cfg.skin), ...sleeveFab });
     for (const side of [-1, 1]) {
       const g = new THREE.Group();
       g.position.set(side * (cfg.shoulder ?? 0.21), -0.03, 0);
+      // 팔은 어깨·팔꿈치 뼈 두 개에 입힌 하나의 매끈한 메시 (팔꿈치에서 부드럽게 굽음)
+      const EL = -0.15; // 팔꿈치 높이 (어깨 기준)
+      const shoulderB = new THREE.Bone();
+      const elbowB = new THREE.Bone();
+      elbowB.position.y = EL;
+      shoulderB.add(elbowB);
       const wide = HDC && ['hero', 'guard', 'mage', 'lady', 'jiangshi', 'reaper'].includes(cfg.type);
+      let geo;
       if (wide || (HDC && cfg.type === 'elf')) {
         // 한복 소매: 어깨에서 소맷부리로 넓어지고 끝에 끝동
         const rb = wide ? (cfg.type === 'mage' || cfg.type === 'reaper' ? 0.13 : 0.112) : 0.082;
         g.add(mesh(new THREE.SphereGeometry(0.075, 14, 10), sleeve, 0, -0.02, 0));
-        g.add(mesh(new THREE.CylinderGeometry(0.07, rb, 0.26, 18), sleeve, 0, -0.15, 0));
-        if (cfg.cuff) g.add(mesh(new THREE.CylinderGeometry(rb + 0.004, rb + 0.006, 0.045, 18), mat({ color: C(cfg.cuff) }), 0, -0.27, 0));
+        geo = new THREE.CylinderGeometry(0.07, rb, 0.26, 18, 10);
+        geo.translate(0, -0.15, 0);
+        if (cfg.cuff) elbowB.add(mesh(new THREE.CylinderGeometry(rb + 0.004, rb + 0.006, 0.045, 18), mat({ color: C(cfg.cuff) }), 0, -0.27 - EL, 0));
       } else {
-        const arm = mesh(new THREE.CapsuleGeometry(0.068 * (cfg.limb || 1), 0.2, 3, 6), sleeve, 0, -0.14, 0);
-        g.add(arm);
-        if (cfg.cuff) g.add(mesh(new THREE.CylinderGeometry(0.08, 0.085, 0.05, 8), mat({ color: C(cfg.cuff) }), 0, -0.26, 0));
+        geo = new THREE.CapsuleGeometry(0.068 * (cfg.limb || 1), 0.2, 4, 8, 10);
+        geo.translate(0, -0.14, 0);
+        if (cfg.cuff) elbowB.add(mesh(new THREE.CylinderGeometry(0.08, 0.085, 0.05, 8), mat({ color: C(cfg.cuff) }), 0, -0.26 - EL, 0));
       }
+      // 뼈 가중치: 팔꿈치 위아래 0.04 구간에서 섞음
+      const pos = geo.attributes.position, n = pos.count;
+      const si = new Uint16Array(n * 4), sw = new Float32Array(n * 4);
+      for (let i = 0; i < n; i++) {
+        const t = smooth(clamp((EL + 0.035 - pos.getY(i)) / 0.07, 0, 1));
+        si[i * 4] = 0; si[i * 4 + 1] = 1;
+        sw[i * 4] = 1 - t; sw[i * 4 + 1] = t;
+      }
+      geo.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(si, 4));
+      geo.setAttribute('skinWeight', new THREE.Float32BufferAttribute(sw, 4));
+      const skin = new THREE.SkinnedMesh(geo, sleeve);
+      skin.castShadow = true; skin.receiveShadow = true; skin.frustumCulled = false;
+      skin.add(shoulderB);
+      g.add(skin);
+      g.updateMatrixWorld(true);
+      skin.bind(new THREE.Skeleton([shoulderB, elbowB]));
       const hand = new THREE.Group();
-      hand.position.y = -0.31;
+      hand.position.y = -0.31 - EL;
       // 장갑을 끼면 손과 손목 토시가 장갑 색으로
-      hand.add(mesh(new THREE.SphereGeometry(0.065 * (cfg.limb || 1) * (cfg.gloves ? 1.12 : 1), 6, 5), cfg.gloves ? (this.gloveMat ||= mat({ color: C(cfg.gloves) })) : skin));
-      if (cfg.gloves) g.add(mesh(new THREE.CylinderGeometry(0.078, 0.082, 0.08, 8), this.gloveMat, 0, -0.25, 0));
-      g.add(hand);
+      const handM = cfg.gloves ? (this.gloveMat ||= mat({ color: C(cfg.gloves) })) : this.skinMat;
+      const palm = mesh(new THREE.SphereGeometry(0.065 * (cfg.limb || 1) * (cfg.gloves ? 1.12 : 1), HDC ? 12 : 6, HDC ? 10 : 5), handM);
+      if (HDC) {
+        // 주먹 쥔 손: 살짝 납작한 손등 + 엄지
+        palm.scale.set(0.92, 1.05, 0.85);
+        hand.add(mesh(new THREE.CapsuleGeometry(0.02 * (cfg.limb || 1), 0.035, 3, 8), handM, -side * 0.035, -0.005, 0.04)).rotation.set(0.6, 0, side * 0.5);
+      }
+      hand.add(palm);
+      if (cfg.gloves) elbowB.add(mesh(new THREE.CylinderGeometry(0.078, 0.082, 0.08, 8), this.gloveMat, 0, -0.25 - EL, 0));
+      elbowB.add(hand);
       g.userData.hand = hand;
+      g.userData.elbow = elbowB;
       this.chest.add(g);
       this.arms.push(g);
     }
@@ -226,7 +307,20 @@ export class Rig {
     this.armL = this.arms[1];
     this.handR = this.armR.userData.hand;
     this.handL = this.armL.userData.hand;
+    this.elbowR = this.armR.userData.elbow;
+    this.elbowL = this.armL.userData.elbow;
 
+    // 치맛자락은 허리(윗단)를 축으로 흔들리게 묶음
+    if (this.skirt) {
+      const sk = this.skirt, top = sk.position.y + this.skirtH / 2;
+      const piv = new THREE.Group();
+      piv.position.y = top;
+      sk.position.y -= top;
+      this.hips.add(piv);
+      piv.add(sk);
+      for (const m of this.skirtParts || []) { m.position.y -= top; piv.add(m); }
+      this.skirtPivot = piv;
+    }
     if (cfg.armor) this.buildArmor(cfg);
     if (cfg.acc) this.buildAccessory(cfg.acc, hr, cfg);
     this.flutter = [];
@@ -279,17 +373,37 @@ export class Rig {
       // 반짝이는 둥근 눈동자 + 하이라이트 두 점, 가는 눈썹, 작은 입
       const glossy = toon({ color: C(cfg.eye || '#1b1416'), roughness: 0.25 });
       const white = toon({ color: C('#ffffff'), emissive: C('#555555') });
+      // 눈은 눈마다 묶음(깜빡일 때 위아래로 접힘), 위에 속눈썹 선, 볼에 엷은 홍조
+      this.eyes = []; this.brows = [];
+      const lashM = this.mat({ color: C('#1a1214') });
       for (const s of [-1, 1]) {
-        const e = mesh(new THREE.SphereGeometry(0.036, 14, 10), glossy, s * 0.095, -0.02, z - 0.025);
+        const eg = new THREE.Group();
+        eg.position.set(s * 0.095, -0.02, z - 0.025);
+        const e = mesh(new THREE.SphereGeometry(0.036, 14, 10), glossy);
         e.scale.set(0.95, 1.35, 0.6);
-        this.head.add(e);
-        this.head.add(mesh(new THREE.SphereGeometry(0.011, 8, 6), white, s * 0.095 + 0.012, 0.006, z - 0.004));
-        this.head.add(mesh(new THREE.SphereGeometry(0.006, 6, 4), white, s * 0.095 - 0.01, -0.035, z - 0.006));
+        eg.add(e);
+        eg.add(mesh(new THREE.SphereGeometry(0.011, 8, 6), white, 0.012, 0.026, 0.021));
+        eg.add(mesh(new THREE.SphereGeometry(0.006, 6, 4), white, -0.01, -0.015, 0.019));
+        this.head.add(eg);
+        this.eyes.push(eg);
+        const lash = mesh(new THREE.TorusGeometry(0.04, 0.0065, 4, 12, Math.PI * 0.8), lashM, s * 0.095, -0.012, z - 0.016);
+        lash.rotation.z = Math.PI * 0.1 + (s > 0 ? 0.04 : -0.04);
+        lash.scale.set(1, 1.15, 0.5);
+        this.head.add(lash);
+        this.eyes.push(lash);
         const br = mesh(new THREE.BoxGeometry(0.07, 0.014, 0.012), this.mat({ color: C(cfg.hair || '#231c1e') }), s * 0.1, 0.06, z - 0.03);
         br.rotation.z = s * -0.12;
+        br.userData.base = br.rotation.z;
+        br.userData.side = s;
         this.head.add(br);
+        this.brows.push(br);
+        const blush = mesh(new THREE.CircleGeometry(0.03, 12), new THREE.MeshBasicMaterial({ color: C('#ff8a8a'), transparent: true, opacity: 0.28, depthWrite: false }), s * 0.15, -0.075, z - 0.035);
+        blush.rotation.y = s * 0.55;
+        blush.userData.noOutline = true;
+        this.head.add(blush);
       }
-      this.head.add(mesh(new THREE.BoxGeometry(0.035, 0.01, 0.01), this.mat({ color: C('#a04848') }), 0, -0.1, z - 0.035));
+      this.mouth = mesh(new THREE.BoxGeometry(0.035, 0.01, 0.01), this.mat({ color: C('#a04848') }), 0, -0.1, z - 0.035);
+      this.head.add(this.mouth);
     } else {
       for (const s of [-1, 1]) {
         this.head.add(mesh(new THREE.BoxGeometry(0.05, 0.085, 0.03), eye, s * 0.095, -0.02, z - 0.01));
@@ -320,19 +434,29 @@ export class Rig {
     cap.rotation.x = -0.35;
     cap.position.set(0, 0.02, -0.02);
     this.head.add(cap);
+    if (HDC) {
+      // 정수리 덮개: 위에서 내려다봐도 이마 위까지 머리로 덮이게 (머리 모양 타원체에 맞춤)
+      const dome = mesh(new THREE.SphereGeometry(hr * 1.045, 28, 14, 0, Math.PI * 2, 0, Math.PI * 0.4), hairM);
+      dome.scale.set(1, 0.95, 0.97);
+      this.head.add(dome);
+    }
     // 앞머리
     if (HDC) {
-      // 끝이 뾰족한 머리 가닥들이 이마를 덮고, 귀 옆으로 옆머리
-      for (let i = -3; i <= 3; i++) {
-        const a = i * 0.24;
-        const b = mesh(new THREE.ConeGeometry(0.045, 0.17, 6), hairM, Math.sin(a) * hr * 0.82, hr * 0.5 - Math.abs(i) * 0.012, Math.cos(a) * hr * 0.82);
-        b.rotation.set(Math.PI - 0.55, a, -i * 0.08);
-        this.head.add(b);
+      // 정수리에서 이마로 휘어 내려오는 앞머리 가닥, 귀 옆으로 흐르는 옆머리 (끝이 가늘어짐)
+      // 머리 표면(타원체)을 따라 붙도록 점을 잡음: a = 앞(0)에서 도는 각, h = 높이(머리 반지름 비율), out = 띄우는 정도
+      const onHead = (a, h, out = 1.06) => {
+        const ry = Math.sqrt(Math.max(0.02, 1 - (h / 0.93) ** 2)) * out;
+        return [Math.sin(a) * hr * ry, h * hr, Math.cos(a) * hr * ry * 0.95];
+      };
+      const tied = cfg.type === 'hero' || cfg.type === 'guard';
+      const nB = tied ? 3 : 4;
+      for (let i = -nB; i <= nB; i++) {
+        const a = i * 0.21;
+        const end = (tied ? 0.36 : 0.26) + Math.abs(i) * 0.04 + (i % 2 ? 0.05 : 0);
+        this.head.add(mesh(strand([onHead(a * 0.6, 0.62, 1.03), onHead(a * 0.9, 0.5, 1.07), onHead(a, end + 0.08, 1.09), onHead(a * 1.04, end, 1.1)], 0.058, 0.005), hairM));
       }
       for (const sx of [-1, 1]) {
-        const lock = mesh(new THREE.ConeGeometry(0.04, 0.22, 6), hairM, sx * hr * 0.92, hr * 0.05, hr * 0.25);
-        lock.rotation.set(Math.PI, 0, sx * -0.12);
-        this.head.add(lock);
+        this.head.add(mesh(strand([onHead(sx * 1.05, 0.7), onHead(sx * 1.25, 0.3, 1.08), onHead(sx * 1.3, -0.15, 1.1), onHead(sx * 1.32, tied ? -0.35 : -0.6, 1.12)], 0.042, 0.005), hairM));
       }
     } else for (let i = -2; i <= 2; i++) {
       const b = mesh(new THREE.BoxGeometry(0.09, 0.12, 0.06), hairM, i * 0.07, hr * 0.62, hr * 0.68);
@@ -348,10 +472,19 @@ export class Rig {
       this.head.add(band);
       const tail = new THREE.Group();
       tail.position.set(0, 0.06, -hr * 0.95);
-      const rib = mesh(new THREE.BoxGeometry(0.07, 0.36, 0.02), this.mat({ color: C('#c8302c') }), 0, -0.18, 0);
-      tail.add(rib);
+      const ribM = this.mat({ color: C('#c8302c'), side: THREE.DoubleSide });
+      if (HDC) {
+        // 머리띠 뒤로 늘어진 두 가닥 끈 (용수철로 나부낌)
+        for (const sx of [-1, 1]) {
+          const r = mesh(ribbon(0.38 + (sx > 0 ? 0.06 : 0), 0.055), ribM, sx * 0.03, 0, 0);
+          r.rotation.z = sx * 0.12;
+          tail.add(r);
+        }
+        tail.add(mesh(new THREE.SphereGeometry(0.035, 8, 6), ribM, 0, 0, 0.005));
+      } else tail.add(mesh(new THREE.BoxGeometry(0.07, 0.36, 0.02), ribM, 0, -0.18, 0));
       this.head.add(tail);
       this.tail = tail;
+      if (HDC) this.head.add(mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.26, 6), this.mat({ color: C('#e0b040') }), 0, hr + 0.05, -0.06)).rotation.z = Math.PI / 2; // 동곳
     } else if (cfg.type === 'mage') {
       // 갓: 넓은 챙 + 높은 대우 + 갓끈 구슬
       const hatM = this.mat({ color: C('#16141c') });
@@ -363,9 +496,16 @@ export class Rig {
       for (const s of [-1, 1]) for (let i = 0; i < 4; i++) this.head.add(mesh(new THREE.SphereGeometry(0.022, 4, 3), bead, s * (0.22 - i * 0.015), hy - 0.06 - i * 0.07, 0.06));
     } else if (cfg.type === 'elf') {
       // 긴 머리 + 뾰족한 귀 + 꽃 머리핀
-      this.head.add(mesh(new THREE.BoxGeometry(0.46, 0.55, 0.14), hairM, 0, -0.2, -0.2));
+      if (HDC) {
+        // 뒷머리: 정수리에서 등으로 흘러내리는 굵은 가닥들 (끝이 바깥으로 살짝 뻗침)
+        for (let i = 0; i < 9; i++) {
+          const a = Math.PI * (0.62 + (i / 8) * 0.76), sa = Math.sin(a), ca = Math.cos(a);
+          this.head.add(mesh(strand([[sa * hr * 0.5, hr * 0.8, ca * hr * 0.5], [sa * hr * 1.02, hr * 0.2, ca * hr * 1.02], [sa * hr * 0.98, -hr * 0.6, ca * hr * 1.05 - 0.02], [sa * hr * 1.1, -hr * 1.35, ca * hr * 1.1 - 0.06]], 0.075, 0.012, 7, 12), hairM));
+        }
+        for (const s of [-1, 1]) this.head.add(mesh(strand([[s * hr * 0.8, hr * 0.5, hr * 0.3], [s * hr * 1.02, 0, hr * 0.32], [s * hr * 0.98, -hr * 0.7, hr * 0.28], [s * hr * 0.9, -hr * 1.2, hr * 0.32]], 0.05, 0.01), hairM));
+      } else this.head.add(mesh(new THREE.BoxGeometry(0.46, 0.55, 0.14), hairM, 0, -0.2, -0.2));
       for (const s of [-1, 1]) {
-        this.head.add(mesh(new THREE.BoxGeometry(0.08, 0.38, 0.1), hairM, s * 0.25, -0.12, 0.06));
+        if (!HDC) this.head.add(mesh(new THREE.BoxGeometry(0.08, 0.38, 0.1), hairM, s * 0.25, -0.12, 0.06));
         const ear = mesh(new THREE.ConeGeometry(0.045, 0.2, 4), this.mat({ color: C(cfg.skin) }), s * 0.3, 0.04, -0.02);
         ear.rotation.z = -s * 1.15;
         this.head.add(ear);
@@ -375,7 +515,11 @@ export class Rig {
       this.head.add(mesh(new THREE.IcosahedronGeometry(0.035, 0), this.mat({ color: C('#fff0a0') }), 0.22, 0.2, 0.14));
       const tail = new THREE.Group();
       tail.position.set(0, -0.3, -0.24);
-      tail.add(mesh(new THREE.BoxGeometry(0.3, 0.32, 0.06), hairM, 0, -0.16, 0));
+      if (HDC) {
+        // 낮게 묶은 머리채 + 초록 댕기 (용수철로 흔들림)
+        for (let i = -1; i <= 1; i++) tail.add(mesh(strand([[i * 0.03, 0, 0], [i * 0.05, -0.15, -0.04], [i * 0.035, -0.32, -0.02]], 0.06, 0.01), hairM));
+        tail.add(mesh(new THREE.TorusGeometry(0.05, 0.018, 6, 12), this.mat({ color: C('#3a8a4a') }), 0, -0.02, 0)).rotation.x = Math.PI / 2;
+      } else tail.add(mesh(new THREE.BoxGeometry(0.3, 0.32, 0.06), hairM, 0, -0.16, 0));
       this.head.add(tail);
       this.tail = tail;
     } else if (cfg.type === 'jiangshi') {
@@ -489,8 +633,9 @@ export class Rig {
       this.hips.add(mesh(new THREE.BoxGeometry(0.04, 0.04, 0.02), T, 0, 0.27, torsoZ + 0.014));
     } else if (d === 'bracers') {
       for (const arm of this.arms) {
-        arm.add(mesh(new THREE.CylinderGeometry(0.084, 0.09, 0.11, 8), T, 0, -0.2, 0));
-        arm.add(mesh(new THREE.CylinderGeometry(0.092, 0.092, 0.02, 8), A, 0, -0.17, 0));
+        const fore = arm.userData.elbow || arm, oy = arm.userData.elbow ? 0.15 : 0;
+        fore.add(mesh(new THREE.CylinderGeometry(0.084, 0.09, 0.11, 8), T, 0, -0.2 + oy, 0));
+        fore.add(mesh(new THREE.CylinderGeometry(0.092, 0.092, 0.02, 8), A, 0, -0.17 + oy, 0));
       }
     } else if (d === 'crown') {
       if (cfg.type === 'mage') return; // 갓 위에는 생략
@@ -929,6 +1074,22 @@ export class Rig {
       bob = 0.02;
     }
     if (staff) wristX = staffT - armRx;
+    // 팔꿈치: 가만히 있을 땐 살짝, 달리면 크게 굽힘. 휘두를 땐 감았다가 쭉 뻗음
+    let elR = -0.28 - run * (0.55 + 0.35 * Math.max(0, -sw)), elL = -0.28 - run * (0.55 + 0.35 * Math.max(0, sw));
+    if (sword && !this.sheathed) elR = -0.3;
+    if (sword && this.saya && !p.attack) elL = -0.75;
+    if (staff) elR = -0.45;
+    if (p.attack) {
+      const t = p.attack.t, k = p.attack.kind;
+      if (k >= 20) { const up = clamp(t / 0.25, 0, 1) * (1 - clamp((t - 0.75) / 0.25, 0, 1)); elL = lerp(elL, -0.05, up); elR = lerp(elR, -1.9 + 1.5 * clamp((t - 0.45) / 0.2, 0, 1), up); }
+      else if (k >= 10) { const w = clamp(t / 0.35, 0, 1), st = clamp((t - 0.35) / 0.2, 0, 1); elL = lerp(lerp(elL, -1.3, w), -0.05, st); if (k === 11 || k === 12) elR = lerp(-1.0 * w, -0.1, st); }
+      else { const w = clamp(t / 0.28, 0, 1), st = clamp((t - 0.28) / 0.22, 0, 1), rc = clamp((t - 0.6) / 0.4, 0, 1); elR = lerp(lerp(lerp(elR, -1.25, w), -0.05, st), -0.3, rc); elL = lerp(elL, -0.6, w * (1 - rc)); }
+    }
+    if (p.dash) { elR = -1.0; elL = -1.0; }
+    if (this.cfg.type === 'jiangshi' && !p.dead) { elR = 0; elL = 0; }
+    if (p.hurt > 0) { elR = lerp(elR, -1.1, p.hurt); elL = lerp(elL, -1.1, p.hurt); }
+    // 손목은 팔꿈치만큼 되돌려 무기 각도는 그대로 (팔뚝만 자연스럽게 굽음)
+    const wristComp = !!this.cfg.weapon;
     if (this.cfg.type === 'jiangshi' && !p.dead) {
       // 강시: 두 팔을 앞으로 쭉 뻗고, 두 다리를 붙인 채 깡충깡충
       armRx = p.attack ? armRx - 1.0 : -1.55; armLx = p.attack ? armLx - 1.0 : -1.55; armRz = 0.05; armLz = -0.05;
@@ -950,6 +1111,11 @@ export class Rig {
       armLx = -1.5; armLz = -0.2;
     }
 
+    // 달릴 때 몸을 좌우로 싣고, 어깨는 골반과 반대로 비틀어 걸음에 무게감
+    if (!p.attack && !p.dead) {
+      bodyRoll = Math.sin(ph) * 0.05 * run;
+      chestYaw += -Math.sin(ph) * 0.12 * run;
+    }
     const L = 1 - Math.exp(-(p.attack ? 34 : 16) * dt);
     const lp = (o, key, v) => (o[key] += (v - o[key]) * L);
     if (this.legs.length) { lp(this.legs[0].rotation, 'x', legR); lp(this.legs[1].rotation, 'x', legL); }
@@ -961,7 +1127,9 @@ export class Rig {
     lp(this.chest.rotation, 'y', chestYaw);
     lp(this.hips.rotation, 'x', chestPitch);
     lp(this.head.rotation, 'x', headPitch);
-    if (this.handR) lp(this.handR.rotation, 'x', wristX);
+    if (this.elbowR) { lp(this.elbowR.rotation, 'x', elR); lp(this.elbowL.rotation, 'x', elL); }
+    if (this.handR) lp(this.handR.rotation, 'x', wristX - (this.elbowR ? this.elbowR.rotation.x : 0) * (wristComp ? 1 : 0));
+    if (this.handL && bow) this.handL.rotation.x = -this.elbowL.rotation.x;
     this.body.position.y = bob;
     this.updateWeapon(dt);
     if (bow) {
@@ -974,13 +1142,48 @@ export class Rig {
     }
     this.body.rotation.z = bodyRoll;
 
+    // ---- 2차 움직임: 실제 이동 속도로 댕기·머리채·치맛자락·망토가 늦게 따라오며 출렁임 ----
+    const rp = this.root.position, yaw = this.root.rotation.y;
+    if (!this._lp) { this._lp = rp.clone(); this.sp = { tx: new Spring(38, 5), tz: new Spring(38, 5), kx: new Spring(70, 7), kz: new Spring(70, 7) }; this._fwd = 0; }
+    const idt = dt > 1e-4 ? 1 / dt : 0;
+    let vx = (rp.x - this._lp.x) * idt, vz = (rp.z - this._lp.z) * idt;
+    if (Math.hypot(vx, vz) > 30) vx = vz = 0; // 순간이동은 무시
+    this._lp.copy(rp);
+    const fwd = vx * Math.sin(yaw) + vz * Math.cos(yaw), lat = vx * Math.cos(yaw) - vz * Math.sin(yaw);
+    const acc = (fwd - this._fwd) * idt;
+    this._fwd += (fwd - this._fwd) * Math.min(1, dt * 10);
+    const wind = Math.sin(this.idleT * 1.7) * 0.5 + Math.sin(this.idleT * 3.1 + 1) * 0.3;
     if (this.tail) {
-      this.tail.rotation.x = 0.25 + run * 0.6 + Math.sin(this.idleT * 7) * 0.08 * run;
+      this.tail.rotation.x = this.sp.tx.step(0.22 + clamp(fwd / 5, -0.3, 1) * 0.95 + wind * 0.05 - chestPitch * 0.5, dt);
+      this.tail.rotation.z = this.sp.tz.step(clamp(-lat * 0.14, -0.6, 0.6) - chestYaw * 0.3, dt);
     }
-    // 망토·띠 나부낌: 달릴수록 뒤로 들리고, 가만히 있어도 바람에 살랑
+    if (this.skirtPivot) {
+      this.skirtPivot.rotation.x = this.sp.kx.step(clamp(fwd * 0.028 - acc * 0.0035, -0.12, 0.22), dt);
+      this.skirtPivot.rotation.z = this.sp.kz.step(clamp(-lat * 0.03, -0.15, 0.15), dt);
+    }
+    // 망토·띠 나부낌: 달릴수록 뒤로 들리고(용수철로 출렁), 가만히 있어도 바람에 살랑
     for (const f of this.flutter) {
-      f.g.rotation.x = f.base + run * f.run + Math.sin(this.idleT * (2.4 + run * 4) + f.ph) * f.amp * (0.6 + run);
+      f.sp ||= new Spring(45, 6);
+      f.g.rotation.x = f.sp.step(f.base + clamp(fwd / 4, -0.2, 1) * f.run, dt) + Math.sin(this.idleT * (2.4 + run * 4) + f.ph) * f.amp * (0.6 + run);
     }
+    // ---- 얼굴: 깜빡임과 표정 ----
+    if (this.eyes) {
+      this.blinkT = (this.blinkT ?? 2 + Math.random() * 3) - dt;
+      if (this.blinkT < -0.13) this.blinkT = 2 + Math.random() * 3.5;
+      const blink = this.blinkT < 0 ? 0.08 : 1;
+      const squint = p.dead ? 0.08 : p.hurt > 0 ? 0.25 : p.attack ? 0.75 : 1;
+      const ey = Math.min(blink, squint);
+      for (const e of this.eyes) e.scale.y += (ey - e.scale.y) * Math.min(1, dt * 30);
+      const mood = p.attack ? 1 : p.hurt > 0 ? -1 : 0; // 1 = 매서움, -1 = 아픔
+      for (const b of this.brows) b.rotation.z += (b.userData.base + b.userData.side * (mood > 0 ? 0.38 : mood < 0 ? -0.3 : 0) - b.rotation.z) * Math.min(1, dt * 18);
+      const mx = mood > 0 ? 1.5 : mood < 0 ? 1.2 : 1, my = mood > 0 ? 2.2 : mood < 0 ? 3.2 : 1;
+      this.mouth.scale.x += (mx - this.mouth.scale.x) * Math.min(1, dt * 18);
+      this.mouth.scale.y += (my - this.mouth.scale.y) * Math.min(1, dt * 18);
+    }
+    // 고개: 어깨 비틀림을 조금 되돌려 앞을 보고, 오래 서 있으면 두리번거림
+    this.stillT = run > 0.05 || p.attack ? 0 : (this.stillT || 0) + dt;
+    const look = this.stillT > 3 ? Math.sin((this.stillT - 3) * 0.6) * 0.45 : 0;
+    this.head.rotation.y += (-this.chest.rotation.y * 0.45 + look - this.head.rotation.y) * Math.min(1, dt * 6);
     if (this.ribbonArc) this.ribbonArc.position.y = -0.02 + Math.sin(this.idleT * 1.8) * 0.025;
     if (this.foxTails) {
       this.foxTails.forEach((t, i) => {

@@ -527,3 +527,29 @@ export function hdCarving() {
     return { map: t, normalMap: normalFrom(hb[0], 3) };
   });
 }
+
+// 옷감 결: 가는 날실·씨실이 엇갈린 평직 + 살짝 주름 (노멀맵만)
+export function hdFabric() {
+  return cached('fabric', () => {
+    const N = 256;
+    const [h, g] = canvas(N);
+    const img = g.createImageData(N, N);
+    const R = mulberry32(77);
+    const wob = Array.from({ length: N }, () => R());
+    for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+      const cx = Math.floor(x / 4), cy = Math.floor(y / 4);
+      const over = (cx + cy) % 2 === 0;
+      const fx = (x % 4) / 4, fy = (y % 4) / 4;
+      // 실 한 가닥의 둥근 단면
+      const v = over ? Math.sin(fy * Math.PI) : Math.sin(fx * Math.PI);
+      const fold = 0.5 + 0.5 * Math.sin((y / N) * Math.PI * 4 + wob[x] * 0.6);
+      const k = Math.round((0.35 + 0.45 * v * (0.85 + 0.15 * wob[(x * 7 + y) % N]) + 0.2 * fold) * 255);
+      const i = (y * N + x) * 4;
+      img.data[i] = img.data[i + 1] = img.data[i + 2] = k; img.data[i + 3] = 255;
+    }
+    g.putImageData(img, 0, 0);
+    const n = tex(normalFrom(h, 1.6), false);
+    n.repeat.set(3, 3);
+    return n;
+  });
+}

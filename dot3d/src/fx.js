@@ -1,5 +1,6 @@
 // 이펙트: 도트 파티클, 검기 호, 충격파, 지면 경고, 데미지 숫자
 import * as THREE from 'three';
+import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { rand } from './util.js';
 
 // 바닥 마법진 텍스처 (팔괘·별·태극 문양, 흰색 → 재질 색으로 물듦)
@@ -447,7 +448,7 @@ export class FX {
   // 잔상: 캐릭터를 통째로 복제해 푸른 빛으로 칠한 뒤 서서히 사라지게
   ghost(rig, color = '#5ab8ff', dur = 0.28) {
     const mat = new THREE.MeshBasicMaterial({ color: new THREE.Color(color), transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false });
-    const c = rig.root.clone(true);
+    const c = cloneSkinned(rig.root);
     c.traverse((o) => { if (o.isMesh) { o.material = mat; o.castShadow = false; o.receiveShadow = false; } });
     this.scene.add(c);
     this.ghosts.push({ c, mat, t: 0, dur });
