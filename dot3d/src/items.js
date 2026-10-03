@@ -24,6 +24,16 @@ export const PERKS = {
   soul: '혼 거두기: 적을 쓰러뜨릴 때마다 최대 체력의 4% 회복',
 };
 
+// 보스 무기 고유 기술 (U 키). 보스 무기에만 붙음
+export const ULTS = {
+  thunder: { name: '도깨비 천둥', short: '천둥', cd: 24, desc: '방망이로 땅을 세 번 내려쳐 점점 넓어지는 벼락 충격파. 맞은 적은 기절' },
+  foxtail: { name: '아홉 꼬리 여우불', short: '여우불', cd: 24, desc: '여우불 아홉 개가 차례로 가까운 적을 꿰뚫음. 준 피해의 25%만큼 체력 회복' },
+  judgment: { name: '명부 집행', short: '명부', cd: 26, desc: '주변 적 여섯에게 명부의 낙인. 잠시 뒤 큰 피해, 체력이 35% 아래로 떨어진 일반 몬스터는 즉사' },
+};
+// 보스 처치 시 전용 장비가 나올 확률 (회차마다 조금씩 오름)
+export const BOSS_WEAPON_CHANCE = 0.2;
+export const BOSS_OUTFIT_CHANCE = 0.35;
+
 // 무기 모양/색 (style)은 character.js의 buildWeapon이 읽음
 export const WEAPONS = {
   sword: [
@@ -32,9 +42,9 @@ export const WEAPONS = {
     { id: 'sw2', name: '청강 월광검', tier: 2, atk: 0.32, style: { blade: '#bfe4ff', edge: '#ffffff', guard: '#c8d4e0', wrap: '#2a3a6a', glow: '#3a9aff' } },
     { id: 'sw3', name: '자운 비도', tier: 3, atk: 0.5, style: { blade: '#d8c8ff', edge: '#ffffff', guard: '#8a5ad8', wrap: '#3a1a5a', glow: '#9a5aff', long: 1.12 } },
     { id: 'sw4', name: '흑룡도', tier: 4, atk: 0.75, style: { blade: '#2a2830', edge: '#ff6a3a', guard: '#e0b040', wrap: '#8a1a1a', glow: '#ff3010', long: 1.2 } },
-    { id: 'swB1', name: '두억시니 참마도', tier: 5, atk: 0.85, from: 'boss', perk: 'quake', style: { blade: '#3a4a8a', edge: '#9ad8ff', guard: '#ffd040', wrap: '#c8302c', glow: '#3ac8ff', long: 1.28 } },
-    { id: 'swB2', name: '구미호 여우검', tier: 5, atk: 0.9, from: 'gumiho', perk: 'drain', style: { blade: '#fff4ec', edge: '#ffb070', guard: '#ff6a2a', wrap: '#f0f0f0', glow: '#ff7a2a', long: 1.22 } },
-    { id: 'swB3', name: '저승 명부검', tier: 5, atk: 1.0, from: 'reaper', perk: 'execute', style: { blade: '#14101c', edge: '#c890ff', guard: '#5a3a8a', wrap: '#1a1420', glow: '#9a4aff', long: 1.32 } },
+    { id: 'swB1', name: '두억시니 참마도', tier: 5, atk: 0.85, from: 'boss', perk: 'quake', ult: 'thunder', style: { blade: '#3a4a8a', edge: '#9ad8ff', guard: '#ffd040', wrap: '#c8302c', glow: '#3ac8ff', long: 1.28 } },
+    { id: 'swB2', name: '구미호 여우검', tier: 5, atk: 0.9, from: 'gumiho', perk: 'drain', ult: 'foxtail', style: { blade: '#fff4ec', edge: '#ffb070', guard: '#ff6a2a', wrap: '#f0f0f0', glow: '#ff7a2a', long: 1.22 } },
+    { id: 'swB3', name: '저승 명부검', tier: 5, atk: 1.0, from: 'reaper', perk: 'execute', ult: 'judgment', style: { blade: '#14101c', edge: '#c890ff', guard: '#5a3a8a', wrap: '#1a1420', glow: '#9a4aff', long: 1.32 } },
   ],
   mage: [
     { id: 'mg0', name: '복숭아나무 지팡이', tier: 0, atk: 0, style: {} },
@@ -42,9 +52,9 @@ export const WEAPONS = {
     { id: 'mg2', name: '월장석 지팡이', tier: 2, atk: 0.32, style: { wood: '#e0e0f0', moon: '#c8d4e0', orb: '#bfe8ff', orbGlow: '#4ab0ff' } },
     { id: 'mg3', name: '뇌전 지팡이', tier: 3, atk: 0.5, style: { wood: '#2a2a40', moon: '#ffe060', orb: '#fff6a0', orbGlow: '#ffd020', big: 1.3 } },
     { id: 'mg4', name: '화룡 지팡이', tier: 4, atk: 0.75, style: { wood: '#2a1414', moon: '#e0b040', orb: '#ff8a4a', orbGlow: '#ff3a00', big: 1.5 } },
-    { id: 'mgB1', name: '두억시니 금방망이', tier: 5, atk: 0.85, from: 'boss', perk: 'quake', style: { wood: '#c8302c', moon: '#ffd040', orb: '#9ad8ff', orbGlow: '#3ac8ff', big: 1.6 } },
-    { id: 'mgB2', name: '여우구슬 지팡이', tier: 5, atk: 0.9, from: 'gumiho', perk: 'drain', style: { wood: '#f4ece4', moon: '#ff8a3a', orb: '#ffe6c8', orbGlow: '#ff7a2a', big: 1.55 } },
-    { id: 'mgB3', name: '명부 지팡이', tier: 5, atk: 1.0, from: 'reaper', perk: 'execute', style: { wood: '#14101c', moon: '#8a5ad8', orb: '#e0c8ff', orbGlow: '#9a4aff', big: 1.7 } },
+    { id: 'mgB1', name: '두억시니 금방망이', tier: 5, atk: 0.85, from: 'boss', perk: 'quake', ult: 'thunder', style: { wood: '#c8302c', moon: '#ffd040', orb: '#9ad8ff', orbGlow: '#3ac8ff', big: 1.6 } },
+    { id: 'mgB2', name: '여우구슬 지팡이', tier: 5, atk: 0.9, from: 'gumiho', perk: 'drain', ult: 'foxtail', style: { wood: '#f4ece4', moon: '#ff8a3a', orb: '#ffe6c8', orbGlow: '#ff7a2a', big: 1.55 } },
+    { id: 'mgB3', name: '명부 지팡이', tier: 5, atk: 1.0, from: 'reaper', perk: 'execute', ult: 'judgment', style: { wood: '#14101c', moon: '#8a5ad8', orb: '#e0c8ff', orbGlow: '#9a4aff', big: 1.7 } },
   ],
   elf: [
     { id: 'bw0', name: '버들 활', tier: 0, atk: 0, style: {} },
@@ -52,9 +62,9 @@ export const WEAPONS = {
     { id: 'bw2', name: '바람결 활', tier: 2, atk: 0.32, style: { wood: '#5ac85a', grip: '#e8f0a0', tips: '#ffffff', glow: '#3aff6a' } },
     { id: 'bw3', name: '서리 활', tier: 3, atk: 0.5, style: { wood: '#bfe8ff', grip: '#3a6aaa', tips: '#ffffff', glow: '#4ab0ff', big: 1.15 } },
     { id: 'bw4', name: '월궁', tier: 4, atk: 0.75, style: { wood: '#f0e8ff', grip: '#e0b040', tips: '#ffe080', glow: '#ffd040', big: 1.25 } },
-    { id: 'bwB1', name: '두억시니 뿔활', tier: 5, atk: 0.85, from: 'boss', perk: 'quake', style: { wood: '#c8302c', grip: '#ffd040', tips: '#f0ead8', glow: '#3ac8ff', big: 1.3 } },
-    { id: 'bwB2', name: '구미 꼬리활', tier: 5, atk: 0.9, from: 'gumiho', perk: 'drain', style: { wood: '#fff4ec', grip: '#ff6a2a', tips: '#ffb070', glow: '#ff7a2a', big: 1.3 } },
-    { id: 'bwB3', name: '망령 활', tier: 5, atk: 1.0, from: 'reaper', perk: 'execute', style: { wood: '#1a1420', grip: '#8a5ad8', tips: '#e0c8ff', glow: '#9a4aff', big: 1.38 } },
+    { id: 'bwB1', name: '두억시니 뿔활', tier: 5, atk: 0.85, from: 'boss', perk: 'quake', ult: 'thunder', style: { wood: '#c8302c', grip: '#ffd040', tips: '#f0ead8', glow: '#3ac8ff', big: 1.3 } },
+    { id: 'bwB2', name: '구미 꼬리활', tier: 5, atk: 0.9, from: 'gumiho', perk: 'drain', ult: 'foxtail', style: { wood: '#fff4ec', grip: '#ff6a2a', tips: '#ffb070', glow: '#ff7a2a', big: 1.3 } },
+    { id: 'bwB3', name: '망령 활', tier: 5, atk: 1.0, from: 'reaper', perk: 'execute', ult: 'judgment', style: { wood: '#1a1420', grip: '#8a5ad8', tips: '#e0c8ff', glow: '#9a4aff', big: 1.38 } },
   ],
 };
 
@@ -89,8 +99,9 @@ export function itemDesc(it, owned = true) {
   if (!it) return '';
   const base = it.kind === 'weapon' ? `공격력 +${Math.round(it.atk * 100)}%` : `체력 +${it.hp} · 받는 피해 -${Math.round(it.def * 100)}%`;
   if (!it.perk) return base;
-  if (!owned) return `${BOSS_SETS[it.from].boss} 처치 시 획득`;
-  return `${base}<br><em>${PERKS[it.perk]}</em>`;
+  if (!owned) return `${BOSS_SETS[it.from].boss} 처치 시 낮은 확률로 획득`;
+  const u = it.ult ? `<br><em class="ult">고유 기술 [U] ${ULTS[it.ult].name}: ${ULTS[it.ult].desc} (재사용 ${ULTS[it.ult].cd}초)</em>` : '';
+  return `${base}<br><em>${PERKS[it.perk]}</em>${u}`;
 }
 
 // 장착한 무기·옷의 고유 효과 목록
@@ -100,17 +111,20 @@ export function perksOf(...ids) {
   return out;
 }
 
-// 보스 처치 보상: 그 보스 전용 장비 중 아직 없는 것 (내 직업 무기 → 옷 → 다른 직업 무기 순)
-export function bossDrop(type, cls, inv) {
-  if (!BOSS_SETS[type]) return null;
+// 보스 처치 보상: 확률로만 나옴. 무기(고유 기술)와 옷을 따로 굴림
+//  무기는 지금 직업용이 우선(아직 없는 것), 다 있으면 다른 직업용 → 그래도 다 있으면 지금 직업용(중복은 경험치)
+export function bossDrop(type, cls, inv, round = 0) {
+  if (!BOSS_SETS[type]) return [];
   const set = [...ALL.values()].filter((it) => it.from === type);
-  const order = [
-    ...set.filter((it) => it.kind === 'weapon' && it.cls === cls),
-    ...set.filter((it) => it.kind === 'outfit'),
-    ...set.filter((it) => it.kind === 'weapon' && it.cls !== cls),
-  ];
-  const fresh = order.find((it) => !inv.has(it.id));
-  return (fresh || order[Math.floor(Math.random() * 2)]).id;
+  const out = [];
+  const bonus = Math.min(0.1, round * 0.02);
+  if (Math.random() < BOSS_WEAPON_CHANCE + bonus) {
+    const mine = set.find((it) => it.kind === 'weapon' && it.cls === cls);
+    const others = set.filter((it) => it.kind === 'weapon' && it.cls !== cls && !inv.has(it.id));
+    out.push((!inv.has(mine.id) || !others.length ? mine : others[Math.floor(Math.random() * others.length)]).id);
+  }
+  if (Math.random() < BOSS_OUTFIT_CHANCE + bonus) out.push(set.find((it) => it.kind === 'outfit').id);
+  return out;
 }
 
 // 처치 보상: 적 종류·회차에 따라 등급이 오름. 무기는 지금 직업용 위주

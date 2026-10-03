@@ -429,3 +429,10 @@ body.touch #gameover .s b::after { content: ' / 화면 탭'; }
 @media (max-height: 520px) { #hunt-btn { top: 64px; left: 148px; padding: 4px 8px; font-size: 11px; } }
 /* 고화질 모드: 선택창 캐릭터를 부드럽게 */
 .cls canvas.hd, #title .cls canvas.hd, #cls-big.hd { image-rendering: auto; }
+/* 보스 무기 고유 기술 */
+.sk.ult { background: #3a1a2a; box-shadow: 0 0 0 1px #ff5a4a, 0 0 8px rgba(255, 90, 74, 0.5); }
+.sk.ult .key { color: #ff8a6a; }
+#touch .btns button.ult { position: absolute; top: -74px; right: 0; border-color: #ff5a4a; background: rgba(90, 20, 30, 0.8); box-shadow: 0 0 10px rgba(255, 90, 74, 0.6); }
+@media (max-height: 520px), (max-width: 600px) { #touch .btns button.ult { top: -64px; } }
+em.ult { color: #ff9a7a; }
+.ult.hidden, #touch .btns button.ult.hidden { display: none; }

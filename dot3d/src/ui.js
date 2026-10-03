@@ -1,4 +1,4 @@
-import { item, itemDesc, drawItemIcon, RARITY, WEAPONS, OUTFITS } from './items.js';
+import { item, itemDesc, drawItemIcon, RARITY, WEAPONS, OUTFITS, ULTS } from './items.js';
 import { EVOS, branchOf, rankOf, freePoints, RANK_NAME, MAX_RANK } from './evolve.js';
 import { drawGearIcon, gearLines, gearScore, SLOT_NAME, STATS, BAG_MAX, salvageExp, GEAR_SLOTS, rarityOf, SETS, setBonuses } from './gear.js';
 import { expNeed, SKILL_LEVEL } from './entities.js';
@@ -381,6 +381,13 @@ export class UI {
       if (p.level < SKILL_LEVEL[slot]) this.setLock(key, SKILL_LEVEL[slot]);
       else { this.setLock(key, 0); this.setCd(key, (slot === 2 ? p.cd2 : p.cd3) || 0, (slot === 2 ? p.cd2Max : p.cd3Max) * g.skillCdMul(p, slot)); }
     }
+    // 보스 무기 고유 기술 칸: 보스 무기를 들었을 때만
+    if (this.ultShown !== p.ult) {
+      this.ultShown = p.ult;
+      for (const u of document.querySelectorAll('.ult')) if (!u.matches('em')) u.classList.toggle('hidden', !p.ult);
+      for (const l of document.querySelectorAll('.lbl-ult')) l.textContent = p.ult ? ULTS[p.ult].short : '고유';
+    }
+    if (p.ult) this.setCd('ult', p.ultCd || 0, p.ultMax);
     el.kills.textContent = g.kills;
     if (el.best) el.best.textContent = g.bestCombo;
 

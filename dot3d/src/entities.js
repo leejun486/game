@@ -3,7 +3,7 @@ import { makeDokkaebi, makeGuard, makeLady, makeMage, makeFox, makeJiangshi, mak
 import { CLASSES } from './classes.js';
 import { outfitLook, gearLook } from './character.js';
 import { sumStats, gearColor, setBonuses } from './gear.js';
-import { item, WEAPONS, perksOf } from './items.js';
+import { item, WEAPONS, perksOf, ULTS } from './items.js';
 
 // 스킬 해금 레벨
 export const SKILL_LEVEL = { 2: 3, 3: 5 };
@@ -55,7 +55,7 @@ export class Player {
     this.level = pr.level;
     this.exp = pr.exp;
     this.skillMax = C.skillCd;
-    this.cd2 = 0; this.cd3 = 0;
+    this.cd2 = 0; this.cd3 = 0; this.ultCd = 0;
     this.cd2Max = C.skill2Cd; this.cd3Max = C.skill3Cd;
     this.dashMax = C.dashCd;
     this.attack = null;
@@ -93,6 +93,9 @@ export class Player {
     this.atkMul = (1 + (this.level - 1) * 0.08) * (1 + (w?.atk || 0)) * (1 + (gs.atk || 0));
     this.def = Math.min(0.7, 1 - (1 - (o?.def || 0)) * (1 - (gs.def || 0)));
     this.perks = perksOf(pr.weapon, pr.outfit);
+    // 보스 무기 고유 기술
+    this.ult = w?.ult || null;
+    this.ultMax = this.ult ? ULTS[this.ult].cd : 0;
     for (const g of this.game.equippedGear(this.cls)) if (g.perk) this.perks.add(g.perk);
     // 세트 4개 효과의 고유 능력
     for (const k of setBonuses(this.game.equippedGear(this.cls)).perks) this.perks.add(k);
@@ -265,6 +268,27 @@ export class Player {
     this.lastCombat = g.time;
   }
 
+  // 보스 무기 고유 기술 (U): 3번 스킬 동작을 빌려 쓰고 효과는 game.castUlt
+  startUlt(input) {
+    if (this.dead || !this.ult || this.ultCd > 0 || this.dashT > 0) return false;
+    if (this.attack && this.attack.t < 0.6) return false;
+    if (!this.game.enemies.some((e) => !e.dead && !e.spawning && Math.hypot(e.pos.x - this.pos.x, e.pos.z - this.pos.z) < 10)) {
+      this.game.ui.toast('주변에 적이 없어요', 1.2);
+      return false;
+    }
+    this.ultCd = this.ultMax * (1 - Math.min(0.4, this.gear?.cdr || 0));
+    this.yaw = this.aimYaw(input);
+    this.combo = 0;
+    this.buffered = false;
+    const kind = { sword: 5, mage: 14, elf: 24 }[this.cls];
+    if (this.cls === 'sword' && this.rig.sheathed) this.drawCut();
+    this.attack = { t: 0, kind, dur: 0.7, hit: true, skill: true };
+    this.sinceAttack = 0;
+    this.lastCombat = this.game.time;
+    this.game.castUlt(this);
+    return true;
+  }
+
   startSkill(input) {
     if (this.dead || this.skillCd > 0 || this.dashT > 0) return;
     if (this.cls !== 'sword') {
@@ -324,6 +348,7 @@ export class Player {
     this.skillCd = Math.max(0, this.skillCd - dt);
     this.cd2 = Math.max(0, (this.cd2 || 0) - dt);
     this.cd3 = Math.max(0, (this.cd3 || 0) - dt);
+    this.ultCd = Math.max(0, (this.ultCd || 0) - dt);
     this.invuln = Math.max(0, this.invuln - dt);
     this.hurtT = Math.max(0, this.hurtT - dt);
     this.comboTimer -= dt;

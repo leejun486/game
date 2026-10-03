@@ -13,7 +13,7 @@ import { GFX, setGfx } from './gfx.js';
 import { EVOS, branchOf, rankOf, freePoints, rankMul, rankCd, RANK_NAME } from './evolve.js';
 import { QUESTS, BOUNTIES, KILL_NAME } from './quests.js';
 import { makeGear, rollGearTier, gearScore, salvageExp, BAG_MAX, GEAR_SLOTS, slotKind, rarityOf, makeSetPiece, setFor, SETS } from './gear.js';
-import { item, rollDrop, bossDrop, RARITY, itemDesc, WEAPONS, OUTFITS } from './items.js';
+import { item, rollDrop, bossDrop, RARITY, itemDesc, WEAPONS, OUTFITS, ULTS } from './items.js';
 import { expNeed, SKILL_LEVEL } from './entities.js';
 import { MAPS, BOSS_TYPES } from './maps.js';
 import { clamp, lerp, rand, angleDiff, damp } from './util.js';
@@ -564,7 +564,7 @@ class Game {
     } else {
       this.inv.add(id);
       if (it.perk) {
-        this.ui.banner(it.name, `보스 전용 장비 획득! — B 키로 착용`, 2.6, 'win-banner');
+        this.ui.banner(it.name, it.ult ? `보스 무기 획득! 고유 기술 「${ULTS[it.ult].name}」 — B 키로 착용 후 U` : `보스 전용 장비 획득! — B 키로 착용`, 3.2, 'win-banner');
         this.audio.play('levelup');
         this.fx.ring(p.pos, 2.4, r.color, 0.5);
         this.fx.colorFire(p.pos.x, p.y + 0.5, p.pos.z, 40, 0.6, '#ffe0a0', r.color);
@@ -873,6 +873,10 @@ class Game {
       case 'KeyL': case 'KeyQ': case 'skill2': if (!this.lockCheck(2) && !this.cdCheck('skill2', this.player.cd2)) this.player.startExtraSkill(inp, 2); break;
       case 'KeyI': case 'KeyR': case 'skill3': if (!this.lockCheck(3) && !this.cdCheck('skill3', this.player.cd3)) this.player.startExtraSkill(inp, 3); break;
       case 'bag': this.toggleBag(); break;
+      case 'KeyU': case 'ult':
+        if (!this.player.ult) { this.ui.toast('고유 기술은 보스 무기를 들어야 쓸 수 있어요', 1.8); this.audio.play('denied'); break; }
+        if (!this.cdCheck('ult', this.player.ultCd)) this.player.startUlt(inp);
+        break;
       case 'KeyK': case 'KeyX': case 'skill': if (!this.cdCheck('skill', this.player.skillCd)) this.player.startSkill(inp); break;
       case 'KeyE': case 'Enter': case 'act': this.interact(); break;
       case 'KeyN':
@@ -1196,7 +1200,8 @@ class Game {
     p.yaw = Math.atan2(t.pos.x - p.pos.x, t.pos.z - p.pos.z);
     const crowd = this.enemiesIn(p.pos, 5).length;
     const lv = p.level;
-    if (p.skillCd <= 0) p.startSkill(inp);
+    if (p.ult && p.ultCd <= 0 && (crowd >= 3 || t.isBoss)) p.startUlt(inp);
+    else if (p.skillCd <= 0) p.startSkill(inp);
     else if (lv >= SKILL_LEVEL[2] && (p.cd2 || 0) <= 0 && (crowd >= 2 || t.isBoss)) p.startExtraSkill(inp, 2);
     else if (lv >= SKILL_LEVEL[3] && (p.cd3 || 0) <= 0 && (crowd >= 3 || t.isBoss)) p.startExtraSkill(inp, 3);
     else p.startAttack(inp);
@@ -1948,6 +1953,112 @@ class Game {
     this.shake(0.2);
   }
 
+  // ================= 보스 무기 고유 기술 (U) =================
+  castUlt(pl) {
+    const U = ULTS[pl.ult];
+    const feet = () => V(pl.pos.x, pl.y, pl.pos.z);
+    this.ui.toast(`고유 기술 — ${U.name}!`, 1.2);
+    this.audio.play('skill');
+    if (pl.ult === 'thunder') {
+      // 도깨비 천둥: 세 번 내려쳐 점점 넓어지는 벼락 충격파
+      this.audio.play('charge');
+      this.fx.circle(feet(), 6.6, '#9ad8ff', 1.4, 2.4);
+      for (let i = 0; i < 3; i++) this.after(0.25 + i * 0.38, () => {
+        if (pl.dead) return;
+        const c = feet(), R = 3 + i * 1.7;
+        this.audio.play('thunder');
+        this.shake(0.5 + i * 0.25);
+        this.ui.flash('#cfeaff', 0.35 + i * 0.15);
+        this.hitstop = Math.max(this.hitstop, 0.07);
+        this.fx.ring(c, R, '#bfe8ff', 0.45);
+        this.fx.ring(c, R * 0.55, '#ffffff', 0.3);
+        this.fx.scorch(c, R * 0.45, '#101830', 2.5);
+        for (let k = 0; k < 3 + i * 2; k++) {
+          const a = Math.random() * Math.PI * 2, r = rand(1, R);
+          this.fx.bolt(V(c.x + Math.cos(a) * r, c.y, c.z + Math.sin(a) * r), 1 + i * 0.3);
+        }
+        for (let k = 0; k < 40; k++) {
+          const a = Math.random() * Math.PI * 2, sp = rand(4, 10);
+          this.fx.add.emit({ x: c.x, y: c.y + 0.3, z: c.z, vx: Math.cos(a) * sp, vy: rand(1, 5), vz: Math.sin(a) * sp, g: 10, drag: 2, life: rand(0.3, 0.7), size: rand(2, 4), endSize: 1, color: '#ffffff', color2: '#3ac8ff' });
+        }
+        let prev = V(c.x, c.y + 1.4, c.z);
+        for (const e of this.enemiesIn(c, R)) {
+          const crit = Math.random() < 0.25;
+          this.damageEnemy(e, Math.round(rand(52, 62) * (1 + i * 0.25) * (crit ? 1.8 : 1)), crit, 6, 1 + i * 0.3);
+          const ec = e.center().clone();
+          this.fx.arc(prev, ec, '#9ad8ff', 0.8);
+          prev = ec;
+        }
+      });
+    } else if (pl.ult === 'foxtail') {
+      // 아홉 꼬리 여우불: 가까운 적들을 번갈아 꿰뚫고 피해의 25% 회복
+      this.audio.play('howl');
+      this.fx.colorFire(pl.pos.x, pl.y + 0.8, pl.pos.z, 40, 0.8, '#ffe0a0', '#ff6a1a');
+      let healed = 0;
+      for (let i = 0; i < 9; i++) this.after(0.15 + i * 0.13, () => {
+        if (pl.dead) return;
+        const c = V(pl.pos.x, pl.y + 1.1, pl.pos.z);
+        const near = this.enemies.filter((e) => !e.dead && !e.spawning && Math.hypot(e.pos.x - c.x, e.pos.z - c.z) < 10)
+          .sort((a, b) => Math.hypot(a.pos.x - c.x, a.pos.z - c.z) - Math.hypot(b.pos.x - c.x, b.pos.z - c.z));
+        const a = (i / 9) * Math.PI * 2 + pl.yaw;
+        if (!near.length) {
+          this.fx.colorFire(c.x + Math.sin(a) * 1.4, c.y, c.z + Math.cos(a) * 1.4, 10, 0.3, '#ffe0a0', '#ff6a1a');
+          return;
+        }
+        const e = near[i % Math.min(3, near.length)];
+        const ec = e.center().clone();
+        // 꼬리처럼 몸 둘레에서 휘어 나가는 불줄기
+        const mid = V(c.x + Math.sin(a) * 1.6, c.y + 0.4, c.z + Math.cos(a) * 1.6);
+        this.fx.streak(c, mid, '#ffb070', 0.3, 0.5);
+        this.fx.streak(mid, ec, '#ff8a3a', 0.35, 0.55);
+        // 여우불 꼬리: 휘어 나가는 길을 따라 불티
+        for (let k = 0; k <= 16; k++) {
+          const t = k / 16, u = 1 - t;
+          const x = u * u * c.x + 2 * u * t * mid.x + t * t * ec.x, y = u * u * c.y + 2 * u * t * mid.y + t * t * ec.y, z = u * u * c.z + 2 * u * t * mid.z + t * t * ec.z;
+          this.fx.add.emit({ x, y, z, vx: rand(-0.4, 0.4), vy: rand(0.5, 1.5), vz: rand(-0.4, 0.4), life: 0.25 + t * 0.3, size: 3 + t * 2, endSize: 1, color: '#fff0b0', color2: '#ff4a10' });
+        }
+        this.fx.colorFire(ec.x, ec.y, ec.z, 18, 0.4, '#ffe0a0', '#ff6a1a');
+        this.audio.play('hit');
+        const hp0 = e.hp;
+        const crit = Math.random() < 0.2;
+        this.damageEnemy(e, Math.round(rand(34, 42) * (crit ? 1.8 : 1)), crit, 3, 0.3);
+        const h = Math.min(pl.maxHp - pl.hp, Math.round(Math.max(0, hp0 - Math.max(0, e.hp)) * 0.25));
+        if (h > 0) { pl.hp += h; healed += h; }
+        if (i === 8 && healed > 0) this.fx.number(pl.pos.clone().add(V(0, 2.1, 0)), `+${healed}`, 'heal');
+      });
+    } else if (pl.ult === 'judgment') {
+      // 명부 집행: 주변 적 여섯에게 낙인 → 1초 뒤 하늘에서 심판
+      const c = feet();
+      const marks = this.enemies.filter((e) => !e.dead && !e.spawning && Math.hypot(e.pos.x - c.x, e.pos.z - c.z) < 10)
+        .sort((a, b) => Math.hypot(a.pos.x - c.x, a.pos.z - c.z) - Math.hypot(b.pos.x - c.x, b.pos.z - c.z)).slice(0, 6);
+      this.audio.play('wail');
+      this.ui.flash('#3a1a5a', 0.4);
+      this.fx.circle(c, 2.2, '#c890ff', 1.1, -3);
+      for (const e of marks) {
+        this.fx.circle(V(e.pos.x, e.y, e.pos.z), e.isBoss ? 2.4 : 1.2, '#c890ff', 1.1, 3);
+        this.fx.cross(e.center().clone().add(V(0, 0.8, 0)), '#c890ff', 1.8, 0.5);
+      }
+      this.after(1.0, () => {
+        this.audio.play('thunder');
+        this.shake(0.7);
+        this.ui.flash('#e0c8ff', 0.5);
+        for (const e of marks) {
+          if (e.dead) continue;
+          const ec = e.center().clone();
+          this.fx.arc(V(ec.x, ec.y + 7, ec.z), ec, '#e0c8ff', 1.2);
+          this.fx.cross(ec, '#c890ff', e.isBoss ? 5 : 3.4, 0.45);
+          this.fx.ring(V(e.pos.x, e.y, e.pos.z), e.isBoss ? 3 : 1.8, '#9a4aff', 0.4);
+          this.damageEnemy(e, Math.round(rand(105, 125)), true, 4, 0.8);
+          // 체력이 35% 아래로 떨어진 일반 몬스터는 즉사
+          if (!e.dead && !e.isBoss && e.hp < e.maxHp * 0.35) {
+            this.damageEnemy(e, e.hp * 20 + 100, true, 6, 0);
+            this.fx.colorFire(ec.x, ec.y, ec.z, 24, 0.5, '#e0c8ff', '#5a1aaa');
+          }
+        }
+      });
+    }
+  }
+
   // ================= 추가 스킬 =================
   castSkill(pl, slot) {
     const k = pl.cls + slot;
@@ -2660,9 +2771,12 @@ class Game {
     this.fx.number(V(e.pos.x, e.y + (e.isBoss ? 4 : 2.2), e.pos.z), `+${exp} EXP`, 'exp');
     const drop = rollDrop(e.type, this.round, this.player.cls);
     if (drop) this.spawnDrop(e.pos, drop);
-    // 보스는 전용 장비를 하나 더 떨어뜨림
-    const bd = e.isBoss && bossDrop(e.type, this.player.cls, this.inv);
-    if (bd) this.spawnDrop(e.pos, bd);
+    // 보스는 확률로 전용 장비(고유 기술 무기·옷)를 떨어뜨림
+    if (e.isBoss) {
+      const bd = bossDrop(e.type, this.player.cls, this.inv, this.round);
+      for (const id of bd) this.spawnDrop(e.pos, id);
+      if (!bd.some((id) => item(id).kind === 'weapon')) this.after(1.2, () => this.ui.toast('보스 무기는 나오지 않았어요… 다시 도전해 보세요', 2.4));
+    }
     // 방어구·장신구: 일반 몬스터는 가끔, 보스는 두세 개 (등급이 높게)
     const gearN = e.isBoss ? 2 + (Math.random() < 0.5 ? 1 : 0) : Math.random() < (e.field ? 0.16 : 0.12) ? 1 : 0;
     for (let i = 0; i < gearN; i++) {
