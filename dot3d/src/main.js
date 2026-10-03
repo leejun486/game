@@ -243,6 +243,7 @@ class Game {
     document.getElementById('bag-btn').addEventListener('click', () => { if (this.state === 'play') this.toggleBag(); });
     document.getElementById('bag-close').addEventListener('click', () => this.toggleBag(false));
     document.querySelectorAll('.bag-tabs button').forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); this.ui.tab(b.dataset.tab); }));
+    document.getElementById('auto-equip').addEventListener('click', (e) => { e.stopPropagation(); this.autoEquip(); });
     document.getElementById('salvage-low').addEventListener('click', (e) => {
       e.stopPropagation();
       this.salvageGear(this.gear.filter((g) => g.tier <= 1).map((g) => g.uid));
@@ -719,6 +720,48 @@ class Game {
     this.ui.setClass(p.cfg, p);
     this.ui.refreshBag();
     this.save(false);
+  }
+
+  // 자동 착용: 지금 직업이 가진 것 중 가장 좋은 무기·옷·방어구·장신구로 한 번에 바꿈
+  //  무기는 공격력(고유 기술이 있으면 조금 더), 옷은 체력과 받는 피해 감소, 방어구·장신구는 옵션 점수(gearScore)
+  //  다른 직업이 끼고 있는 방어구·장신구는 빼앗지 않음
+  autoEquip() {
+    const p = this.player, cls = p.cls, pr = this.progressOf(cls);
+    const owned = [...this.inv].map((id) => item(id)).filter(Boolean);
+    const wScore = (it) => it.atk + (it.ult ? 0.04 : 0) + it.tier * 0.001;
+    const oScore = (it) => it.hp + it.def * 500 + (it.perk ? 15 : 0) + it.tier * 0.01;
+    let changed = 0;
+    const bestW = owned.filter((it) => it.kind === 'weapon' && it.cls === cls).sort((a, b) => wScore(b) - wScore(a))[0];
+    const bestO = owned.filter((it) => it.kind === 'outfit').sort((a, b) => oScore(b) - oScore(a))[0];
+    const curW = item(pr.weapon), curO = item(pr.outfit);
+    if (bestW && (!curW || wScore(bestW) > wScore(curW))) { pr.weapon = bestW.id; changed++; }
+    if (bestO && (!curO || oScore(bestO) > oScore(curO))) { pr.outfit = bestO.id; changed++; }
+    // 방어구·장신구
+    const eq = this.eqOf(cls);
+    const others = new Set(CLASS_ORDER.filter((c) => c !== cls).flatMap((c) => Object.values(this.eqOf(c))));
+    const free = this.gear.filter((g) => !others.has(g.uid)).sort((a, b) => gearScore(b) - gearScore(a));
+    const want = {};
+    for (const k of ['gloves', 'legs', 'belt']) want[k] = free.find((g) => g.kind === k)?.uid;
+    // 반지 두 칸: 이미 낀 좋은 반지는 그 칸에 그대로, 남은 칸만 채움
+    const top = free.filter((g) => g.kind === 'ring').slice(0, 2).map((g) => g.uid);
+    want.ring1 = top.includes(eq.ring1) ? eq.ring1 : null;
+    want.ring2 = top.includes(eq.ring2) ? eq.ring2 : null;
+    for (const uid of top) {
+      if (uid === want.ring1 || uid === want.ring2) continue;
+      if (!want.ring1) want.ring1 = uid; else if (!want.ring2) want.ring2 = uid;
+    }
+    for (const slot of GEAR_SLOTS) {
+      const uid = want[slot];
+      if (!uid || eq[slot] === uid) continue;
+      eq[slot] = uid;
+      changed++;
+    }
+    if (!changed) { this.ui.toast('이미 가장 좋은 장비를 끼고 있어요', 1.8); this.audio.play('denied'); return 0; }
+    const best = [bestW, bestO, ...this.equippedGear(cls)].filter(Boolean).reduce((a, b) => (b.tier > a.tier ? b : a));
+    this.afterGearChange(rarityOf(best).color || '#ffd76a');
+    this.audio.play('draw');
+    this.ui.toast(`자동 착용: ${changed}개를 바꿨어요`, 2);
+    return changed;
   }
 
   // ---------- 가방 ----------

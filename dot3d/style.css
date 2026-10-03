@@ -609,3 +609,7 @@ html[lang="en"] .rune-line { grid-template-columns: 18px 46px repeat(3, 1fr); }
 
 /* 스크린샷 모드 (F2): 화면 글자를 모두 숨김 */
 body.shot #hud, body.shot #hpbars, body.shot #numbers, body.shot #toast, body.shot #coach, body.shot #prompt, body.shot #ach-pop, body.shot #savemark, body.shot #touch, body.shot #banner { display: none !important; }
+
+/* 가방: 자동 착용 */
+#auto-equip { font-family: var(--font); font-size: 12px; padding: 5px 12px; background: #ffd76a; color: #2a1a08; border: 2px solid #8a6a2a; cursor: pointer; }
+#auto-equip:hover { background: #ffe8a0; }
