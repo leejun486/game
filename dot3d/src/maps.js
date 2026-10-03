@@ -31,7 +31,7 @@ export const MAPS = {
     },
   },
   temple: {
-    id: 'temple', han: '폐사찰', name: '설원 폐사찰', sub: '저승의 문', next: 'palace', prev: 'bamboo', lvl: 4,
+    id: 'temple', han: '폐사찰', name: '설원 폐사찰', sub: '저승의 문', next: 'swamp', prev: 'bamboo', lvl: 4,
     foe: '망자', night: ['저승의 문', '범종 소리에 망자들이 깨어난다…'],
     summonLine: '저승사자: "명부에 이름이 오른 자들아, 일어나라…"',
     field: { cap: 6, pack: 3, types: [['jiangshi', 2], ['ghost', 1]] },
@@ -47,4 +47,22 @@ export const MAPS = {
   },
 };
 
-export const BOSS_TYPES = new Set(['boss', 'gumiho', 'reaper']);
+MAPS.swamp = {
+  id: 'swamp', han: '물안개 늪', name: '물안개 늪', sub: '이무기의 잠', next: 'palace', prev: 'temple', lvl: 6,
+  foe: '물귀신', night: ['이무기의 잠', '징 소리에 늪이 끓어오른다…'],
+  summonLine: '이무기: "용이 되려던 천 년을… 감히 방해하느냐!"',
+  field: { cap: 6, pack: 3, types: [['waterghost', 3], ['toad', 2]] },
+  waves(n, r) {
+    if (n === 1) return [['waterghost', 4 + r], ['toad', 1 + Math.floor(r / 2)]];
+    if (n === 2) return [['waterghost', 3 + r], ['toad', 2 + r]];
+    return [['imugi', 1], ['waterghost', 2 + r], ['toad', 1 + Math.floor(r / 2)]];
+  },
+  theme: {
+    sun: ['#e4ecc8', '#6a9a8a'], sunI: [2.0, 0.85], sky: ['#d4e4c8', '#2a4a48'], ground: ['#4a5a3a', '#141e1c'],
+    hemiI: [1.05, 0.95], bg: ['#2a3626', '#060e0c'], ambient: 'mist',
+  },
+};
+
+export const BOSS_TYPES = new Set(['boss', 'gumiho', 'reaper', 'imugi']);
+export const BOSS_NAME = { palace: '도깨비 대왕 두억시니', bamboo: '천년 구미호', temple: '저승사자', swamp: '천년 이무기' };
+export const WIN_LINE = { palace: '도깨비들이 달아나고 동이 튼다', bamboo: '여우들이 숲 깊이 사라진다', temple: '망자들이 저승으로 돌아간다', swamp: '늪의 물안개가 걷히고 수면이 잠잠해진다' };

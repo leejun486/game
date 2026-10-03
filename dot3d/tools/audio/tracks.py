@@ -165,6 +165,27 @@ def boss():
     return T, make_ir(2.0, 0.8, 7000, 2000, seed=17), 0.5
 
 
+def swamp():
+    """물안개 늪: 느린 중모리, 계면조. 낮은 대금과 아쟁 위로 물방울 같은 가야금, 멀리서 징"""
+    sub, subs, cyc = 0.55, 12, 8
+    T = Track('swamp', sub * subs * cyc, 81)
+    tonic, sc = 130.81, GYEMYEON
+    tune = make_tune(T.rng, subs, cyc, [3, 0, 2, 0, 5, 3, 2, 0], -1, 7)
+    lead(T, tune, 0, sub, subs, I_daegeum, tonic, sc, 'gyemyeon', pan=0.15, gain=0.95, send=0.55, octave=2, vel=0.65)
+    for c in range(cyc):
+        T.add(ajaeng(freq(tonic / 2, sc, 0 if c % 4 != 2 else 3), subs * sub * 1.02, 0.5), c * subs * sub, -0.25, 0.8, 0.5)
+        T.add(geomungo(freq(tonic / 2, sc, 0), 3.0, 0.75), c * subs * sub, -0.05, 0.8, 0.35)
+        # 물방울: 높은 가야금 음이 띄엄띄엄 떨어짐
+        for k in range(3):
+            s0 = int(T.rng.integers(0, subs))
+            d = int(T.rng.choice([5, 6, 7, 8]))
+            T.add(gayageum(freq(tonic * 2, sc, d), 0.8, 0.45, bright=1.2), (c * subs + s0) * sub + T.rng.random() * 0.2, 0.5 - T.rng.random(), 0.55, 0.6)
+    T.add(jing(0.5, 5.0), 0.0, 0.0, 0.55, 0.7)
+    T.add(jing(0.4, 5.0), 4 * subs * sub, 0.0, 0.45, 0.7)
+    janggu_part(T, 'jungmori', 0, sub, cyc, gain=0.4, sparse=True)
+    return T, make_ir(3.8, 1.4, 4600, 1100, seed=19), 0.9
+
+
 # ---------- 환경음 (지역 분위기) ----------
 
 def amb(name, L=32.0, seed=1):
@@ -235,6 +256,28 @@ def amb(name, L=32.0, seed=1):
             tt = np.arange(m) / SR
             x = np.sin(2 * np.pi * r.uniform(500, 900) * tt) * exp_env(m, 0.03)
             drop(x, at, r.uniform(-0.8, 0.8), 0.05)
+    elif name == 'amb_swamp':
+        wind(0.03, 80, 600, 1.0)
+        # 개구리 '개굴개굴': 낮은 펄스 묶음
+        for k in range(22):
+            at = r.random() * L
+            f = r.uniform(160, 320)
+            reps = int(r.integers(2, 5))
+            pan = r.uniform(-0.9, 0.9)
+            for j in range(reps):
+                d = 0.11
+                tt = np.arange(int(d * SR)) / SR
+                x = np.sign(np.sin(2 * np.pi * f * tt)) * (0.5 + 0.5 * np.sin(2 * np.pi * 28 * tt)) * np.hanning(len(tt))
+                drop(lowpass(x, 1400), at + j * 0.16, pan, 0.03)
+        # 물 찰랑임과 물방울
+        for k in range(40):
+            at = r.random() * L
+            m = int(0.12 * SR)
+            tt = np.arange(m) / SR
+            x = np.sin(2 * np.pi * r.uniform(700, 1400) * (1 + 2 * tt) * tt) * exp_env(m, 0.03)
+            drop(x, at, r.uniform(-0.8, 0.8), 0.02)
+        for c in range(2):
+            out[:, c] += lowpass(noise(n), 300) * 0.02 * (0.7 + 0.3 * np.sin(2 * np.pi * t / L * 3 + c))
     elif name == 'amb_temple':
         wind(0.06, 80, 900, 1.0)
         for at in (4.0, 15.0, 26.0):
@@ -272,8 +315,8 @@ def write(name, data, kbps_ogg_q=3, mp3='112k'):
     return {'samples': len(data), 'rate': SR, 'dur': round(len(data) / SR, 4)}
 
 
-TRACKS = {'title': title, 'palace': palace, 'night': night, 'bamboo': bamboo, 'temple': temple, 'battle': battle, 'boss': boss}
-AMBS = ['amb_day', 'amb_night', 'amb_bamboo', 'amb_temple']
+TRACKS = {'title': title, 'palace': palace, 'night': night, 'bamboo': bamboo, 'temple': temple, 'swamp': swamp, 'battle': battle, 'boss': boss}
+AMBS = ['amb_day', 'amb_night', 'amb_bamboo', 'amb_temple', 'amb_swamp']
 
 if __name__ == '__main__':
     want = sys.argv[1:]

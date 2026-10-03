@@ -1215,3 +1215,243 @@ export function makeDokkaebi(variant = 'blue') {
     weapon: variant === 'boss' ? 'goldclub' : 'club', eye: '#1b1416',
   });
 }
+
+// ======================= 물안개 늪 =======================
+// 물귀신: 물에 젖은 검푸른 소복, 산발한 긴 머리, 다리 없이 미끄러지듯 다가옴
+export function makeWaterGhost() {
+  return new Rig({
+    type: 'ghost', scale: 1.12, skin: '#9cb8ae', robe: '#36564f', sleeve: '#36564f', hair: '#060a0a', eye: '#7affd0', noLegs: true,
+  });
+}
+
+// 두꺼비 요괴: 납작 엎드린 몸, 큰 입, 툭 튀어나온 금빛 눈, 등에 혹. 독침(구슬)을 뱉음
+export class ToadRig {
+  constructor() {
+    this.mats = [];
+    const mat = (o) => { const m = toon(o); this.mats.push(m); return m; };
+    const skin = mat({ color: C('#6a7a3a') }), belly = mat({ color: C('#d8d0a0') }), wart = mat({ color: C('#4a5a2a') }), mouth = mat({ color: C('#8a2a2a') });
+    const eyeM = toon({ color: C('#ffd040'), emissive: C('#5a3a00') });
+    this.root = new THREE.Group();
+    this.body = new THREE.Group();
+    this.body.scale.setScalar(1.25);
+    this.root.add(this.body);
+    this.torso = new THREE.Group();
+    this.torso.position.y = 0.32;
+    this.body.add(this.torso);
+    const trunk = mesh(new THREE.SphereGeometry(0.42, 14, 10), skin);
+    trunk.scale.set(1.1, 0.7, 1.15);
+    this.torso.add(trunk);
+    const bel = mesh(new THREE.SphereGeometry(0.38, 12, 8), belly, 0, -0.08, 0.08);
+    bel.scale.set(1.0, 0.55, 1.05);
+    this.torso.add(bel);
+    const R = (k) => Math.sin(k * 12.9898) * 43758.5453 % 1;
+    for (let i = 0; i < 9; i++) {
+      const a = (i / 9) * Math.PI * 2, d = 0.18 + Math.abs(R(i)) * 0.14;
+      this.torso.add(mesh(new THREE.SphereGeometry(0.055 + Math.abs(R(i + 3)) * 0.04, 6, 4), wart, Math.cos(a) * d, 0.24, Math.sin(a) * d - 0.05));
+    }
+    // 머리 (아래턱이 따로 벌어짐)
+    this.head = new THREE.Group();
+    this.head.position.set(0, 0.06, 0.36);
+    this.torso.add(this.head);
+    const top = mesh(new THREE.SphereGeometry(0.3, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), skin);
+    top.scale.set(1.15, 0.6, 1);
+    this.head.add(top);
+    this.jaw = new THREE.Group();
+    this.head.add(this.jaw);
+    const jaw = mesh(new THREE.SphereGeometry(0.3, 12, 6, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), belly);
+    jaw.scale.set(1.12, 0.45, 1);
+    this.jaw.add(jaw);
+    this.jaw.add(mesh(new THREE.CircleGeometry(0.26, 12), mouth, 0, 0.005, 0)).rotation.x = -Math.PI / 2;
+    for (const s of [-1, 1]) {
+      const eye = mesh(new THREE.SphereGeometry(0.1, 10, 8), eyeM, s * 0.17, 0.17, 0.05);
+      this.head.add(eye);
+      this.head.add(mesh(new THREE.BoxGeometry(0.025, 0.1, 0.03), toon({ color: C('#100800') }), s * 0.17, 0.17, 0.145));
+      this.head.add(mesh(new THREE.SphereGeometry(0.11, 8, 6, 0, Math.PI * 2, 0, Math.PI / 2.4), skin, s * 0.17, 0.2, 0.04));
+    }
+    // 다리: 앞다리는 버팀, 뒷다리는 접혀 있다가 뛰어오를 때 펴짐
+    this.legs = [];
+    for (const [x, z, back] of [[-0.3, 0.25, 0], [0.3, 0.25, 0], [-0.36, -0.22, 1], [0.36, -0.22, 1]]) {
+      const g = new THREE.Group();
+      g.position.set(x, 0.22, z);
+      const th = mesh(new THREE.CapsuleGeometry(back ? 0.1 : 0.06, back ? 0.18 : 0.14, 3, 6), skin, 0, -0.1, back ? -0.05 : 0);
+      th.rotation.x = back ? 0.9 : 0.2;
+      g.add(th);
+      const foot = mesh(new THREE.BoxGeometry(0.16, 0.03, 0.18), skin, 0, -0.2, back ? 0.05 : 0.06);
+      g.add(foot);
+      this.body.add(g);
+      this.legs.push({ g, back });
+    }
+    this.root.traverse((o) => { if (o.isMesh) o.castShadow = true; });
+    this.phase = Math.random() * 6;
+    this.deadT = 0;
+  }
+
+  setFlash(v) {
+    if (v === this._lastFlash) return;
+    this._lastFlash = v;
+    for (const m of this.mats) v > 0 ? m.emissive.setRGB(v, v * 0.95, v * 0.9) : m.emissive.set(0, 0, 0);
+  }
+
+  animate(dt, p) {
+    const s = p.speed || 0;
+    this.phase += dt * (s > 0 ? 5 : 1.5);
+    const hop = s > 0 ? Math.max(0, Math.sin(this.phase)) : 0;
+    let open = 0, crouch = 0, puff = 1 + Math.sin(this.phase * 2.2) * 0.04; // 숨 쉴 때 볼록
+    if (p.attack) {
+      const t = p.attack.t;
+      crouch = smooth(clamp(t / 0.28, 0, 1)) * (1 - smooth(clamp((t - 0.3) / 0.3, 0, 1)));
+      open = smooth(clamp((t - 0.15) / 0.2, 0, 1)) * (1 - smooth(clamp((t - 0.6) / 0.3, 0, 1)));
+      puff = 1 + crouch * 0.18;
+    }
+    this.body.position.y = hop * 0.35 - crouch * 0.08;
+    this.torso.scale.set(puff, 1, puff);
+    this.jaw.rotation.x = open * 0.7;
+    this.head.rotation.x = -open * 0.25;
+    for (const L of this.legs) if (L.back) L.g.rotation.x = -hop * 0.9;
+    if (p.hurt > 0) this.torso.rotation.z = Math.sin(this.phase * 30) * 0.08 * p.hurt; else this.torso.rotation.z = 0;
+    if (p.dead) {
+      this.deadT += dt;
+      this.body.rotation.z = smooth(clamp(this.deadT / 0.4, 0, 1)) * Math.PI;
+      this.body.position.y = 0.4 * smooth(clamp(this.deadT / 0.4, 0, 1));
+    } else { this.deadT = 0; this.body.rotation.z = 0; }
+  }
+}
+
+export function makeToad() { return new ToadRig(); }
+
+// 이무기: 용이 되지 못한 거대한 뱀. 고개를 쳐들고, 몸통 마디들이 머리가 지나간 길을 따라옴
+export class SerpentRig {
+  constructor() {
+    this.mats = [];
+    const mat = (o) => { const m = toon(o); this.mats.push(m); return m; };
+    const scale = mat({ color: C('#2a4a5a') }), belly = mat({ color: C('#c8c09a') }), fin = mat({ color: C('#3a8a8a') }), dark = mat({ color: C('#16222a') });
+    const eyeM = toon({ color: C('#ffe060'), emissive: C('#aa6a00') });
+    this.root = new THREE.Group();
+    this.body = new THREE.Group();
+    this.root.add(this.body);
+    const S = 1.9;
+    this.S = S;
+    // 머리: 길쭉한 주둥이, 아래턱, 수염, 이마의 작은 혹(아직 뿔이 되지 못함)
+    this.neck = new THREE.Group();
+    this.neck.position.y = 1.5 * S * 0.6;
+    this.body.add(this.neck);
+    this.head = new THREE.Group();
+    this.neck.add(this.head);
+    const skull = mesh(new THREE.SphereGeometry(0.34, 14, 10), scale);
+    skull.scale.set(1, 0.75, 1.25);
+    skull.scale.multiplyScalar(S);
+    this.head.add(skull);
+    const snout = mesh(new THREE.BoxGeometry(0.42, 0.2, 0.5), scale, 0, -0.02 * S, 0.42 * S);
+    snout.scale.multiplyScalar(S);
+    this.head.add(snout);
+    this.jaw = new THREE.Group();
+    this.jaw.position.set(0, -0.12 * S, 0.12 * S);
+    this.head.add(this.jaw);
+    const jaw = mesh(new THREE.BoxGeometry(0.36, 0.1, 0.55), belly, 0, 0, 0.26 * S);
+    jaw.scale.multiplyScalar(S);
+    this.jaw.add(jaw);
+    for (const s of [-1, 1]) {
+      this.head.add(mesh(new THREE.SphereGeometry(0.075 * S, 8, 6), eyeM, s * 0.2 * S, 0.12 * S, 0.22 * S));
+      this.head.add(mesh(new THREE.SphereGeometry(0.06 * S, 6, 4), fin, s * 0.13 * S, 0.24 * S, -0.02 * S));
+      for (const k of [0, 1]) {
+        const w = mesh(new THREE.CylinderGeometry(0.008 * S, 0.016 * S, 0.7 * S, 4), belly, s * (0.2 + k * 0.03) * S, -0.06 * S, 0.62 * S);
+        w.rotation.set(0.6 + k * 0.4, 0, s * (1.1 + k * 0.3));
+        this.head.add(w);
+      }
+      for (let k = 0; k < 3; k++) this.jaw.add(mesh(new THREE.ConeGeometry(0.025 * S, 0.09 * S, 4), belly, s * 0.12 * S, 0.06 * S, (0.3 + k * 0.12) * S)).rotation.x = Math.PI;
+    }
+    // 몸통 마디
+    this.segs = [];
+    const N = 18;
+    for (let i = 0; i < N; i++) {
+      const k = i / (N - 1);
+      const r = (0.5 - 0.36 * k) * S * (i < 2 ? 0.9 : 1);
+      const g = new THREE.Group();
+      const ball = mesh(new THREE.SphereGeometry(r, 12, 8), scale);
+      ball.scale.set(1, 0.9, 1.25);
+      g.add(ball);
+      const bl = mesh(new THREE.SphereGeometry(r * 0.86, 10, 6), belly, 0, -r * 0.22, 0);
+      bl.scale.set(1, 0.7, 1.2);
+      g.add(bl);
+      if (i % 2 === 0 && i < N - 2) {
+        const f = mesh(new THREE.ConeGeometry(r * 0.32, r * 0.9, 4), fin, 0, r * 0.95, 0);
+        f.rotation.x = -0.5;
+        g.add(f);
+      }
+      if (i % 3 === 1) for (const s of [-1, 1]) g.add(mesh(new THREE.SphereGeometry(r * 0.2, 5, 4), dark, s * r * 0.75, r * 0.3, 0));
+      this.body.add(g);
+      this.segs.push({ g, r });
+    }
+    this.gap = 0.42 * S;
+    this.trail = [];
+    this.root.traverse((o) => { if (o.isMesh) o.castShadow = true; });
+    this.phase = 0;
+    this.deadT = 0;
+    this.rise = 1;
+  }
+
+  setFlash(v) {
+    if (v === this._lastFlash) return;
+    this._lastFlash = v;
+    for (const m of this.mats) v > 0 ? m.emissive.setRGB(v, v * 0.95, v * 0.9) : m.emissive.set(0, 0, 0);
+  }
+
+  // 머리(루트)가 지나간 길을 기록해 마디를 그 위에 늘어놓음
+  updateTrail() {
+    const p = this.root.position, yaw = this.root.rotation.y;
+    const T = this.trail;
+    if (!T.length) {
+      for (let i = 0; i < 60; i++) T.push(new THREE.Vector3(p.x - Math.sin(yaw) * i * 0.25, p.y, p.z - Math.cos(yaw) * i * 0.25));
+    }
+    if (T[0].distanceTo(p) > 0.12) { T.unshift(p.clone()); if (T.length > 140) T.pop(); }
+  }
+
+  animate(dt, p) {
+    const S = this.S;
+    this.phase += dt * (2 + (p.speed || 0) * 1.5);
+    this.updateTrail();
+    const root = this.root.position, yaw = this.root.rotation.y;
+    const cy = Math.cos(yaw), sy = Math.sin(yaw);
+    // 마디: 길을 따라 일정 간격 + 옆으로 굽이침
+    let acc = 0, j = 0;
+    const T = this.trail;
+    let prev = root;
+    this.segs.forEach((sg, i) => {
+      const want = (i + 1) * this.gap;
+      while (j < T.length - 1 && acc + T[j].distanceTo(T[j + 1]) < want) { acc += T[j].distanceTo(T[j + 1]); j++; }
+      const a = T[j], b = T[Math.min(j + 1, T.length - 1)];
+      const seg = a.distanceTo(b) || 1;
+      const t = Math.min(1, (want - acc) / seg);
+      const wx = a.x + (b.x - a.x) * t, wz = a.z + (b.z - a.z) * t;
+      const dx = wx - root.x, dz = wz - root.z;
+      // 월드 → 루트 로컬 (y축 회전의 역)
+      let lx = dx * cy - dz * sy, lz = dx * sy + dz * cy;
+      lx += Math.sin(this.phase * 2 - i * 0.6) * 0.12 * S * Math.min(1, i / 3);
+      // 앞쪽 몇 마디는 고개를 쳐든 목으로 이어짐
+      const lift = Math.max(0, 1 - i / 4) * this.neck.position.y * 0.8 * this.rise;
+      sg.g.position.set(lx, sg.r * 0.8 + lift, lz);
+      const pp = i ? this.segs[i - 1].g.position : new THREE.Vector3(0, this.neck.position.y, 0);
+      sg.g.rotation.y = Math.atan2(pp.x - lx, pp.z - lz);
+      prev = sg.g.position;
+    });
+    // 머리 동작
+    let lunge = 0, open = 0;
+    if (p.attack) {
+      const t = p.attack.t;
+      const wind = smooth(clamp(t / 0.28, 0, 1)), strike = smooth(clamp((t - 0.28) / 0.2, 0, 1)), rec = smooth(clamp((t - 0.62) / 0.38, 0, 1));
+      lunge = (strike - wind * 0.4) * (1 - rec);
+      open = Math.max(wind, strike) * (1 - rec);
+    }
+    this.neck.position.y = (1.5 * 0.6 + Math.sin(this.phase) * 0.05) * S * this.rise;
+    this.neck.position.z = lunge * 0.9 * S;
+    this.head.rotation.x = 0.15 - lunge * 0.5 + (p.hurt > 0 ? -0.3 * p.hurt : 0);
+    this.jaw.rotation.x = open * 0.7;
+    if (p.dead) {
+      this.deadT += dt;
+      this.rise = Math.max(0.15, 1 - this.deadT * 1.6);
+      this.body.rotation.z = smooth(clamp(this.deadT / 0.6, 0, 1)) * 0.6;
+    } else { this.deadT = 0; this.body.rotation.z = 0; this.rise += (1 - this.rise) * Math.min(1, dt * 4); }
+  }
+}
+
+export function makeImugi() { return new SerpentRig(); }

@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { makeDokkaebi, makeGuard, makeLady, makeMage, makeFox, makeJiangshi, makeGhost, makeReaper } from './character.js';
+import { Rig, makeDokkaebi, makeGuard, makeLady, makeMage, makeFox, makeJiangshi, makeGhost, makeReaper, makeWaterGhost, makeToad, makeImugi } from './character.js';
 import { CLASSES } from './classes.js';
 import { outfitLook, gearLook } from './character.js';
 import { sumStats, gearColor, setBonuses } from './gear.js';
@@ -317,8 +317,26 @@ export class Player {
     this.lastCombat = this.game.time;
   }
 
+  // 느려짐 (물귀신에게 붙잡힘, 두꺼비 독)
+  slowFor(t, msg) {
+    if (this.dead) return;
+    if (!(this.slowT > 0.3) && msg) this.game.ui.toast(msg, 1.2);
+    this.slowT = Math.max(this.slowT || 0, t);
+  }
+
   damage(dmg, from) {
     if (this.invuln > 0 || this.dead || this.game.godMode) return false;
+    // 용비늘: 10초마다 한 번 공격을 막음
+    if (this.perks?.has('scales') && this.game.time - (this.scaleT ?? -99) > 10) {
+      this.scaleT = this.game.time;
+      this.invuln = 0.5;
+      const g = this.game;
+      g.fx.ring(new THREE.Vector3(this.pos.x, this.pos.y, this.pos.z), 1.4, '#2affd0', 0.35);
+      g.fx.spark(this.pos.x, this.pos.y + 1, this.pos.z, 14, '#bffff0', 5);
+      g.audio.play('block');
+      g.fx.number(this.pos.clone().add(new THREE.Vector3(0, 1.9, 0)), '비늘 막기!', 'alert');
+      return false;
+    }
     dmg = Math.max(1, Math.round(dmg * (1 - (this.def || 0))));
     this.hp -= dmg;
     this.invuln = 0.7;
@@ -349,6 +367,10 @@ export class Player {
     this.cd2 = Math.max(0, (this.cd2 || 0) - dt);
     this.cd3 = Math.max(0, (this.cd3 || 0) - dt);
     this.ultCd = Math.max(0, (this.ultCd || 0) - dt);
+    if (this.slowT > 0) {
+      this.slowT -= dt;
+      if (Math.random() < dt * 12) g.fx.add.emit({ x: this.pos.x + rand(-0.35, 0.35), y: this.pos.y + rand(0.1, 1.2), z: this.pos.z + rand(-0.35, 0.35), vy: -0.6, life: 0.5, size: 2, color: '#8af0c8', color2: '#1a5a4a' });
+    }
     this.invuln = Math.max(0, this.invuln - dt);
     this.hurtT = Math.max(0, this.hurtT - dt);
     this.comboTimer -= dt;
@@ -369,7 +391,10 @@ export class Player {
         if (this.cls === 'elf' && Math.random() < 0.6) g.fx.norm.emit({ x: this.pos.x + rand(-0.3, 0.3), y: this.pos.y + rand(0.2, 0.9), z: this.pos.z + rand(-0.3, 0.3), vx: rand(-1, 1), vy: rand(0.5, 1.5), vz: rand(-1, 1), wob: 1.5, life: rand(0.5, 0.9), size: 2, color: Math.random() < 0.5 ? '#8ad06a' : '#c8e88a' });
       } else {
         const slow = this.attack ? (this.attack.kind === 5 ? 0.7 : this.attack.skill ? (this.cls === 'sword' ? 0.1 : 0.25) : this.cls === 'sword' ? 0.22 : 0.45) : 1;
-        const sp = 4.6 * slow * (this.perks?.has('swift') ? 1.15 : 1) * (1 + (this.gear?.spd || 0));
+        // 얕은 물·붙잡힘·독: 걸음이 느려짐
+        const wet = g.world.wet.length && g.world.inWater(this.pos.x, this.pos.z);
+        const sp = 4.6 * slow * (this.perks?.has('swift') ? 1.15 : 1) * (1 + (this.gear?.spd || 0)) * (wet ? 0.62 : 1) * (this.slowT > 0 ? 0.55 : 1);
+        if (wet && input.moveLen > 0.1 && Math.random() < dt * 14) g.fx.add.emit({ x: this.pos.x + rand(-0.3, 0.3), y: this.pos.y + 0.08, z: this.pos.z + rand(-0.3, 0.3), vx: rand(-1, 1), vy: rand(1, 2.2), vz: rand(-1, 1), g: 10, life: 0.35, size: 2, color: '#d8fff4', color2: '#4a9a9a' });
         if (input.moveLen > 0.1) {
           mv = 1;
           const dx = input.mx * sp, dz = input.mz * sp;
@@ -486,6 +511,7 @@ const PAL = {
   blue: { core: '#bff4ff', hi: '#e8ffff', idle: '#9feaff', shell: '#3a8cff', trail: '#7fe0ff', trail2: '#1a40ff', orb: '#d8fbff', eye: 0x0a1030, fire: ['#9ff0ff', '#2050ff'] },
   fox: { core: '#ffe0c0', hi: '#fff4e0', idle: '#ffc89a', shell: '#ff6a2a', trail: '#ffb070', trail2: '#ff2a00', orb: '#ffe8c8', eye: 0x3a0a00, fire: ['#ffd08a', '#ff3a00'] },
   ghost: { core: '#f0e0ff', hi: '#ffffff', idle: '#d8c0ff', shell: '#8a4aff', trail: '#c8a0ff', trail2: '#4a1a9a', orb: '#ecdcff', eye: 0x1a0a2a, fire: ['#d8c0ff', '#5a1aaa'] },
+  water: { core: '#c8fff0', hi: '#ffffff', idle: '#9af0d8', shell: '#2a9a8a', trail: '#8ae8d0', trail2: '#1a5a6a', orb: '#b8ffd8', eye: 0x062a20, fire: ['#a8ffe0', '#1a7a8a'] },
 };
 
 const TYPES = {
@@ -501,6 +527,10 @@ const TYPES = {
   // 설원 폐사찰
   jiangshi: { hp: 92, speed: 3.2, dmg: 15, range: 1.5, windup: 0.45, recover: 0.6, radius: 0.45, exp: 20, ai: 'melee', hop: true, make: makeJiangshi, pal: PAL.ghost },
   ghost: { hp: 48, speed: 1.8, dmg: 12, range: 6.5, windup: 0.6, recover: 1.6, radius: 0.4, exp: 20, ai: 'wisp', teleport: true, make: makeGhost, pal: PAL.ghost },
+  // 물안개 늪: 물귀신은 물속에서 빨라지고 붙잡아 느리게 함, 두꺼비는 독침(맞으면 느려짐)
+  waterghost: { hp: 110, speed: 2.9, dmg: 16, range: 1.5, windup: 0.5, recover: 0.6, radius: 0.42, exp: 26, ai: 'melee', aquatic: true, grab: true, make: makeWaterGhost, pal: PAL.water },
+  toad: { hp: 120, speed: 1.6, dmg: 14, range: 7, windup: 0.7, recover: 1.6, radius: 0.55, exp: 26, ai: 'wisp', poison: true, make: makeToad, pal: PAL.water },
+  imugi: { hp: 2100, speed: 2.6, dmg: 30, range: 3.0, windup: 0.75, recover: 0.8, radius: 1.1, exp: 650, ai: 'boss', boss: 'imugi', aquatic: true, make: makeImugi, pal: PAL.water, name: '천년 이무기', summon: ['waterghost', 'toad'] },
   reaper: { hp: 1500, speed: 2.7, dmg: 26, range: 2.8, windup: 0.7, recover: 0.8, radius: 1.0, exp: 450, ai: 'boss', boss: 'reaper', make: makeReaper, pal: PAL.ghost, name: '저승사자', summon: ['ghost', 'jiangshi'] },
 };
 
@@ -578,7 +608,7 @@ export class Enemy {
   center() { return tmp.set(this.pos.x, this.y + (this.isBoss ? 2.0 : this.isWisp ? (this.rig ? 1.2 : 1.3) : 0.8), this.pos.z); }
 
   hit(dmg, dir, knock = 5, stun = 0.25) {
-    if (this.dead || this.spawning) return false;
+    if (this.dead || this.spawning || this.state === 'submerged') return false;
     this.hp -= dmg;
     this.flashT = 0.12;
     if (!this.isBoss || this.state === 'chase') {
@@ -720,7 +750,7 @@ export class Enemy {
       } else if (this.isBoss && T.boss !== 'dokkaebi' && this.bossPattern(dt, dist, toYaw)) {
         // 구미호·저승사자 고유 패턴 시작
       } else if (dist > T.range * 0.85 || !sameLevel) {
-        let sp = T.speed * (this.isBoss && this.hp < this.maxHp * 0.4 ? 1.25 : 1);
+        let sp = T.speed * (this.isBoss && this.hp < this.maxHp * 0.4 ? 1.25 : 1) * this.waterMul();
         if (T.hop) {
           // 강시: 뛰어오른 동안만 앞으로 감
           this.hopPh = (this.hopPh + dt * 1.8) % 1;
@@ -769,7 +799,7 @@ export class Enemy {
           const hx = this.pos.x + fx * 0.9, hz = this.pos.z + fz * 0.9;
           g.fx.dust(hx, this.pos.y, hz, 5);
           if (Math.hypot(p.pos.x - hx, p.pos.z - hz) < 1.05 + p.radius && Math.abs(p.pos.y - this.pos.y) < 1) {
-            p.damage(this.dmg, this.pos);
+            if (p.damage(this.dmg, this.pos) && T.grab) p.slowFor(1.6, '물귀신에게 붙잡혔다!');
           }
         }
       }
@@ -787,6 +817,7 @@ export class Enemy {
       }
       if (this.st >= 0.7) {
         if (T.boss === 'gumiho') for (let k = -3; k <= 3; k++) g.spawnOrb(this, k * 0.2);
+        else if (T.boss === 'imugi') for (let k = -4; k <= 4; k++) g.spawnOrb(this, k * 0.16, { slow: 1.2 });
         else g.spawnDarkWaves(this);
         this.state = 'recover'; this.st = 0;
       }
@@ -822,6 +853,34 @@ export class Enemy {
         const f = new THREE.Vector3(this.pos.x + Math.sin(this.yaw) * 1.6, this.pos.y, this.pos.z + Math.cos(this.yaw) * 1.6);
         this.tele = g.fx.ring(f, 2.6, '#c84aff', 1, 1);
         this.smashAt = f;
+      }
+    } else if (this.state === 'dive') {
+      // 이무기: 물보라를 일으키며 땅(물) 속으로
+      const k = clamp(this.st / 0.6, 0, 1);
+      this.jumpY = -k * 3.5;
+      if (Math.random() < 0.8) g.fx.add.emit({ x: this.pos.x + rand(-1.5, 1.5), y: this.y + 0.2, z: this.pos.z + rand(-1.5, 1.5), vx: rand(-2, 2), vy: rand(3, 6), vz: rand(-2, 2), g: 14, life: 0.6, size: 3, color: '#c8fff0', color2: '#2a8a9a' });
+      if (k >= 1) {
+        this.state = 'submerged'; this.st = 0;
+        this.root.visible = false;
+        this.emergeAt = p.pos.clone();
+        this.tele = g.fx.ring(this.emergeAt, 3.4, '#2affd0', 1, 1);
+      }
+    } else if (this.state === 'submerged') {
+      // 물밑에서 플레이어를 쫓다가 멈춰 솟구칠 자리를 정함
+      if (this.st < 0.6) this.emergeAt.lerp(p.pos, Math.min(1, dt * 4));
+      if (this.tele) { this.tele.m.position.set(this.emergeAt.x, g.world.heightAt(this.emergeAt.x, this.emergeAt.z) + 0.04, this.emergeAt.z); this.tele.mat.uniforms.uProg.value = this.st / 1.1; }
+      if (Math.random() < 0.7) g.fx.add.emit({ x: this.emergeAt.x + rand(-2, 2), y: 0.1, z: this.emergeAt.z + rand(-2, 2), vy: rand(0.5, 1.5), life: 0.5, size: 2, color: '#a8ffe0' });
+      if (this.st >= 1.1) {
+        const h = g.world.heightAt(this.emergeAt.x, this.emergeAt.z);
+        if (!g.world.isBlocked(this.emergeAt.x, this.emergeAt.z, this.moveR * 0.7, h)) { this.pos.set(this.emergeAt.x, h, this.emergeAt.z); this.y = h; }
+        this.root.visible = true;
+        this.jumpY = 0;
+        this.clearTele();
+        this.yaw = toYaw;
+        this.rig.trail = [];
+        g.bossSlam(this, this.pos.clone(), 3.4, Math.round(this.dmg * 1.15), true);
+        for (let i = 0; i < 50; i++) g.fx.add.emit({ x: this.pos.x + rand(-1, 1), y: this.y + 0.3, z: this.pos.z + rand(-1, 1), vx: rand(-4, 4), vy: rand(5, 11), vz: rand(-4, 4), g: 16, life: rand(0.6, 1.1), size: rand(3, 5), endSize: 1, color: '#e8fff8', color2: '#2a9aaa' });
+        this.state = 'recover'; this.st = 0;
       }
     } else if (this.state === 'leapPrep') {
       attackAnim = { t: 0.2 * clamp(this.st / 0.6, 0, 1), kind: 2 };
@@ -871,6 +930,12 @@ export class Enemy {
         g.fx.streak(from, to, '#ff4a3a', 0.7, 1.6);
         g.audio.play('howl');
       } else { this.state = 'cast'; this.st = 0; g.audio.play('charge'); }
+      return true;
+    }
+    if (T.boss === 'imugi') {
+      // 물속으로 잠겼다가 플레이어 발밑에서 솟구침 / 물줄기 부채
+      if (Math.random() < (dist > 3.5 ? 0.55 : 0.35)) { this.state = 'dive'; this.st = 0; g.audio.play('dash'); }
+      else { this.state = 'cast'; this.st = 0; g.audio.play('charge'); }
       return true;
     }
     if (T.boss === 'reaper') {
@@ -1045,6 +1110,12 @@ export class Enemy {
     return dt > 0 ? moved / dt : 0;
   }
 
+  // 얕은 물: 물에 사는 것들은 빨라지고 나머지는 느려짐
+  waterMul() {
+    if (!this.game.world.wet.length || !this.game.world.inWater(this.pos.x, this.pos.z)) return 1;
+    return this.T.aquatic ? 1.3 : this.isBoss ? 0.85 : 0.7;
+  }
+
   place(dt, speed, attackAnim = null) {
     const g = this.game;
     const h = g.world.heightAt(this.pos.x, this.pos.z);
@@ -1074,6 +1145,7 @@ export class NPC {
     this.game = game;
     this.kind = kind;
     this.rig = kind === 'guard' ? makeGuard()
+      : kind === 'ferry' ? new Rig({ type: 'guard', scale: 1.08, skin: '#d8b090', robe: '#8a7a5a', sleeve: '#8a7a5a', cuff: '#5a4a3a', belt: '#5a4a3a', collar: '#e8e0cc', pants: '#4a4038', hair: '#dcd8d0', weapon: 'spear' })
       : kind === 'herb' ? makeLady({ robe: '#c8b890', sleeve: '#c8b890', cuff: '#5a7a3a', skirt: '#6a5a3a', pants: '#6a5a3a', hair: '#3a2a20' })
       : kind === 'hermit' ? makeMage({ robe: '#c8c8c0', sleeve: '#c8c8c0', cuff: '#4a4a5a', belt: '#4a4a5a', pants: '#5a5a62', hair: '#e8e8e8' })
       : makeLady();

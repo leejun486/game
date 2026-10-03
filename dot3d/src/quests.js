@@ -3,7 +3,7 @@
 //  wave  : 그 지역의 북·방울·범종을 울려 밤 싸움에서 이기기
 //  kill  : 몬스터 처치 (need: {종류: 수})
 //  collect: 몬스터가 떨어뜨리는 퀘스트 물건 모으기 (from 종류, chance 확률)
-//  light : 폐사찰의 꺼진 석등 밝히기 (E 키)
+//  light : 그 지역(region)의 꺼진 석등 밝히기 (E 키)
 // gate: 이 단계가 시작될 때 열리는 문, reward: 완료 보상 (exp, item: 'cls:티어' 또는 아이템 id)
 export const QUESTS = [
   { title: '수문장을 찾아서', type: 'talk', npc: 'guard', desc: '왼쪽 북 옆의 <b>수문장</b>에게 말을 걸자',
@@ -44,10 +44,28 @@ export const QUESTS = [
     startLines: ['청허: 망자들이 잠잠해졌군. 이제 꺼진 석등에 불을 밝혀 길을 비추게.', '청허: 불이 넷 켜지면 저승의 문이 드러날 걸세.'] },
   { title: '저승의 문', type: 'wave', region: 'temple', desc: '종각의 <b>범종</b>을 울려 <b>저승사자</b>와 맞서자', reward: { exp: 300 },
     startLines: ['청허: 석등이 모두 밝았네. 종각의 범종을 울리면 저승사자가 명부를 들고 올 걸세.'] },
+  { title: '뒷문 너머', type: 'talk', npc: 'hermit', desc: '폐사찰 입구의 <b>떠돌이 도사 청허</b>와 이야기하자',
+    lines: () => [
+      '저승사자가 물러갔구먼. 헌데 명부가 흩어지며 남쪽 늪의 물안개가 짙어졌다네.',
+      '절 뒤편 쪽문 너머는 물안개 늪일세. 천 년 동안 용이 되기를 기다린 이무기가 잠들어 있지.',
+      '쪽문의 부적을 떼어 주겠네. 늪 어귀의 사공 영감이 길을 알 걸세.',
+      '(물에 들어가면 걸음이 느려집니다. 나무 다리를 따라가세요)',
+    ], gateAfter: 'swamp', reward: { exp: 150 } },
+  { title: '늪의 사공', type: 'talk', npc: 'ferry', desc: '폐사찰 뒷문 너머 <b>물안개 늪</b>의 <b>사공 영감</b>을 찾아가자',
+    lines: () => [
+      '허, 이런 데까지 사람이 다 오는구먼. 난 이 늪에서 나룻배를 젓는 늙은이요.',
+      '요새 물귀신들이 사람 발목을 잡아끌고, 두꺼비 요괴가 독을 뱉어 배를 띄울 수가 없소.',
+      '물귀신은 물속에선 빨라지니 뭍이나 다리 위에서 상대하시오.',
+    ] },
+  { title: '물귀신 소동', type: 'kill', region: 'swamp', need: { waterghost: 6, toad: 3 }, desc: '늪의 <b>물귀신</b>과 <b>두꺼비 요괴</b>를 물리치자', reward: { exp: 260, item: 'cls:3' } },
+  { title: '연꽃 등불', type: 'light', region: 'swamp', n: 3, desc: '늪 작은 섬들의 <b>석등</b>에 불을 밝히자 (석등 앞에서 E)', reward: { exp: 220 },
+    startLines: ['사공: 고맙소! 물안개를 걷으려면 섬마다 있는 석등에 불을 켜야 하오.', '사공: 셋이 다 켜지면 제단의 징을 울릴 수 있을 게요.'] },
+  { title: '이무기의 징', type: 'wave', region: 'swamp', desc: '용왕 제단의 <b>징</b>을 울려 <b>천년 이무기</b>와 맞서자', reward: { exp: 500 },
+    startLines: ['사공: 징을 치면 이무기가 깨어날 거요. 놈은 물속으로 숨었다가 발밑에서 솟구치니, 바닥의 푸른 원을 보면 피하시오!'] },
   { title: '귀환', type: 'talk', npc: 'guard', desc: '월하궁의 <b>수문장</b>에게 돌아가 소식을 전하자',
     lines: (g) => [
-      `${g.player.cfg.title} 나리! 저승사자까지 물리치셨다고요? 소문이 궁 안까지 퍼졌소!`,
-      '이제 궁도, 대숲도, 옛 절터도 모두 평안하오. 참으로 고맙소.',
+      `${g.player.cfg.title} 나리! 저승사자에 이무기까지 물리치셨다고요? 소문이 궁 안까지 퍼졌소!`,
+      '이제 궁도, 대숲도, 옛 절터도, 늪도 모두 평안하오. 참으로 고맙소.',
       '앞으로도 이 땅을 지켜 주시오. 현상수배가 붙으면 내게 오시오.',
       '(메인 퀘스트 완료! 수문장에게 현상수배를 받거나, 북·방울·범종을 다시 울려 회차를 올릴 수 있습니다)',
     ], reward: { exp: 400, item: 'cls:3' } },
@@ -59,6 +77,8 @@ export const BOUNTIES = [
   { region: 'temple', title: '현상수배: 설원의 망자', need: { jiangshi: 6, ghost: 4 } },
   { region: 'bamboo', title: '현상수배: 여우불 소탕', need: { foxfire: 6 } },
   { region: 'temple', title: '현상수배: 강시 무리', need: { jiangshi: 10 } },
+  { region: 'swamp', title: '현상수배: 늪의 물귀신', need: { waterghost: 8 } },
+  { region: 'swamp', title: '현상수배: 독두꺼비', need: { toad: 6 } },
 ];
 
-export const KILL_NAME = { fox: '여우', foxfire: '여우불', jiangshi: '강시', ghost: '원귀', blue: '꼬마 도깨비', red: '붉은 도깨비', wisp: '도깨비불' };
+export const KILL_NAME = { fox: '여우', foxfire: '여우불', jiangshi: '강시', ghost: '원귀', waterghost: '물귀신', toad: '두꺼비 요괴', blue: '꼬마 도깨비', red: '붉은 도깨비', wisp: '도깨비불' };

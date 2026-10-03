@@ -5,16 +5,18 @@ import { boxGeo, cylGeo, Batcher, roofGeometry, latheGeo } from './geom.js';
 import * as T from './textures.js';
 import { mulberry32 } from './util.js';
 import { buildBamboo, buildTemple } from './worlds2.js';
+import { buildSwamp } from './worlds3.js';
 import { GFX } from './gfx.js';
 import * as HD from './hdtex.js';
 
-// 오픈월드: 세 지역을 남북으로 이어 붙임. 궁궐 남문 → 죽림 → 설원 폐사찰
+// 오픈월드: 지역들을 남북으로 이어 붙임. 궁궐 남문 → 죽림 → 설원 폐사찰 → (뒷문) 물안개 늪
 //  ox/oz: 지역 원점의 월드 위치, flip: 180° 돌려 놓음(폐사찰 입구가 죽림 쪽을 보게)
 //  x0..z1: 그 지역에서 걸을 수 있는 월드 좌표 범위 (이웃 지역과 살짝 겹쳐서 이어짐)
 export const REGIONS = [
   { id: 'palace', ox: 0, oz: 0, flip: false, x0: -21.6, x1: 21.6, z0: -33.3, z1: 30, gate: { z: 21.2, x0: -3.2, x1: 3.2 }, from: -1e9, to: 29.5, spawn: [0, 0.12, 16] },
   { id: 'bamboo', ox: 0, oz: 55.6, flip: false, x0: -19.6, x1: 19.6, z0: 29, z1: 78, from: 29.5, to: 77.2, spawn: [0, 0, 36] },
-  { id: 'temple', ox: 0, oz: 98.8, flip: true, x0: -19.6, x1: 19.6, z0: 76.2, z1: 124.4, from: 77.2, to: 1e9, spawn: [0, 0, 84] },
+  { id: 'temple', ox: 0, oz: 98.8, flip: true, x0: -19.6, x1: 19.6, z0: 76.2, z1: 124.4, from: 77.2, to: 124.2, spawn: [0, 0, 84] },
+  { id: 'swamp', ox: 0, oz: 150.5, flip: false, x0: -19.6, x1: 19.6, z0: 122.4, z1: 172.6, from: 124.2, to: 1e9, spawn: [-11, 0, 133], center: [1, 147] },
 ];
 
 export class World {
@@ -22,7 +24,7 @@ export class World {
     this.scene = scene;
     this.regions = REGIONS;
     // 전체 외곽 (길찾기 격자 범위)
-    this.bounds = { x0: -21.6, x1: 21.6, z0: -33.3, z1: 124.4 };
+    this.bounds = { x0: -21.6, x1: 21.6, z0: -33.3, z1: REGIONS[REGIONS.length - 1].z1 };
     this.spawn = new THREE.Vector3(0, 0.12, 16);
     this.top = new THREE.Group();
     scene.add(this.top);
@@ -36,6 +38,8 @@ export class World {
     this.windows = [];
     this.spawnPoints = [];
     this.gates = {};     // 퀘스트로 열리는 문 {rect, open, t, anim(k)}
+    this.wet = [];       // 얕은 물 (타원) {x,z,rx,rz} — 걸음이 느려짐
+    this.boards = [];    // 물 위 나무 다리 선분 {x0,z0,x1,z1,w}
     this.makeMaterials();
     for (const R of REGIONS) this.buildRegion(R);
     this.root = this.top;
@@ -48,10 +52,11 @@ export class World {
     if (R.flip) g.rotation.y = Math.PI;
     this.top.add(g);
     this.root = g;
-    const n = { rects: this.rects.length, ramps: this.ramps.length, blockRects: this.blockRects.length, circles: this.circles.length, drums: this.drums.length, lanterns: this.lanterns.length, spawnPoints: this.spawnPoints.length };
+    const n = { wet: this.wet.length, boards: this.boards.length, rects: this.rects.length, ramps: this.ramps.length, blockRects: this.blockRects.length, circles: this.circles.length, drums: this.drums.length, lanterns: this.lanterns.length, spawnPoints: this.spawnPoints.length };
     if (R.id === 'palace') this.build();
     else if (R.id === 'bamboo') buildBamboo(this);
-    else buildTemple(this);
+    else if (R.id === 'temple') buildTemple(this);
+    else if (R.id === 'swamp') buildSwamp(this);
     const f = (x, z) => (R.flip ? [R.ox - x, R.oz - z] : [R.ox + x, R.oz + z]);
     const box = (r) => {
       const [ax, az] = f(r.x0, r.z0), [bx, bz] = f(r.x1, r.z1);
@@ -65,6 +70,24 @@ export class World {
     for (const d of this.drums.slice(n.drums)) { v(d.pos); d.region = R.id; }
     for (const p of this.lanterns.slice(n.lanterns)) { v(p); p.region = R.id; }
     for (const p of this.spawnPoints.slice(n.spawnPoints)) v(p);
+    for (const w of this.wet.slice(n.wet)) v(w);
+    for (const b of this.boards.slice(n.boards)) { const [ax, az] = f(b.x0, b.z0), [bx, bz] = f(b.x1, b.z1); b.x0 = ax; b.z0 = az; b.x1 = bx; b.z1 = bz; }
+  }
+
+  // 얕은 물 속인지 (나무 다리 위는 아님)
+  inWater(x, z) {
+    let wet = false;
+    for (const w of this.wet) {
+      const dx = (x - w.x) / w.rx, dz = (z - w.z) / w.rz;
+      if (dx * dx + dz * dz < 1) { wet = true; break; }
+    }
+    if (!wet) return false;
+    for (const b of this.boards) {
+      const ex = b.x1 - b.x0, ez = b.z1 - b.z0, L2 = ex * ex + ez * ez || 1;
+      const t = Math.max(0, Math.min(1, ((x - b.x0) * ex + (z - b.z0) * ez) / L2));
+      if (Math.hypot(x - (b.x0 + ex * t), z - (b.z0 + ez * t)) < b.w) return false;
+    }
+    return true;
   }
 
   // 퀘스트 문: anim(k)는 0(닫힘)~1(열림) 사이 모습을 그림

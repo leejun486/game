@@ -11,7 +11,7 @@ import * as HD from './hdtex.js';
 const C = (h) => new THREE.Color(h);
 const at = (m, x, y, z) => { m.position.set(x, y, z); return m; };
 
-function extraMaterials(W) {
+export function extraMaterials(W) {
   const M = W.M;
   M.bamboo = toon({ map: T.bambooTex() });
   M.snow = toon({ map: T.snowTex() });
@@ -37,7 +37,7 @@ function extraMaterials(W) {
 
 // 바닥: 큰 평면 + 길 조각들
 // 지역 길이(z -26.1..22.1)만큼만 깔아서 이웃 지역 바닥과 겹치지 않게
-function ground(W, mat, y = 0) {
+export function ground(W, mat, y = 0) {
   // 고화질: 넓은 바닥은 텍스처를 4배 크게 깔아 반복 무늬가 덜 보이게
   if (GFX.hd && mat.map) {
     mat = mat.clone();
@@ -51,7 +51,7 @@ function ground(W, mat, y = 0) {
   W.root.add(g);
 }
 
-function pathStrip(W, mat, pts, width, y0 = 0.012) {
+export function pathStrip(W, mat, pts, width, y0 = 0.012) {
   for (let i = 0; i < pts.length - 1; i++) {
     const [x0, z0] = pts[i], [x1, z1] = pts[i + 1];
     const len = Math.hypot(x1 - x0, z1 - z0) + width * 0.6;
@@ -67,7 +67,7 @@ function pathStrip(W, mat, pts, width, y0 = 0.012) {
   }
 }
 
-function disc(W, mat, x, z, r) {
+export function disc(W, mat, x, z, r) {
   const geo = new THREE.CircleGeometry(r, 24);
   geo.attributes.uv.array.forEach((v, k, a) => (a[k] = v * r));
   const m = new THREE.Mesh(geo, mat);
@@ -79,7 +79,7 @@ function disc(W, mat, x, z, r) {
 }
 
 // 울리면 웨이브가 시작되는 물건 (북과 같은 역할)
-function trigger(W, group, body, x, z, label, sound, promptY, r = 1.1) {
+export function trigger(W, group, body, x, z, label, sound, promptY, r = 1.1) {
   group.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
   W.root.add(group);
   W.circles.push({ x, z, r, y: 0 });
@@ -87,7 +87,7 @@ function trigger(W, group, body, x, z, label, sound, promptY, r = 1.1) {
 }
 
 // 돌탑 (작은 돌을 쌓은 탑)
-function cairn(W, x, z, s = 1, seed = 1) {
+export function cairn(W, x, z, s = 1, seed = 1) {
   const R = mulberry32(seed);
   let y = 0;
   for (let i = 0; i < 6; i++) {
@@ -333,14 +333,43 @@ export function buildTemple(W) {
   for (const [x0, x1, z] of [[-19, -12, -24], [6, 19, -24]]) {
     for (let x = x0; x < x1; x += 2.2) {
       if (R() < 0.25) continue;
+      if (x + 2.2 > 10.6 && x < 17.4) continue; // 뒷문 자리
       const h = 0.6 + R() * 1.2;
       B.add(boxGeo(2.1, h, 0.6, 2), M.blockDark, mat4(x + 1.1, h / 2, z));
       B.add(boxGeo(2.1, 0.1, 0.7, 2), M.snow, mat4(x + 1.1, h + 0.04, z));
       W.blockRects.push({ x0: x, x1: x + 2.2, z0: z - 0.35, z1: z + 0.35 });
     }
   }
+  // 뒷문: 늪으로 이어지는 쪽문. 부적을 붙인 새끼줄로 막혀 있어 도사가 풀어 줘야 함
+  for (const s of [-1, 1]) {
+    B.add(boxGeo(0.5, 2.6, 0.5, 1), M.stoneGrey, mat4(14 + s * 2.6, 1.3, -24));
+    B.add(boxGeo(0.7, 0.2, 0.7, 1), M.snow, mat4(14 + s * 2.6, 2.7, -24));
+    W.circles.push({ x: 14 + s * 2.6, z: -24, r: 0.4, y: 0 });
+  }
+  // 쪽문 양옆 담 (뒷문으로만 지나가게)
+  for (const [a, b] of [[10.3, 11.2], [16.8, 19.8]]) {
+    const w = b - a, h = 1.5;
+    B.add(boxGeo(w, h, 0.7, 2), M.blockDark, mat4((a + b) / 2, h / 2, -24));
+    B.add(boxGeo(w, 0.12, 0.8, 2), M.snow, mat4((a + b) / 2, h + 0.06, -24));
+    W.blockRects.push({ x0: a, x1: b, z0: -24.35, z1: -23.65 });
+  }
+  const seal = new THREE.Group();
+  const straw2 = toon({ color: C('#b89858') });
+  seal.add(at(new THREE.Mesh(boxGeo(4.8, 0.07, 0.07, 1), straw2), 14, 1.8, -24));
+  for (let i = 0; i < 7; i++) {
+    const tal = new THREE.Mesh(new THREE.PlaneGeometry(0.2, 0.42), toon({ color: C('#f2d36b'), side: THREE.DoubleSide }));
+    tal.position.set(12.2 + i * 0.6, 1.55, -23.95);
+    tal.rotation.z = i % 2 ? 0.15 : -0.15;
+    animateMesh(tal, ANIM.flag);
+    seal.add(tal);
+  }
+  W.root.add(seal);
+  W.addGate('swamp', { x0: 11.6, x1: 16.4, z0: -24.3, z1: -23.7 }, (k) => {
+    seal.visible = k < 0.99;
+    seal.position.y = -k * 1.6;
+  });
   // 눈 덮인 소나무
-  for (const [x, z, s, sd] of [[-16, -6, 1.2, 1], [15.5, -9, 1.3, 2], [16, 8, 1.1, 3], [-16, 12, 1.0, 4], [13, -20, 1.0, 5], [-15, -20, 1.2, 6], [-22, 2, 1.3, 7], [22, -2, 1.2, 8], [-8, 22, 1.1, 9], [9, 23, 1.2, 10]]) {
+  for (const [x, z, s, sd] of [[-16, -6, 1.2, 1], [15.5, -9, 1.3, 2], [16, 8, 1.1, 3], [-16, 12, 1.0, 4], [18, -14, 1.0, 5], [-15, -20, 1.2, 6], [-22, 2, 1.3, 7], [22, -2, 1.2, 8], [-8, 22, 1.1, 9], [9, 23, 1.2, 10]]) {
     W.pine(x, 0, z, s, sd, Math.abs(x) < 19.5, true);
   }
   // 얼음 결정 (밤에 빛남)

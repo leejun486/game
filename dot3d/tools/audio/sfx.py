@@ -381,6 +381,11 @@ def s_victory(v):
     return room(mix(*parts), 1.6, 0.3)
 
 
+def s_gong(v):
+    # 용왕 제단의 큰 징: 낮고 길게 '징~' 우는 소리
+    return room(mix((0, jing(1.0, 5.5), 1.2), (0, thump(0.6, 90, 60, 0.2), 0.4)), 2.2, 0.35)
+
+
 def s_block(v):
     return mix((0, kkwaenggwari(0.9, damped=True), 1.4), (0, metal(0.35, 2400, tau=0.1), 0.2))
 
@@ -396,7 +401,7 @@ SFX = {
     'burst': (s_burst, 1, -15), 'impact': (s_impact, 1, -13), 'dash': (s_dash, 2, -18), 'wave': (s_wave, 1, -14),
     'hurt': (s_hurt, 2, -13), 'poof': (s_poof, 1, -18), 'spawn': (s_spawn, 1, -20), 'laugh': (s_laugh, 1, -18),
     'slam': (s_slam, 1, -11), 'orb': (s_orb, 2, -20), 'talk': (s_talk, 5, -26), 'coin': (s_coin, 1, -20),
-    'victory': (s_victory, 1, -14), 'block': (s_block, 1, -15),
+    'victory': (s_victory, 1, -14), 'block': (s_block, 1, -15), 'gong': (s_gong, 1, -13),
 }
 
 

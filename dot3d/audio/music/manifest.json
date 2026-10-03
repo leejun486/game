@@ -53,5 +53,15 @@
   "samples": 1389150,
   "rate": 44100,
   "dur": 31.5
+ },
+ "swamp": {
+  "samples": 2328480,
+  "rate": 44100,
+  "dur": 52.8
+ },
+ "amb_swamp": {
+  "samples": 1389150,
+  "rate": 44100,
+  "dur": 31.5
  }
 }

@@ -15,7 +15,7 @@ import { QUESTS, BOUNTIES, KILL_NAME } from './quests.js';
 import { makeGear, rollGearTier, gearScore, salvageExp, BAG_MAX, GEAR_SLOTS, slotKind, rarityOf, makeSetPiece, setFor, SETS } from './gear.js';
 import { item, rollDrop, bossDrop, RARITY, itemDesc, WEAPONS, OUTFITS, ULTS } from './items.js';
 import { expNeed, SKILL_LEVEL } from './entities.js';
-import { MAPS, BOSS_TYPES } from './maps.js';
+import { MAPS, BOSS_TYPES, BOSS_NAME, WIN_LINE } from './maps.js';
 import { clamp, lerp, rand, angleDiff, damp } from './util.js';
 
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
@@ -341,6 +341,11 @@ class Game {
         '숲속엔 여우들이 어슬렁거려요. 가까이 가면 달려드니 조심하세요.',
         '숲 한가운데 서낭당 나무가 있는데, 거기 방울을 흔들면 여우 떼가 몰려온대요.',
         '그 끝엔 천년 묵은 구미호가… 아이고, 생각만 해도 무서워라.',
+      ]),
+      new NPC(this, 'ferry', -12.5, 135.5, 2.4, '사공 영감', [
+        '이 늪은 물이 얕아도 발이 푹푹 빠지오. 나무 다리를 따라 다니시오.',
+        '물귀신은 물속에서 빨라지고, 두꺼비 요괴의 독침을 맞으면 몸이 무거워지오.',
+        '남쪽 용왕 제단의 징을 치면 천년 묵은 이무기가 깨어난다는 전설이 있소…',
       ]),
       new NPC(this, 'hermit', -4.4, 75.4, 2.6, '떠돌이 도사 청허', [
         '허허, 대숲을 지나 여기까지 왔는가. 이곳은 버려진 옛 절터일세.',
@@ -1005,7 +1010,7 @@ class Game {
     const Q = this.curQuest();
     if (Q && Q.type === 'light') {
       this.world.lanterns.forEach((L, idx) => {
-        if (L.region !== 'temple' || this.quest.lit.includes(idx)) return;
+        if (L.region !== (Q.region || 'temple') || this.quest.lit.includes(idx)) return;
         const d = Math.hypot(L.x - p.x, L.z - p.z);
         if (d < 2.2 && d < bd) { bd = d; best = { kind: 'lantern', idx, label: '석등 밝히기', promptPos: L.clone().add(V(0, 1.2, 0)) }; }
       });
@@ -1156,7 +1161,7 @@ class Game {
       else if (Q.type === 'wave') it = { kind: 'drum', drum: this.world.drums.find((x) => x.region === Q.region) };
       else if (Q.type === 'light') {
         let bi = -1, bd2 = 3;
-        this.world.lanterns.forEach((L, i) => { const k = Math.hypot(L.x - pp.x, L.z - pp.z); if (L.region === 'temple' && !this.quest.lit.includes(i) && k < bd2) { bd2 = k; bi = i; } });
+        this.world.lanterns.forEach((L, i) => { const k = Math.hypot(L.x - pp.x, L.z - pp.z); if (L.region === (Q.region || 'temple') && !this.quest.lit.includes(i) && k < bd2) { bd2 = k; bi = i; } });
         if (bi >= 0) it = { kind: 'lantern', idx: bi };
       }
       if (it) { this.nearInteract = it; this.interact(); }
@@ -1216,7 +1221,7 @@ class Game {
   progText(Q, prog) {
     if (Q.type === 'kill') return '<br>' + Object.entries(Q.need).map(([t, n]) => `${KILL_NAME[t]} <b>${Math.min(n, prog[t] || 0)}</b>/${n}`).join(' · ');
     if (Q.type === 'collect') return `<br>${Q.item} <b>${prog.n || 0}</b>/${Q.n}`;
-    if (Q.type === 'light') return `<br>석등 <b>${this.quest.lit.length}</b>/${Q.n}`;
+    if (Q.type === 'light') return `<br>석등 <b>${this.litCount(Q)}</b>/${Q.n}`;
     return '';
   }
 
@@ -1261,17 +1266,24 @@ class Game {
     }
   }
 
-  // 퀘스트 단계에 맞춰 남문·일주문을 열고 닫음
+  // 퀘스트 단계에 맞춰 남문·일주문·뒷문을 열고 닫음 (gateAfter가 붙은 단계를 마치면 열림)
   updateGates(instant = false) {
-    this.world.setGate('south', this.quest.step >= 3, instant);
-    this.world.setGate('temple', this.quest.step >= 8, instant);
-    if (!instant) for (const [id, st] of [['south', 3], ['temple', 8]]) {
-      if (this.quest.step === st && !this.gateNotice?.[id]) {
+    const NOTE = {
+      south: ['drum', '남문이 열렸다! 남쪽으로 내려가면 죽림이다'],
+      temple: ['bell', '금줄이 걷혔다! 일주문 너머 폐사찰로 들어갈 수 있다'],
+      swamp: ['bell', '뒷문의 부적이 떨어졌다! 폐사찰 뒤편으로 가면 물안개 늪이다'],
+    };
+    QUESTS.forEach((q, i) => {
+      if (!q.gateAfter) return;
+      const id = q.gateAfter, st = i + 1;
+      this.world.setGate(id, this.quest.step >= st, instant);
+      if (!instant && this.quest.step === st && !this.gateNotice?.[id]) {
         this.gateNotice = { ...(this.gateNotice || {}), [id]: true };
-        this.audio.play(id === 'south' ? 'drum' : 'bell');
-        this.after(0.8, () => this.ui.toast(id === 'south' ? '남문이 열렸다! 남쪽으로 내려가면 죽림이다' : '금줄이 걷혔다! 일주문 너머 폐사찰로 들어갈 수 있다', 3.5));
+        const [snd, msg] = NOTE[id] || ['bell', '길이 열렸다!'];
+        this.audio.play(snd);
+        this.after(0.8, () => this.ui.toast(msg, 3.5));
       }
-    }
+    });
   }
 
   questOnKill(e) {
@@ -1325,17 +1337,19 @@ class Game {
     }
   }
 
-  // 폐사찰 석등에 불 밝히기
+  litCount(Q) { return this.quest.lit.filter((i) => this.world.lanterns[i]?.region === (Q.region || 'temple')).length; }
+
+  // 퀘스트 지역의 꺼진 석등에 불 밝히기
   lightLantern(idx) {
     const Q = this.curQuest();
-    if (!Q || Q.type !== 'light' || this.quest.lit.includes(idx)) return;
+    if (!Q || Q.type !== 'light' || this.quest.lit.includes(idx) || this.world.lanterns[idx].region !== (Q.region || 'temple')) return;
     this.quest.lit.push(idx);
     const L = this.world.lanterns[idx];
     this.addFlame(L);
     this.fx.colorFire(L.x, L.y, L.z, 30, 0.3, '#fff0c0', '#ff8a2a');
     this.fx.ring(V(L.x, this.world.heightAt(L.x, L.z), L.z), 2, '#ffd080', 0.4);
     this.audio.play('fire');
-    if (this.quest.lit.length >= Q.n) this.completeStep(); else this.updateQuest();
+    if (this.litCount(Q) >= Q.n) this.completeStep(); else this.updateQuest();
     this.save(false);
   }
 
@@ -1386,7 +1400,7 @@ class Game {
     const Q = this.curQuest();
     const out = [];
     const npc = (k) => this.npcs.find((n) => n.kind === k);
-    const regionCenter = (id) => { const R = this.world.regions.find((r) => r.id === id); return V(R.spawn[0], 0, R.spawn[2] + (id === 'temple' ? 8 : 6)); };
+    const regionCenter = (id) => { const R = this.world.regions.find((r) => r.id === id); return R.center ? V(R.center[0], 0, R.center[1]) : V(R.spawn[0], 0, R.spawn[2] + (id === 'temple' ? 8 : 6)); };
     if (!Q) {
       const B = this.quest.bounty;
       const g = npc('guard');
@@ -1396,9 +1410,9 @@ class Game {
     }
     if (Q.type === 'talk') { const n = npc(Q.npc); out.push({ pos: n.pos.clone().add(V(0, 2.5, 0)), mark: true }); }
     else if (Q.type === 'wave') { const d = this.world.drums.find((x) => x.region === Q.region); out.push({ pos: d.pos.clone().add(V(0, (d.promptY || 4) + 0.6, 0)), mark: !this.waveActive }); }
-    else if (Q.type === 'light') this.world.lanterns.forEach((L, i) => { if (L.region === 'temple' && !this.quest.lit.includes(i)) out.push({ pos: L.clone().add(V(0, 1.1, 0)), mark: true }); });
+    else if (Q.type === 'light') this.world.lanterns.forEach((L, i) => { if (L.region === (Q.region || 'temple') && !this.quest.lit.includes(i)) out.push({ pos: L.clone().add(V(0, 1.1, 0)), mark: true }); });
     else if (Q.type === 'kill' || Q.type === 'collect') {
-      const reg = Q.type === 'collect' || Q.need.fox ? 'bamboo' : 'temple';
+      const reg = Q.region || (Q.type === 'collect' || Q.need.fox ? 'bamboo' : 'temple');
       out.push({ pos: regionCenter(reg), area: reg });
     }
     return out;
@@ -1479,7 +1493,7 @@ class Game {
     this.wave++;
     const list = this.waveDef(this.wave);
     const boss = this.wave === 3;
-    const bossName = { palace: '도깨비 대왕 두억시니', bamboo: '천년 구미호', temple: '저승사자' }[this.mapId];
+    const bossName = BOSS_NAME[this.mapId];
     this.ui.banner(`제${this.wave}파`, boss ? `${bossName} 출현!` : `${this.map.foe} ${list.length}마리`, 2.4, boss ? 'boss-banner' : '');
     this.audio.play(boss ? 'drum' : 'wave');
     let delay = 0.6;
@@ -2025,6 +2039,32 @@ class Game {
         const h = Math.min(pl.maxHp - pl.hp, Math.round(Math.max(0, hp0 - Math.max(0, e.hp)) * 0.25));
         if (h > 0) { pl.hp += h; healed += h; }
         if (i === 8 && healed > 0) this.fx.number(pl.pos.clone().add(V(0, 2.1, 0)), `+${healed}`, 'heal');
+      });
+    } else if (pl.ult === 'tidal') {
+      // 물기둥: 가까운 적 다섯의 발밑에서 차례로 솟구침
+      const c = feet();
+      const tgt = this.enemies.filter((e) => !e.dead && !e.spawning && Math.hypot(e.pos.x - c.x, e.pos.z - c.z) < 10)
+        .sort((a, b) => Math.hypot(a.pos.x - c.x, a.pos.z - c.z) - Math.hypot(b.pos.x - c.x, b.pos.z - c.z)).slice(0, 5);
+      this.audio.play('freeze');
+      tgt.forEach((e, i) => {
+        const at = V(e.pos.x, e.y, e.pos.z);
+        this.fx.circle(at, 1.6, '#2affd0', 0.35 + i * 0.16, 3);
+        this.after(0.3 + i * 0.16, () => {
+          if (pl.dead) return;
+          const h = this.world.heightAt(at.x, at.z);
+          this.fx.ring(V(at.x, h, at.z), 2.2, '#bffff0', 0.4);
+          for (let k = 0; k < 46; k++) {
+            const a = Math.random() * Math.PI * 2, r = Math.random() * 0.8;
+            this.fx.add.emit({ x: at.x + Math.cos(a) * r, y: h + rand(0, 0.5), z: at.z + Math.sin(a) * r, vx: Math.cos(a) * 0.6, vy: rand(6, 13), vz: Math.sin(a) * 0.6, g: 14, life: rand(0.5, 0.9), size: rand(3, 5), endSize: 1, color: '#e8fff8', color2: '#2a9aaa' });
+          }
+          this.audio.play('impact');
+          this.shake(0.25);
+          for (const o of this.enemiesIn(at, 1.9)) {
+            const crit = Math.random() < 0.2;
+            this.damageEnemy(o, Math.round(rand(66, 78) * (crit ? 1.8 : 1)), crit, 2, 0.6);
+            if (!o.dead && !o.isBoss) o.freeze(1.2);
+          }
+        });
       });
     } else if (pl.ult === 'judgment') {
       // 명부 집행: 주변 적 여섯에게 낙인 → 1초 뒤 하늘에서 심판
@@ -2680,7 +2720,7 @@ class Game {
   }
 
   // 적이 쏘는 구슬 (도깨비불·여우불·원귀의 저주 구슬). off: 조준 각도 비틀기
-  spawnOrb(w, off = 0) {
+  spawnOrb(w, off = 0, opt = {}) {
     const p = this.player;
     const P = w.T.pal;
     const pos = V(w.pos.x, w.y + (w.isBoss ? 2 : w.rig ? 1.1 : 1.3), w.pos.z);
@@ -2690,7 +2730,7 @@ class Game {
     const mesh = new THREE.Mesh(new THREE.IcosahedronGeometry(w.isBoss ? 0.28 : 0.2, 1), new THREE.MeshBasicMaterial({ color: P.orb }));
     mesh.position.copy(pos);
     this.scene.add(mesh);
-    this.projectiles.push({ owner: 'enemy', kind: 'orb', pos, dir, speed: w.isBoss ? 7.5 : 5.5, life: 3.6, dmg: w.isBoss ? Math.round(w.dmg * 0.6) : w.dmg, mesh, radius: 0.45, hitSet: new Set(), y: pos.y, pal: P });
+    this.projectiles.push({ owner: 'enemy', kind: 'orb', pos, dir, speed: w.isBoss ? 7.5 : 5.5, life: 3.6, dmg: w.isBoss ? Math.round(w.dmg * 0.6) : w.dmg, mesh, radius: 0.45, hitSet: new Set(), y: pos.y, pal: P, slow: opt.slow || (w.T.poison ? 1.6 : 0) });
   }
 
   // 저승사자의 검은 초승달: 플레이어 쪽으로 세 줄기
@@ -2747,6 +2787,11 @@ class Game {
         }
         this.fx.norm.emit({ x: c.x, y: c.y, z: c.z, vx: (pl.pos.x - c.x) * 2, vy: 2, vz: (pl.pos.z - c.z) * 2, drag: 1, life: 0.5, size: 3, color: '#ffb070' });
       }
+    }
+    if (pl.perks.has('chill') && !e.dead && !e.isBoss && Math.random() < 0.15) {
+      // 찬물결: 맞은 적을 잠깐 얼림
+      e.freeze(1.0);
+      this.fx.colorFire(c.x, c.y, c.z, 12, 0.3, '#e8fff8', '#2affd0');
     }
     if (pl.perks.has('quake') && !this.inQuake && Math.random() < 0.2) {
       // 도깨비 벼락: 맞은 적 자리에 벼락 + 주변 충격파
@@ -2833,7 +2878,7 @@ class Game {
     const Q = this.curQuest();
     if (Q && Q.type === 'wave' && Q.region === this.mapId) this.after(2.0, () => this.completeStep());
     this.after(0.1, () => this.updateRegion(true));
-    this.ui.banner('승리', { palace: '도깨비들이 달아나고 동이 튼다', bamboo: '여우들이 숲 깊이 사라진다', temple: '망자들이 저승으로 돌아간다' }[this.mapId], 4, 'win-banner');
+    this.ui.banner('승리', WIN_LINE[this.mapId], 4, 'win-banner');
 
     this.updateQuest();
     this.save();
@@ -2936,7 +2981,7 @@ class Game {
       } else if (pr.owner === 'enemy') {
         const p = this.player;
         if (Math.hypot(p.pos.x - pr.pos.x, p.pos.z - pr.pos.z) < pr.radius + p.radius * 0.5 && p.dashT <= 0) {
-          if (p.damage(pr.dmg, pr.pos)) pr.life = 0;
+          if (p.damage(pr.dmg, pr.pos)) { pr.life = 0; if (pr.slow) p.slowFor(pr.slow, '독에 중독되어 몸이 무겁다!'); }
         }
       }
       if (pr.life <= 0) {
@@ -2979,6 +3024,10 @@ class Game {
       // 설원: 밤낮없이 눈이 내림
       for (let k = 0; k < 2; k++) if (Math.random() < dt * 30) this.fx.norm.emit({ x: f.x + rand(-20, 20), y: rand(6, 10), z: f.z + rand(-18, 12), vx: rand(-0.3, 0.6), vy: -1.2, vz: rand(-0.2, 0.2), wob: 0.8, life: 8, size: Math.random() < 0.3 ? 3 : 2, color: '#ffffff', floor: 0.02, alpha: 0.95 });
       return;
+    }
+    if (amb === 'mist') {
+      // 늪: 낮게 깔려 흐르는 물안개
+      if (Math.random() < dt * 9) this.fx.norm.emit({ x: f.x + rand(-20, 20), y: rand(0.2, 1.2), z: f.z + rand(-16, 12), vx: rand(0.2, 0.6), vy: 0.02, vz: rand(-0.1, 0.1), wob: 0.3, life: rand(5, 8), size: rand(10, 16), endSize: 18, color: '#e8f4ec', alpha: 0.16 });
     }
     if (amb === 'leaf' && Math.random() < dt * 7 * (1 - n)) {
       this.fx.norm.emit({ x: f.x + rand(-18, 18), y: rand(4, 7), z: f.z + rand(-16, 10), vx: rand(0.2, 0.8), vy: -0.7, vz: rand(-0.2, 0.3), wob: 1.6, life: 7, size: 2, color: Math.random() < 0.5 ? '#8ad06a' : '#c8e08a', floor: 0.02 });
@@ -3057,7 +3106,7 @@ class Game {
     const night = this.night > 0.5;
     const region = id === 'palace' ? (night ? 'night' : 'palace') : id;
     const music = boss ? 'boss' : this.waveActive || this.combatHeat > 0 ? 'battle' : region;
-    const amb = id === 'palace' ? (night ? 'amb_night' : 'amb_day') : id === 'bamboo' ? (night ? 'amb_night' : 'amb_bamboo') : 'amb_temple';
+    const amb = id === 'palace' ? (night ? 'amb_night' : 'amb_day') : id === 'bamboo' ? (night ? 'amb_night' : 'amb_bamboo') : id === 'swamp' ? 'amb_swamp' : 'amb_temple';
     this.audio.setScene(music, amb);
   }
 
