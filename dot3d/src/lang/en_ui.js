@@ -13,7 +13,7 @@ export const dict = {
   '"용이 되지 못할 바엔!" — 꼬리를 휘두른다': '"If I can\'t be a dragon…!" — lashes its tail',
   '쇠바늘이 달아올라 지나간 자리가 불탄다': 'Its iron spines glow; its path catches fire', '세 번 연달아 들이받는다!': 'It charges three times in a row!',
   '"판관들아, 나와라" — 판결이 다섯 번 내려친다': '"Judges, come forth" — five verdicts strike', '지옥의 불이 사방으로 터져 나간다': 'Hellfire bursts out in every direction',
-  '고화질': 'HD', '도트': 'Pixel', '월하궁: 도깨비 야행': 'Wolhagung: Night Parade of the Dokkaebi', '그래픽: 고화질': 'Graphics: HD', '그래픽: 도트': 'Graphics: Pixel', '한국어': '한국어',
+  '고화질': 'HD', '도트': 'Pixel', '3D 액션': '3D Action', '월하궁: 도깨비 야행': 'Wolhagung: Night Parade of the Dokkaebi', '그래픽: 고화질': 'Graphics: HD', '그래픽: 도트': 'Graphics: Pixel', '한국어': '한국어',
   // NPC
   '수문장 박돌쇠': 'Gatekeeper Bak Dolsoe', '나인 연이': 'Court Maid Yeoni',
   '어머, 검객님. 이 궁은 밤만 되면 도깨비불이 떠다녀요.': 'Oh my, sir. Will-o\'-wisps float around this palace every night.',

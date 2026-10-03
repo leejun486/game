@@ -4,6 +4,14 @@
 
 > **English:** *Wolhagung: Night Parade of the Dokkaebi* is a 3D action RPG set in a Joseon-era palace. The game is fully playable in English: it follows your browser language, and you can switch any time with the `English / 한국어` button on the title screen or under **Menu → Display → Language**.
 
+## 출시 준비
+
+- 버전: `src/version.js` (지금 1.0.0). 선택 화면 아래에 표시됩니다. 바뀐 점은 [CHANGELOG.md](CHANGELOG.md)에 적습니다.
+- 판매용 빌드, itch.io·Steam 올리는 순서, 스토어 소개문(한·영), 시스템 요구 사항, 체크리스트는 [RELEASE.md](RELEASE.md)에 있습니다.
+- 웹판 묶음: `npm run dist:web` → `release/Wolhagung-web-<버전>.zip`
+- 스토어 이미지: `marketing/screenshots/`(1920×1080 여섯 장), `marketing/capsules/`(Steam 캡슐 규격 일곱 장과 itch.io 표지)
+- 아이콘: `icon.png`(512), `favicon.png`(64)
+
 ## 실행
 
 ```bash
@@ -166,6 +174,8 @@ npm run watch      # 개발용 자동 빌드
 | O | 외곽선 켜기/끄기 (도트 모드) |
 | F / 임무 창 클릭 | 퀘스트 목표로 자동 이동 (켜기/끄기) |
 | H / 자동 사냥 버튼 | 자동 사냥 켜기/끄기 |
+| Y | 기록 · 업적 · 도감 |
+| F2 / F3 | 스크린샷 모드: 화면 글자 숨기기 / 지금 화면을 PNG로 저장 |
 | G | 그래픽 모드 바꾸기 (고화질 ↔ 도트) |
 | M | 음악 켜기/끄기 |
 

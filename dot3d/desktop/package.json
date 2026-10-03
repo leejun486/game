@@ -37,6 +37,7 @@
       "category": "public.app-category.action-games"
     },
     "executableName": "Wolhagung",
-    "artifactName": "Wolhagung-${version}-${os}-${arch}.${ext}"
+    "artifactName": "Wolhagung-${version}-${os}-${arch}.${ext}",
+    "icon": "game/icon.png"
   }
 }

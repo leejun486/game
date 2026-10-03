@@ -21,6 +21,7 @@ import { PROLOGUE, SHARD_LINES, SHARD_MAX, ENDING, CREDITS, fillStory } from './
 import { clamp, lerp, rand, angleDiff, damp } from './util.js';
 import { initLang, watchDom, tr, LANG } from './i18n.js';
 import { Coach } from './coach.js';
+import { VERSION } from './version.js';
 import { Records, newStats } from './records.js';
 import { drop } from './dispose.js';
 import { spearHit, lancerSkill1, lancerSkill2, lancerSkill3, updateLancer, clearLancer } from './lancer.js';
@@ -208,7 +209,7 @@ class Game {
     this.input = { mx: 0, mz: 0, moveLen: 0, mouseRecent: false, mouseWorld: null };
     this.mouse = { x: 0, y: 0, t: -10 };
     window.addEventListener('keydown', (e) => {
-      if (e.code === 'Tab') e.preventDefault();
+      if (e.code === 'Tab' || e.code === 'F2' || e.code === 'F3') e.preventDefault();
       // 설정에서 키를 바꾸는 중: 다음에 누른 키를 그 동작에 배정
       if (this.rebind) { e.preventDefault(); this.finishRebind(e.code); return; }
       if (e.repeat) { this.keys.add(e.code); return; }
@@ -331,6 +332,7 @@ class Game {
     btn('cf-yes', () => this.newGame(true));
     btn('cf-no', () => this.showConfirm(false));
     btn('btn-gfx', () => this.toggleGfx());
+    document.querySelector('#title .credit').textContent = `3D 액션 · Three.js · v${VERSION}`;
     btn('btn-lang', () => this.setLang(LANG === 'ko' ? 'en' : 'ko'));
     document.getElementById('btn-lang').textContent = LANG === 'ko' ? 'English' : '한국어';
     document.getElementById('btn-gfx').textContent = `그래픽: ${GFX.hd ? '고화질' : '도트'} (G)`;
@@ -511,7 +513,7 @@ class Game {
 
   updateMarker(dt) {
     const M = this.marker, t = this.target;
-    M.g.visible = !!t && this.state === 'play';
+    M.g.visible = !!t && this.state === 'play' && !document.body.classList.contains('shot'); // 스크린샷 모드에서는 숨김
     if (!M.g.visible) return;
     const r = t.isBoss ? 1.6 : t.isWisp ? 0.7 : 0.8;
     M.g.position.set(t.pos.x, t.y + 0.05, t.pos.z);
@@ -974,6 +976,7 @@ class Game {
       towerBest: this.towerBest || 0,
       playTime: Math.round(this.playTime || 0),
       flags: this.flags,
+      version: VERSION,
       stats: this.stats,
       inv: [...this.inv],
       gear: this.gear,
@@ -987,6 +990,9 @@ class Game {
   }
 
   onKey(code) {
+    // 스크린샷 모드: F2 화면 글자 숨기기, F3 지금 화면을 그림 파일로 저장
+    if (code === 'F2') { document.body.classList.toggle('shot'); return; }
+    if (code === 'F3') { this.screenshot(); return; }
     if (this.story) {
       if (code === 'Escape' || code === 'pause') this.storySkip();
       else if (['Space', 'Enter', 'KeyJ', 'KeyE', 'atk', 'act', 'dash'].includes(code)) this.storyNext();
@@ -1399,6 +1405,23 @@ class Game {
     };
     if (!this.quest.prologue) this.playStory(PROLOGUE, { moon: true, onDone: () => { this.quest.prologue = true; this.save(false); open(); } });
     else open();
+  }
+
+  // 지금 화면을 PNG로 저장 (그린 직후에 읽어야 해서 한 번 더 그리고 바로 꺼냄)
+  screenshot() {
+    this.pixel.render(this.scene);
+    const cv = this.pixel.renderer.domElement;
+    const d = new Date(), pad = (n) => String(n).padStart(2, '0');
+    cv.toBlob((b) => {
+      if (!b) return;
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(b);
+      a.download = `wolhagung-${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}.png`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    }, 'image/png');
+    this.ui.flash('#ffffff', 0.15);
+    this.audio.play('talk');
   }
 
   // ---------- 이야기 (프롤로그·엔딩) ----------
@@ -1947,7 +1970,7 @@ class Game {
   }
 
   updateQuestMarkers(dt) {
-    const T = this.state === 'play' ? this.questTargets() : [];
+    const T = this.state === 'play' && !document.body.classList.contains('shot') ? this.questTargets() : [];
     const p = this.player.pos;
     let mi = 0;
     for (const t of T) {

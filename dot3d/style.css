@@ -606,3 +606,6 @@ html[lang="en"] .rune-line { grid-template-columns: 18px 46px repeat(3, 1fr); }
 .rec-stats div { display: flex; justify-content: space-between; padding: 5px 8px; background: rgba(0, 0, 0, 0.25); border: 1px solid #3a3020; font-size: 12px; }
 .rec-stats span { color: #a89e8a; }
 .rec-stats b { color: #ffd76a; font-weight: normal; }
+
+/* 스크린샷 모드 (F2): 화면 글자를 모두 숨김 */
+body.shot #hud, body.shot #hpbars, body.shot #numbers, body.shot #toast, body.shot #coach, body.shot #prompt, body.shot #ach-pop, body.shot #savemark, body.shot #touch, body.shot #banner { display: none !important; }

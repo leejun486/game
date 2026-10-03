@@ -19,7 +19,7 @@ ipcMain.on('save-path', (e) => { e.returnValue = SAVE(); });
 function createWindow() {
   const win = new BrowserWindow({
     width: 1280, height: 760, minWidth: 800, minHeight: 480,
-    backgroundColor: '#0b0d14', title: '월하궁: 도깨비 야행', autoHideMenuBar: true,
+    backgroundColor: '#0b0d14', title: '월하궁: 도깨비 야행', autoHideMenuBar: true, icon: path.join(GAME, 'icon.png'),
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, sandbox: false },
   });
   Menu.setApplicationMenu(null);

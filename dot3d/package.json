@@ -7,7 +7,8 @@
     "build": "esbuild src/main.js --bundle --minify --format=iife --target=es2020 --outfile=dist/game.js",
     "watch": "esbuild src/main.js --bundle --format=iife --target=es2020 --sourcemap --outfile=dist/game.js --watch",
     "serve": "python3 -m http.server 8080",
-    "audio": "cd tools/audio && python3 tracks.py && python3 sfx.py"
+    "audio": "cd tools/audio && python3 tracks.py && python3 sfx.py",
+    "dist:web": "npm run build && python3 tools/pack_web.py"
   },
   "dependencies": {
     "three": "^0.186.1"
