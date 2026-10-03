@@ -41,5 +41,11 @@
 "coin": 1,
 "victory": 1,
 "block": 1,
-"gong": 1
+"gong": 1,
+"thrust": 3,
+"spearbeam": 1,
+"leap": 1,
+"spearslam": 1,
+"spearfall": 3,
+"spinspear": 1
 }

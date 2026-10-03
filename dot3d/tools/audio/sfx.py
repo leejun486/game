@@ -390,6 +390,63 @@ def s_block(v):
     return mix((0, kkwaenggwari(0.9, damped=True), 1.4), (0, metal(0.35, 2400, tau=0.1), 0.2))
 
 
+# ---------- 창술사 ----------
+
+def s_thrust(v):
+    # 찌르기: 짧고 날카로운 바람 가르는 소리 + 창날의 가는 쇳소리
+    d = 0.16 + 0.02 * v
+    air = sweep_noise(d, 1800 + 300 * v, 6500, 2.6) * env_bell(N(d), 0.35)
+    tip = metal(0.22, 2600 + 250 * v, ratios=(1, 2.01, 2.97), tau=0.05)
+    return mix((0, air, 1.0), (0.04, tip, 0.12), (0.03, highpass(noise(N(0.02)), 5000) * np.linspace(1, 0, N(0.02)), 0.25))
+
+
+def s_spearbeam(v):
+    # 용아창: 길게 뻗는 기운 — 낮게 깔린 돌진음 위로 맑은 쇳소리가 길게 울림
+    d = 0.55
+    rush = sweep_noise(d, 700, 5200, 1.4) * env_bell(N(d), 0.25)
+    ring = metal(0.9, 1480, ratios=(1, 2.0, 2.99, 4.1), tau=0.35)
+    return room(mix((0, rush, 1.0), (0, thump(0.3, 160, 60, 0.07), 0.7), (0.05, ring, 0.16)), 0.9, 0.2)
+
+
+def s_leap(v):
+    # 낙화창 도약: 몸이 솟구치는 바람 + 옷자락 펄럭임
+    d = 0.38
+    up = sweep_noise(d, 300, 2400, 1.3) * env_bell(N(d), 0.7)
+    n = N(d)
+    flap = bandpass(noise(n), 900, 1.5) * (0.5 + 0.5 * np.sin(np.arange(n) / SR * 2 * np.pi * 22)) * env_bell(n, 0.5)
+    return mix((0, up, 1.0), (0, flap, 0.35))
+
+
+def s_spearslam(v):
+    # 내려찍기: 묵직한 쿵 + 돌바닥 갈라지는 소리 + 창대의 울림
+    n = N(0.9)
+    crack = np.zeros(n)
+    for _ in range(14):
+        i = R.integers(0, N(0.25))
+        m = 160
+        crack[i:i + m] += bandpass(noise(m), R.uniform(1200, 3200), 2.5) * np.linspace(1, 0, m) * R.uniform(0.3, 1)
+    return room(mix((0, thump(0.8, 105, 32, 0.22), 1.5), (0, lowpass(noise(n), 700) * exp_env(n, 0.12), 0.9), (0, crack, 0.6),
+                    (0.01, metal(0.6, 620, ratios=(1, 2.76, 5.4), tau=0.2), 0.1)), 1.2, 0.22)
+
+
+def s_spearfall(v):
+    # 천창우: 하늘에서 떨어지는 휘파람 + 꽂히는 소리
+    d = 0.32
+    whistle = sine_sweep(d, 2400 - 200 * v, 700, None) * env_bell(N(d), 0.85) * 0.25
+    hit = mix((0, thump(0.18, 260, 90, 0.04), 0.7), (0, highpass(noise(N(0.03)), 2500) * exp_env(N(0.03), 0.008), 0.6), (0, metal(0.25, 1900 + 150 * v, tau=0.06), 0.08))
+    return mix((0, whistle, 1.0), (d - 0.02, hit, 1.0))
+
+
+def s_spinspear(v):
+    # 회선창: 창이 맴도는 웅웅거림
+    d = 0.9
+    n = N(d)
+    t = np.arange(n) / SR
+    am = 0.55 + 0.45 * np.sin(2 * np.pi * (9 + 5 * t) * t)
+    x = bandpass(noise(n), 700, 1.2) * am * env_bell(n, 0.2)
+    return mix((0, x, 1.0), (0, sweep_noise(d, 1500, 2600, 3) * am * env_bell(n, 0.3), 0.4))
+
+
 SFX = {
     'swing': (s_swing, 3, -15), 'swing3': (s_swing3, 2, -14), 'hit': (s_hit, 3, -13), 'crit': (s_crit, 2, -11),
     'drum': (s_drum, 1, -12), 'draw': (s_draw, 1, -18), 'sheathe': (s_sheathe, 1, -18), 'bowdraw': (s_bowdraw, 1, -22),
@@ -402,6 +459,8 @@ SFX = {
     'hurt': (s_hurt, 2, -13), 'poof': (s_poof, 1, -18), 'spawn': (s_spawn, 1, -20), 'laugh': (s_laugh, 1, -18),
     'slam': (s_slam, 1, -11), 'orb': (s_orb, 2, -20), 'talk': (s_talk, 5, -26), 'coin': (s_coin, 1, -20),
     'victory': (s_victory, 1, -14), 'block': (s_block, 1, -15), 'gong': (s_gong, 1, -13),
+    'thrust': (s_thrust, 3, -15), 'spearbeam': (s_spearbeam, 1, -13), 'leap': (s_leap, 1, -17), 'spearslam': (s_spearslam, 1, -11),
+    'spearfall': (s_spearfall, 3, -17), 'spinspear': (s_spinspear, 1, -16),
 }
 
 
@@ -418,8 +477,14 @@ def write(name, x):
 
 
 if __name__ == '__main__':
-    man = {}
+    import sys
+    # python3 sfx.py 이름1 이름2 … : 그 소리만 새로 만들고 나머지 파일·목록은 그대로 둠 (전부 다시 만들면 인코딩이 매번 조금씩 달라짐)
+    only = set(sys.argv[1:])
+    path = os.path.join(OUT, 'manifest.json')
+    man = json.load(open(path)) if only and os.path.exists(path) else {}
     for name, (fn, count, level) in SFX.items():
+        if only and name not in only:
+            continue
         for v in range(count):
             x = fn(v).astype(np.float64)
             x = highpass(x, 30)

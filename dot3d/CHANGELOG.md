@@ -24,6 +24,7 @@
 - **소리:** 국악 배경음악, 지역 환경음, 효과음을 직접 합성했습니다.
 - **데스크톱판:** Windows, Linux, macOS(Electron), 전체 화면(F11)을 지원하고 저장 파일은 사용자 폴더에 남습니다.
 - **스크린샷 모드:** F2 화면 글자 숨기기, F3 PNG 저장.
+- **균형:** 직업별 위력을 측정해 맞췄습니다(도사 ×1.2, 요정 ×0.92, 검객 삼연 검기 상향, 창술사 파천창·창룡출해 하향). 창술사 전용 효과음을 넣었습니다. 자동 사냥은 원거리 기술을 그 사거리에서 씁니다.
 
 ### English
 
@@ -39,3 +40,4 @@ First commercial release.
 - Korean and English.
 - Synthesized Korean traditional music, ambience and sound effects.
 - Desktop builds via Electron; screenshot mode (F2 hide HUD, F3 save PNG).
+- Balance: measured per-class damage and tuned it (Taoist x1.2, Fairy x0.92, Swordsman Triple Wave up, Lancer Heaven Piercer/Rising Dragon down). Dedicated Lancer sound effects. Auto-hunt now uses reach skills from range.

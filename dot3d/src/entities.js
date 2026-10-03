@@ -172,7 +172,7 @@ export class Player {
       this.combo++;
       this.yaw = this.aimYaw(input);
       this.attack = { t: 0, kind, dur: kind === 32 ? 0.46 : 0.34, hit: false, hitAt: kind === 32 ? 0.45 : 0.42 };
-      this.game.audio.play(kind === 32 ? 'swing3' : 'swing');
+      this.game.audio.play(kind === 32 ? 'swing3' : 'thrust');
       this.lastCombat = this.game.time;
       this.sinceAttack = 0;
       return;

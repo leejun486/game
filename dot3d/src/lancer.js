@@ -60,7 +60,7 @@ function spearBeam(g, pl, o = {}) {
     g.fx.add.emit({ x: from.x + (to.x - from.x) * k, y: y + rand(-0.2, 0.2), z: from.z + (to.z - from.z) * k, vx: Math.sin(yaw) * rand(2, 6), vy: rand(0, 1.5), vz: Math.cos(yaw) * rand(2, 6), drag: 3, life: rand(0.25, 0.5), size: 3, endSize: 1, color: '#ffffff', color2: c1 });
   }
   const n = hitAll(g, enemiesInLine(g, from, yaw, L, W), o.dmg || 40, o.knock ?? 6, o.stun ?? 0.3);
-  if (!o.quiet) { g.audio.play('skill'); g.fx.ring(from, 1.6, c1, 0.3); g.shake(0.2); }
+  if (!o.quiet) { g.audio.play('spearbeam'); g.fx.ring(from, 1.6, c1, 0.3); g.shake(0.2); }
   if (n) g.hitstop = Math.max(g.hitstop, 0.04);
   return to;
 }
@@ -116,14 +116,14 @@ export function lancerSkill1(g, pl) {
         if (pl.dead) return;
         const off = (i % 2 ? 1 : -1) * Math.ceil(i / 2) * 0.09;
         const end = spearBeam(g, pl, { yawOff: off, L: 6.5, W: 0.6, dmg: 30 * M, knock: 3, stun: 0.2, color: gold ? '#ffd060' : '#7fd8ff', quiet: i > 0 });
-        if (i > 0) g.audio.play('swing');
+        if (i > 0) g.audio.play('thrust');
         if (gold) g.after(0.15, () => g.boomAt(V(end.x, g.world.heightAt(end.x, end.z), end.z), 1.6, Math.round(26 * M), '#ffd060'));
       });
     }
   } else if (br === 'b') {
     const offs = r >= 5 ? [-0.35, 0, 0.35] : [0];
     for (const off of offs) {
-      const end = spearBeam(g, pl, { yawOff: off, L: 10, W: 1.35, dmg: 80 * M, knock: 12, stun: 0.7, color: '#ff9a5a', quiet: off !== 0 });
+      const end = spearBeam(g, pl, { yawOff: off, L: 10, W: 1.35, dmg: 72 * M, knock: 12, stun: 0.7, color: '#ff9a5a', quiet: off !== 0 });
       if (r >= 3) {
         // 지나간 자리에 벼락 셋
         for (let k = 1; k <= 3; k++) g.after(0.2 + k * 0.12, () => {
@@ -149,7 +149,7 @@ function leap(g, pl, to, dur, onLand) {
   pl.yaw = Math.atan2(D.x, D.z);
   pl.invuln = Math.max(pl.invuln, dur + 0.15);
   g.fx.dust(from.x, pl.y, from.z, 10);
-  g.audio.play('dash');
+  g.audio.play('leap');
   let moved = 0;
   g.lancerFx.push({
     t: 0,
@@ -175,7 +175,7 @@ function slam(g, at, R, dmg, color = '#ffc8e0') {
   g.fx.dust(at.x, at.y, at.z, 16);
   for (let i = 0; i < 26; i++) { const a = (i / 26) * Math.PI * 2, sp = rand(3, 7); g.fx.add.emit({ x: at.x, y: at.y + 0.2, z: at.z, vx: Math.cos(a) * sp, vy: rand(1, 4), vz: Math.sin(a) * sp, g: 8, drag: 2, life: rand(0.35, 0.7), size: 3, endSize: 1, color: '#ffffff', color2: color }); }
   hitAll(g, g.enemiesIn(at, R), dmg, 7, 0.8);
-  g.audio.play('impact');
+  g.audio.play('spearslam');
   g.shake(0.4);
   g.hitstop = Math.max(g.hitstop, 0.06);
 }
@@ -239,7 +239,7 @@ export function lancerSkill2(g, pl) {
         g.after(0.75, next);
       }
     } else if (br === 'b') {
-      const o = { R: r >= 3 ? 5 : 4, dur: r >= 3 ? 3.2 : 2.4, tickDmg: 5 * M, boom: 45 * M };
+      const o = { R: r >= 3 ? 5 : 4, dur: r >= 3 ? 3.2 : 2.4, tickDmg: 5 * M, boom: 40 * M };
       pillar(g, at, o);
       if (r >= 5) for (const s of [-1, 1]) {
         const a = pl.yaw + s * Math.PI / 2;
@@ -271,7 +271,7 @@ function fallingSpear(g, at, delay, o) {
             g.fx.dust(at.x, at.y, at.z, 6);
             g.fx.spark(at.x, at.y + 0.3, at.z, 8, '#ffffff', 5);
             hitAll(g, g.enemiesIn(at, o.R), o.dmg, 3, 0.3);
-            if (o.big) { g.boomAt(at, o.R, Math.round(o.dmg * 0.5), o.color); g.ui.flash(o.color, 0.25); } else g.audio.play('impact');
+            if (o.big) { g.boomAt(at, o.R, Math.round(o.dmg * 0.5), o.color); g.ui.flash(o.color, 0.25); } else g.audio.play('spearfall');
           }
           return true;
         }
@@ -307,11 +307,12 @@ function whirlSpear(g, pl, o) {
     spears.push(sp);
   }
   const start = V(pl.pos.x, pl.y + 1, pl.pos.z);
-  g.audio.play('tornado');
+  g.audio.play('spinspear');
   g.lancerFx.push({
     t: 0, tick: 0, ang: 0,
     update(dt) {
       this.t += dt; this.tick -= dt; this.ang += dt * 14;
+      if (this.t - (this.snd ?? 0) > 0.8) { this.snd = this.t; g.audio.play('spinspear'); }
       const fly = Math.min(1, this.t / 0.25);
       const cx = start.x + (c.x - start.x) * fly, cz = start.z + (c.z - start.z) * fly, cy = c.y + 0.9;
       spears.forEach((sp, i) => {

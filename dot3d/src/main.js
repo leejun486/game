@@ -1736,25 +1736,28 @@ class Game {
     }
     this.target = t;
     const d = Math.hypot(t.pos.x - p.pos.x, t.pos.z - p.pos.z);
-    if (d > range) return this.steerTo(inp, t.pos.x, t.pos.z, 2, 80);
-    // 사거리 안: 적을 바라보고 (마우스 방향 말고) 공격
-    p.yaw = Math.atan2(t.pos.x - p.pos.x, t.pos.z - p.pos.z);
-    inp.mouseRecent = false; inp.mouseWorld = null;
     const crowd = this.enemiesIn(p.pos, 5).length;
     const big = t.isBoss || t.elite || crowd >= 2;
     const lv = p.level;
-    // 쓸 수 있는 기술이 있으면 기본 공격을 이어 치지 않고, 지금 동작이 끝나는 대로 기술부터
+    // 쓸 수 있는 기술 (기본 공격을 이어 치지 않고, 지금 동작이 끝나는 대로 기술부터)
     const ready = p.ult && p.ultCd <= 0 && big ? 'ult'
       : p.skillCd <= 0 ? 1
       : lv >= SKILL_LEVEL[2] && (p.cd2 || 0) <= 0 ? 2
       : lv >= SKILL_LEVEL[3] && (p.cd3 || 0) <= 0 ? 3 : 0;
-    if (ready) {
+    // 기술마다 닿는 거리: 멀리 나가는 기술(검기, 일섬, 창기, 도약, 창비)은 붙지 않고 그 거리에서 바로 씀
+    const reach = ready ? ({ sword: { 1: 6, 2: 6, 3: 2 }, lancer: { 1: 6, 2: 6, 3: 9, ult: 5 } }[p.cls]?.[ready] ?? range) : range;
+    if (d > Math.max(range, ready ? reach : 0)) return this.steerTo(inp, t.pos.x, t.pos.z, 2, 80);
+    // 사거리 안: 적을 바라보고 (마우스 방향 말고) 공격
+    p.yaw = Math.atan2(t.pos.x - p.pos.x, t.pos.z - p.pos.z);
+    inp.mouseRecent = false; inp.mouseWorld = null;
+    if (ready && d <= reach) {
       if (p.attack && p.attack.t < 0.6) return inp;
       if (ready === 'ult') p.startUlt(inp);
       else if (ready === 1) p.startSkill(inp);
       else p.startExtraSkill(inp, ready);
       return inp;
     }
+    if (d > range) return this.steerTo(inp, t.pos.x, t.pos.z, 2, 80);
     p.startAttack(inp);
     return inp;
   }
@@ -2450,7 +2453,7 @@ class Game {
     const pl = this.player;
     const perks = pl.perks;
     const base = dmg;
-    let mul = pl.atkMul || 1;
+    let mul = (pl.atkMul || 1) * (pl.cfg.power || 1); // power: 직업별 위력 보정 (classes.js)
     if (perks?.has('rage') && pl.hp < pl.maxHp * 0.4) mul *= 1.35;
     if (perks?.has('verdict') && (e.isBoss || e.elite)) mul *= 1.3;
     const exec = perks?.has('execute') && e.hp < e.maxHp * 0.35;
@@ -2507,7 +2510,7 @@ class Game {
     if (br === 'a') {
       const n = r >= 5 ? 7 : r >= 3 ? 5 : 3, sp = n === 3 ? 0.34 : n === 5 ? 0.26 : 0.2;
       const gold = r >= 5 ? ['#ffa020', '#ffe8a0', '#ffffff'] : undefined;
-      for (let i = 0; i < n; i++) this.spawnSwordWave(pl, { yawOff: (i - (n - 1) / 2) * sp, dmgMul: 0.72 * M, scale: 0.85, quiet: i !== (n - 1) / 2, color: gold });
+      for (let i = 0; i < n; i++) this.spawnSwordWave(pl, { yawOff: (i - (n - 1) / 2) * sp, dmgMul: 0.9 * M, scale: 0.85, quiet: i !== (n - 1) / 2, color: gold });
     } else if (br === 'b') {
       for (const off of r >= 5 ? [-0.45, 0, 0.45] : [0]) this.spawnSwordWave(pl, { yawOff: off, scale: 1.75, dmgMul: 2.0 * M, speed: 11, life: 0.9, knock: 13, stun: 0.6, color: ['#ff7a2a', '#ffd08a', '#ffffff'], burn: r >= 3, quiet: off !== 0 });
       const feet = V(pl.pos.x, pl.y, pl.pos.z);
