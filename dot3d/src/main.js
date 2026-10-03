@@ -3044,11 +3044,29 @@ class Game {
     return e;
   }
 
+  // 지금 어울리는 배경음악·환경음: 보스 > 웨이브·필드 난전 > 지역(궁궐은 낮/밤)
+  updateSoundScene(dt) {
+    if (this.state === 'title') { this.audio.setScene('title', null); return; }
+    const p = this.player;
+    // 필드에서 덤벼드는 적이 셋 이상이면 전투곡 (잠깐 줄어도 몇 초는 유지)
+    let aggro = 0;
+    for (const e of this.enemies) if (!e.dead && !e.spawning && (!e.field || e.aggro) && Math.hypot(e.pos.x - p.pos.x, e.pos.z - p.pos.z) < 14) aggro++;
+    this.combatHeat = aggro >= 3 ? 6 : Math.max(0, (this.combatHeat || 0) - dt);
+    const boss = this.enemies.some((e) => e.isBoss && !e.dead);
+    const id = this.mapId || 'palace';
+    const night = this.night > 0.5;
+    const region = id === 'palace' ? (night ? 'night' : 'palace') : id;
+    const music = boss ? 'boss' : this.waveActive || this.combatHeat > 0 ? 'battle' : region;
+    const amb = id === 'palace' ? (night ? 'amb_night' : 'amb_day') : id === 'bamboo' ? (night ? 'amb_night' : 'amb_bamboo') : 'amb_temple';
+    this.audio.setScene(music, amb);
+  }
+
   loop(now) {
     requestAnimationFrame(this.loop);
     let dt = Math.min(0.05, (now - this.last) / 1000);
     this.last = now;
     this.audio.update();
+    this.updateSoundScene(dt);
     // 15초마다 자동 저장
     if (this.state === 'play') { this.saveT -= dt; if (this.saveT <= 0) this.save(); }
 

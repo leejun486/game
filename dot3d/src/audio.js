@@ -1,4 +1,12 @@
-// WebAudio 절차적 효과음 + 국악풍(평조 오음계) 배경음
+// 소리: 녹음된 음원 파일(audio/)을 우선 쓰고, 못 불러오면 WebAudio 합성음으로 대신함
+//  - 배경음악: 장소·상황별 곡을 2초 동안 겹쳐 바꿈, 이음매 없는 반복
+//  - 환경음: 지역마다 바람·새·귀뚜라미·댓잎·풍경 소리를 깔아 둠
+//  - 효과음: 자주 나는 소리는 여러 벌을 번갈아, 높낮이도 살짝 흔들어 기계적인 반복을 줄임
+//  음원은 tools/audio/*.py 로 만들며, 같은 이름의 파일로 바꿔 넣으면 그대로 쓰임
+const BASE = 'audio/';
+const NO_DETUNE = new Set(['talk', 'levelup', 'victory', 'bigbell', 'coin', 'bell']);
+const VOL = { master: 0.7, music: 0.55, amb: 0.6, sfx: 0.95 };
+
 export class Audio {
   constructor() {
     this.ctx = null;
@@ -6,6 +14,129 @@ export class Audio {
     this.mood = 'day';
     this.nextNote = 0;
     this.step = 0;
+    this.buffers = new Map();   // 경로 → AudioBuffer (불러오는 중이면 Promise)
+    this.sfxMan = null;         // 효과음 이름 → 벌 수
+    this.musicMan = null;       // 곡 이름 → { samples, rate }
+    this.fallback = false;      // 음원을 못 쓰면 합성 음악
+    this.wantMusic = null; this.wantAmb = null;
+    this.layers = { music: null, amb: null };
+    this.lastPlay = new Map();
+    this.lastVar = new Map();
+  }
+
+  get ext() {
+    if (this._ext) return this._ext;
+    const a = document.createElement('audio');
+    this._ext = a.canPlayType && a.canPlayType('audio/ogg; codecs="vorbis"') ? 'ogg' : 'mp3';
+    return this._ext;
+  }
+
+  async loadManifests() {
+    try {
+      const [m, f] = await Promise.all([fetch(BASE + 'music/manifest.json').then((r) => r.json()), fetch(BASE + 'sfx/manifest.json').then((r) => r.json())]);
+      this.musicMan = m; this.sfxMan = f;
+      // 효과음은 작으니 한꺼번에 미리 불러둠
+      for (const [name, n] of Object.entries(f)) for (let v = 0; v < n; v++) this.load(`sfx/${name}_${v}`).catch(() => {});
+      this.applyScene(true);
+    } catch (e) {
+      this.fallback = true;
+    }
+  }
+
+  load(path) {
+    const key = path;
+    const have = this.buffers.get(key);
+    if (have) return have instanceof Promise ? have : Promise.resolve(have);
+    const p = fetch(BASE + path + '.' + this.ext)
+      .then((r) => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); })
+      .then((ab) => new Promise((res, rej) => this.ctx.decodeAudioData(ab, res, rej)))
+      .then((buf) => { this.buffers.set(key, buf); return buf; })
+      .catch((e) => { this.buffers.delete(key); throw e; });
+    this.buffers.set(key, p);
+    return p;
+  }
+
+  ready(path) {
+    const b = this.buffers.get(path);
+    return b && !(b instanceof Promise) ? b : null;
+  }
+
+  // ---- 배경음악·환경음 ----
+  // 게임이 매 프레임 지금 어울리는 곡과 환경음을 알려줌
+  setScene(music, amb) {
+    if (music === this.wantMusic && amb === this.wantAmb) return;
+    this.wantMusic = music; this.wantAmb = amb;
+    this.applyScene();
+  }
+
+  applyScene() {
+    if (!this.ctx || !this.musicMan) return;
+    this.switchLayer('music', this.musicOn ? this.wantMusic : null);
+    this.switchLayer('amb', this.wantAmb);
+  }
+
+  switchLayer(kind, name) {
+    const L = this.layers[kind];
+    if ((L?.name || null) === (name || null)) return;
+    const ctx = this.ctx, now = ctx.currentTime;
+    const fadeOut = kind === 'music' && name === 'boss' ? 0.6 : 2.0;
+    if (L) {
+      L.gain.gain.cancelScheduledValues(now);
+      L.gain.gain.setValueAtTime(L.gain.gain.value, now);
+      L.gain.gain.linearRampToValueAtTime(0, now + fadeOut);
+      try { L.src?.stop(now + fadeOut + 0.05); } catch (e) { /* 아직 시작 전 */ }
+      L.dead = true;
+    }
+    this.layers[kind] = null;
+    if (!name || !this.musicMan[name]) return;
+    const layer = { name, gain: ctx.createGain(), src: null, dead: false };
+    layer.gain.gain.value = 0;
+    layer.gain.connect(kind === 'music' ? this.music : this.amb);
+    this.layers[kind] = layer;
+    this.load('music/' + name).then((buf) => {
+      if (layer.dead) return;
+      const src = ctx.createBufferSource();
+      src.buffer = buf;
+      src.loop = true;
+      // mp3는 앞에 빈 구간(인코더 지연)이 붙을 수 있음 → 원래 길이와 비교해 반복 구간을 맞춤 (ogg는 끝에만 몇 샘플)
+      const info = this.musicMan[name];
+      const want = info.samples * (buf.sampleRate / info.rate);
+      const extra = buf.length - want;
+      const lead = this.ext === 'mp3' && extra > 1000 ? Math.min(extra, 1105 * (buf.sampleRate / info.rate)) : 0;
+      src.loopStart = lead / buf.sampleRate;
+      src.loopEnd = (lead + Math.min(want, buf.length - lead)) / buf.sampleRate;
+      src.connect(layer.gain);
+      const t = ctx.currentTime;
+      src.start(t, src.loopStart);
+      layer.src = src;
+      layer.gain.gain.setValueAtTime(0, t);
+      layer.gain.gain.linearRampToValueAtTime(1, t + (name === 'boss' ? 0.4 : 1.8));
+    }).catch(() => { if (kind === 'music') { this.fallback = true; this.layers.music = null; } });
+  }
+
+  // ---- 효과음 ----
+  play(name) {
+    if (!this.ctx) return;
+    const n = this.sfxMan?.[name];
+    if (n) {
+      const now = this.ctx.currentTime;
+      // 한 프레임에 같은 소리가 여러 번 겹치면 귀가 아프니 걸러냄
+      if (now - (this.lastPlay.get(name) ?? -1) < 0.03) return;
+      let v = Math.floor(Math.random() * n);
+      if (n > 1 && v === this.lastVar.get(name)) v = (v + 1) % n;
+      const buf = this.ready(`sfx/${name}_${v}`);
+      if (buf) {
+        this.lastPlay.set(name, now);
+        this.lastVar.set(name, v);
+        const src = this.ctx.createBufferSource();
+        src.buffer = buf;
+        if (!NO_DETUNE.has(name)) src.playbackRate.value = 1 + (Math.random() - 0.5) * 0.07;
+        src.connect(this.sfx);
+        src.start(now);
+        return;
+      }
+    }
+    this.playProc(name);
   }
 
   unlock() {
@@ -14,13 +145,20 @@ export class Audio {
     if (!AC) return;
     const ctx = (this.ctx = new AC());
     this.master = ctx.createGain();
-    this.master.gain.value = 0.55;
+    this.master.gain.value = VOL.master;
     this.master.connect(ctx.destination);
     this.sfx = ctx.createGain();
-    this.sfx.gain.value = 0.9;
+    this.sfx.gain.value = VOL.sfx;
     this.sfx.connect(this.master);
+    this.amb = ctx.createGain();
+    this.amb.gain.value = VOL.amb;
+    this.amb.connect(this.master);
     this.music = ctx.createGain();
-    this.music.gain.value = 0.32;
+    this.music.gain.value = this.musicOn ? VOL.music : 0;
+    // 합성 음악(대체용)은 따로 묶어 잔향을 걸고 음량을 맞춤
+    this.procMusic = ctx.createGain();
+    this.procMusic.gain.value = 0.32 / VOL.music;
+    this.procMusic.connect(this.music);
     // 음악에 살짝 잔향 (딜레이)
     const delay = ctx.createDelay();
     delay.delayTime.value = 0.28;
@@ -29,7 +167,7 @@ export class Audio {
     const lp = ctx.createBiquadFilter();
     lp.type = 'lowpass'; lp.frequency.value = 2200;
     this.music.connect(this.master);
-    this.music.connect(delay);
+    this.procMusic.connect(delay);
     delay.connect(lp); lp.connect(fb); fb.connect(delay);
     lp.connect(this.master);
     const len = ctx.sampleRate;
@@ -37,6 +175,7 @@ export class Audio {
     const d = this.noiseBuf.getChannelData(0);
     for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
     this.nextNote = ctx.currentTime + 0.3;
+    this.loadManifests();
   }
 
   noise(dur, { type = 'bandpass', f0 = 1000, f1 = 1000, q = 1, gain = 0.3, attack = 0.005, dest } = {}) {
@@ -74,7 +213,8 @@ export class Audio {
     o.stop(t + dur + 0.05);
   }
 
-  play(name) {
+  // 합성 효과음 (음원이 없거나 아직 못 불러왔을 때)
+  playProc(name) {
     if (!this.ctx) return;
     switch (name) {
       case 'swing': this.noise(0.16, { f0: 700, f1: 3200, q: 2.5, gain: 0.22 }); break;
@@ -254,7 +394,7 @@ export class Audio {
     g.gain.exponentialRampToValueAtTime(0.0001, t + 1.1);
     const g2 = ctx.createGain();
     g2.gain.value = 0.25;
-    o.connect(g); o2.connect(g2); g2.connect(g); g.connect(this.music);
+    o.connect(g); o2.connect(g2); g2.connect(g); g.connect(this.procMusic);
     o.start(t); o2.start(t); o.stop(t + 1.2); o2.stop(t + 1.2);
   }
 
@@ -263,17 +403,19 @@ export class Audio {
     if (kind === 'deong') { // 덩: 낮은 북 + 채
       const o = ctx.createOscillator(); o.frequency.setValueAtTime(110, t); o.frequency.exponentialRampToValueAtTime(55, t + 0.2);
       const g = ctx.createGain(); g.gain.setValueAtTime(0.35, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.3);
-      o.connect(g); g.connect(this.music); o.start(t); o.stop(t + 0.35);
+      o.connect(g); g.connect(this.procMusic); o.start(t); o.stop(t + 0.35);
     }
     const src = ctx.createBufferSource(); src.buffer = this.noiseBuf;
     const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = kind === 'kung' ? 400 : 2400; f.Q.value = 1.5;
     const g = ctx.createGain(); g.gain.setValueAtTime(kind === 'kung' ? 0.3 : 0.18, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.08);
-    src.connect(f); f.connect(g); g.connect(this.music); src.start(t, Math.random()); src.stop(t + 0.1);
+    src.connect(f); f.connect(g); g.connect(this.procMusic); src.start(t, Math.random()); src.stop(t + 0.1);
   }
 
   update() {
     const ctx = this.ctx;
     if (!ctx || !this.musicOn) return;
+    if (!this.fallback) return; // 음원 음악이 돌고 있음
+    this.mood = this.wantMusic === 'battle' || this.wantMusic === 'boss' ? 'battle' : 'day';
     // 평조 (솔라도레미) 기반
     const base = this.mood === 'battle' ? 146.83 : 196;
     const scale = [0, 2, 5, 7, 9, 12, 14, 17, 19];
@@ -301,7 +443,8 @@ export class Audio {
 
   toggleMusic() {
     this.musicOn = !this.musicOn;
-    if (this.music) this.music.gain.value = this.musicOn ? 0.32 : 0;
+    if (this.music) this.music.gain.value = this.musicOn ? VOL.music : 0;
+    this.applyScene();
     return this.musicOn;
   }
 }

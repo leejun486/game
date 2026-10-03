@@ -1,0 +1,57 @@
+{
+ "title": {
+  "samples": 1568000,
+  "rate": 44100,
+  "dur": 35.5556
+ },
+ "palace": {
+  "samples": 2565818,
+  "rate": 44100,
+  "dur": 58.1818
+ },
+ "night": {
+  "samples": 2116800,
+  "rate": 44100,
+  "dur": 48.0
+ },
+ "bamboo": {
+  "samples": 2540159,
+  "rate": 44100,
+  "dur": 57.6
+ },
+ "temple": {
+  "samples": 2328480,
+  "rate": 44100,
+  "dur": 52.8
+ },
+ "battle": {
+  "samples": 2257920,
+  "rate": 44100,
+  "dur": 51.2
+ },
+ "boss": {
+  "samples": 2116800,
+  "rate": 44100,
+  "dur": 48.0
+ },
+ "amb_day": {
+  "samples": 1389150,
+  "rate": 44100,
+  "dur": 31.5
+ },
+ "amb_night": {
+  "samples": 1389150,
+  "rate": 44100,
+  "dur": 31.5
+ },
+ "amb_bamboo": {
+  "samples": 1389150,
+  "rate": 44100,
+  "dur": 31.5
+ },
+ "amb_temple": {
+  "samples": 1389150,
+  "rate": 44100,
+  "dur": 31.5
+ }
+}
