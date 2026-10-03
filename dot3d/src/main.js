@@ -11,7 +11,7 @@ import { CLASSES, CLASS_ORDER } from './classes.js';
 import { ClassPreview } from './preview.js';
 import { EVOS, branchOf, rankOf, freePoints, rankMul, rankCd, RANK_NAME } from './evolve.js';
 import { QUESTS, BOUNTIES, KILL_NAME } from './quests.js';
-import { makeGear, rollGearTier, gearScore, salvageExp, BAG_MAX, GEAR_SLOTS, slotKind } from './gear.js';
+import { makeGear, rollGearTier, gearScore, salvageExp, BAG_MAX, GEAR_SLOTS, slotKind, rarityOf, makeSetPiece, setFor, SETS } from './gear.js';
 import { item, rollDrop, bossDrop, RARITY, itemDesc, WEAPONS, OUTFITS } from './items.js';
 import { expNeed, SKILL_LEVEL } from './entities.js';
 import { MAPS, BOSS_TYPES } from './maps.js';
@@ -186,7 +186,8 @@ class Game {
     stage.addEventListener('mousemove', (e) => { this.mouse.x = e.clientX; this.mouse.y = e.clientY; this.mouse.t = this.time; });
     stage.addEventListener('mousedown', (e) => {
       this.mouse.x = e.clientX; this.mouse.y = e.clientY; this.mouse.t = this.time;
-      if (this.state === 'title') { const c = e.target.closest && e.target.closest('.cls'); if (c) this.selectClass(c.dataset.cls); this.start(); return; }
+      // 선택 화면: 카드를 누르면 고르기만 함 (시작은 아래 버튼으로)
+      if (this.state === 'title') { const c = e.target.closest && e.target.closest('.cls'); if (c && c.dataset.cls !== this.selectedCls) { this.selectClass(c.dataset.cls); this.audio.unlock(); this.audio.play('talk'); } return; }
       this.audio.unlock();
       if (this.paused) return;
     if (this.ui.inDialog) { this.ui.advance(); return; }
@@ -228,7 +229,7 @@ class Game {
     let id = null, ox = 0, oy = 0;
     const area = document.getElementById('stick-area');
     area.addEventListener('touchstart', (e) => {
-      if (this.state === 'title') this.start();
+      if (this.state === 'title') return;
       const t = e.changedTouches[0];
       id = t.identifier; ox = t.clientX; oy = t.clientY;
       stick.style.left = ox + 'px'; stick.style.top = oy + 'px';
@@ -254,7 +255,7 @@ class Game {
     area.addEventListener('touchend', end);
     area.addEventListener('touchcancel', end);
     for (const b of document.querySelectorAll('#touch [data-k]')) {
-      b.addEventListener('touchstart', (e) => { e.preventDefault(); if (this.state === 'title') this.start(); else this.onKey(b.dataset.k); }, { passive: false });
+      b.addEventListener('touchstart', (e) => { e.preventDefault(); if (this.state !== 'title') this.onKey(b.dataset.k); }, { passive: false });
     }
   }
 
@@ -283,8 +284,13 @@ class Game {
     for (const card of document.querySelectorAll('#classes .cls')) {
       const C = CLASSES[card.dataset.cls];
       card.querySelector('.role').textContent = C.role;
-      card.querySelector('.desc').textContent = C.desc;
     }
+    const btn = (id, fn) => { const b = document.getElementById(id); b.addEventListener('click', (e) => { e.stopPropagation(); fn(); }); b.addEventListener('mousedown', (e) => e.stopPropagation()); };
+    btn('btn-cont', () => { if (this.hasSave) this.start(); });
+    btn('btn-new', () => this.newGame(false));
+    btn('cf-yes', () => this.newGame(true));
+    btn('cf-no', () => this.showConfirm(false));
+    document.getElementById('confirm').addEventListener('mousedown', (e) => e.stopPropagation());
     this.selectClass(this.selectedCls);
   }
 
@@ -292,6 +298,7 @@ class Game {
     if (!CLASSES[id]) return;
     this.selectedCls = id;
     for (const card of document.querySelectorAll('#classes .cls')) card.classList.toggle('sel', card.dataset.cls === id);
+    if (this.state === 'title' || !this.state) this.refreshTitle?.();
     // 타이틀 뒤 장면에서도 고른 직업 모습이 보이도록
     if (this.player.cls !== id) { this.player.setClass(id); this.ui.setClass(this.player.cfg); }
   }
@@ -488,7 +495,8 @@ class Game {
   // 적이 떨어뜨린 장비: 빛기둥과 함께 바닥에서 빙글빙글, 가까이 가면 빨려와 획득
   spawnDrop(pos, id) {
     const it = typeof id === 'object' ? id : item(id);
-    const col = new THREE.Color(RARITY[it.tier].color);
+    const rar = typeof id === 'object' ? rarityOf(it) : RARITY[it.tier];
+    const col = new THREE.Color(rar.color);
     const g = new THREE.Group();
     const box = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.34, 0.34), new THREE.MeshBasicMaterial({ color: col }));
     const core = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.2, 0.2), new THREE.MeshBasicMaterial({ color: '#ffffff' }));
@@ -501,7 +509,7 @@ class Game {
     this.scene.add(g);
     const vel = V(rand(-2, 2), 5, rand(-2, 2));
     this.drops.push({ id, g, box, beam, vel, y: 0.6, t: 0, col });
-    this.fx.ring(g.position, 1.2, RARITY[it.tier].color, 0.4);
+    this.fx.ring(g.position, 1.2, rar.color, 0.4);
   }
 
   updateDrops(dt) {
@@ -562,7 +570,7 @@ class Game {
 
   // ---------- 방어구·장신구 ----------
   pickupGear(g) {
-    const r = RARITY[g.tier];
+    const r = rarityOf(g);
     const p = this.player;
     this.audio.play('coin');
     this.fx.spark(p.pos.x, p.y + 1, p.pos.z, 14, r.color, 4);
@@ -576,8 +584,8 @@ class Game {
     this.gear.push(g);
     const cur = this.gearInSlot(g.kind === 'ring' ? this.worseRingSlot() : g.kind);
     const better = gearScore(g) > gearScore(cur);
-    this.ui.toast(`획득! [${r.name}] ${g.name}${better ? ' ▲ 지금 것보다 좋아요' : ''}`, 2.6);
-    if (g.tier >= 3) { this.audio.play('levelup'); this.fx.ring(p.pos, 2, r.color, 0.5); }
+    this.ui.toast(g.set ? `세트 획득! ${SETS[g.set].name} · ${g.name}` : `획득! [${r.name}] ${g.name}${better ? ' ▲ 지금 것보다 좋아요' : ''}`, 2.6);
+    if (g.tier >= 3 || g.set) { this.audio.play('levelup'); this.fx.ring(p.pos, 2, r.color, 0.5); }
     this.ui.newItem = true;
     this.ui.refreshBag();
     this.save(false);
@@ -611,7 +619,7 @@ class Game {
     for (const c of CLASS_ORDER) if (c !== p.cls) { const e2 = this.eqOf(c); for (const k of Object.keys(e2)) if (e2[k] === uid) delete e2[k]; }
     slot = slot || (g.kind === 'ring' ? this.worseRingSlot() : g.kind);
     eq[slot] = uid;
-    this.afterGearChange(RARITY[g.tier].color);
+    this.afterGearChange(rarityOf(g).color);
     this.audio.play('coin');
   }
 
@@ -734,7 +742,8 @@ class Game {
   // ---------- 자동 저장 ----------
   applySave(d) {
     const info = document.getElementById('title-save');
-    if (!d) { if (info) info.textContent = ''; return; }
+    this.hasSave = !!d;
+    if (!d) { if (info) info.textContent = ''; this.refreshTitle(); return; }
     this.kills = d.kills | 0;
     this.round = d.round | 0;
     this.bestCombo = d.bestCombo | 0;
@@ -775,9 +784,13 @@ class Game {
       info.innerHTML = `이어하기 · ${this.player.cfg.title} <b>Lv.${this.player.level}</b> · <b>${this.round + 1}회차</b> · 퇴치 <b>${this.kills}</b> · 최고 연속 <b>${this.bestCombo}</b>` +
         `<small>${when.getMonth() + 1}/${when.getDate()} ${pad(when.getHours())}:${pad(when.getMinutes())} 자동 저장 · Delete 키: 기록 지우기</small>`;
     }
+    this.refreshTitle();
   }
 
   save(show = true) {
+    // 선택 화면에서 한 번도 시작하지 않았으면 빈 기록을 만들지 않음
+    if (this.state === 'title' && !this.hasSave) return;
+    this.hasSave = true;
     const ok = writeSave({
       kills: this.kills,
       round: this.round,
@@ -802,25 +815,14 @@ class Game {
 
   onKey(code) {
     if (this.state === 'title') {
+      if (document.getElementById('confirm').classList.contains('show')) {
+        if (code === 'Escape') this.showConfirm(false);
+        else if (code === 'Enter') this.newGame(true);
+        return;
+      }
       if (code === 'Delete' || code === 'Backspace') {
-        clearSave();
-        this.kills = 0; this.round = 0; this.stage = 0; this.bestCombo = 0;
-        this.progress = {}; this.inv = new Set(['sw0', 'mg0', 'bw0', 'ot0']); this.gear = [];
-        this.cleared = {};
-        this.quest = { step: 0, prog: {}, lit: [], bounty: null };
-        for (const f of this.flames) this.scene.remove(f);
-        this.flames = [];
-        this.updateGates(true);
-        this.player.pos.copy(this.world.spawn); this.player.y = this.player.pos.y;
-        this.startPos = null;
-        for (const e of this.enemies) e.dispose();
-        this.enemies = [];
-        this.updateRegion(true);
-        this.stage = 0;
-        const c0 = this.player.cls; this.player.cls = null; this.selectClass(c0);
-        this.applySave(null);
-        this.updateQuest();
-        this.preview.rebuild();
+        if (!this.hasSave) return;
+        this.resetProgress();
         const info = document.getElementById('title-save');
         if (info) info.textContent = '기록을 지웠습니다. 처음부터 시작합니다.';
         return;
@@ -829,7 +831,8 @@ class Game {
       if (code === 'ArrowLeft' || code === 'KeyA') { this.selectClass(CLASS_ORDER[(i + 2) % 3]); this.audio.unlock(); this.audio.play('talk'); return; }
       if (code === 'ArrowRight' || code === 'KeyD') { this.selectClass(CLASS_ORDER[(i + 1) % 3]); this.audio.unlock(); this.audio.play('talk'); return; }
       if (code === 'Digit1' || code === 'Digit2' || code === 'Digit3') { this.selectClass(CLASS_ORDER[+code.slice(-1) - 1]); return; }
-      this.start();
+      // Enter: 기록이 있으면 이어하기, 없으면 새로 시작
+      if (code === 'Enter' || code === 'Space') { if (this.hasSave) this.start(); else this.newGame(true); }
       return;
     }
     this.audio.unlock();
@@ -892,8 +895,73 @@ class Game {
     return true;
   }
 
+  // 기록을 모두 지우고 처음 상태로 (선택 화면에서)
+  resetProgress() {
+    clearSave();
+    this.kills = 0; this.round = 0; this.stage = 0; this.bestCombo = 0;
+    this.progress = {}; this.inv = new Set(['sw0', 'mg0', 'bw0', 'ot0']); this.gear = [];
+    this.cleared = {};
+    this.quest = { step: 0, prog: {}, lit: [], bounty: null };
+    for (const f of this.flames) this.scene.remove(f);
+    this.flames = [];
+    this.updateGates(true);
+    this.player.pos.copy(this.world.spawn); this.player.y = this.player.pos.y;
+    this.startPos = null;
+    for (const e of this.enemies) e.dispose();
+    this.enemies = [];
+    this.updateRegion(true);
+    this.stage = 0;
+    const c0 = this.selectedCls; this.player.cls = null; this.selectClass(c0);
+    this.applySave(null);
+    this.updateQuest();
+    this.preview.rebuild();
+  }
+
+  // 새로 시작: 기록이 있으면 먼저 확인
+  newGame(confirmed = false) {
+    this.audio.unlock();
+    if (this.hasSave && !confirmed) { this.showConfirm(true); return; }
+    this.showConfirm(false);
+    if (this.hasSave) this.resetProgress();
+    this.start();
+  }
+
+  showConfirm(v) { document.getElementById('confirm').classList.toggle('show', v); }
+
+  // 선택 화면 오른쪽: 고른 캐릭터의 설명·능력치 막대·스킬·장비
+  refreshTitle() {
+    const C = CLASSES[this.selectedCls];
+    const pr = this.progress[C.id];
+    const lv = pr?.level || 1;
+    const q = (sel) => document.querySelector(sel);
+    q('.cd-name').innerHTML = `${C.title}<b>${C.name}</b>` + (this.hasSave && pr ? `<em>Lv.${lv}</em>` : '');
+    q('.cd-role').textContent = C.role;
+    q('.cd-desc').textContent = C.desc;
+    q('.cd-bars').innerHTML = Object.entries(C.bars).map(([k, v]) => `<span>${k}</span><span class="pips5">${[1, 2, 3, 4, 5].map((i) => `<i class="${i <= v ? 'on' : ''}"></i>`).join('')}</span>`).join('');
+    const keys = { 1: ['K', 'skill'], 2: ['L', 'skill2'], 3: ['I', 'skill3'] };
+    q('.cd-skills').innerHTML = [1, 2, 3].map((slot) => {
+      const br = pr ? branchOf(pr, C.id, lv, slot) : null;
+      const r = pr ? rankOf(pr, C.id, lv, slot) : 0;
+      const name = br ? `${EVOS[C.id][slot][br].name} ${RANK_NAME[r]}` : C.labels[keys[slot][1]];
+      return `<div><span class="k">${keys[slot][0]}</span>${name}${br ? ` <small>(${EVOS[C.id][slot].base} 파생)</small>` : ''}</div>`;
+    }).join('');
+    const w = item(pr?.weapon || WEAPONS[C.id][0].id), o = item(pr?.outfit || 'ot0');
+    const eqN = pr?.eq ? Object.values(pr.eq).filter(Boolean).length : 0;
+    q('.cd-gear').innerHTML = `무기 <span style="color:${RARITY[w.tier].color}">${w.name}</span> · 갑옷 <span style="color:${RARITY[o.tier].color}">${o.name}</span>` + (eqN ? ` · 방어구·장신구 ${eqN}개` : '');
+    for (const card of document.querySelectorAll('#classes .cls')) {
+      const p2 = this.progress[card.dataset.cls];
+      card.querySelector('.lvb').textContent = this.hasSave && p2 ? `Lv.${p2.level}` : '';
+    }
+    const cont = document.getElementById('btn-cont');
+    cont.disabled = !this.hasSave;
+    cont.classList.toggle('main', !!this.hasSave);
+    document.getElementById('btn-new').classList.toggle('main', !this.hasSave);
+  }
+
   start() {
     this.audio.unlock();
+    if (this.state !== 'title') return;
+    this.showConfirm(false);
     this.state = 'play';
     if (this.player.cls !== this.selectedCls) this.player.setClass(this.selectedCls);
     this.ui.setClass(this.player.cfg);
@@ -2453,7 +2521,11 @@ class Game {
     const gearN = e.isBoss ? 2 + (Math.random() < 0.5 ? 1 : 0) : Math.random() < (e.field ? 0.16 : 0.12) ? 1 : 0;
     for (let i = 0; i < gearN; i++) {
       const strong = e.isBoss ? 0.6 : e.T.hp > 60 ? 0.12 : 0;
-      this.spawnDrop(e.pos, makeGear(Math.max(1, e.lvl || 1) + this.round, rollGearTier(strong, this.round)));
+      const lv = Math.max(1, e.lvl || 1) + this.round;
+      // 가끔은 그 지역 세트의 조각 (보스는 자주)
+      const sid = setFor(e.type);
+      if (sid && Math.random() < (e.isBoss ? 0.4 : 0.09)) this.spawnDrop(e.pos, makeSetPiece(sid, lv));
+      else this.spawnDrop(e.pos, makeGear(lv, rollGearTier(strong, this.round)));
     }
     const pl = this.player;
     if (pl.perks?.has('soul') && !pl.dead && pl.hp < pl.maxHp) {
@@ -2703,7 +2775,7 @@ class Game {
   }
 
   // 테스트·디버그용: 장비 하나 만들기
-  testGear(kind, tier, lv = 5) { return makeGear(lv, tier, kind); }
+  testGear(kind, tier, lv = 5, set = null) { return set ? makeSetPiece(set, lv, kind) : makeGear(lv, tier, kind); }
 
   spawnEnemyAt(type, x, z) {
     const e = new Enemy(this, type, V(x, this.world.heightAt(x, z), z), 1 + this.round);

@@ -81,6 +81,8 @@ export class ClassPreview {
       r.readRenderTargetPixels(this.target, 0, 0, W, H, this.buf);
       rig.root.visible = false;
       this.blit(c, sel);
+      // 고른 캐릭터는 오른쪽 큰 그림에도
+      if (sel) { this.bigCtx ||= document.getElementById('cls-big')?.getContext('2d'); this.bigCtx?.putImageData(c.img, 0, 0); }
     }
     r.setRenderTarget(prevTarget);
     r.setClearColor(prevClear, prevAlpha);

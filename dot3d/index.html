@@ -87,13 +87,35 @@
 
   <div id="title">
     <div class="logo-big"><span class="han">月下宮</span><span class="kr">월하궁</span><span class="sub">— 도깨비 야행 —</span></div>
-    <div id="classes">
-      <div class="cls" data-cls="sword"><canvas width="20" height="20"></canvas><b>검객</b><span class="role"></span><span class="desc"></span><span class="num">1</span></div>
-      <div class="cls" data-cls="mage"><canvas width="20" height="20"></canvas><b>도사</b><span class="role"></span><span class="desc"></span><span class="num">2</span></div>
-      <div class="cls" data-cls="elf"><canvas width="20" height="20"></canvas><b>요정</b><span class="role"></span><span class="desc"></span><span class="num">3</span></div>
+    <div id="select">
+      <div id="classes">
+        <div class="cls" data-cls="sword"><span class="num">1</span><canvas width="20" height="20"></canvas><b>검객</b><span class="role"></span><span class="lvb"></span></div>
+        <div class="cls" data-cls="mage"><span class="num">2</span><canvas width="20" height="20"></canvas><b>도사</b><span class="role"></span><span class="lvb"></span></div>
+        <div class="cls" data-cls="elf"><span class="num">3</span><canvas width="20" height="20"></canvas><b>요정</b><span class="role"></span><span class="lvb"></span></div>
+      </div>
+      <div id="cls-detail" class="panel">
+        <div class="cd-stage"><canvas id="cls-big" width="48" height="72"></canvas></div>
+        <div class="cd-info">
+          <div class="cd-name"></div>
+          <div class="cd-role"></div>
+          <div class="cd-desc"></div>
+          <div class="cd-bars"></div>
+          <div class="cd-skills"></div>
+          <div class="cd-gear"></div>
+        </div>
+      </div>
     </div>
     <div id="title-save"></div>
-    <div class="press"><span class="kb">← → 직업 선택 · Enter 시작 <small>(카드를 눌러도 시작)</small></span><span class="tp">직업 카드를 눌러 시작</span></div>
+    <div class="title-btns">
+      <button id="btn-new" class="tbtn">새로 시작</button>
+      <button id="btn-cont" class="tbtn main">이어하기</button>
+    </div>
+    <div class="press"><span class="kb">← → 직업 고르기 · Enter 시작 · Delete 기록 지우기</span><span class="tp">직업을 고르고 아래 버튼을 누르세요</span></div>
+    <div id="confirm" class="panel">
+      <div class="cf-t">새로 시작할까요?</div>
+      <div class="cf-s">지금까지의 기록(레벨, 장비, 퀘스트, 회차)이 <b>모두 지워집니다.</b></div>
+      <div class="cf-b"><button id="cf-yes" class="tbtn">지우고 새로 시작</button><button id="cf-no" class="tbtn main">취소</button></div>
+    </div>
     <div class="credit">도트 3D 액션 · Three.js</div>
   </div>
 

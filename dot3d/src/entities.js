@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { makeDokkaebi, makeGuard, makeLady, makeMage, makeFox, makeJiangshi, makeGhost, makeReaper } from './character.js';
 import { CLASSES } from './classes.js';
 import { outfitLook, gearLook } from './character.js';
-import { sumStats, gearColor } from './gear.js';
+import { sumStats, gearColor, setBonuses } from './gear.js';
 import { item, WEAPONS, perksOf } from './items.js';
 
 // 스킬 해금 레벨
@@ -94,6 +94,8 @@ export class Player {
     this.def = Math.min(0.7, 1 - (1 - (o?.def || 0)) * (1 - (gs.def || 0)));
     this.perks = perksOf(pr.weapon, pr.outfit);
     for (const g of this.game.equippedGear(this.cls)) if (g.perk) this.perks.add(g.perk);
+    // 세트 4개 효과의 고유 능력
+    for (const k of setBonuses(this.game.equippedGear(this.cls)).perks) this.perks.add(k);
     this.dashMax = this.cfg.dashCd * (this.perks.has('swift') ? 0.7 : 1);
     this.hp = full ? this.maxHp : Math.max(1, Math.round(this.maxHp * ratio));
   }

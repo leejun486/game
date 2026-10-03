@@ -75,12 +75,13 @@ export function rollGearTier(strong, round) {
   return r > 1.45 ? 4 : r > 1.15 ? 3 : r > 0.82 ? 2 : r > 0.5 ? 1 : 0;
 }
 
-export const gearColor = (g) => BASES[g.kind][g.tier][1];
+export const gearColor = (g) => (g.set ? SETS[g.set].color : BASES[g.kind][g.tier][1]);
 
 // 장착한 장비 옵션 합계 (한계 적용)
 export function sumStats(list) {
   const t = {};
   for (const g of list) if (g) for (const [k, v] of Object.entries(g.stats)) t[k] = (t[k] || 0) + v;
+  for (const [k, v] of Object.entries(setBonuses(list).stats)) t[k] = (t[k] || 0) + v;
   for (const [k, c] of Object.entries(CAPS)) if (t[k] > c) t[k] = c;
   return t;
 }
@@ -91,7 +92,7 @@ export function gearScore(g) {
   const w = { atk: 260, hp: 0.8, def: 300, crit: 240, critDmg: 70, spd: 160, cdr: 260, ls: 900, exp: 40, regen: 12 };
   let s = 0;
   for (const [k, v] of Object.entries(g.stats)) s += v * (w[k] || 1);
-  return s + (g.perk ? 20 : 0);
+  return s + (g.perk ? 20 : 0) + (g.set ? 12 : 0);
 }
 
 export function gearLines(g) {
@@ -107,7 +108,7 @@ export const salvageExp = (g) => 8 + g.tier * g.tier * 10 + g.lv * 2;
 export function drawGearIcon(cv, g) {
   const c = cv.getContext('2d');
   c.clearRect(0, 0, 16, 16);
-  const rc = RARITY[g.tier].color, col = gearColor(g);
+  const rc = (g.set ? SET_RARITY : RARITY[g.tier]).color, col = gearColor(g);
   c.fillStyle = '#14101c'; c.fillRect(0, 0, 16, 16);
   c.globalAlpha = 0.25; c.fillStyle = rc; c.fillRect(0, 0, 16, 16); c.globalAlpha = 1;
   const px = (x, y, w, h, k) => { c.fillStyle = k; c.fillRect(x, y, w, h); };
@@ -123,5 +124,72 @@ export function drawGearIcon(cv, g) {
     px(6, 2, 4, 4, col); px(7, 3, 1, 1, '#ffffff');
   }
   if (g.perk) { px(1, 1, 1, 1, '#ffffff'); px(14, 14, 1, 1, '#ffffff'); }
+  if (g.set) { px(12, 1, 3, 3, '#5aff9a'); px(13, 2, 1, 1, '#14101c'); }
   c.strokeStyle = rc; c.strokeRect(0.5, 0.5, 15, 15);
+}
+
+// ================= 세트 아이템 =================
+// 부위 네 개(장갑·각반·허리띠·반지). 2개·4개를 함께 끼면 세트 효과
+export const SET_RARITY = { name: '세트', color: '#5aff9a' };
+export const SETS = {
+  dokkaebi: {
+    name: '도깨비 대왕의 차림', from: ['blue', 'red', 'wisp', 'boss'], color: '#c8302c',
+    pieces: { gloves: '대왕의 손아귀', legs: '호피 각반', belt: '방망이 허리띠', ring: '도깨비불 반지' },
+    b2: { stats: { atk: 0.1 }, text: '공격력 +10%' },
+    b4: { stats: { critDmg: 0.3 }, perks: ['quake'], text: '치명타 피해 +30%, 도깨비 벼락 (맞힐 때 20% 확률로 주변에 벼락)' },
+  },
+  fox: {
+    name: '구미호의 홀림', from: ['fox', 'foxfire', 'gumiho'], color: '#ff8a3a',
+    pieces: { gloves: '여우털 장갑', legs: '구미 각반', belt: '아홉 꼬리 띠', ring: '여우구슬 반지' },
+    b2: { stats: { spd: 0.08, crit: 0.05 }, text: '이동 속도 +8%, 치명타 확률 +5%' },
+    b4: { stats: { cdr: 0.1 }, perks: ['drain'], text: '스킬 재사용 -10%, 여우구슬 (준 피해의 6% 회복)' },
+  },
+  reaper: {
+    name: '저승사자의 명부', from: ['jiangshi', 'ghost', 'reaper'], color: '#8a5ad8',
+    pieces: { gloves: '저승 수갑', legs: '망자의 각반', belt: '명부 허리띠', ring: '혼불 반지' },
+    b2: { stats: { def: 0.08 }, text: '받는 피해 -8%' },
+    b4: { stats: {}, perks: ['soul', 'execute'], text: '혼 거두기 (처치 시 체력 4% 회복) + 저승 심판 (체력 35% 아래 적에게 피해 +60%)' },
+  },
+  moon: {
+    name: '월하 선인의 유품', from: ['boss', 'gumiho', 'reaper'], color: '#bfe8ff',
+    pieces: { gloves: '월광 장갑', legs: '선인의 바지', belt: '은하 띠', ring: '달빛 가락지' },
+    b2: { stats: { exp: 0.15, regen: 2 }, text: '경험치 +15%, 초당 체력 회복 +2' },
+    b4: { stats: { cdr: 0.15, atk: 0.15 }, text: '스킬 재사용 -15%, 공격력 +15%' },
+  },
+};
+
+export const rarityOf = (g) => (g.set ? SET_RARITY : RARITY[g.tier]);
+
+// 세트 조각 하나 (영웅 등급 옵션 + 세트 이름·색)
+export function makeSetPiece(setId, level, kind) {
+  const S = SETS[setId];
+  kind = kind || ['gloves', 'legs', 'belt', 'ring'][Math.floor(Math.random() * 4)];
+  const g = makeGear(level, 3, kind);
+  delete g.perk;
+  g.set = setId;
+  g.name = S.pieces[kind];
+  return g;
+}
+
+// 이 적이 떨어뜨릴 수 있는 세트 (없으면 null)
+export function setFor(enemyType) {
+  const ids = Object.keys(SETS).filter((k) => SETS[k].from.includes(enemyType));
+  return ids.length ? ids[Math.floor(Math.random() * ids.length)] : null;
+}
+
+// 착용 목록의 세트 개수와 켜진 효과
+export function setBonuses(list) {
+  const cnt = {};
+  for (const g of list) if (g?.set) cnt[g.set] = (cnt[g.set] || 0) + 1;
+  const stats = {}, perks = [], active = [];
+  for (const [id, n] of Object.entries(cnt)) {
+    const S = SETS[id];
+    for (const [need, B] of [[2, S.b2], [4, S.b4]]) {
+      if (n < need) continue;
+      for (const [k, v] of Object.entries(B.stats)) stats[k] = (stats[k] || 0) + v;
+      if (B.perks) perks.push(...B.perks);
+    }
+    active.push({ id, n });
+  }
+  return { stats, perks, active, cnt };
 }

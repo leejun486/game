@@ -1,6 +1,6 @@
 import { item, itemDesc, drawItemIcon, RARITY, WEAPONS, OUTFITS } from './items.js';
 import { EVOS, branchOf, rankOf, freePoints, RANK_NAME, MAX_RANK } from './evolve.js';
-import { drawGearIcon, gearLines, gearScore, SLOT_NAME, STATS, BAG_MAX, salvageExp, GEAR_SLOTS } from './gear.js';
+import { drawGearIcon, gearLines, gearScore, SLOT_NAME, STATS, BAG_MAX, salvageExp, GEAR_SLOTS, rarityOf, SETS, setBonuses } from './gear.js';
 import { expNeed, SKILL_LEVEL } from './entities.js';
 
 // HTML HUD: 체력, 스킬, 임무, 배너, 대화창, 보스 체력, 적 체력바, 상호작용 표시
@@ -205,14 +205,20 @@ export class UI {
     }
     for (const slot of GEAR_SLOTS) {
       const it = g.gearInSlot(slot);
-      slotRow(SLOT_NAME[slot], it ? (cv) => drawGearIcon(cv, it) : null, it?.name, it ? RARITY[it.tier].color : '', it ? () => { this.pick = it.uid; this.pickSlot = slot; this.tab('gear'); this.refreshBag(); } : null, it && this.pick === it.uid);
+      slotRow(SLOT_NAME[slot], it ? (cv) => drawGearIcon(cv, it) : null, it?.name, it ? rarityOf(it).color : '', it ? () => { this.pick = it.uid; this.pickSlot = slot; this.tab('gear'); this.refreshBag(); } : null, it && this.pick === it.uid);
+    }
+    // 켜진 세트 효과
+    const sb = setBonuses(g.equippedGear(p.cls));
+    for (const { id, n } of sb.active) {
+      const S = SETS[id];
+      eqEl.insertAdjacentHTML('beforeend', `<div class="setbox"><b>${S.name} (${n}/4)</b><div class="${n >= 2 ? 'on' : ''}">2세트: ${S.b2.text}</div><div class="${n >= 4 ? 'on' : ''}">4세트: ${S.b4.text}</div></div>`);
     }
     // 방어구·장신구 목록 (착용한 것 먼저, 등급 높은 순)
     const free = g.gear.filter((x) => !CLASS_ORDER_EQ(g, x));
     document.getElementById('gear-count').textContent = `${free.length}/${BAG_MAX}`;
     const gl = document.getElementById('bag-gear');
     gl.innerHTML = '';
-    const list = [...g.gear].sort((a, b) => (g.isEquipped(b) - g.isEquipped(a)) || b.tier - a.tier || gearScore(b) - gearScore(a));
+    const list = [...g.gear].sort((a, b) => (g.isEquipped(b) - g.isEquipped(a)) || (!!b.set - !!a.set) || b.tier - a.tier || gearScore(b) - gearScore(a));
     for (const it of list) {
       const row = document.createElement('div');
       const worn = g.isEquipped(it);
@@ -223,7 +229,7 @@ export class UI {
       const cur = g.gearInSlot(it.kind === 'ring' ? g.worseRingSlot() : it.kind);
       const better = !worn && gearScore(it) > gearScore(cur);
       const txt = document.createElement('div');
-      txt.innerHTML = `<span style="color:${RARITY[it.tier].color}">${it.name}</span><small>${RARITY[it.tier].name} ${SLOT_NAME[it.kind]}${other ? ' · 다른 직업 착용' : ''}</small>`;
+      txt.innerHTML = `<span style="color:${rarityOf(it).color}">${it.name}</span><small>${it.set ? SETS[it.set].name : rarityOf(it).name} ${SLOT_NAME[it.kind]}${other ? ' · 다른 직업 착용' : ''}</small>`;
       row.append(cv, txt);
       if (better) row.insertAdjacentHTML('beforeend', '<span class="better">▲</span>');
       row.addEventListener('click', (e) => { e.stopPropagation(); this.pick = it.uid; this.pickSlot = null; this.refreshBag(); });
@@ -274,7 +280,14 @@ export class UI {
         return `<span class="${cls}">${STATS[k].name} ${d > 0 ? '▲' : '▼'} ${STATS[k].fmt(Math.abs(d)).replace(/^[+-]/, '')}</span>`;
       }).filter(Boolean).join('<br>');
     }
-    el.innerHTML = `<div class="gd"><div class="gd-top"><canvas width="16" height="16"></canvas><div><div class="gd-name" style="color:${RARITY[it.tier].color}">${it.name}</div><small>${RARITY[it.tier].name} ${SLOT_NAME[it.kind]} · 아이템 레벨 ${it.lv}${worn ? ' · 착용 중' : ''}</small></div></div>` +
+    // 세트 조각이면 세트 효과와 지금 몇 개 끼고 있는지
+    let setInfo = '';
+    if (it.set) {
+      const S = SETS[it.set];
+      const n = setBonuses(g.equippedGear(g.player.cls)).cnt[it.set] || 0;
+      setInfo = `<div class="setbox"><b>${S.name} (착용 ${n}/4)</b><div class="${n >= 2 ? 'on' : ''}">2세트: ${S.b2.text}</div><div class="${n >= 4 ? 'on' : ''}">4세트: ${S.b4.text}</div></div>`;
+    }
+    el.innerHTML = `<div class="gd"><div class="gd-top"><canvas width="16" height="16"></canvas><div><div class="gd-name" style="color:${rarityOf(it).color}">${it.name}</div><small>${it.set ? '세트' : rarityOf(it).name} ${SLOT_NAME[it.kind]} · 아이템 레벨 ${it.lv}${worn ? ' · 착용 중' : ''}</small></div></div>` + setInfo +
       `<div class="cmp"><div>${lines(it)}</div>${cur ? `<div><small>지금 낀 ${cur.name}과 비교</small><br>${cmp || '<small>차이 없음</small>'}</div>` : ''}</div>` +
       `<div class="btns">${worn ? '<button data-a="off" class="sub">벗기</button>' : `<button data-a="on">${cur ? '바꿔 끼기' : '착용'}</button>`}${worn ? '' : `<button data-a="salvage" class="sub">분해 (경험치 +${salvageExp(it)})</button>`}</div></div>`;
     drawGearIcon(el.querySelector('canvas'), it);
