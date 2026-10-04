@@ -434,3 +434,142 @@ export const makeJelly = () => new JellyRig();
 export const makeTurtle = () => new TurtleRig();
 export const makeBee = () => new BeeRig();
 export const makeMantis = () => new MantisRig();
+
+// ======================= 네발짐승 (범·백호·멧돼지·늑대) =======================
+// 가슴·배·엉덩이 덩어리, 무릎이 굽는 두 마디 다리, 턱이 벌어지는 머리, 마디 꼬리
+const BEASTS = {
+  tiger: { s: 1.45, fur: '#e08a2a', belly: '#f6eedc', dark: '#1a1210', eye: '#ffd040', eyeE: '#5a3a00', stripes: true, ears: 'round', tail: 1.0, muzzle: 0.9 },
+  baekho: { s: 3.0, fur: '#eeeee6', belly: '#ffffff', dark: '#1a1a22', eye: '#7fd8ff', eyeE: '#1a6aff', stripes: true, ears: 'round', tail: 1.0, muzzle: 0.9, glow: true },
+  boar: { s: 1.5, fur: '#5a3e2a', belly: '#7a5a3a', dark: '#2a1a10', eye: '#ff4a2a', eyeE: '#6a0a00', tusks: true, bristle: true, ears: 'small', tail: 0.35, muzzle: 1.25, bulk: 1.25, legs: 0.85 },
+  wolf: { s: 1.4, fur: '#b8bec8', belly: '#eef0f4', dark: '#3a3e48', eye: '#8ad8ff', eyeE: '#1a5aaa', ruff: true, ears: 'pointy', tail: 1.1, muzzle: 1.1, legs: 1.1 },
+};
+
+export class BeastRig extends BaseRig {
+  constructor(kind = 'tiger') {
+    super();
+    const V = (this.V = BEASTS[kind]);
+    const fur = this.mat({ color: C(V.fur) }), belly = this.mat({ color: C(V.belly) }), dark = this.mat({ color: C(V.dark) });
+    const eyeM = toon({ color: C(V.eye), emissive: C(V.eyeE), emissiveIntensity: V.glow ? 1.4 : 0.8 });
+    const bulk = V.bulk || 1, legL = V.legs || 1;
+    this.body.scale.setScalar(V.s * 0.62);
+    this.hipH = 0.62 * legL;
+    this.torso = new THREE.Group();
+    this.torso.position.y = this.hipH;
+    this.body.add(this.torso);
+    // 몸통: 가슴(앞) · 배 · 엉덩이(뒤)
+    const chest = mesh(new THREE.SphereGeometry(0.3 * bulk, 12, 10), fur, 0, 0.06, 0.32);
+    chest.scale.set(1, 1.05, 1.1);
+    const mid = mesh(new THREE.SphereGeometry(0.26 * bulk, 12, 10), fur, 0, 0.02, 0);
+    mid.scale.set(1, 0.95, 1.5);
+    const hip = mesh(new THREE.SphereGeometry(0.27 * bulk, 12, 10), fur, 0, 0.04, -0.34);
+    hip.scale.set(1, 1, 1.05);
+    const under = mesh(new THREE.SphereGeometry(0.22 * bulk, 10, 8), belly, 0, -0.12, 0.12);
+    under.scale.set(0.9, 0.6, 1.8);
+    this.torso.add(chest, mid, hip, under);
+    if (V.stripes) {
+      for (let k = 0; k < 7; k++) {
+        const b = mesh(new THREE.TorusGeometry(0.27 * bulk, 0.022, 4, 12, Math.PI * 0.7), dark, 0, 0.03, 0.38 - k * 0.12);
+        b.rotation.z = Math.PI * 0.15 + (k % 2 ? 0.18 : -0.18);
+        b.scale.set(1, 1, 1);
+        this.torso.add(b);
+      }
+    }
+    if (V.bristle) for (let k = 0; k < 7; k++) this.torso.add(mesh(new THREE.ConeGeometry(0.04, 0.16, 4), dark, 0, 0.3 * bulk, 0.36 - k * 0.11, -0.35, 0, 0));
+    if (V.ruff) {
+      const ruff = mesh(new THREE.SphereGeometry(0.3, 10, 8), belly, 0, 0.12, 0.44);
+      ruff.scale.set(1.15, 1.05, 0.7);
+      this.torso.add(ruff);
+    }
+    // 목 + 머리 (턱이 따로 벌어짐)
+    this.neck = new THREE.Group();
+    this.neck.position.set(0, 0.16, 0.52);
+    this.torso.add(this.neck);
+    this.head = new THREE.Group();
+    this.head.position.set(0, 0.1, 0.16);
+    this.neck.add(this.head);
+    const skull = mesh(new THREE.SphereGeometry(0.2, 12, 10), fur, 0, 0, 0);
+    skull.scale.set(1, 0.92, 1);
+    this.head.add(skull);
+    const mz = V.muzzle;
+    const snout = mesh(new THREE.BoxGeometry(0.2 * mz, 0.13, 0.22 * mz), V.ruff ? fur : belly, 0, -0.04, 0.2);
+    this.head.add(snout);
+    this.head.add(mesh(new THREE.SphereGeometry(0.045 * mz, 6, 4), dark, 0, 0.0, 0.31 + 0.05 * (mz - 1)));
+    this.jaw = new THREE.Group();
+    this.jaw.position.set(0, -0.1, 0.08);
+    this.head.add(this.jaw);
+    this.jaw.add(mesh(new THREE.BoxGeometry(0.17 * mz, 0.05, 0.22 * mz), belly, 0, 0, 0.12));
+    for (const s of [-1, 1]) {
+      this.jaw.add(mesh(new THREE.ConeGeometry(0.018, 0.06, 4), toon({ color: C('#f4f0e4') }), s * 0.05, 0.04, 0.2, 0, 0, 0));
+      this.head.add(mesh(new THREE.BoxGeometry(0.06, 0.035, 0.02), eyeM, s * 0.09, 0.05, 0.17));
+      if (V.ears === 'round') { const e = mesh(new THREE.SphereGeometry(0.065, 8, 6), fur, s * 0.13, 0.15, -0.04); e.scale.set(1, 1, 0.45); this.head.add(e); }
+      else if (V.ears === 'pointy') this.head.add(mesh(new THREE.ConeGeometry(0.06, 0.18, 4), fur, s * 0.1, 0.2, -0.04, -0.15, 0, -s * 0.2));
+      else this.head.add(mesh(new THREE.ConeGeometry(0.045, 0.1, 4), fur, s * 0.13, 0.14, -0.02, -0.3, 0, -s * 0.6));
+      if (V.tusks) this.head.add(mesh(new THREE.ConeGeometry(0.025, 0.16, 5), toon({ color: C('#f4ecd8') }), s * 0.1, -0.05, 0.3, -0.7, 0, s * 0.35));
+    }
+    if (V.stripes) for (const s of [-1, 0, 1]) { const b = mesh(new THREE.BoxGeometry(0.025, 0.09, 0.02), dark, s * 0.05, 0.12, 0.18); b.rotation.z = s * 0.3; this.head.add(b); }
+    // 다리: 어깨/엉덩이 → 무릎 → 발
+    this.legs = [];
+    for (const [x, z, front, ph] of [[-0.17, 0.34, 1, 0], [0.17, 0.34, 1, Math.PI], [-0.17, -0.34, 0, Math.PI], [0.17, -0.34, 0, 0]]) {
+      const up = new THREE.Group();
+      up.position.set(x * bulk, -0.02, z);
+      this.torso.add(up);
+      const th = mesh(new THREE.CapsuleGeometry(0.075 * bulk, 0.22 * legL, 3, 6), fur, 0, -0.14 * legL, 0);
+      up.add(th);
+      const knee = new THREE.Group();
+      knee.position.set(0, -0.3 * legL, 0);
+      up.add(knee);
+      knee.add(mesh(new THREE.CapsuleGeometry(0.05, 0.22 * legL, 3, 6), fur, 0, -0.13 * legL, 0));
+      knee.add(mesh(new THREE.SphereGeometry(0.07, 8, 6), V.tusks ? dark : belly, 0, -0.27 * legL, 0.03)).scale.set(1, 0.6, 1.3);
+      this.legs.push({ up, knee, front, ph });
+    }
+    // 꼬리: 마디 넷
+    this.tail = [];
+    let parent = this.torso, tz = -0.58;
+    for (let k = 0; k < 4; k++) {
+      const g = new THREE.Group();
+      g.position.set(0, k ? 0 : 0.1, k ? -0.16 * V.tail : tz);
+      g.rotation.x = k ? 0.12 : 0.7;
+      parent.add(g);
+      const seg = mesh(new THREE.CapsuleGeometry(0.035 - k * 0.004, 0.13 * V.tail, 3, 5), k === 3 && V.stripes ? dark : fur, 0, 0, -0.08 * V.tail, Math.PI / 2, 0, 0);
+      g.add(seg);
+      this.tail.push(g);
+      parent = g;
+    }
+    this.finish();
+  }
+  animate(dt, p) {
+    const s = p.speed || 0, run = clamp(s / 4.5, 0, 1);
+    this.phase += dt * (3 + s * 2.2);
+    const ph = this.phase;
+    let pitch = Math.sin(ph * 2) * 0.03 * run, bob = Math.abs(Math.sin(ph)) * 0.06 * run, headX = -Math.sin(ph * 2) * 0.05 * run, jaw = 0.05 + Math.max(0, Math.sin(this.phase * 0.3)) * 0.03;
+    const [a, b, r] = this.atk(p);
+    let crouch = 0, reach = 0;
+    if (p.attack) {
+      crouch = a * (1 - b);
+      reach = b * (1 - r);
+      pitch = (-0.15 * a + 0.3 * b) * (1 - r);
+      headX = (-0.25 * a + 0.35 * b) * (1 - r);
+      jaw = Math.max(a * 0.5, b * 0.7) * (1 - r);
+    }
+    if (p.hurt > 0) { pitch = -0.25 * p.hurt; headX = -0.3 * p.hurt; }
+    const L = 1 - Math.exp(-20 * dt);
+    for (const g of this.legs) {
+      const sw = Math.sin(ph + g.ph) * run;
+      let upA = sw * 0.75, kneeA = (g.front ? -1 : 1) * Math.max(0, -Math.cos(ph + g.ph)) * 0.9 * run;
+      if (p.attack) { upA = g.front ? (-0.8 * reach + 0.5 * crouch) : (0.5 * reach - 0.4 * crouch); kneeA = (g.front ? -1 : 1) * crouch * 0.8; }
+      g.up.rotation.x += (upA - g.up.rotation.x) * L;
+      g.knee.rotation.x += (kneeA - g.knee.rotation.x) * L;
+    }
+    this.torso.rotation.x += (pitch - this.torso.rotation.x) * L;
+    this.torso.position.y = this.hipH + bob - crouch * 0.12;
+    this.torso.position.z = reach * 0.18;
+    this.head.rotation.x += (headX - this.head.rotation.x) * L;
+    this.jaw.rotation.x = jaw;
+    this.tail.forEach((t, i) => { t.rotation.y = Math.sin(this.phase * 0.8 + i * 0.6) * (0.25 + 0.2 * run); });
+    if (p.dead) {
+      this.deadT += dt;
+      this.body.rotation.z = smooth(clamp(this.deadT / 0.4, 0, 1)) * Math.PI / 2;
+    } else { this.deadT = 0; this.body.rotation.z = 0; }
+  }
+}
+export const makeBeast = (kind) => new BeastRig(kind);

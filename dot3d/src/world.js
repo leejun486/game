@@ -845,17 +845,17 @@ export class World {
         if (GFX.hd) {
           // 분재처럼: 가지 끝마다 납작한 솔잎층 두세 겹, 줄기가 비쳐 보이게
           pad(end.clone().add(new THREE.Vector3(0, 0.05 * s, 0)), 1.25 * ps, 0.32 * ps, 1.05 * ps, M.leaf);
-          pad(end.clone().add(new THREE.Vector3((R() - 0.5) * 0.3, 0.32 * s, (R() - 0.5) * 0.3)), 0.85 * ps, 0.26 * ps, 0.75 * ps, snowy ? M.snowLeaf : M.leaf2);
-          if (R() < 0.5) pad(end.clone().add(new THREE.Vector3(0, 0.55 * s, 0)), 0.5 * ps, 0.2 * ps, 0.45 * ps, snowy ? M.snowLeaf : M.leaf2);
+          pad(end.clone().add(new THREE.Vector3((R() - 0.5) * 0.3, 0.32 * s, (R() - 0.5) * 0.3)), 0.85 * ps, 0.26 * ps, 0.75 * ps, snowy ? (M.snowPad || M.snowLeaf) : M.leaf2);
+          if (R() < 0.5) pad(end.clone().add(new THREE.Vector3(0, 0.55 * s, 0)), 0.5 * ps, 0.2 * ps, 0.45 * ps, snowy ? (M.snowPad || M.snowLeaf) : M.leaf2);
         } else {
           pad(end.clone().add(new THREE.Vector3(0, 0.15 * s, 0)), 1.25 * ps, 0.42 * ps, 1.05 * ps, M.leaf);
-          pad(end.clone().add(new THREE.Vector3(0.1, 0.42 * s, 0.05)), 0.85 * ps, 0.3 * ps, 0.75 * ps, snowy ? M.snowLeaf : M.leaf2);
+          pad(end.clone().add(new THREE.Vector3(0.1, 0.42 * s, 0.05)), 0.85 * ps, 0.3 * ps, 0.75 * ps, snowy ? (M.snowPad || M.snowLeaf) : M.leaf2);
         }
       }
     }
     const top = pts[segs - 1];
     pad(top.clone().add(new THREE.Vector3(0, 0.2 * s, 0)), 1.5 * s, 0.5 * s, 1.3 * s, M.leaf);
-    pad(top.clone().add(new THREE.Vector3(0.1, 0.55 * s, 0)), 1.0 * s, 0.35 * s, 0.9 * s, snowy ? M.snowLeaf : M.leaf2);
+    pad(top.clone().add(new THREE.Vector3(0.1, 0.55 * s, 0)), 1.0 * s, 0.35 * s, 0.9 * s, snowy ? (M.snowPad || M.snowLeaf) : M.leaf2);
     if (collide) this.circles.push({ x, z, r: 0.45 * s, y });
   }
 

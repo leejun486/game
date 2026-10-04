@@ -29,6 +29,8 @@ export function extraMaterials(W) {
     M.snow = toon({ ...HD.hdSnow(), roughness: 0.8, color: new THREE.Color(1.2, 1.2, 1.24) });
     M.snowLeaf = toon({ ...HD.hdNeedle([226, 236, 244], true), roughness: 0.85 });
   }
+  // 소나무 위 눈: 매끈한 흰 덩어리 (고화질 솔잎 무늬를 쓰면 회색 잡음처럼 보임)
+  M.snowPad = toon({ color: C('#f4f8fc') });
   M.ice = toon({ color: C('#bfe8ff'), emissive: C('#000000') });
   M.rock = toon({ color: C('#8a8478') });
   M.rockDark = toon({ color: C('#6a665e') });

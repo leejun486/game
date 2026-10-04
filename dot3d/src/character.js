@@ -1659,6 +1659,8 @@ export class ToadRig {
     this.body.position.y = hop * 0.35 - crouch * 0.08;
     this.torso.scale.set(puff, 1, puff);
     this.jaw.rotation.x = open * 0.7;
+    // 지네 다리: 마디를 따라 물결치듯 앞뒤로
+    if (this.centiLegs) for (const L of this.centiLegs) L.g.rotation.y = Math.sin(this.phase * 5 - L.i * 0.7 + (L.sd > 0 ? Math.PI : 0)) * 0.45;
     this.head.rotation.x = -open * 0.25;
     for (const L of this.legs) if (L.back) L.g.rotation.x = -hop * 0.9;
     if (p.hurt > 0) this.torso.rotation.z = Math.sin(this.phase * 30) * 0.08 * p.hurt; else this.torso.rotation.z = 0;
@@ -1752,24 +1754,46 @@ export class SerpentRig {
       const k = i / (N - 1);
       const r = (0.5 - 0.36 * k) * S * (i < 2 ? 0.9 : 1);
       const g = new THREE.Group();
+      if (centi) {
+        // 지네: 납작한 등딱지 마디 + 주황 테두리 + 마디마다 관절 다리 한 쌍
+        const plate = mesh(new THREE.SphereGeometry(r, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2), scale, 0, -r * 0.1, 0);
+        plate.scale.set(1.35, 0.6, 0.95);
+        g.add(plate);
+        const rim = mesh(new THREE.TorusGeometry(r * 1.1, r * 0.08, 4, 16), dark, 0, -r * 0.1, 0, Math.PI / 2, 0, 0);
+        rim.scale.set(1.2, 0.85, 1);
+        g.add(rim);
+        g.add(mesh(new THREE.BoxGeometry(r * 0.25, r * 0.12, r * 0.7), fin, 0, r * 0.48, 0));
+        const bl = mesh(new THREE.SphereGeometry(r * 0.9, 10, 6), belly, 0, -r * 0.2, 0);
+        bl.scale.set(1.25, 0.35, 0.9);
+        g.add(bl);
+        if (i < N - 1) for (const sd of [-1, 1]) {
+          const hipG = new THREE.Group();
+          hipG.position.set(sd * r * 1.25, -r * 0.15, 0);
+          hipG.rotation.z = sd * 0.5;
+          hipG.add(mesh(new THREE.CylinderGeometry(r * 0.08, r * 0.1, r * 0.9, 4), belly, sd * r * 0.4, 0, 0, 0, 0, sd * Math.PI / 2));
+          const kneeG = new THREE.Group();
+          kneeG.position.set(sd * r * 0.85, 0, 0);
+          kneeG.rotation.z = -sd * 1.4;
+          kneeG.add(mesh(new THREE.CylinderGeometry(r * 0.06, r * 0.03, r * 0.9, 4), fin, sd * r * 0.4, 0, 0, 0, 0, sd * Math.PI / 2));
+          hipG.add(kneeG);
+          g.add(hipG);
+          (this.centiLegs = this.centiLegs || []).push({ g: hipG, i, sd });
+        }
+      } else {
       const ball = mesh(new THREE.SphereGeometry(r, 12, 8), scale);
       ball.scale.set(1, 0.9, 1.25);
       g.add(ball);
       const bl = mesh(new THREE.SphereGeometry(r * 0.86, 10, 6), belly, 0, -r * 0.22, 0);
       bl.scale.set(1, 0.7, 1.2);
       g.add(bl);
-      if (i % 2 === 0 && i < N - 2) {
+      }
+      if (!centi && i % 2 === 0 && i < N - 2) {
         const f = mesh(new THREE.ConeGeometry(r * 0.32, r * 0.9, 4), fin, 0, r * 0.95, 0);
         f.rotation.x = -0.5;
         g.add(f);
       }
-      if (i % 3 === 1) for (const s of [-1, 1]) g.add(mesh(new THREE.SphereGeometry(r * 0.2, 5, 4), dark, s * r * 0.75, r * 0.3, 0));
+      if (!centi && i % 3 === 1) for (const s of [-1, 1]) g.add(mesh(new THREE.SphereGeometry(r * 0.2, 5, 4), dark, s * r * 0.75, r * 0.3, 0));
       // 용: 앞뒤 두 쌍의 발톱 달린 다리
-      // 지네: 마디마다 다리 한 쌍
-      if (centi && i < N - 1) for (const s of [-1, 1]) {
-        const leg = mesh(new THREE.CylinderGeometry(r * 0.06, r * 0.1, r * 1.5, 4), belly, s * r * 1.1, -r * 0.35, 0, 0, 0, s * 1.15);
-        g.add(leg);
-      }
       if (dragon && (i === 3 || i === 10)) for (const s of [-1, 1]) {
         const leg = mesh(new THREE.CapsuleGeometry(r * 0.18, r * 0.9, 3, 6), scale, s * r * 0.95, -r * 0.35, 0, 0.3, 0, s * 0.9);
         g.add(leg);
@@ -1842,6 +1866,8 @@ export class SerpentRig {
     this.neck.position.z = lunge * 0.9 * S;
     this.head.rotation.x = 0.15 - lunge * 0.5 + (p.hurt > 0 ? -0.3 * p.hurt : 0);
     this.jaw.rotation.x = open * 0.7;
+    // 지네 다리: 마디를 따라 물결치듯 앞뒤로
+    if (this.centiLegs) for (const L of this.centiLegs) L.g.rotation.y = Math.sin(this.phase * 5 - L.i * 0.7 + (L.sd > 0 ? Math.PI : 0)) * 0.45;
     if (p.dead) {
       this.deadT += dt;
       this.rise = Math.max(0.15, 1 - this.deadT * 1.6);

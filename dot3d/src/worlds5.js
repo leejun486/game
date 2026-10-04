@@ -83,7 +83,7 @@ function thatchHut(W, x, z, ry, snow = false) {
   B.add(boxGeo(4.4, 0.25, 3.0, 2), M.wood2, mat4(x, 0.12, z, ry));
   const roof = new THREE.SphereGeometry(1, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2);
   B.add(roof, M.thatch, mat4(x, 1.95, z, ry, 0, 0, [2.7, 1.25, 2.0]));
-  if (snow) B.add(roof, M.snowCap, mat4(x, 2.02, z, ry, 0, 0, [2.5, 1.2, 1.85]));
+  if (snow) B.add(roof, M.snowCap, mat4(x, 2.0, z, ry, 0, 0, [2.62, 1.34, 1.93]));
   // 문과 창
   const fx = Math.sin(ry), fz = Math.cos(ry);
   B.add(boxGeo(0.8, 1.3, 0.06, 1), M.darkWood, mat4(x + fx * 1.42, 0.75, z + fz * 1.42, ry));
@@ -109,7 +109,7 @@ function valleyMaterials(W) {
   M.lily = M.lily || toon({ color: C('#4a8a3a') });
   M.dayLily = toon({ color: C('#ff8a2a') });
   M.mudWall = toon({ color: C('#c8a878') });
-  M.thatch = toon({ color: C('#c8a050') });
+  M.thatch = toon({ color: C('#b8945a') });
   M.candle = toon({ color: C('#fff4d0'), emissive: C('#000000') });
   W.glowMats.push({ mat: M.candle, color: new THREE.Color('#ffb040'), k: 1.2 });
 }
@@ -288,7 +288,7 @@ function snowMaterials(W) {
   M.iceLake = toon({ color: C('#a8d8f0'), roughness: 0.2, metalness: GFX.hd ? 0.2 : 0 });
   M.iceCrystal = toon({ color: C('#d8f4ff'), emissive: C('#2a8aff'), emissiveIntensity: 0.6, transparent: true, opacity: 0.85 });
   M.mudWall = M.mudWall || toon({ color: C('#c8a878') });
-  M.thatch = M.thatch || toon({ color: C('#c8a050') });
+  M.thatch = M.thatch || toon({ color: C('#b8945a') });
   W.lavaMats = W.lavaMats || [];
   W.lavaMats.push({ mat: M.iceCrystal, base: 0.6 });
 }
@@ -310,7 +310,10 @@ export function buildSnowfield(W) {
   snowMaterials(W);
   const M = W.M, B = (W.batch = new Batcher());
   W.foliage = new Batcher();
-  ground(W, M.snow);
+  // 고원 바닥: 큰 얼룩 없이 고르게 쌓인 눈 (살짝 푸른 그늘)
+  M.snowGround = toon({ color: C('#eef3f9') });
+  ground(W, M.snowGround);
+  for (let i = 0; i < 40; i++) { const R = mulberry32(3000 + i); const d = disc(W, M.snowCap, (R() - 0.5) * 38, -24 + R() * 46, 0.8 + R() * 1.6); d.position.y = 0.004; d.scale.set(1.6, 1, 1); }
   if (M.summerGrass) blendStrip(W, M.summerGrass, -60, 60, -26.1, -20.5, 0.004);
   // 발자국 길: 북서쪽 어귀 → 마을 → 얼음 북
   // 밟아 다진 눈길 (흙이 살짝 비침)
