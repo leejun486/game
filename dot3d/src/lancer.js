@@ -59,6 +59,37 @@ function spearBeam(g, pl, o = {}) {
     const k = i / 15;
     g.fx.add.emit({ x: from.x + (to.x - from.x) * k, y: y + rand(-0.2, 0.2), z: from.z + (to.z - from.z) * k, vx: Math.sin(yaw) * rand(2, 6), vy: rand(0, 1.5), vz: Math.cos(yaw) * rand(2, 6), drag: 3, life: rand(0.25, 0.5), size: 3, endSize: 1, color: '#ffffff', color2: c1 });
   }
+  // 빛의 창이 날아가며 잔상을 남기고, 끝에서 터짐
+  if (!o.quiet || o.spear) {
+    const holder = new THREE.Group();
+    const sp = spiritSpear(g, c1, 1.7, 1.25);
+    g.scene.remove(sp);
+    sp.rotation.x = -Math.PI / 2; // 창끝을 +z로
+    holder.add(sp);
+    holder.rotation.y = yaw;
+    holder.position.set(from.x, y, from.z);
+    g.scene.add(holder);
+    let ghostT = 0;
+    g.lancerFx.push({
+      t: 0, boomed: false,
+      update(dt) {
+        this.t += dt;
+        const k = Math.min(1, this.t / 0.16);
+        holder.position.set(from.x + (to.x - from.x) * k, y, from.z + (to.z - from.z) * k);
+        ghostT -= dt;
+        if (k < 1 && ghostT <= 0) { ghostT = 0.012; g.fx.add.emit({ x: holder.position.x, y, z: holder.position.z, life: 0.22, size: 6, endSize: 1, color: '#ffffff', color2: c1 }); }
+        if (k >= 1 && !this.boomed) {
+          this.boomed = true;
+          g.fx.ring(V(to.x, pl.y, to.z), 1.8, c1, 0.3);
+          g.fx.spark(to.x, y, to.z, 14, '#ffffff', 7);
+          g.fx.cross?.(V(to.x, y, to.z), c1, 1.4, 0.14);
+        }
+        fade(sp, k < 1 ? 1 : Math.max(0, 1 - (this.t - 0.16) / 0.2));
+        return this.t < 0.36;
+      },
+      end() { g.scene.remove(holder); drop(g, sp); },
+    });
+  }
   const n = hitAll(g, enemiesInLine(g, from, yaw, L, W), o.dmg || 40, o.knock ?? 6, o.stun ?? 0.3);
   if (!o.quiet) { g.audio.play('spearbeam'); g.fx.ring(from, 1.6, c1, 0.3); g.shake(0.2); }
   if (n) g.hitstop = Math.max(g.hitstop, 0.04);
