@@ -632,17 +632,17 @@ const TYPES = {
   crab: { hp: 210, speed: 3.0, dmg: 21, range: 1.7, windup: 0.45, recover: 0.55, radius: 0.55, exp: 44, ai: 'melee', armor: 0.3, make: makeCrab, pal: PAL.sea },
   jelly: { hp: 110, speed: 1.7, dmg: 18, range: 7, windup: 0.6, recover: 1.5, radius: 0.42, exp: 42, ai: 'wisp', poison: true, make: makeJelly, pal: PAL.sea },
   turtle: { hp: 460, speed: 1.6, dmg: 30, range: 2.0, windup: 0.85, recover: 1.0, radius: 0.7, exp: 64, ai: 'melee', armor: 0.5, slam: 2.2, make: makeTurtle, pal: PAL.sea },
-  dragon: { hp: 4400, speed: 2.7, dmg: 40, range: 3.1, windup: 0.75, recover: 0.8, radius: 1.2, exp: 1500, ai: 'boss', boss: 'dragon', aquatic: true, make: makeDragon, pal: PAL.sea, name: '동해 용왕', summon: ['crab', 'jelly'] },
+  dragon: { hp: 4400, speed: 2.7, dmg: 37, range: 3.1, windup: 0.75, recover: 0.8, radius: 1.2, exp: 1500, ai: 'boss', boss: 'dragon', aquatic: true, make: makeDragon, pal: PAL.sea, name: '동해 용왕', summon: ['crab', 'jelly'] },
   // 청류 계곡: 멧돼지(덮치는 돌진), 사마귀 요괴(빠른 낫질), 왕벌 요괴(독침 — 맞으면 느려짐)
   boar: { hp: 260, speed: 4.2, dmg: 25, range: 1.7, windup: 0.45, recover: 0.6, radius: 0.6, exp: 54, ai: 'melee', lunge: true, make: () => makeFox('boar'), pal: PAL.summer },
   mantis: { hp: 190, speed: 3.6, dmg: 27, range: 1.9, windup: 0.36, recover: 0.5, radius: 0.5, exp: 52, ai: 'melee', make: makeMantis, pal: PAL.summer },
   bee: { hp: 110, speed: 3.0, dmg: 20, range: 7, windup: 0.45, recover: 1.2, radius: 0.38, exp: 48, ai: 'wisp', poison: true, make: makeBee, pal: PAL.summer },
-  centipede: { hp: 5000, speed: 3.0, dmg: 44, range: 3.0, windup: 0.7, recover: 0.75, radius: 1.15, exp: 1800, ai: 'boss', boss: 'centipede', make: makeCentipede, pal: PAL.summer, name: '천년 왕지네', summon: ['mantis', 'bee'] },
+  centipede: { hp: 5000, speed: 3.0, dmg: 40, range: 3.0, windup: 0.7, recover: 0.75, radius: 1.15, exp: 1800, ai: 'boss', boss: 'centipede', make: makeCentipede, pal: PAL.summer, name: '천년 왕지네', summon: ['mantis', 'bee'] },
   // 백설 고원: 눈늑대(덮침), 얼음 도깨비(맞으면 몸이 얼어 느려짐), 서리 도깨비불(얼음 구슬)
   wolf: { hp: 260, speed: 4.8, dmg: 27, range: 1.6, windup: 0.34, recover: 0.5, radius: 0.5, exp: 58, ai: 'melee', lunge: true, make: () => makeFox('wolf'), pal: PAL.ice },
   icedok: { hp: 330, speed: 3.0, dmg: 30, range: 1.7, windup: 0.5, recover: 0.6, radius: 0.55, exp: 62, ai: 'melee', frost: true, make: () => makeDokkaebi('ice'), pal: PAL.ice },
   icewisp: { hp: 140, speed: 2.2, dmg: 24, range: 7, windup: 0.55, recover: 1.4, radius: 0.38, exp: 56, ai: 'wisp', poison: true, pal: PAL.ice },
-  frostgiant: { hp: 6000, speed: 2.4, dmg: 50, range: 3.3, windup: 0.9, recover: 0.85, radius: 1.4, exp: 2200, ai: 'boss', boss: 'frost', leap: true, make: makeFrostGiant, pal: PAL.ice, name: '서리 거인 동장군', summon: ['wolf', 'icedok'] },
+  frostgiant: { hp: 6000, speed: 2.4, dmg: 45, range: 3.3, windup: 0.9, recover: 0.85, radius: 1.4, exp: 2200, ai: 'boss', boss: 'frost', leap: true, make: makeFrostGiant, pal: PAL.ice, name: '서리 거인 동장군', summon: ['wolf', 'icedok'] },
   // 시련탑 10층마다: 염라대왕
   yeomra: { hp: 4200, speed: 2.5, dmg: 36, range: 3.2, windup: 0.8, recover: 0.8, radius: 1.2, exp: 1500, ai: 'boss', boss: 'yeomra', make: makeYeomra, pal: PAL.hell, name: '염라대왕', summon: ['jiangshi', 'ghost'] },
   reaper: { hp: 1500, speed: 2.7, dmg: 26, range: 2.8, windup: 0.7, recover: 0.8, radius: 1.0, exp: 450, ai: 'boss', boss: 'reaper', make: makeReaper, pal: PAL.ghost, name: '저승사자', summon: ['ghost', 'jiangshi'] },
