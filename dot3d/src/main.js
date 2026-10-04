@@ -16,7 +16,7 @@ import { QUESTS, BOUNTIES, KILL_NAME } from './quests.js';
 import { makeGear, rollGearTier, gearScore, salvageExp, BAG_MAX, GEAR_SLOTS, slotKind, rarityOf, makeSetPiece, setFor, SETS } from './gear.js';
 import { item, rollDrop, bossDrop, RARITY, itemDesc, WEAPONS, OUTFITS, ULTS } from './items.js';
 import { expNeed, SKILL_LEVEL } from './entities.js';
-import { MAPS, BOSS_TYPES, BOSS_NAME, WIN_LINE } from './maps.js';
+import { MAPS, BOSS_TYPES, BOSS_NAME, WIN_LINE, GRADE } from './maps.js';
 import { PROLOGUE, SHARD_LINES, SHARD_MAX, ENDING, CREDITS, fillStory } from './story.js';
 import { clamp, lerp, rand, angleDiff, damp } from './util.js';
 import { initLang, watchDom, tr, LANG } from './i18n.js';
@@ -369,6 +369,14 @@ class Game {
     for (const key of ['sun', 'sky', 'ground', 'bg']) for (let i = 0; i < 2; i++) cur[key][i].lerp(_e.set(tgt[key][i]), k);
     for (const key of ['sunI', 'hemiI']) for (let i = 0; i < 2; i++) cur[key][i] = lerp(cur[key][i], tgt[key][i], k);
     cur.ambient = tgt.ambient;
+    // 지역 색감 (고화질 합성 셰이더)
+    const U = this.pixel.hdMat?.uniforms, G = GRADE[this.world.regionAt(this.focus.x, this.focus.z).id];
+    if (U && G) {
+      U.gTint.value.x = lerp(U.gTint.value.x, G.tint[0], k); U.gTint.value.y = lerp(U.gTint.value.y, G.tint[1], k); U.gTint.value.z = lerp(U.gTint.value.z, G.tint[2], k);
+      U.gSat.value = lerp(U.gSat.value, G.sat, k);
+      U.gHaze.value.lerp(_e.set(G.haze), k);
+      U.gHazeAmt.value = lerp(U.gHazeAmt.value, G.hz, k);
+    }
   }
 
   // 궁궐의 수문장·나인·참새, 죽림 입구의 약초꾼, 폐사찰 입구의 떠돌이 도사

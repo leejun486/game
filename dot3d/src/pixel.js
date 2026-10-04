@@ -147,6 +147,10 @@ uniform float flash;
 uniform vec3 flashColor;
 uniform float vignette;
 uniform float aoOn;
+uniform vec3 gTint;
+uniform float gSat;
+uniform vec3 gHaze;
+uniform float gHazeAmt;
 uniform float pxPerUnit;
 uniform float tanHalf;
 uniform float aspect;
@@ -200,8 +204,13 @@ void main() {
   vec3 bloom = max(blur - vec3(0.78 - night * 0.45), 0.0);
   col += bloom * mix(0.55, 1.1, night);
 
+  // ---- 지역 색감: 먼 곳(화면 위쪽)에 대기가 끼고, 지역마다 색과 채도가 다름 (밤엔 절반만) ----
+  float gk = 1.0 - night * 0.5;
+  col = mix(col, gHaze * mix(1.0, 0.35, night), gHazeAmt * gk * smoothstep(0.3, 1.0, vUv.y) * (dr < 0.9999 ? 1.0 : 0.6));
+  col = max(sat(col, mix(1.0, gSat, gk)), 0.0) * mix(vec3(1.0), gTint, gk);
+
   // ---- 색보정: 낮은 따뜻하고 부드럽게, 밤은 푸르게 ----
-  col = sat(col, mix(1.08, 0.82, night));
+  col = max(sat(col, mix(1.08, 0.82, night)), 0.0);
   col *= mix(vec3(1.06, 1.0, 0.9), vec3(0.7, 0.82, 1.14), night);
   // 필믹 톤매핑 (ACES 근사), 노출 살짝 낮춤
   col *= 0.88;
@@ -272,7 +281,7 @@ export class PixelRenderer {
           tColor: { value: null }, tBlur: { value: null }, tNormal: { value: null }, tDepth: { value: null }, tCloud: { value: cloudNoiseTex() },
           res: { value: new THREE.Vector2(1, 1) }, viewSize: { value: new THREE.Vector2(1, 1) }, cNear: { value: 1 }, cFar: { value: 100 },
           invViewProj: { value: new THREE.Matrix4() }, time: shared.time, night: shared.night, flash: { value: 0 },
-          flashColor: { value: new THREE.Color(1, 1, 1) }, vignette: { value: 0.55 }, aoOn: { value: 1 }, pxPerUnit: { value: 48 }, tanHalf: { value: 0.27 }, aspect: { value: 1.7 },
+          flashColor: { value: new THREE.Color(1, 1, 1) }, vignette: { value: 0.55 }, aoOn: { value: 1 }, gTint: { value: new THREE.Vector3(1, 1, 1) }, gSat: { value: 1 }, gHaze: { value: new THREE.Color('#ffffff') }, gHazeAmt: { value: 0 }, pxPerUnit: { value: 48 }, tanHalf: { value: 0.27 }, aspect: { value: 1.7 },
         },
       });
       this.blurMat = new THREE.ShaderMaterial({ vertexShader: vert, fragmentShader: blurFrag, depthTest: false, depthWrite: false, uniforms: { tSrc: { value: null }, dir: { value: new THREE.Vector2() }, bright: { value: 0 } } });

@@ -156,3 +156,17 @@ MAPS.tower = {
 export const BOSS_TYPES = new Set(['boss', 'gumiho', 'reaper', 'imugi', 'bulgasari', 'baekho', 'dragon', 'centipede', 'frostgiant', 'yeomra']);
 export const BOSS_NAME = { palace: '도깨비 대왕 두억시니', bamboo: '천년 구미호', temple: '저승사자', swamp: '천년 이무기', canyon: '쇠먹는 불가사리', fortress: '산군 백호', sea: '동해 용왕', valley: '천년 왕지네', snowfield: '서리 거인 동장군' };
 export const WIN_LINE = { palace: '도깨비들이 달아나고 동이 튼다', bamboo: '여우들이 숲 깊이 사라진다', temple: '망자들이 저승으로 돌아간다', swamp: '늪의 물안개가 걷히고 수면이 잠잠해진다', canyon: '가마의 불이 사그라들고 쇳소리가 멎는다', fortress: '산성의 봉화가 잦아들고 단풍잎만 흩날린다', sea: '소용돌이가 잦아들고 용궁에 고요한 물빛이 돈다', valley: '물레방아가 다시 천천히 돌고 시냇물 소리만 남는다', snowfield: '눈보라가 그치고 고원 위로 햇살이 쏟아진다' };
+
+// 지역 색감 (고화질): tint 색 곱, sat 채도, haze 화면 위쪽(먼 곳)에 끼는 대기 색과 양
+export const GRADE = {
+  palace: { tint: [1.04, 1.0, 0.94], sat: 1.04, haze: '#ffe8c8', hz: 0.10 },
+  bamboo: { tint: [0.96, 1.04, 0.95], sat: 1.0, haze: '#cfe8c8', hz: 0.16 },
+  temple: { tint: [0.96, 0.98, 1.06], sat: 0.84, haze: '#e4eaf4', hz: 0.18 },
+  swamp: { tint: [0.98, 1.03, 0.93], sat: 0.92, haze: '#a8b890', hz: 0.15 },
+  canyon: { tint: [1.06, 0.97, 0.9], sat: 1.05, haze: '#ff9a60', hz: 0.14 },
+  fortress: { tint: [1.08, 0.98, 0.88], sat: 1.12, haze: '#f4c890', hz: 0.14 },
+  sea: { tint: [0.95, 1.01, 1.06], sat: 1.04, haze: '#90d4ea', hz: 0.14 },
+  valley: { tint: [1.02, 1.04, 0.95], sat: 1.14, haze: '#eaf8ff', hz: 0.12 },
+  snowfield: { tint: [0.93, 0.98, 1.1], sat: 0.8, haze: '#eef4ff', hz: 0.2 },
+  tower: { tint: [0.98, 0.9, 1.1], sat: 0.92, haze: '#4a2a62', hz: 0.2 },
+};
