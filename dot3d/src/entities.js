@@ -741,6 +741,9 @@ export class Enemy {
       if (ph > this.phase) { this.phase = ph; this.game.bossPhase(this, ph); }
     }
     this.flashT = 0.12;
+    // 맞은 반응: 잠깐 찌그러졌다가 맞은 쪽 반대로 몸이 젖혀짐 (보스는 약하게)
+    this.hitPulse = this.isBoss ? 0.45 : 1;
+    if (dir) { this.hitDX = dir.x; this.hitDZ = dir.z; }
     if (!this.isBoss || this.state === 'chase') {
       const k = this.isBoss ? knock * 0.15 : knock;
       this.vel.addScaledVector(dir, k);
@@ -1277,6 +1280,7 @@ export class Enemy {
       // 사람 모양 귀신: 리그로 애니메이션
       this.root.position.set(this.pos.x, this.y, this.pos.z);
       this.root.rotation.y = this.yaw;
+      this.hitReact(dt, this.root);
       this.rig.animate(dt, { speed: len > 0.01 ? 1 : 0, attack: this.state === 'windup' ? { t: 0.28 * clamp(this.st / this.T.windup, 0, 1), kind: 2 } : null, hurt: this.hurtT > 0 ? Math.min(1, this.hurtT / 0.25) : 0 });
       this.rig.setFlash(this.flashT > 0 ? 0.9 : this.state === 'windup' ? (Math.floor(this.st * 12) % 2 ? 0.3 : 0) : 0);
       if (Math.random() < 0.4) g.fx.add.emit({ x: this.pos.x + rand(-0.3, 0.3), y: this.y + rand(0.2, 1.4), z: this.pos.z + rand(-0.3, 0.3), vy: rand(0.2, 0.6), life: 0.6, size: 2, color: this.T.pal.trail, color2: this.T.pal.trail2, alpha: 0.7 });
@@ -1399,12 +1403,28 @@ export class Enemy {
     const r = this.rig;
     r.root.position.set(this.pos.x, this.y + (this.jumpY || 0), this.pos.z);
     r.root.rotation.y = this.yaw;
+    this.hitReact(dt, r.root);
     r.animate(dt, { speed, hop: this.hop || 0, attack: attackAnim, hurt: this.frozenT > 0 ? 0.3 : this.hurtT > 0 ? Math.min(1, this.hurtT / 0.25) : 0 });
     // 공격 준비 중엔 붉게 깜빡임, 피격 시 흰색
     if (this.flashT > 0) r.setFlash(0.9);
     else if (this.state === 'windup' && !this.isBoss) r.setFlash(Math.floor(this.st * 14) % 2 ? 0.35 : 0);
     else if (this.state === 'windup' || this.state === 'leapPrep') r.setFlash(Math.floor(this.st * 10) % 2 ? 0.25 : 0);
     else r.setFlash(0);
+  }
+
+  // 맞은 반응을 몸 전체(root)에 입힘: 찌그러짐 + 맞은 방향으로 기울어짐
+  hitReact(dt, root) {
+    const k = this.hitPulse || 0;
+    if (k <= 0) { if (this._reacted) { this._reacted = false; root.rotation.x = 0; root.rotation.z = 0; if (!this.spawning && !this.dead) root.scale.setScalar(this.sizeMul); } return; }
+    this._reacted = true;
+    this.hitPulse = Math.max(0, k - dt * 5);
+    const e = Math.sin(k * Math.PI) * k;
+    // 몸 기준 좌표로 맞은 방향 (앞뒤 x축, 좌우 z축 회전)
+    const c = Math.cos(this.yaw), sn = Math.sin(this.yaw);
+    const fx = (this.hitDX || 0) * sn + (this.hitDZ || 0) * c, sx = (this.hitDX || 0) * c - (this.hitDZ || 0) * sn;
+    root.rotation.x = fx * 0.4 * e;
+    root.rotation.z = -sx * 0.4 * e;
+    if (!this.spawning && !this.dead) root.scale.set(this.sizeMul * (1 + 0.14 * e), this.sizeMul * (1 - 0.16 * e), this.sizeMul * (1 + 0.14 * e));
   }
 
   dispose() {
