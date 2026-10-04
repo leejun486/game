@@ -181,8 +181,8 @@ export function buildFortress(W) {
 //  바닷속 용왕의 궁. 산호와 미역 숲 사이 붉은 기둥의 궁전, 진주 등 셋을 밝히고 용고(龍鼓)를 울리면 용왕이 나옴
 function seaMaterials(W) {
   const M = W.M;
-  M.sand = toon({ color: C('#efe0b0') });
-  if (GFX.hd) M.sand = toon({ ...HD.hdDirt([226, 210, 160]), roughness: 1 });
+  M.sand = toon({ color: C('#f2e8e2') });
+  if (GFX.hd) M.sand = toon({ ...HD.hdDirt([238, 226, 216]), roughness: 1 });
   M.coral = toon({ color: C('#ff6a7a') });
   M.coral2 = toon({ color: C('#ffa04a') });
   M.weed = toon({ color: C('#3a8a5a'), side: THREE.DoubleSide });

@@ -1723,7 +1723,7 @@ class Game {
   }
 
   // 길찾기 흐름장을 따라 한 걸음 (가까우면 곧장)
-  steerTo(inp, tx, tz, slot = 2, maxD = 4000) {
+  steerTo(inp, tx, tz, slot = 2, maxD = 4000, escape = true) {
     const p = this.player.pos;
     const dx = tx - p.x, dz = tz - p.z, d = Math.hypot(dx, dz) || 1;
     let mx = dx / d, mz = dz / d;
@@ -1733,26 +1733,15 @@ class Game {
       const nd = this.world.navDir(p, 0, slot);
       if (nd) { mx = nd.x; mz = nd.z; } else this.steerNoPath = true;
     }
-    // 돌탑·석등 모서리에 정면으로 걸려 제자리걸음이면 잠깐 옆으로 비켜 감 (좌우를 번갈아)
-    const lp = this.steerLast;
-    this.steerStuck = lp && Math.hypot(p.x - lp.x, p.z - lp.z) < 0.01 ? (this.steerStuck || 0) + 1 : 0;
-    this.steerLast = { x: p.x, z: p.z };
-    if (this.steerStuck > 6) {
-      // 닿아 있는 둥근 장애물이 있으면 그 둘레를 따라(가려는 쪽으로) 돌고, 없으면 옆·뒤로 번갈아
-      let c = null, cd = 1.2;
-      for (const o of this.world.circles) { const k = Math.hypot(p.x - o.x, p.z - o.z) - o.r; if (k < cd) { cd = k; c = o; } }
-      let sx, sz;
-      if (c) {
-        const ox = (p.x - c.x) / (Math.hypot(p.x - c.x, p.z - c.z) || 1), oz = (p.z - c.z) / (Math.hypot(p.x - c.x, p.z - c.z) || 1);
-        let tx = -oz, tz = ox;
-        if (tx * mx + tz * mz < 0) { tx = -tx; tz = -tz; }
-        if (Math.floor(this.steerStuck / 40) % 2) { tx = -tx; tz = -tz; }
-        sx = tx + ox * 0.35; sz = tz + oz * 0.35;
-      } else {
-        const a = [Math.PI / 2, -Math.PI / 2, Math.PI, Math.PI / 4][Math.floor(this.steerStuck / 15) % 4];
-        sx = mx * Math.cos(a) - mz * Math.sin(a); sz = mx * Math.sin(a) + mz * Math.cos(a);
-      }
-      const l = Math.hypot(sx, sz) || 1;
+    // 모서리에 걸려 1초 가까이 제자리면 0.6초 동안 비스듬히 물러나며 옆으로 비켜 감 (매번 좌우를 바꿔)
+    //  escape=false: 목적지 바로 앞(자동 이동 도착 판정 중)에서는 비켜 가지 않음
+    const now = this.time, W0 = this.steerWin;
+    if (!W0 || now - W0.t > 0.9) {
+      if (W0 && now - W0.t < 1.8 && Math.hypot(p.x - W0.x, p.z - W0.z) < 0.35 && escape) { this.steerEsc = now + 0.6; this.steerSide = -(this.steerSide || 1); }
+      this.steerWin = { t: now, x: p.x, z: p.z };
+    }
+    if (escape && this.steerEsc > now) {
+      const sd = this.steerSide, sx = -mz * sd - mx * 0.4, sz = mx * sd - mz * 0.4, l = Math.hypot(sx, sz) || 1;
       mx = sx / l; mz = sz / l;
     }
     inp.mx = mx; inp.mz = mz; inp.moveLen = 1; inp.mouseRecent = false; inp.mouseWorld = null;
@@ -1790,7 +1779,7 @@ class Game {
     A.stuck = Math.hypot(p.pos.x - A.last.x, p.pos.z - A.last.z) < dt * 0.6 ? A.stuck + dt : 0;
     A.last.copy(p.pos);
     if (A.stuck > 2.5) { this.stopAutoMove('길을 찾지 못했어요'); return inp; }
-    return this.steerTo(inp, A.pos.x, A.pos.z);
+    return this.steerTo(inp, A.pos.x, A.pos.z, 2, 4000, d > 3.6);
   }
 
   nearestEnemy(R, aggroOnly = false) {
