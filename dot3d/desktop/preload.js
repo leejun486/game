@@ -18,4 +18,7 @@ contextBridge.exposeInMainWorld('dot3dDesktop', {
     } catch { return false; }
   },
   savePath,
+  // 스팀 (desktop/main.js). steam이 false면 스팀 없이 실행 중
+  steam: ipcRenderer.sendSync('steam-on'),
+  steamAchievement(name) { ipcRenderer.send('steam-ach', name); },
 });

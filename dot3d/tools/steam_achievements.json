@@ -1,0 +1,314 @@
+[
+ {
+  "api": "ACH_FIRST",
+  "id": "first",
+  "ko": "첫걸음",
+  "koDesc": "적을 처음 쓰러뜨리기",
+  "en": "First Steps",
+  "enDesc": "Defeat your first foe"
+ },
+ {
+  "api": "ACH_TUT",
+  "id": "tut",
+  "ko": "배움의 길",
+  "koDesc": "튜토리얼 마치기",
+  "en": "Student",
+  "enDesc": "Finish the tutorial"
+ },
+ {
+  "api": "ACH_K100",
+  "id": "k100",
+  "ko": "도깨비 사냥꾼",
+  "koDesc": "적 100 처치",
+  "en": "Dokkaebi Hunter",
+  "enDesc": "Defeat 100 foes"
+ },
+ {
+  "api": "ACH_K1000",
+  "id": "k1000",
+  "ko": "백귀야행을 끝낸 자",
+  "koDesc": "적 1000 처치",
+  "en": "End of the Night Parade",
+  "enDesc": "Defeat 1000 foes"
+ },
+ {
+  "api": "ACH_B_BOSS",
+  "id": "b_boss",
+  "ko": "대왕의 방망이",
+  "koDesc": "도깨비 대왕 두억시니 물리치기",
+  "en": "The King's Club",
+  "enDesc": "Defeat Dokkaebi King Dueoksini"
+ },
+ {
+  "api": "ACH_B_GUMIHO",
+  "id": "b_gumiho",
+  "ko": "여우 사냥",
+  "koDesc": "천년 구미호 물리치기",
+  "en": "Fox Hunt",
+  "enDesc": "Defeat the Thousand-Year Gumiho"
+ },
+ {
+  "api": "ACH_B_REAPER",
+  "id": "b_reaper",
+  "ko": "명부를 찢다",
+  "koDesc": "저승사자 물리치기",
+  "en": "Torn Ledger",
+  "enDesc": "Defeat the Grim Reaper"
+ },
+ {
+  "api": "ACH_B_IMUGI",
+  "id": "b_imugi",
+  "ko": "승천을 막다",
+  "koDesc": "천년 이무기 물리치기",
+  "en": "No Ascension",
+  "enDesc": "Defeat the Thousand-Year Imugi"
+ },
+ {
+  "api": "ACH_B_BULGASARI",
+  "id": "b_bulgasari",
+  "ko": "쇠를 녹이다",
+  "koDesc": "쇠먹는 불가사리 물리치기",
+  "en": "Molten Iron",
+  "enDesc": "Defeat the Iron-Eating Bulgasari"
+ },
+ {
+  "api": "ACH_B_BAEKHO",
+  "id": "b_baekho",
+  "ko": "산군을 꺾다",
+  "koDesc": "산군 백호 물리치기",
+  "en": "Tiger Tamer",
+  "enDesc": "Defeat the White Tiger"
+ },
+ {
+  "api": "ACH_B_DRAGON",
+  "id": "b_dragon",
+  "ko": "용궁의 평화",
+  "koDesc": "동해 용왕 물리치기",
+  "en": "Peace Beneath the Waves",
+  "enDesc": "Defeat the Dragon King of the East Sea"
+ },
+ {
+  "api": "ACH_B_CENTIPEDE",
+  "id": "b_centipede",
+  "ko": "맑은 냇물",
+  "koDesc": "천년 왕지네 물리치기",
+  "en": "Clear Waters",
+  "enDesc": "Defeat the Thousand-Year Centipede"
+ },
+ {
+  "api": "ACH_B_FROSTGIANT",
+  "id": "b_frostgiant",
+  "ko": "봄을 부르다",
+  "koDesc": "서리 거인 동장군 물리치기",
+  "en": "Calling Spring",
+  "enDesc": "Defeat General Winter"
+ },
+ {
+  "api": "ACH_B_YEOMRA",
+  "id": "b_yeomra",
+  "ko": "저승의 판결",
+  "koDesc": "염라대왕 물리치기",
+  "en": "Final Verdict",
+  "enDesc": "Defeat King Yeomra"
+ },
+ {
+  "api": "ACH_MAIN",
+  "id": "main",
+  "ko": "평안해진 땅",
+  "koDesc": "메인 퀘스트 모두 마치기",
+  "en": "Peace Restored",
+  "enDesc": "Finish the main quest"
+ },
+ {
+  "api": "ACH_ENDING",
+  "id": "ending",
+  "ko": "달거울 복원",
+  "koDesc": "엔딩 보기",
+  "en": "Moon Mirror Restored",
+  "enDesc": "See the ending"
+ },
+ {
+  "api": "ACH_ROUND2",
+  "id": "round2",
+  "ko": "다시 찾아온 밤",
+  "koDesc": "두 번째 회차 시작",
+  "en": "Another Night",
+  "enDesc": "Start round 2"
+ },
+ {
+  "api": "ACH_ROUND5",
+  "id": "round5",
+  "ko": "끝나지 않는 야행",
+  "koDesc": "다섯 번째 회차 시작",
+  "en": "Endless Parade",
+  "enDesc": "Start round 5"
+ },
+ {
+  "api": "ACH_T5",
+  "id": "t5",
+  "ko": "탑의 문턱",
+  "koDesc": "시련탑 5층 돌파",
+  "en": "Tower Threshold",
+  "enDesc": "Clear tower floor 5"
+ },
+ {
+  "api": "ACH_T10",
+  "id": "t10",
+  "ko": "염라의 방",
+  "koDesc": "시련탑 10층 돌파",
+  "en": "Yeomra's Hall",
+  "enDesc": "Clear tower floor 10"
+ },
+ {
+  "api": "ACH_T20",
+  "id": "t20",
+  "ko": "저승 깊은 곳",
+  "koDesc": "시련탑 20층 돌파",
+  "en": "Deep Underworld",
+  "enDesc": "Clear tower floor 20"
+ },
+ {
+  "api": "ACH_T30",
+  "id": "t30",
+  "ko": "끝없는 탑",
+  "koDesc": "시련탑 30층 돌파",
+  "en": "Endless Tower",
+  "enDesc": "Clear tower floor 30"
+ },
+ {
+  "api": "ACH_LV10",
+  "id": "lv10",
+  "ko": "숙련",
+  "koDesc": "한 직업 Lv.10",
+  "en": "Skilled",
+  "enDesc": "Reach Lv.10 with a class"
+ },
+ {
+  "api": "ACH_LV20",
+  "id": "lv20",
+  "ko": "고수",
+  "koDesc": "한 직업 Lv.20",
+  "en": "Expert",
+  "enDesc": "Reach Lv.20 with a class"
+ },
+ {
+  "api": "ACH_LV30",
+  "id": "lv30",
+  "ko": "달인",
+  "koDesc": "한 직업 Lv.30",
+  "en": "Master",
+  "enDesc": "Reach Lv.30 with a class"
+ },
+ {
+  "api": "ACH_ALL4",
+  "id": "all4",
+  "ko": "네 갈래의 길",
+  "koDesc": "네 직업 모두 Lv.10",
+  "en": "Four Paths",
+  "enDesc": "Reach Lv.10 with all four classes"
+ },
+ {
+  "api": "ACH_C50",
+  "id": "c50",
+  "ko": "흐르는 칼끝",
+  "koDesc": "50 연속 타격",
+  "en": "Flowing Blade",
+  "enDesc": "50-hit combo"
+ },
+ {
+  "api": "ACH_C150",
+  "id": "c150",
+  "ko": "멈추지 않는 손",
+  "koDesc": "150 연속 타격",
+  "en": "Relentless",
+  "enDesc": "150-hit combo"
+ },
+ {
+  "api": "ACH_PD1",
+  "id": "pd1",
+  "ko": "종이 한 장 차이",
+  "koDesc": "완벽한 회피 성공",
+  "en": "By a Hair",
+  "enDesc": "Land a perfect dodge"
+ },
+ {
+  "api": "ACH_PD50",
+  "id": "pd50",
+  "ko": "바람 같은 몸놀림",
+  "koDesc": "완벽한 회피 50번",
+  "en": "Like the Wind",
+  "enDesc": "50 perfect dodges"
+ },
+ {
+  "api": "ACH_HIT500",
+  "id": "hit500",
+  "ko": "일격필살",
+  "koDesc": "한 방에 500 피해",
+  "en": "One Strike",
+  "enDesc": "Deal 500 damage in one hit"
+ },
+ {
+  "api": "ACH_LEGEND",
+  "id": "legend",
+  "ko": "전설을 손에",
+  "koDesc": "전설 등급 방어구·장신구 줍기",
+  "en": "Legend in Hand",
+  "enDesc": "Find legendary gear"
+ },
+ {
+  "api": "ACH_BOSSW",
+  "id": "bossw",
+  "ko": "보스의 유물",
+  "koDesc": "보스 무기 얻기",
+  "en": "Boss Relic",
+  "enDesc": "Obtain a boss weapon"
+ },
+ {
+  "api": "ACH_SET4",
+  "id": "set4",
+  "ko": "한 벌 차림",
+  "koDesc": "세트 장비 네 부위 모두 착용",
+  "en": "Full Set",
+  "enDesc": "Wear all four pieces of a set"
+ },
+ {
+  "api": "ACH_AWAKEN",
+  "id": "awaken",
+  "ko": "각성",
+  "koDesc": "기술 하나를 Ⅴ단계까지 수련",
+  "en": "Awakening",
+  "enDesc": "Train a skill to rank V"
+ },
+ {
+  "api": "ACH_GEAR100",
+  "id": "gear100",
+  "ko": "보따리 장수",
+  "koDesc": "방어구·장신구 100개 줍기",
+  "en": "Packrat",
+  "enDesc": "Pick up 100 pieces of gear"
+ },
+ {
+  "api": "ACH_BOUNTY10",
+  "id": "bounty10",
+  "ko": "현상금 사냥꾼",
+  "koDesc": "현상수배 10번 마치기",
+  "en": "Bounty Hunter",
+  "enDesc": "Complete 10 bounties"
+ },
+ {
+  "api": "ACH_FALL10",
+  "id": "fall10",
+  "ko": "칠전팔기",
+  "koDesc": "10번 쓰러지고도 다시 일어서기",
+  "en": "Never Give Up",
+  "enDesc": "Fall 10 times and get back up"
+ },
+ {
+  "api": "ACH_CODEX",
+  "id": "codex",
+  "ko": "요괴 도감",
+  "koDesc": "몬스터 도감 완성",
+  "en": "Spirit Codex",
+  "enDesc": "Complete the monster codex"
+ }
+]

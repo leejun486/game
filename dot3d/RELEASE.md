@@ -43,12 +43,13 @@
      | Library logo 1280×720 | library_logo_1280x720.png (투명 배경) |
 
    - 스크린샷: 1920×1080 다섯 장 이상이 필요합니다. `marketing/screenshots/`에 열 장이 있습니다.
-   - 트레일러는 아직 없습니다. 권장 사항이며, F2 스크린샷 모드로 화면을 녹화해 30~60초로 만들면 좋습니다.
+   - 트레일러: `marketing/trailer/wolhagung-trailer.mp4` (1280×720, 약 50초, 국악 배경음악). 다시 만드는 방법은 `marketing/trailer/README.md`.
 3. 빌드 올리기: SteamPipe(ContentBuilder/SteamCMD)로 `desktop/release/win-unpacked/` 폴더를 Windows 디포에 올립니다. 실행 파일은 `Wolhagung.exe`입니다.
 4. Steam Cloud: Auto-Cloud에 저장 경로를 등록합니다. 경로는 `%APPDATA%/Wolhagung/save.json`이고, Steamworks 설정의 Root는 WinAppDataRoaming, 하위 경로는 `Wolhagung`입니다.
-5. 업적: 게임 안 업적 39개(`src/records.js`)는 지금은 게임 안에만 기록됩니다. Steam 업적으로도 띄우려면 steamworks.js 같은 연동 모듈을 데스크톱판에 붙이고 같은 id로 등록해야 합니다. 다음 작업 후보입니다.
-6. 출시 일정: 스토어 페이지를 "출시 예정"으로 최소 2주 공개해야 출시할 수 있고, 빌드와 스토어 검토에 며칠씩 걸립니다.
-7. 가격: Steam 가격 등급에서 원화 가격을 고릅니다(5,000원 근처의 등급).
+5. 업적: 데스크톱판이 steamworks.js로 스팀 업적을 함께 엽니다. 등록표와 아이콘, 앱 번호 설정은 [`STEAM.md`](STEAM.md)를 보세요.
+6. 체험판: `npm run dist:demo`(웹), `desktop`에서 `npm run dist:win:demo`(Windows). 월하궁·죽림·폐사찰까지이고 기록은 정식판으로 이어집니다.
+7. 출시 일정: 스토어 페이지를 "출시 예정"으로 최소 2주 공개해야 출시할 수 있고, 빌드와 스토어 검토에 며칠씩 걸립니다.
+8. 가격: Steam 가격 등급에서 원화 가격을 고릅니다(5,000원 근처의 등급).
 
 > 한국에서 유료로 판매하려면 게임물 등급분류가 필요할 수 있습니다. 플랫폼별 자체등급분류 여부와 절차는 게임물관리위원회(GRAC) 안내를 확인하세요. 내용 기술 예시: 판타지 폭력(요괴와 싸움), 피 표현 없음, 선정성·언어 문제 없음.
 
@@ -69,6 +70,7 @@
 - **열 지역의 오픈월드:** 달빛 정원 궁, 대숲, 눈 덮인 폐사찰, 물안개 늪, 불가사리 협곡, 단풍 산성, 바다 밑 용궁, 시냇물 흐르는 여름 계곡, 눈보라 치는 고원, 저승 시련탑.
 - **엔드게임:** 층마다 강해지는 저승 시련탑, 회차, 현상수배, 업적 39개와 도감이 있습니다.
 - **국악 배경음악:** 지역마다 장단과 가락이 다른 배경음악이 흐릅니다.
+- **지도와 퀘스트 일지:** 작은 지도와 모든 지역을 잇는 큰 지도, 지나온 임무를 볼 수 있습니다.
 - **조작:** 키보드·마우스, 게임패드, 터치를 지원하고 키를 바꿀 수 있습니다. 한국어와 영어를 지원합니다.
 
 ### English
@@ -86,6 +88,7 @@ Every hundred years, the palace's Moon Mirror shone upon the border and kept the
 - **Ten regions:** a moonlit garden palace, a bamboo grove, a snowbound temple, a misty marsh, a volcanic canyon, a maple-covered mountain fortress, the Dragon Palace beneath the sea, a summer valley with a babbling stream, a blizzard-swept highland and the Tower of Trials.
 - **Endgame:** an endless tower, new rounds, bounties, 39 achievements and a codex.
 - **Korean traditional music** with its own rhythm in every region.
+- **Minimap, world map and quest log.**
 - **Keyboard & mouse, gamepad and touch**, rebindable keys, Korean and English.
 
 ### 태그 / Tags

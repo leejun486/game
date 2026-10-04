@@ -10,7 +10,9 @@
     "start": "npm run prepare-game && electron .",
     "dist:win": "npm run prepare-game && electron-builder --win zip --x64",
     "dist:linux": "npm run prepare-game && electron-builder --linux AppImage --x64",
-    "dist:mac": "npm run prepare-game && electron-builder --mac dmg"
+    "dist:mac": "npm run prepare-game && electron-builder --mac dmg",
+    "start:demo": "node copy-game.js demo && electron .",
+    "dist:win:demo": "node copy-game.js demo && electron-builder --win zip --x64 -c.productName=\"월하궁 도깨비 야행 체험판\" -c.artifactName=\"Wolhagung-demo-${version}-${os}-${arch}.${ext}\""
   },
   "devDependencies": {
     "electron": "^33.4.11",
@@ -22,7 +24,8 @@
     "files": [
       "main.js",
       "preload.js",
-      "game/**/*"
+      "game/**/*",
+      "steam.json"
     ],
     "directories": {
       "output": "release"
@@ -38,6 +41,15 @@
     },
     "executableName": "Wolhagung",
     "artifactName": "Wolhagung-${version}-${os}-${arch}.${ext}",
-    "icon": "game/icon.png"
+    "icon": "game/icon.png",
+    "asarUnpack": [
+      "**/*.node",
+      "**/*.dll",
+      "**/*.so",
+      "**/*.dylib"
+    ]
+  },
+  "optionalDependencies": {
+    "steamworks.js": "^0.4.0"
   }
 }

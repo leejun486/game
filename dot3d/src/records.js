@@ -45,6 +45,9 @@ const bossK = (S, t) => S.bosses?.[t] || 0;
 const maxLv = (g) => Math.max(...CLASS_ORDER.map((c) => g.progressOf(c).level || 1), g.player.level);
 
 // 업적: test(game, stats) → 참이면 달성. prog: [지금, 목표] (진행 막대)
+// 스팀웍스에 등록하는 업적 이름 (STEAM.md 표와 같아야 함)
+export const steamName = (id) => 'ACH_' + id.toUpperCase();
+
 export const ACHIEVEMENTS = [
   { id: 'first', name: '첫걸음', desc: '적을 처음 쓰러뜨리기', test: (g, S) => S.kills >= 1 },
   { id: 'tut', name: '배움의 길', desc: '튜토리얼 마치기', test: (g) => g.flags.tut === 1 },
@@ -128,6 +131,9 @@ export class Records {
 
   check() {
     const S = this.S;
+    // 스팀 업적: 처음 한 번은 이미 달성한 것까지 모두 알림 (예전 기록, 스팀 밖에서 달성한 것)
+    const D = typeof window !== 'undefined' && window.dot3dDesktop;
+    if (D?.steam && !this.steamSynced) { this.steamSynced = true; for (const id of Object.keys(S.ach)) D.steamAchievement(steamName(id)); }
     for (const A of ACHIEVEMENTS) {
       if (S.ach[A.id]) continue;
       let ok = false;
@@ -135,6 +141,7 @@ export class Records {
       if (!ok) continue;
       S.ach[A.id] = Date.now();
       this.queue.push(A);
+      if (D?.steam) D.steamAchievement(steamName(A.id));
     }
   }
 
