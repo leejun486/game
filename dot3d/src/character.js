@@ -982,6 +982,8 @@ export class Rig {
 
   // p: {speed, moving, attack:{t, kind} | null, dash, hurt, dead, dt}
   animate(dt, p) {
+    // 떠다니는 장식 (명부·업경대): 천천히 오르내리며 돎
+    if (this.floaters) { this._ft = (this._ft || 0) + dt; for (const f of this.floaters) { f.obj.position.y = f.base.y + Math.sin(this._ft * 1.6) * 0.06; f.obj.rotation.y += f.spin * dt; } }
     const s = p.speed || 0;
     const run = clamp(s / 4, 0, 1);
     this.idleT += dt;
@@ -1683,6 +1685,9 @@ export class SerpentRig {
     const dragon = variant === 'dragon', centi = variant === 'centipede';
     const scale = mat({ color: C(dragon ? '#2a64b0' : centi ? '#3a1a1a' : '#2a4a5a') }), belly = mat({ color: C(dragon ? '#f0d890' : centi ? '#d89a3a' : '#c8c09a') }), fin = mat({ color: C(dragon ? '#f0b030' : centi ? '#c8402a' : '#3a8a8a') }), dark = mat({ color: C(dragon ? '#0e1a3a' : centi ? '#f0a020' : '#16222a') });
     const eyeM = toon({ color: C(dragon ? '#ff6a3a' : centi ? '#aaff3a' : '#ffe060'), emissive: C(dragon ? '#c82000' : centi ? '#3a8a00' : '#aa6a00') });
+    const imugi = !dragon && !centi;
+    const scale2 = imugi ? mat({ color: C('#3a6470') }) : scale;
+    if (imugi) eyeM.emissiveIntensity = 1.6;
     this.root = new THREE.Group();
     this.body = new THREE.Group();
     this.root.add(this.body);
@@ -1780,7 +1785,12 @@ export class SerpentRig {
           (this.centiLegs = this.centiLegs || []).push({ g: hipG, i, sd });
         }
       } else {
-      const ball = mesh(new THREE.SphereGeometry(r, 12, 8), scale);
+      const ball = mesh(new THREE.SphereGeometry(r, 12, 8), imugi && i % 2 ? scale2 : scale);
+      if (imugi) {
+        // 이무기: 마디마다 작은 등지느러미 + 옆구리 비늘 띠
+        g.add(mesh(new THREE.ConeGeometry(r * 0.2, r * 0.55, 4), fin, 0, r * 0.85, -r * 0.2, -0.7, 0, 0));
+        for (const sd of [-1, 1]) g.add(mesh(new THREE.TorusGeometry(r * 0.55, r * 0.06, 3, 10, Math.PI * 0.8), dark, sd * r * 0.5, r * 0.15, 0, 0, Math.PI / 2, 0));
+      }
       ball.scale.set(1, 0.9, 1.25);
       g.add(ball);
       const bl = mesh(new THREE.SphereGeometry(r * 0.86, 10, 6), belly, 0, -r * 0.22, 0);
@@ -1987,7 +1997,7 @@ export class BeastRig {
     const eyeM = toon({ color: C('#ffd040'), emissive: C('#ff6a00'), emissiveIntensity: 1.5 });
     this.root = new THREE.Group();
     this.body = new THREE.Group();
-    this.body.scale.setScalar(2.2);
+    this.body.scale.setScalar(2.5);
     this.root.add(this.body);
     this.torso = new THREE.Group();
     this.torso.position.y = 0.62;
@@ -1999,9 +2009,22 @@ export class BeastRig {
     hump.scale.set(1, 0.8, 1.1);
     this.torso.add(hump);
     this.torso.add(mesh(new THREE.SphereGeometry(0.28, 10, 8), belly, 0, -0.14, 0.05)).scale.set(1, 0.6, 1.4);
+    // 옆구리의 쇳물 균열 (달아오르면 같이 빛남) + 어깨 쇠판
+    this.crackMat = toon({ color: C('#3a1a10'), emissive: C('#ff5a00'), emissiveIntensity: 0.5 });
+    this.mats.push(this.crackMat);
+    for (const sd of [-1, 1]) for (let k = 0; k < 4; k++) {
+      const c = mesh(new THREE.BoxGeometry(0.02, 0.18 + (k % 2) * 0.08, 0.04), this.crackMat, sd * 0.35, 0.02, 0.28 - k * 0.2);
+      c.rotation.set(0.3 * (k % 2 ? 1 : -1), 0, sd * 0.2);
+      this.torso.add(c);
+    }
+    for (const sd of [-1, 1]) {
+      const pl = mesh(new THREE.BoxGeometry(0.26, 0.05, 0.3), this.spikeMat, sd * 0.28, 0.24, 0.32);
+      pl.rotation.z = sd * -0.6;
+      this.torso.add(pl);
+    }
     // 등의 쇠바늘
-    for (let i = 0; i < 16; i++) {
-      const row = i % 4, col = Math.floor(i / 4);
+    for (let i = 0; i < 30; i++) {
+      const row = i % 5 - 0.5, col = Math.floor(i / 5) * 0.67;
       const sp = mesh(new THREE.ConeGeometry(0.045, 0.32, 5), this.spikeMat, (row - 1.5) * 0.12, 0.38 - Math.abs(row - 1.5) * 0.06, 0.32 - col * 0.2);
       sp.rotation.set(-0.5, 0, (row - 1.5) * -0.35);
       this.torso.add(sp);
@@ -2069,6 +2092,7 @@ export class BeastRig {
     if (Math.abs(k - this.heat) < 0.01) return;
     this.heat = k;
     this.spikeMat.emissive.setRGB(1.0 * k, 0.32 * k, 0.04 * k);
+    if (this.crackMat) this.crackMat.emissiveIntensity = 0.5 + k * 2.5;
   }
 
   animate(dt, p) {

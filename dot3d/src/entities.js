@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { disposeTree, drop } from './dispose.js';
 import { Rig, makeDokkaebi, makeGuard, makeLady, makeMage, makeFox, makeJiangshi, makeGhost, makeReaper, makeWaterGhost, makeToad, makeImugi, makeStoneGolem, makeBulgasari, makeYeomra, makeDragon, makeCentipede, makeFrostGiant } from './character.js';
+import { decorateDokkaebiKing, decorateReaper, decorateYeomra } from './bossdeco.js';
 import { makeCrow, makeCrab, makeJelly, makeTurtle, makeBee, makeMantis, makeBeast } from './rigs2.js';
 import { CLASSES } from './classes.js';
 import { outfitLook, gearLook } from './character.js';
@@ -606,15 +607,15 @@ const TYPES = {
   blue: { hp: 46, speed: 2.7, dmg: 10, range: 1.5, windup: 0.5, recover: 0.6, radius: 0.46, exp: 10, ai: 'melee', make: () => makeDokkaebi('blue'), pal: PAL.blue },
   red: { hp: 72, speed: 3.1, dmg: 15, range: 1.6, windup: 0.42, recover: 0.5, radius: 0.48, exp: 16, ai: 'melee', make: () => makeDokkaebi('red'), pal: PAL.blue },
   wisp: { hp: 28, speed: 1.9, dmg: 9, range: 7, windup: 0.6, recover: 1.6, radius: 0.35, exp: 12, ai: 'wisp', pal: PAL.blue },
-  boss: { hp: 900, speed: 2.35, dmg: 24, range: 2.7, windup: 0.85, recover: 0.8, radius: 0.95, exp: 200, ai: 'boss', boss: 'dokkaebi', make: () => makeDokkaebi('boss'), pal: PAL.blue, name: '도깨비 대왕 두억시니', summon: ['red', 'blue'] },
+  boss: { hp: 900, speed: 2.35, dmg: 24, range: 2.7, windup: 0.85, recover: 0.8, radius: 0.95, exp: 200, ai: 'boss', boss: 'dokkaebi', make: () => decorateDokkaebiKing(makeDokkaebi('boss')), pal: PAL.blue, name: '도깨비 대왕 두억시니', summon: ['red', 'blue'] },
   // 죽림
   fox: { hp: 44, speed: 4.4, dmg: 10, range: 1.5, windup: 0.34, recover: 0.5, radius: 0.42, exp: 14, ai: 'melee', lunge: true, make: () => makeFox('fox'), pal: PAL.fox },
   foxfire: { hp: 32, speed: 2.1, dmg: 10, range: 7, windup: 0.5, recover: 1.4, radius: 0.35, exp: 14, ai: 'wisp', pal: PAL.fox },
-  gumiho: { hp: 1150, speed: 3.1, dmg: 22, range: 2.4, windup: 0.6, recover: 0.7, radius: 0.95, exp: 320, ai: 'boss', boss: 'gumiho', make: () => makeFox('gumiho'), pal: PAL.fox, name: '천년 구미호', summon: ['fox', 'foxfire'] },
+  gumiho: { hp: 1150, speed: 3.1, dmg: 22, range: 2.4, windup: 0.6, recover: 0.7, radius: 0.95, exp: 320, ai: 'boss', boss: 'gumiho', make: () => makeBeast('gumiho'), pal: PAL.fox, name: '천년 구미호', summon: ['fox', 'foxfire'] },
   // 설원 폐사찰
   jiangshi: { hp: 92, speed: 3.2, dmg: 15, range: 1.5, windup: 0.45, recover: 0.6, radius: 0.45, exp: 20, ai: 'melee', hop: true, make: makeJiangshi, pal: PAL.ghost },
   ghost: { hp: 48, speed: 1.8, dmg: 12, range: 6.5, windup: 0.6, recover: 1.6, radius: 0.4, exp: 20, ai: 'wisp', teleport: true, make: makeGhost, pal: PAL.ghost },
-  foxclone: { hp: 70, speed: 2.4, dmg: 12, range: 7, windup: 0.6, recover: 1.5, radius: 0.6, exp: 4, ai: 'wisp', make: () => makeFox('clone'), pal: PAL.fox },
+  foxclone: { hp: 70, speed: 2.4, dmg: 12, range: 7, windup: 0.6, recover: 1.5, radius: 0.6, exp: 4, ai: 'wisp', make: () => makeBeast('clone'), pal: PAL.fox },
   // 물안개 늪: 물귀신은 물속에서 빨라지고 붙잡아 느리게 함, 두꺼비는 독침(맞으면 느려짐)
   waterghost: { hp: 110, speed: 2.9, dmg: 16, range: 1.5, windup: 0.5, recover: 0.6, radius: 0.42, exp: 26, ai: 'melee', aquatic: true, grab: true, make: makeWaterGhost, pal: PAL.water },
   toad: { hp: 120, speed: 1.6, dmg: 14, range: 7, windup: 0.7, recover: 1.6, radius: 0.55, exp: 26, ai: 'wisp', poison: true, make: makeToad, pal: PAL.water },
@@ -644,8 +645,8 @@ const TYPES = {
   icewisp: { hp: 140, speed: 2.2, dmg: 24, range: 7, windup: 0.55, recover: 1.4, radius: 0.38, exp: 56, ai: 'wisp', poison: true, pal: PAL.ice },
   frostgiant: { hp: 6000, speed: 2.4, dmg: 45, range: 3.3, windup: 0.9, recover: 0.85, radius: 1.4, exp: 2200, ai: 'boss', boss: 'frost', leap: true, make: makeFrostGiant, pal: PAL.ice, name: '서리 거인 동장군', summon: ['wolf', 'icedok'] },
   // 시련탑 10층마다: 염라대왕
-  yeomra: { hp: 4200, speed: 2.5, dmg: 36, range: 3.2, windup: 0.8, recover: 0.8, radius: 1.2, exp: 1500, ai: 'boss', boss: 'yeomra', make: makeYeomra, pal: PAL.hell, name: '염라대왕', summon: ['jiangshi', 'ghost'] },
-  reaper: { hp: 1500, speed: 2.7, dmg: 26, range: 2.8, windup: 0.7, recover: 0.8, radius: 1.0, exp: 450, ai: 'boss', boss: 'reaper', make: makeReaper, pal: PAL.ghost, name: '저승사자', summon: ['ghost', 'jiangshi'] },
+  yeomra: { hp: 4200, speed: 2.5, dmg: 36, range: 3.2, windup: 0.8, recover: 0.8, radius: 1.2, exp: 1500, ai: 'boss', boss: 'yeomra', make: () => decorateYeomra(makeYeomra()), pal: PAL.hell, name: '염라대왕', summon: ['jiangshi', 'ghost'] },
+  reaper: { hp: 1500, speed: 2.7, dmg: 26, range: 2.8, windup: 0.7, recover: 0.8, radius: 1.0, exp: 450, ai: 'boss', boss: 'reaper', make: () => decorateReaper(makeReaper()), pal: PAL.ghost, name: '저승사자', summon: ['ghost', 'jiangshi'] },
 };
 
 export class Enemy {

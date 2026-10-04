@@ -441,6 +441,8 @@ const BEASTS = {
   tiger: { s: 1.45, fur: '#e08a2a', belly: '#f6eedc', dark: '#1a1210', eye: '#ffd040', eyeE: '#5a3a00', stripes: true, ears: 'round', tail: 1.0, muzzle: 0.9 },
   baekho: { s: 3.0, fur: '#eeeee6', belly: '#ffffff', dark: '#1a1a22', eye: '#7fd8ff', eyeE: '#1a6aff', stripes: true, ears: 'round', tail: 1.0, muzzle: 0.9, glow: true },
   boar: { s: 1.5, fur: '#5a3e2a', belly: '#7a5a3a', dark: '#2a1a10', eye: '#ff4a2a', eyeE: '#6a0a00', tusks: true, bristle: true, ears: 'small', tail: 0.35, muzzle: 1.25, bulk: 1.25, legs: 0.85 },
+  gumiho: { s: 2.9, fur: '#f6f0e4', belly: '#ffffff', dark: '#3a3040', eye: '#ff4a6a', eyeE: '#8a0a2a', ears: 'pointy', tail: 1.6, tails: 9, tip: '#7fd8ff', muzzle: 1.25, legs: 1.05, ruff: true, wisps: 3, glow: true, mark: '#c8302c' },
+  clone: { s: 1.7, fur: '#f6f0e4', belly: '#ffffff', dark: '#3a3040', eye: '#ff4a6a', eyeE: '#8a0a2a', ears: 'pointy', tail: 1.4, tails: 9, tip: '#7fd8ff', muzzle: 1.25, legs: 1.05, ruff: true, ghost: true },
   wolf: { s: 1.4, fur: '#b8bec8', belly: '#eef0f4', dark: '#3a3e48', eye: '#8ad8ff', eyeE: '#1a5aaa', ruff: true, ears: 'pointy', tail: 1.1, muzzle: 1.1, legs: 1.1 },
 };
 
@@ -507,6 +509,7 @@ export class BeastRig extends BaseRig {
       if (V.tusks) this.head.add(mesh(new THREE.ConeGeometry(0.025, 0.16, 5), toon({ color: C('#f4ecd8') }), s * 0.1, -0.05, 0.3, -0.7, 0, s * 0.35));
     }
     if (V.stripes) for (const s of [-1, 0, 1]) { const b = mesh(new THREE.BoxGeometry(0.025, 0.09, 0.02), dark, s * 0.05, 0.12, 0.18); b.rotation.z = s * 0.3; this.head.add(b); }
+    if (V.mark) for (const s of [-1, 1]) this.head.add(mesh(new THREE.BoxGeometry(0.03, 0.1, 0.02), toon({ color: C(V.mark), emissive: C(V.mark), emissiveIntensity: 0.6 }), s * 0.05, 0.13, 0.17)).rotation.z = s * 0.2;
     // 다리: 어깨/엉덩이 → 무릎 → 발
     this.legs = [];
     for (const [x, z, front, ph] of [[-0.17, 0.34, 1, 0], [0.17, 0.34, 1, Math.PI], [-0.17, -0.34, 0, Math.PI], [0.17, -0.34, 0, 0]]) {
@@ -522,20 +525,40 @@ export class BeastRig extends BaseRig {
       knee.add(mesh(new THREE.SphereGeometry(0.07, 8, 6), V.tusks ? dark : belly, 0, -0.27 * legL, 0.03)).scale.set(1, 0.6, 1.3);
       this.legs.push({ up, knee, front, ph });
     }
-    // 꼬리: 마디 넷
+    // 꼬리: 마디 넷 (구미호는 아홉 개를 부채처럼, 끝이 푸르게 빛남)
     this.tail = [];
-    let parent = this.torso, tz = -0.58;
-    for (let k = 0; k < 4; k++) {
-      const g = new THREE.Group();
-      g.position.set(0, k ? 0 : 0.1, k ? -0.16 * V.tail : tz);
-      g.rotation.x = k ? 0.12 : 0.7;
-      parent.add(g);
-      const seg = mesh(new THREE.CapsuleGeometry(0.035 - k * 0.004, 0.13 * V.tail, 3, 5), k === 3 && V.stripes ? dark : fur, 0, 0, -0.08 * V.tail, Math.PI / 2, 0, 0);
-      g.add(seg);
-      this.tail.push(g);
-      parent = g;
+    const nT = V.tails || 1;
+    const tipM = V.tip ? toon({ color: C(V.tip), emissive: C('#2a7aff'), emissiveIntensity: 1.2 }) : null;
+    for (let t = 0; t < nT; t++) {
+      const spread = nT > 1 ? (t / (nT - 1) - 0.5) * 2.2 : 0;
+      let parent = this.torso;
+      for (let k = 0; k < 4; k++) {
+        const g = new THREE.Group();
+        g.position.set(0, k ? 0 : 0.1, k ? -0.16 * V.tail : -0.58);
+        g.rotation.x = k ? 0.12 : 0.7 + (nT > 1 ? 0.25 * Math.cos(spread) : 0);
+        if (!k) g.rotation.y = spread * 0.7;
+        parent.add(g);
+        const r = nT > 1 ? 0.1 - k * 0.012 : 0.035 - k * 0.004;
+        // 여러 꼬리는 털이 풍성하게 (가운데가 볼록한 타원)
+        if (nT > 1) { const puff = mesh(new THREE.SphereGeometry(1, 10, 8), fur, 0, 0, -0.1 * V.tail); puff.scale.set(r * 1.3, r * 1.3, 0.17 * V.tail); g.add(puff); }
+        else g.add(mesh(new THREE.CapsuleGeometry(r, 0.13 * V.tail, 3, 6), k === 3 && V.stripes ? dark : fur, 0, 0, -0.08 * V.tail, Math.PI / 2, 0, 0));
+        if (k === 3 && tipM) g.add(mesh(new THREE.SphereGeometry(r * 1.4, 8, 6), tipM, 0, 0, -0.2 * V.tail));
+        this.tail.push(g);
+        g.userData.k = k; g.userData.t = t;
+        parent = g;
+      }
+    }
+    this.ghost = !!V.ghost;
+    // 둘레를 도는 여우불
+    this.wisps = [];
+    for (let w = 0; w < (V.wisps || 0); w++) {
+      const f = new THREE.Mesh(new THREE.SphereGeometry(0.09, 8, 6), new THREE.MeshBasicMaterial({ color: '#bfe8ff' }));
+      f.userData.noOutline = true;
+      this.body.add(f);
+      this.wisps.push(f);
     }
     this.finish();
+    if (this.ghost) this.root.traverse((o) => { if (o.isMesh) { o.material = o.material.clone(); o.material.transparent = true; o.material.opacity = 0.55; o.castShadow = false; } });
   }
   animate(dt, p) {
     const s = p.speed || 0, run = clamp(s / 4.5, 0, 1);
@@ -565,7 +588,8 @@ export class BeastRig extends BaseRig {
     this.torso.position.z = reach * 0.18;
     this.head.rotation.x += (headX - this.head.rotation.x) * L;
     this.jaw.rotation.x = jaw;
-    this.tail.forEach((t, i) => { t.rotation.y = Math.sin(this.phase * 0.8 + i * 0.6) * (0.25 + 0.2 * run); });
+    this.tail.forEach((t) => { const k = t.userData.k; if (k) t.rotation.y = Math.sin(this.phase * 0.8 + k * 0.6 + t.userData.t) * (0.25 + 0.2 * run); });
+    this.wisps.forEach((f, i) => { const a = this.phase * 0.6 + (i / this.wisps.length) * Math.PI * 2; f.position.set(Math.cos(a) * 0.9, 0.9 + Math.sin(this.phase * 1.3 + i) * 0.15, Math.sin(a) * 0.9); });
     if (p.dead) {
       this.deadT += dt;
       this.body.rotation.z = smooth(clamp(this.deadT / 0.4, 0, 1)) * Math.PI / 2;
