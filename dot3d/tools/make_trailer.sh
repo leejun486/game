@@ -9,7 +9,9 @@ OUT=$(dirname "$0")/../marketing/trailer/wolhagung-trailer.mp4
 TMP=$(mktemp -d)
 n=0
 for d in "$SRC"/*/; do
-  for f in "$d"f_*.jpg; do printf -v name '%s/%05d.jpg' "$TMP" "$n"; ln -s "$(realpath "$f")" "$name"; n=$((n + 1)); done
+  for f in "$d"f_*.jpg; do
+    [[ "$f" == *f_00000.jpg ]] && continue # 장면 첫 프레임은 렌더가 덜 된 경우가 있어 뺌
+    printf -v name '%s/%05d.jpg' "$TMP" "$n"; ln -s "$(realpath "$f")" "$name"; n=$((n + 1)); done
 done
 dur=$(echo "scale=3; $n / 30" | bc)
 fo=$(echo "scale=3; $dur - 1.5" | bc)

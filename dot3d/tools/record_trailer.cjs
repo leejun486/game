@@ -20,7 +20,7 @@ const SEGS = {
     ['h_dragon', (g) => { for (const e of g.enemies) e.dispose(); g.enemies = []; g.teleport(0, 292); g.spawnEnemy('dragon'); }, 120],
   ],
   mage: [
-    ['e_temple', (g) => { g.night = 1; g.nightTarget = 1; g.teleport(0, 100); for (const [t, dx, dz] of [['jiangshi', -3, -4], ['ghost', 3, -4], ['jiangshi', 0, -6], ['ghost', 4, 1], ['jiangshi', -4, 2]]) g.spawnEnemyAt(t, dx, 100 + dz); }, 120],
+    ['e_temple', (g) => { g.night = 0; g.nightTarget = 0; g.teleport(0, 100); for (const [t, dx, dz] of [['jiangshi', -3, -4], ['ghost', 3, -4], ['jiangshi', 0, -6], ['ghost', 4, 1], ['jiangshi', -4, 2]]) g.spawnEnemyAt(t, dx, 100 + dz); }, 120],
     ['j_frost', (g) => { g.night = 0; g.nightTarget = 0; for (const e of g.enemies) e.dispose(); g.enemies = []; g.teleport(0, 390); g.spawnEnemy('frostgiant'); }, 150],
     ['k_kill', (g) => { const b = g.enemies.find((e) => e.isBoss && !e.dead); if (b) g.damageEnemy(b, b.hp + 10, true, 0, 0); }, 100],
   ],
@@ -60,8 +60,14 @@ const KEYS = { sword: 'Digit1', mage: 'Digit2', elf: 'Digit3', lancer: 'Digit4' 
         if (dir) await page.screenshot({ path: `${dir}/f_${String(i).padStart(5, '0')}.jpg`, type: 'jpeg', quality: 92 });
       }
     };
+    // 무거운 첫 렌더(셰이더 준비)가 녹화에 섞이지 않게 먼저 몇 프레임 진행
+    await step(30, null);
+    const pick = process.env.SEG ? process.env.SEG.split(',') : null;
     for (const [name, setup, frames] of SEGS[cls]) {
+      if (pick && !pick.includes(name)) continue;
       const dir = OUT + name; fs.rmSync(dir, { recursive: true, force: true }); fs.mkdirSync(dir, { recursive: true });
+      // 앞 장면의 보스 소개(레터박스·카메라)가 남지 않게
+      if (name !== 'k_kill') await page.evaluate(() => { const g = game; g.cine = null; g.killCam = null; document.getElementById('cine').className = ''; document.getElementById('app').classList.remove('cine-on'); document.body.classList.remove('killcam'); });
       await page.evaluate(`(${setup.toString()})(game); game.setAutoHunt(true);`);
       await step(name === 'k_kill' ? 2 : 24, null); // 자리 잡기
       await step(frames, dir);
