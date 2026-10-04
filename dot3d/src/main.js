@@ -1895,12 +1895,14 @@ class Game {
     const W = this.world, n = W.nav, p = this.player.pos;
     if (!n || n.target[0] < 0) return;
     const D = n.dist[0];
+    const stuck = (e) => { const k = W.navCell(e.pos.x, e.pos.z); return k < 0 || !(D[k] < Infinity); };
+    // 싸움을 바꾸지 않도록: 밤 싸움에 남은 적이 모두 갇혔을 때(3초), 아니면 아주 오래 갇혔을 때(15초)만
+    const live = this.waveActive ? this.enemies.filter((e) => !e.dead && !e.field) : [];
+    const allStuck = live.length > 0 && live.every((e) => e.spawning || e.isBoss ? false : stuck(e));
     for (const e of this.enemies) {
-      if (e.dead || e.spawning || e.isBoss || Math.hypot(e.pos.x - p.x, e.pos.z - p.z) > 22) { e.strandT = 0; continue; }
-      const k = W.navCell(e.pos.x, e.pos.z);
-      if (k >= 0 && D[k] < Infinity) { e.strandT = 0; continue; }
+      if (e.dead || e.spawning || e.isBoss || e.field || Math.hypot(e.pos.x - p.x, e.pos.z - p.z) > 22 || !stuck(e)) { e.strandT = 0; continue; }
       e.strandT = (e.strandT || 0) + 0.5;
-      if (e.strandT < 3) continue;
+      if (e.strandT < (allStuck ? 3 : 15)) continue;
       e.strandT = 0;
       const ci = Math.floor((e.pos.x - n.x0) / n.cs), cj = Math.floor((e.pos.z - n.z0) / n.cs);
       let best = -1, bd = 1e9;
