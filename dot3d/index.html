@@ -52,14 +52,17 @@
 
     <div id="boss"><div id="boss-name"></div><div class="bar"><i id="boss-lag"></i><i id="boss-fill"></i></div></div>
 
+    <div id="minimap" class="panel" title="지도 (V)"><canvas id="minimap-cv" width="150" height="186"></canvas><span class="mm-key">V</span></div>
+
     <div id="combo"><b id="combo-n">0</b><span>연속 베기</span></div>
 
     <div id="help">
       <span><b>WASD</b> 이동</span><span><b>J</b>/<b>클릭</b> <i class="lbl-atk">베기</i></span><span><b>Space</b> <i class="lbl-dash">회피</i></span><span><b>K</b>/<b>우클릭</b> <i class="lbl-skill">검기</i></span><span><b>L</b>/<b>Q</b> <i class="lbl-skill2">일섬</i></span><span><b>I</b>/<b>R</b> <i class="lbl-skill3">회오리</i></span><span class="ult hidden"><b>U</b> 고유 기술</span>
-      <span><b>E</b> 대화·북</span><span><b>Tab</b> 타겟 변경</span><span><b>B</b> 가방</span><span><b>N</b> 낮/밤</span><span><b>휠</b> 확대</span><span><b>O</b> 외곽선</span><span><b>M</b> 음악</span><span><b>Esc</b> 일시정지·설정</span>
+      <span><b>E</b> 대화·북</span><span><b>Tab</b> 타겟 변경</span><span><b>B</b> 가방</span><span><b>V</b> 지도</span><span><b>N</b> 낮/밤</span><span><b>휠</b> 확대</span><span><b>O</b> 외곽선</span><span><b>M</b> 음악</span><span><b>Esc</b> 일시정지·설정</span>
     </div>
   </div>
 
+  <div id="worldmap"><div class="wm-box panel"><div class="wm-head"><span class="wm-title">지도</span><button id="worldmap-close">닫기 <span>V</span></button></div><div class="wm-body"><canvas id="worldmap-cv" width="620" height="560"></canvas><div id="worldmap-log"></div></div></div></div>
   <div id="banner"><div id="banner-main"></div><div id="banner-sub"></div></div>
   <div id="cine"><i class="lb top"></i><i class="lb bot"></i><div class="cine-title"><span class="cine-sub"></span><span class="cine-name"></span></div></div>
   <div id="story"><div class="story-moon"></div><div class="story-text"></div><div class="story-credits"></div><div class="story-hint">클릭 · Space: 다음 &nbsp;·&nbsp; Esc: 건너뛰기</div></div>

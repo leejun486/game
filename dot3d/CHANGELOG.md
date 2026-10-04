@@ -8,6 +8,7 @@
 - **청류 계곡(여름):** 용궁 뒤 샘물길 너머. 폭포에서 시작한 시냇물이 졸졸 흐르고(흐르는 물살과 물거품), 나무다리·징검돌, 물레방아, 산신 제단, 수국과 원추리 꽃밭이 있습니다. 멧돼지, 사마귀 요괴, 왕벌 요괴, 우두머리 천년 왕지네.
 - **백설 고원(겨울):** 계곡 남서쪽. 눈 쌓인 소나무와 눈더미, 얼어붙은 못, 눈 덮인 초가 마을, 화톳불, 비스듬히 몰아치는 눈보라. 눈늑대, 얼음 도깨비, 서리 도깨비불, 우두머리 서리 거인 동장군.
 - **그래픽·연출:** 범·백호·멧돼지·늑대를 새 몸(가슴·엉덩이 덩어리, 무릎이 굽는 다리, 벌어지는 턱, 마디 꼬리)으로 바꿨고, 왕지네는 등딱지 마디와 물결치는 관절 다리를 달았습니다. 보스 격파 연출(느린 시간, 갈라지는 빛, 빛 폭발, `격파!`), 치명타 섬광, 쓰러지는 몬스터의 넋 연출을 넣었습니다. 눈 쌓인 소나무와 고원 바닥을 깔끔하게 다듬었습니다.
+- **지도와 퀘스트 일지:** 화면 오른쪽 아래에 지금 지역의 작은 지도(막힌 곳·물·북·NPC·적·퀘스트 목표 별·내 위치와 방향)가 있습니다. V 키(또는 작은 지도 클릭)로 큰 지도를 열면 모든 지역의 이어짐과 평정 여부(★), 지금 할 일, 지나온 퀘스트 목록을 볼 수 있습니다. 여는 동안 게임은 멈춥니다.
 - **도사 기본 공격 소리:** 부적을 휙 던지면 종이가 탁 펴지고 오음 풍경 소리와 함께 불이 붙는 소리로 바꿨습니다. 세 번째 부채꼴 공격과 맞았을 때 소리도 따로 있습니다.
 
 - **새 지역 둘:**
@@ -30,6 +31,7 @@ Four new regions, a redesigned Wolhagung and a longer adventure.
 
 - Wolhagung redesigned as a moonlit garden palace: a winding stone path, a lotus pond with an island pavilion, side halls, flower walls and blossoming trees.
 - New regions: the Maple Fortress (boss: the White Tiger), the Dragon Palace beneath the East Sea (boss: the Dragon King), Cheongryu Valley with a babbling summer stream (boss: the Thousand-Year Centipede) and the White Snow Highland (boss: General Winter). Each has its own music and ambience.
+- Minimap and world map: a corner map of the current region (walls, water, drums, NPCs, foes, quest stars, your heading). Press V or click it for the full map with every region, cleared marks, the current task and a quest log.
 - New Taoist basic-attack sounds (talisman throw, fan throw, hit).
 - 24 new quest steps (46 in total), four new Moon Mirror shards (ten in all), new boss weapons and outfits with unique skills, 8 bounties, 4 achievements and 16 codex entries. All new bosses also appear on tower boss floors.
 - Longer play: lower gear drop rates, a steeper level curve at high levels, and larger quest targets.

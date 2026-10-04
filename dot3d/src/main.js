@@ -24,6 +24,7 @@ import { Coach } from './coach.js';
 import { VERSION } from './version.js';
 import { Records, newStats } from './records.js';
 import { drop } from './dispose.js';
+import { MiniMap } from './minimap.js';
 import { spearHit, lancerSkill1, lancerSkill2, lancerSkill3, updateLancer, clearLancer } from './lancer.js';
 
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
@@ -239,12 +240,13 @@ class Game {
     stage.addEventListener('contextmenu', (e) => e.preventDefault());
     document.getElementById('story').addEventListener('click', () => { if (this.story && !this.story.credits) this.storyNext(); });
     // 가방 버튼·창: 클릭이 공격으로 새지 않게
-    for (const id of ['bag-btn', 'bag', 'evo-btn', 'skills', 'hunt-btn', 'quest', 'pause', 'menu-btn', 'coach']) {
+    for (const id of ['bag-btn', 'bag', 'evo-btn', 'skills', 'hunt-btn', 'quest', 'pause', 'menu-btn', 'coach', 'minimap', 'worldmap']) {
       const el = document.getElementById(id);
       el.addEventListener('mousedown', (e) => e.stopPropagation());
       el.addEventListener('touchstart', (e) => e.stopPropagation(), { passive: true });
     }
     document.getElementById('bag-btn').addEventListener('click', () => { if (this.state === 'play') this.toggleBag(); });
+    this.minimap = new MiniMap(this);
     document.getElementById('bag-close').addEventListener('click', () => this.toggleBag(false));
     document.querySelectorAll('.bag-tabs button').forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); this.ui.tab(b.dataset.tab); }));
     document.getElementById('auto-equip').addEventListener('click', (e) => { e.stopPropagation(); this.autoEquip(); });
@@ -792,7 +794,7 @@ class Game {
   toggleBag(open = !this.ui.bagOpen) {
     if (open) this.toggleSkills(false);
     this.ui.bagOpen = open;
-    this.paused = open || !!this.ui.skillsOpen;
+    this.paused = open || !!this.ui.skillsOpen || !!this.mapOpen;
     this.ui.showBag(open);
     if (open) this.ui.newItem = false;
   }
@@ -801,7 +803,7 @@ class Game {
   toggleSkills(open = !this.ui.skillsOpen) {
     if (open && this.ui.bagOpen) this.toggleBag(false);
     this.ui.skillsOpen = open;
-    this.paused = open || !!this.ui.bagOpen;
+    this.paused = open || !!this.ui.bagOpen || !!this.mapOpen;
     this.ui.showSkills(open);
     if (open) document.getElementById('evo-dot').classList.add('hidden');
   }
@@ -1109,7 +1111,8 @@ class Game {
       return;
     }
     if (this.paused) {
-      // 가방·기술 창이 열려 있는 동안
+      // 가방·기술·지도 창이 열려 있는 동안
+      if (this.mapOpen) { if (['KeyV', 'map', 'Escape', 'Tab', 'pause'].includes(code)) this.minimap.toggle(false); return; }
       if (code === 'KeyB' || code === 'bag') this.toggleBag();
       else if (code === 'KeyT' || code === 'skills') this.toggleSkills();
       else if (code === 'Escape' || code === 'Tab') { this.toggleBag(false); this.toggleSkills(false); }
@@ -1140,6 +1143,7 @@ class Game {
         break;
       case 'Tab': this.updateTarget(true); break;
       case 'KeyB': this.toggleBag(); break;
+      case 'KeyV': case 'map': this.minimap.toggle(true); break;
       case 'KeyT': case 'skills': this.toggleSkills(); break;
       case 'KeyY': case 'records': this.togglePause(true); this.pausePane('records'); break;
       case 'KeyF': case 'auto': this.toggleAutoMove(); break;
@@ -1292,7 +1296,7 @@ class Game {
   }
 
   togglePause(open = !this.pauseOpen) {
-    if (open && this.state === 'play') { if (this.ui.bagOpen) this.toggleBag(false); if (this.ui.skillsOpen) this.toggleSkills(false); if (this.autoMove) this.stopAutoMove(); }
+    if (open && this.state === 'play') { if (this.ui.bagOpen) this.toggleBag(false); if (this.ui.skillsOpen) this.toggleSkills(false); if (this.mapOpen) this.minimap.toggle(false); if (this.autoMove) this.stopAutoMove(); }
     this.pauseOpen = open;
     this.rebind = null;
     if (this.state === 'play') this.paused = open;
@@ -1562,7 +1566,7 @@ class Game {
     const el = document.getElementById('story');
     el.className = '';
     el.querySelector('.story-text').classList.remove('in');
-    this.paused = !!(this.ui.bagOpen || this.ui.skillsOpen);
+    this.paused = !!(this.ui.bagOpen || this.ui.skillsOpen || this.mapOpen);
     S.opt.onDone?.();
   }
 
@@ -4378,6 +4382,7 @@ class Game {
     this.updateTower();
     this.updateField(wdt);
     this.updateQuestMarkers(wdt);
+    this.minimap.update(wdt);
     // 길찾기 흐름장 (플레이어가 다른 칸으로 옮겼을 때만 실제로 다시 계산)
     this.flowT -= wdt;
     if (this.enemies.length && this.flowT <= 0) {

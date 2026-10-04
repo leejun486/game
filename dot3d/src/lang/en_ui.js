@@ -140,6 +140,7 @@ export const dict = {
   '대화': 'Talk', '석등 밝히기': 'Light lantern', '북': 'Drum', '방울': 'Bell', '범종': 'Temple Bell', '징': 'Gong', '풀무': 'Bellows', '석등': 'Lanterns', '적': 'foes',
   '저승 문 (시련탑)': 'Underworld Gate (Tower)', '시련탑 나가기': 'Leave the tower', '다음 층으로': 'Next floor',
   '돌파! 가운데 <b>문</b>으로 다음 층, 남쪽 <b>홍살문</b>으로 나가기': 'Cleared! Center <b>gate</b> for the next floor, south <b>red gate</b> to leave',
+  '지도': 'Map', '지도 (V)': 'Map (V)', '지금 할 일': 'Current Task', '지나온 길': 'Journey So Far', '수문장에게 현상수배를 받자': 'Take a bounty from the Gatekeeper',
   '<b>수문장</b>에게 돌아가 보상을 받자': 'Return to the <b>Gatekeeper</b> for your reward', '모든 지역 평정': 'All Regions at Peace',
   '자동 이동을 멈췄어요': 'Auto-move stopped', '싸우는 중에는 자동 이동을 할 수 없어요': 'Can\'t auto-move during a fight', '지금은 갈 곳이 없어요': 'Nowhere to go right now',
   '길이 막혀 있어요 (닫힌 문이 있나 봐요)': 'The way is blocked (a gate must be closed)', '현상수배': 'Bounty',
