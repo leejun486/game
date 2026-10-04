@@ -143,7 +143,7 @@ class Game {
     s.add(this.hemi);
     const sun = (this.sun = new THREE.DirectionalLight('#fff0d6', 2.5));
     sun.castShadow = true;
-    const smap = GFX.hd ? { high: 4096, mid: 2048, low: 1024 }[this.settings?.quality || 'high'] : 2048;
+    const smap = GFX.hd ? { high: 4096, mid: 2048, low: 1024 }[loadSettings().quality || 'high'] : 2048;
     sun.shadow.mapSize.set(smap, smap);
     if (GFX.hd) sun.shadow.radius = 3;
     const sc = sun.shadow.camera;
@@ -1281,6 +1281,35 @@ class Game {
     document.body.classList.toggle('no-dmg', !S.numbers);
   }
 
+  // 화질 단계: 화면 해상도·AO·MSAA(pixel.js)와 그림자 지도 크기
+  applyQuality(q) {
+    this.pixel.setQuality(q);
+    if (!GFX.hd) return;
+    const n = { high: 4096, mid: 2048, low: 1024 }[q] || 4096, sh = this.sun.shadow;
+    if (sh.mapSize.x === n) return;
+    sh.mapSize.set(n, n);
+    sh.map?.dispose();
+    sh.map = null;
+  }
+
+  // 화질 자동 조절: 플레이 중 8초 동안의 초당 프레임이 40 아래면 한 단계 낮춤 (직접 고르면 끔, 올리지는 않음)
+  autoQuality(dt) {
+    const S = this.settings;
+    if (!GFX.hd || S.autoQ === false || S.quality === 'low' || this.state !== 'play' || this.paused || document.hidden || this.killCam) { this.fpsWin = null; return; }
+    const W = (this.fpsWin ||= { t: 0, a: [], skip: 2 });
+    if (W.skip > 0) { W.skip -= dt; return; } // 창을 막 닫은 직후 등은 건너뜀
+    W.t += dt; W.a.push(dt);
+    if (W.t < 8) return;
+    // 한 번씩 튀는 끊김(지역 불러오기 등)에 휘둘리지 않게 프레임 시간의 중앙값으로 봄
+    const fps = 1 / W.a.sort((x, y) => x - y)[W.a.length >> 1];
+    this.fpsWin = null;
+    if (fps >= 40) return;
+    const q = S.quality === 'high' ? 'mid' : 'low';
+    this.setSetting((s) => { s.quality = q; });
+    this.applyQuality(q);
+    this.ui.toast(q === 'mid' ? '화면이 버벅여 화질을 「보통」으로 낮췄어요' : '화면이 버벅여 화질을 「낮음」으로 낮췄어요', 3);
+  }
+
   // 언어 바꾸기: 저장하고 새로고침
   setLang(v) {
     this.save(false);
@@ -1332,12 +1361,12 @@ class Game {
         <div class="pz-row"><label>도움말</label>${seg('tips', [[1, '보이기'], [0, '숨기기']], S.tips === false ? 0 : 1)}</div>
         <div class="pz-row"><label>데미지 숫자</label>${seg('numbers', [[1, '보이기'], [0, '숨기기']], S.numbers ? 1 : 0)}</div>
         ${GFX.hd ? '' : `<div class="pz-row"><label>외곽선</label>${seg('outline', [[1, '켜기'], [0, '끄기']], this.pixel.compMat.uniforms.outline.value ? 1 : 0)}</div>`}
-        <div class="pz-note">화질 '낮음'은 해상도를 줄이고 그늘(AO)·계단 현상 제거·그림자 해상도를 낮춰 저사양 노트북·휴대폰에서 부드럽게 돌아가요. 그래픽 모드와 그림자 해상도는 새로고침해야 바뀝니다.</div>`;
+        <div class="pz-note">화질 '낮음'은 해상도를 줄이고 그늘(AO)·계단 현상 제거·그림자 해상도를 낮춰 저사양 노트북·휴대폰에서 부드럽게 돌아가요. 버벅이면 화질이 저절로 한 단계씩 낮아지고, 직접 고르면 그대로 둡니다. 그래픽 모드는 새로고침해야 바뀝니다.</div>`;
       for (const b of el.querySelectorAll('[data-k]')) b.addEventListener('click', () => {
         const k = b.dataset.k, v = b.dataset.val;
         if (k === 'gfx') { if ((v === 'hd') !== GFX.hd) { this.save(false); setGfx(v); } return; }
         if (k === 'lang') { if (v !== LANG) this.setLang(v); return; }
-        if (k === 'quality') { this.setSetting((s) => { s.quality = v; }); this.pixel.setQuality(v); }
+        if (k === 'quality') { this.setSetting((s) => { s.quality = v; s.autoQ = false; }); this.applyQuality(v); }
         if (k === 'shake') this.setSetting((s) => { s.shake = +v; });
         if (k === 'numbers') this.setSetting((s) => { s.numbers = v === '1'; });
         if (k === 'tips') this.setSetting((s) => { s.tips = v === '1'; });
@@ -1855,6 +1884,39 @@ class Game {
     if (d > range) return this.steerTo(inp, t.pos.x, t.pos.z, 2, 80);
     p.startAttack(inp);
     return inp;
+  }
+
+  // 플레이어가 갈 수 없는 곳(대숲 덤불 속 등)에 3초 넘게 갇힌 적은 가까운 갈 수 있는 곳으로 옮김
+  //  밤 싸움이 마지막 한 마리 때문에 끝나지 않는 일을 막음
+  rescueStranded(dt) {
+    this.strandAcc = (this.strandAcc || 0) + dt;
+    if (this.strandAcc < 0.5) return;
+    this.strandAcc = 0;
+    const W = this.world, n = W.nav, p = this.player.pos;
+    if (!n || n.target[0] < 0) return;
+    const D = n.dist[0];
+    for (const e of this.enemies) {
+      if (e.dead || e.spawning || e.isBoss || Math.hypot(e.pos.x - p.x, e.pos.z - p.z) > 22) { e.strandT = 0; continue; }
+      const k = W.navCell(e.pos.x, e.pos.z);
+      if (k >= 0 && D[k] < Infinity) { e.strandT = 0; continue; }
+      e.strandT = (e.strandT || 0) + 0.5;
+      if (e.strandT < 3) continue;
+      e.strandT = 0;
+      const ci = Math.floor((e.pos.x - n.x0) / n.cs), cj = Math.floor((e.pos.z - n.z0) / n.cs);
+      let best = -1, bd = 1e9;
+      for (let dj = -16; dj <= 16; dj++) for (let di = -16; di <= 16; di++) {
+        const i = ci + di, j = cj + dj;
+        if (i < 0 || j < 0 || i >= n.nx || j >= n.nz) continue;
+        const c = j * n.nx + i, q = di * di + dj * dj;
+        if (D[c] < Infinity && q < bd) { bd = q; best = c; }
+      }
+      if (best < 0) continue;
+      this.fx.smoke(e.pos.x, e.y + 0.3, e.pos.z, 8);
+      e.pos.x = n.x0 + ((best % n.nx) + 0.5) * n.cs;
+      e.pos.z = n.z0 + (Math.floor(best / n.nx) + 0.5) * n.cs;
+      e.pos.y = e.y = W.heightAt(e.pos.x, e.pos.z);
+      this.fx.smoke(e.pos.x, e.y + 0.3, e.pos.z, 8);
+    }
   }
 
   // ---------- 퀘스트 ----------
@@ -4206,7 +4268,9 @@ class Game {
     if (this.tower?.active) { this.leaveTower(true); return; }
     if (this.waveActive) {
       this.wave = Math.max(0, this.wave - 1);
-      this.after(1.2, () => this.nextWave());
+      // 다시 불러낼 때까지는 '파 완료'로 치지 않음 (적이 0마리라 바로 완료되어 보스가 둘 나오던 문제)
+      this.waveClearing = true;
+      this.after(1.2, () => { this.waveClearing = false; this.nextWave(); });
     }
   }
 
@@ -4397,6 +4461,7 @@ class Game {
       const edt = this.cine && e !== this.cine.e ? 0 : wdt * ek;
       if (!e.update(edt)) { e.dispose(); this.enemies.splice(i, 1); }
     }
+    this.rescueStranded(wdt);
     this.updateBurnZones(wdt);
     this.separate();
     this.updateProjectiles(wdt);
@@ -4458,6 +4523,8 @@ class Game {
     if (this.state === 'play') { this.saveT -= dt; if (this.saveT <= 0) this.save(); if (!this.paused) this.playTime = (this.playTime || 0) + dt; }
     this.coach.update(dt);
     this.records.update(dt);
+    this.autoQuality((now - this.last0) / 1000 || 0);
+    this.last0 = now;
 
     // 히트스톱: 월드 시간 멈춤
     let wdt = dt;

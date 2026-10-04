@@ -53,7 +53,7 @@ export const dict = {
   '전체': 'Master', '배경음악': 'Music', '효과음': 'Effects', '환경음': 'Ambience', '음악': 'Music', '켜기': 'On', '끄기': 'Off',
   '그래픽 모드': 'Graphics', '화질': 'Quality', '높음': 'High', '보통': 'Normal', '낮음': 'Low', '화면 흔들림': 'Screen shake', '약하게': 'Weak', '끔': 'Off',
   '데미지 숫자': 'Damage numbers', '보이기': 'Show', '숨기기': 'Hide', '외곽선': 'Outline', '언어': 'Language',
-  "화질 '낮음'은 해상도를 줄이고 그늘(AO)·계단 현상 제거·그림자 해상도를 낮춰 저사양 노트북·휴대폰에서 부드럽게 돌아가요. 그래픽 모드와 그림자 해상도는 새로고침해야 바뀝니다.": "'Low' quality lowers resolution, ambient occlusion, anti-aliasing and shadow detail so the game runs smoothly on low-end laptops and phones. Graphics mode and shadow resolution apply after a reload.",
+  "화질 '낮음'은 해상도를 줄이고 그늘(AO)·계단 현상 제거·그림자 해상도를 낮춰 저사양 노트북·휴대폰에서 부드럽게 돌아가요. 버벅이면 화질이 저절로 한 단계씩 낮아지고, 직접 고르면 그대로 둡니다. 그래픽 모드는 새로고침해야 바뀝니다.": "'Low' quality lowers resolution, ambient occlusion, anti-aliasing and shadow detail so the game runs smoothly on low-end laptops and phones. If the frame rate drops, quality steps down on its own; picking one yourself keeps it. Graphics mode applies after a reload.",
   '키를 누르세요…': 'Press a key…', '기본 키로 되돌리기': 'Reset to default keys',
   '이동은 WASD·방향키 고정. 원래 키(J/Z, Space/Shift, K/X, L/Q, I/R 등)도 계속 쓸 수 있어요.<br> <b>게임패드</b> — 왼쪽 스틱 이동 · A 공격 · B 피하기 · X 기술1 · Y 기술2 · RB 기술3 · RT 고유 기술 · LB 대화 · LT 타겟 변경 · Back 가방 · Start 일시정지 · 십자키 ↑ 자동 이동 / ↓ 자동 사냥 / ← 기술 수련. 메뉴에서는 십자키로 고르고 A로 누르고 B로 닫아요.':
     'Movement is fixed to WASD / arrow keys. The original keys (J/Z, Space/Shift, K/X, L/Q, I/R…) keep working.<br> <b>Gamepad</b> — left stick move · A attack · B dodge · X skill 1 · Y skill 2 · RB skill 3 · RT unique skill · LB talk · LT switch target · Back bag · Start pause · D-pad ↑ auto-move / ↓ auto-hunt / ← skill training. In menus, pick with the D-pad, press with A, close with B.',
@@ -140,6 +140,7 @@ export const dict = {
   '대화': 'Talk', '석등 밝히기': 'Light lantern', '북': 'Drum', '방울': 'Bell', '범종': 'Temple Bell', '징': 'Gong', '풀무': 'Bellows', '석등': 'Lanterns', '적': 'foes',
   '저승 문 (시련탑)': 'Underworld Gate (Tower)', '시련탑 나가기': 'Leave the tower', '다음 층으로': 'Next floor',
   '돌파! 가운데 <b>문</b>으로 다음 층, 남쪽 <b>홍살문</b>으로 나가기': 'Cleared! Center <b>gate</b> for the next floor, south <b>red gate</b> to leave',
+  '화면이 버벅여 화질을 「보통」으로 낮췄어요': 'Frame rate was low, so quality was lowered to Medium', '화면이 버벅여 화질을 「낮음」으로 낮췄어요': 'Frame rate was low, so quality was lowered to Low',
   '지도': 'Map', '지도 (V)': 'Map (V)', '지금 할 일': 'Current Task', '지나온 길': 'Journey So Far', '수문장에게 현상수배를 받자': 'Take a bounty from the Gatekeeper',
   '<b>수문장</b>에게 돌아가 보상을 받자': 'Return to the <b>Gatekeeper</b> for your reward', '모든 지역 평정': 'All Regions at Peace',
   '자동 이동을 멈췄어요': 'Auto-move stopped', '싸우는 중에는 자동 이동을 할 수 없어요': 'Can\'t auto-move during a fight', '지금은 갈 곳이 없어요': 'Nowhere to go right now',
