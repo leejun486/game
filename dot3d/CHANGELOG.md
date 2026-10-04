@@ -11,6 +11,7 @@
 - **지도와 퀘스트 일지:** 화면 오른쪽 아래에 지금 지역의 작은 지도(막힌 곳·물·북·NPC·적·퀘스트 목표 별·내 위치와 방향)가 있습니다. V 키(또는 작은 지도 클릭)로 큰 지도를 열면 모든 지역의 이어짐과 평정 여부(★), 지금 할 일, 지나온 퀘스트 목록을 볼 수 있습니다. 여는 동안 게임은 멈춥니다.
 - **저사양:** 플레이 중 프레임이 낮으면(초당 40 미만) 화질이 저절로 한 단계씩 낮아집니다. 화질을 직접 고르면 그대로 둡니다. 화질 '보통'·'낮음'의 그림자 해상도가 실제로 낮아지지 않던 문제(늘 최고 해상도)를 고쳤고, 이제 새로고침 없이 바로 바뀝니다.
 - **고친 점:** 밤 싸움 중 쓰러진 뒤 다시 하면 그 파가 바로 '완료'되어 대왕이 둘 나오던 문제. 날아다니는 몬스터가 대숲 덤불처럼 갈 수 없는 곳에 갇혀 밤 싸움이 끝나지 않던 문제(3초 넘게 갇히면 가까운 빈터로 옮겨짐).
+- **고친 점 (2):** 남문 밖 박석 길과 죽림 흙길이 겹친 곳이 깜빡이며 깨져 보이던 문제. 창술사 `천창우`·꽃잎 충격파의 바닥 원이 사라지지 않고 잔상으로 남던 문제. `여우불 구슬`처럼 특정 몬스터가 필요한 퀘스트·현상수배 중에는 그 몬스터가 훨씬 자주 나옵니다(여우불 25% → 약 65%).
 - **직업 균형:** 요정 체력 100 → 112, 검객 위력 +6%.
 - **도사 기본 공격 소리:** 부적을 휙 던지면 종이가 탁 펴지고 오음 풍경 소리와 함께 불이 붙는 소리로 바꿨습니다. 세 번째 부채꼴 공격과 맞았을 때 소리도 따로 있습니다.
 
@@ -36,6 +37,7 @@ Four new regions, a redesigned Wolhagung and a longer adventure.
 - New regions: the Maple Fortress (boss: the White Tiger), the Dragon Palace beneath the East Sea (boss: the Dragon King), Cheongryu Valley with a babbling summer stream (boss: the Thousand-Year Centipede) and the White Snow Highland (boss: General Winter). Each has its own music and ambience.
 - Low-end PCs: quality now steps down automatically when the frame rate drops below 40 (unless you pick it yourself). Medium/Low shadow resolution now actually applies, without a reload.
 - Fixes: retrying after dying in a night battle no longer skips the wave and spawns two bosses; flying monsters stuck inside unreachable thickets are moved out so the battle can end.
+- Fixes: flickering where the palace stone path meets the bamboo dirt path; Lancer spear-rain and petal rings no longer stay on the ground; quests and bounties that need a certain monster now spawn it far more often (Foxfire 25% → about 65% during Foxfire Beads).
 - Balance: Fairy HP 100 → 112, Swordsman power +6%.
 - Minimap and world map: a corner map of the current region (walls, water, drums, NPCs, foes, quest stars, your heading). Press V or click it for the full map with every region, cleared marks, the current task and a quest log.
 - New Taoist basic-attack sounds (talisman throw, fan throw, hit).

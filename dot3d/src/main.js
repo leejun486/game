@@ -465,8 +465,15 @@ class Game {
     if (this.enemies.filter((e) => e.field && !e.dead).length >= F.cap) return;
     const at = this.world.randomWalkable(p.pos.x, p.pos.z, 13, 22);
     if (!at || this.world.regionAt(at.x, at.z) !== R) return;
-    let roll = Math.random() * F.types.reduce((a, t) => a + t[1], 0), type = F.types[0][0];
-    for (const [t, w] of F.types) { roll -= w; if (roll <= 0) { type = t; break; } }
+    // 퀘스트에 필요한 몬스터(모을 물건을 떨어뜨리는 종류, 아직 덜 잡은 종류)는 훨씬 자주 나옴
+    const Q = this.curQuest(), want = new Set();
+    if (Q?.type === 'collect') for (const t of Q.from) want.add(t);
+    if (Q?.type === 'kill') for (const [t, n] of Object.entries(Q.need)) if ((this.quest.prog?.[t] || 0) < n) want.add(t);
+    const B = !Q && this.quest.bounty;
+    if (B) for (const [t, n] of Object.entries(BOUNTIES[B.i].need)) if ((B.prog[t] || 0) < n) want.add(t);
+    const W = F.types.map(([t, w]) => [t, want.has(t) ? w * 4 + 2 : w]);
+    let roll = Math.random() * W.reduce((a, t) => a + t[1], 0), type = W[0][0];
+    for (const [t, w] of W) { roll -= w; if (roll <= 0) { type = t; break; } }
     const n = Math.min(1 + Math.floor(Math.random() * F.pack), F.cap - this.enemies.filter((e) => e.field && !e.dead).length);
     const lv = 1 + MAPS[R.id].lvl + Math.floor((p.level - 1) / 3);
     for (let i = 0; i < n; i++) {

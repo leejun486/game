@@ -182,7 +182,8 @@ function slam(g, at, R, dmg, color = '#ffc8e0') {
 
 // 꽃잎 충격파
 function petals(g, at, R, dmg) {
-  g.fx.ring(at, R, '#ff9ac0', 0.45, 1);
+  const ring = g.fx.ring(at, R, '#ff9ac0', 0.45, 1);
+  g.after(0.45, () => g.fx.removeRing(ring));
   for (let i = 0; i < 30; i++) { const a = Math.random() * Math.PI * 2, sp = rand(2, 5); g.fx.norm.emit({ x: at.x, y: at.y + 0.4, z: at.z, vx: Math.cos(a) * sp, vy: rand(0.5, 2.5), vz: Math.sin(a) * sp, wob: 2, drag: 1.5, life: rand(0.6, 1.1), size: 2, color: Math.random() < 0.5 ? '#ffb0d0' : '#ffffff' }); }
   hitAll(g, g.enemiesIn(at, R), dmg, 4, 0.3);
 }
@@ -268,6 +269,7 @@ function fallingSpear(g, at, delay, o) {
           sp.position.y = at.y + y;
           if (y <= 0.7 * (o.big || 1) + 1e-3) {
             this.landed = true; this.t = 0;
+            g.fx.removeRing(ring);
             g.fx.dust(at.x, at.y, at.z, 6);
             g.fx.spark(at.x, at.y + 0.3, at.z, 8, '#ffffff', 5);
             hitAll(g, g.enemiesIn(at, o.R), o.dmg, 3, 0.3);
@@ -278,9 +280,8 @@ function fallingSpear(g, at, delay, o) {
         fade(sp, 1 - this.t / 0.6);
         return this.t < 0.6;
       },
-      end() { drop(g, sp); },
+      end() { drop(g, sp); g.fx.removeRing(ring); },
     });
-    void ring;
   });
 }
 
