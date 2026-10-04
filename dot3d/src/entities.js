@@ -864,6 +864,8 @@ export class Enemy {
       return this.deadT < 1.2;
     }
 
+    // 보스 등장 연출 (bossIntro에서 정함)
+    if (this.spawning && this.entrance) return this.updateEntrance(dt);
     // 등장
     if (this.spawning) {
       const k = smooth(clamp(this.st / 0.7, 0, 1));
@@ -1393,6 +1395,78 @@ export class Enemy {
   waterMul() {
     if (!this.game.world.wet.length || !this.game.world.inWater(this.pos.x, this.pos.z)) return 1;
     return this.T.aquatic ? 1.3 : this.isBoss ? 0.85 : 0.7;
+  }
+
+  // 보스 등장: drop 하늘에서 떨어져 내려찍음 / rise 땅(물)을 가르고 솟아오름 / burst 기운이 모여들다 터지며 나타남
+  updateEntrance(dt) {
+    const g = this.game, E = this.entrance, t = this.st;
+    const [c1, c2] = this.T.pal.fire;
+    const at = new THREE.Vector3(this.pos.x, this.y, this.pos.z);
+    const s = this.sizeMul, big = this.T.radius || 1;
+    if (!E.started) {
+      E.started = true;
+      g.fx.circle(at, 2.2 + big, c1, E.dur + 0.4, E.kind === 'burst' ? 2.4 : 1.2);
+    }
+    if (E.kind === 'drop') {
+      // 0~0.55초: 바닥에 그림자 고리만, 0.55~1.0초: 떨어짐, 1.0초: 쾅
+      const k = clamp((t - 0.55) / 0.45, 0, 1);
+      this.root.visible = t >= 0.55;
+      this.root.scale.setScalar(s);
+      this.jumpY = 16 * (1 - k) * (1 - k);
+      if (t < 0.55 && Math.random() < 0.5) g.fx.dust(at.x + rand(-1.5, 1.5), at.y, at.z + rand(-1.5, 1.5), 1);
+      if (k >= 1 && !E.hit) {
+        E.hit = true;
+        this.jumpY = 0;
+        g.shake(1.0); g.hitstop = Math.max(g.hitstop, 0.08);
+        g.audio.play('slam');
+        g.fx.ring(at, 4 + big * 2, c1, 0.5);
+        g.fx.ring(at, 2.5 + big, '#ffffff', 0.3);
+        g.fx.dust(at.x, at.y, at.z, 30);
+        g.fx.smoke(at.x, at.y, at.z, 14);
+        g.fx.colorFire(at.x, at.y, at.z, 40, 1.4, c1, c2);
+        g.fx.scorch?.(at, 2 + big, '#1a1220', 4);
+      }
+    } else if (E.kind === 'rise') {
+      // 땅이 흔들리며 갈라지고, 몸이 아래에서 솟아오름
+      const k = smooth(clamp((t - 0.35) / 0.85, 0, 1));
+      this.root.visible = t >= 0.35;
+      this.root.scale.setScalar(s);
+      this.jumpY = -4.5 * (1 - k);
+      if (t < 1.2) {
+        g.shakeAmt = Math.max(g.shakeAmt, 0.25);
+        if (Math.random() < 0.8) { const a = Math.random() * Math.PI * 2, r = rand(0.5, 2 + big); g.fx.dust(at.x + Math.cos(a) * r, at.y, at.z + Math.sin(a) * r, 2, E.water ? '#bfe8ff' : '#a89a80'); }
+        if (Math.random() < 0.5) g.fx.colorFire(at.x, at.y, at.z, 3, 1 + big * 0.5, c1, c2);
+        if (E.water && Math.random() < 0.6) for (let i = 0; i < 3; i++) g.fx.add.emit({ x: at.x + rand(-1.2, 1.2), y: at.y + 0.1, z: at.z + rand(-1.2, 1.2), vx: rand(-1.5, 1.5), vy: rand(4, 8), vz: rand(-1.5, 1.5), g: 14, life: rand(0.5, 0.9), size: 3, endSize: 1, color: '#e8fbff', color2: '#4ab0ff' });
+      }
+      if (t >= 0.35 && !E.hit) { E.hit = true; g.audio.play('slam'); g.fx.ring(at, 3 + big * 2, c1, 0.6); }
+      if (k >= 1 && !E.hit2) { E.hit2 = true; g.shake(0.7); g.fx.smoke(at.x, at.y, at.z, 12); }
+    } else {
+      // 사방에서 기운이 빨려 들어오다(0~0.9초) 번쩍 터지며 나타남
+      const k = clamp((t - 0.9) / 0.35, 0, 1);
+      this.root.visible = t >= 0.9;
+      this.root.scale.setScalar(Math.max(0.01, k < 1 ? k * 1.15 : 1) * s);
+      this.jumpY = 0;
+      if (t < 0.9) for (let i = 0; i < 4; i++) {
+        const a = Math.random() * Math.PI * 2, r = rand(3, 6);
+        g.fx.add.emit({ x: at.x + Math.cos(a) * r, y: at.y + rand(0.3, 2.5), z: at.z + Math.sin(a) * r, vx: -Math.cos(a) * r * 1.6, vy: 0, vz: -Math.sin(a) * r * 1.6, life: 0.55, size: 3, endSize: 1, color: c1, color2: c2 });
+      }
+      if (t >= 0.9 && !E.hit) {
+        E.hit = true;
+        g.shake(0.8); g.ui.flash(c1, 0.35);
+        g.audio.play('burst');
+        g.fx.ring(at, 5 + big * 2, c1, 0.5);
+        g.fx.colorFire(at.x, at.y, at.z, 50, 1.2, c1, c2);
+        g.fx.spark(at.x, at.y + 1, at.z, 24, '#ffffff', 9);
+      }
+    }
+    if (t >= E.dur) {
+      this.spawning = false; this.entrance = null; this.jumpY = 0;
+      this.root.visible = true; this.root.scale.setScalar(s);
+      this.state = 'roar'; this.st = 0;
+      g.audio.play(this.T.pal === PAL.blue ? 'laugh' : this.T.pal === PAL.fox || this.T.pal === PAL.autumn ? 'howl' : 'wail');
+    }
+    this.place(dt, 0);
+    return true;
   }
 
   place(dt, speed, attackAnim = null) {

@@ -424,7 +424,7 @@ export class PixelRenderer {
   setFocus(target) {
     const cam = this.camera;
     const p = this.pitch;
-    const back = _v.set(0, Math.sin(p), Math.cos(p)).multiplyScalar(this.camDist);
+    const back = _v.set(0, Math.sin(p), Math.cos(p)).multiplyScalar(this.camDist * (this.hd ? this.camK ?? 1 : 1));
     cam.position.copy(target).add(back);
     cam.up.set(0, 1, 0);
     cam.lookAt(target);

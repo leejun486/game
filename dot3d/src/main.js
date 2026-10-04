@@ -2179,7 +2179,9 @@ class Game {
     this.seenBoss = this.seenBoss || {};
     const first = !this.seenBoss[e.type];
     this.seenBoss[e.type] = true;
-    const dur = first ? 2.8 : 1.7;
+    const kind = { boss: 'drop', baekho: 'drop', frostgiant: 'drop', imugi: 'rise', dragon: 'rise', centipede: 'rise', bulgasari: 'rise' }[e.type] || 'burst';
+    e.entrance = { kind, dur: kind === 'drop' ? 1.25 : 1.35, water: e.type === 'imugi' || e.type === 'dragon' };
+    const dur = (first ? 2.8 : 1.7) + 1.1;
     this.cine = { e, t: 0, dur };
     e.introRoar = true;
     for (const q of this.spawnQueue) q.at += dur;
@@ -4574,6 +4576,7 @@ class Game {
       this.lead.x = damp(this.lead.x, p.vel.x * 0.28, 3, dt);
       this.lead.z = damp(this.lead.z, p.vel.z * 0.28, 3, dt);
       target = V(p.pos.x + this.lead.x, p.y + 0.6, p.pos.z + this.lead.z - 0.8);
+      this.pixel.camK = damp(this.pixel.camK ?? 1, this.cine ? 0.74 : this.killCam ? 0.85 : 1, 3, dt);
       if (this.cine) { const b = this.cine.e; target = V(lerp(p.pos.x, b.pos.x, 0.85), b.y + 1.2, lerp(p.pos.z, b.pos.z, 0.85) - 0.8); }
       if (this.killCam) { const b = this.killCam.at; target = V(lerp(p.pos.x, b.x, 0.8), b.y + 1.0, lerp(p.pos.z, b.z, 0.8) - 0.6); }
       this.focus.x = damp(this.focus.x, target.x, 7, dt);
