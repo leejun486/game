@@ -2580,6 +2580,8 @@ class Game {
       if (pl.lsAcc >= 1) { const h = Math.floor(pl.lsAcc); pl.lsAcc -= h; pl.hp = Math.min(pl.maxHp, pl.hp + h); }
     }
     this.fx.spark(c.x, c.y, c.z, crit ? 18 : 10, crit ? '#fff07a' : '#ffffff', crit ? 8 : 6);
+    // 치명타: 별 모양 섬광과 작은 고리
+    if (crit) { this.fx.cross(c, '#fff4c0', e.isBoss ? 2.2 : 1.5, 0.16); this.fx.ring(V(e.pos.x, e.y, e.pos.z), e.isBoss ? 2.2 : 1.3, '#fff07a', 0.2); }
     this.fx.number(c.clone().add(V(0, 0.5 * (e.isBoss ? 2 : 1), 0)), dmg, crit ? 'crit' : 'normal');
     this.audio.play(crit ? 'crit' : 'hit');
     this.hitstop = Math.max(this.hitstop, crit ? 0.085 : 0.05);
@@ -4069,10 +4071,71 @@ class Game {
     if (this.target === e) this.target = null;
     this.questOnKill(e);
     this.updateQuest();
-    if (e.isBoss) {
-      this.hitstop = 0.25;
-      this.shake(1);
-      this.ui.flash('#ffffff', 0.6);
+    if (e.isBoss) this.startKillCam(e);
+  }
+
+  // 보스 격파 연출: 화면 위아래 검은 띠, 카메라가 보스를 비추고 시간이 느려짐.
+  //  몸 곳곳이 갈라지며 빛이 새어 나오다가, 큰 빛 폭발과 함께 '격파!'
+  startKillCam(e) {
+    if (this.cine) { this.cine = null; document.getElementById('cine').className = ''; }
+    const at = V(e.pos.x, e.y, e.pos.z);
+    this.killCam = { e, at, t: 0, dur: 2.6, crack: 0, boomed: false };
+    this.hitstop = 0.18;
+    this.shake(0.8);
+    this.ui.flash('#ffffff', 0.45);
+    this.audio.play('gong');
+    if (this.autoMove) this.stopAutoMove();
+    document.getElementById('app').classList.add('cine-on');
+    document.getElementById('cine').className = 'show bars';
+    document.body.classList.add('killcam');
+    const [f1, f2] = e.T.pal.fire;
+    for (let r = 0; r < 3; r++) this.fx.ring(at, 2 + r * 1.6, r ? f1 : '#ffffff', 0.35 + r * 0.12);
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * Math.PI * 2;
+      this.fx.streak(V(at.x, at.y + 0.5, at.z), V(at.x + Math.cos(a) * 0.3, at.y + 9, at.z + Math.sin(a) * 0.3), i % 2 ? f1 : '#fff8e0', 0.35, 1.2);
+    }
+  }
+
+  updateKillCam(dt) {
+    const K = this.killCam;
+    K.t += dt;
+    this.player.invuln = Math.max(this.player.invuln, 0.4);
+    const e = K.e, [f1, f2] = e.T.pal.fire;
+    const big = 1.6;
+    // 갈라짐: 몸 곳곳에서 빛줄기와 불티
+    if (!K.boomed) {
+      K.crack -= dt;
+      if (K.crack <= 0) {
+        K.crack = 0.11;
+        const x = K.at.x + rand(-big, big), y = K.at.y + rand(0.5, 3), z = K.at.z + rand(-big, big);
+        const a = Math.random() * Math.PI * 2;
+        this.fx.streak(V(x, y, z), V(x + Math.cos(a) * 2.2, y + rand(-0.5, 1.5), z + Math.sin(a) * 2.2), '#fff8e0', 0.18, 0.35);
+        this.fx.colorFire(x, y, z, 10, 0.4, '#ffffff', f1);
+        this.audio.play('hit');
+      }
+    }
+    // 빛 폭발
+    if (!K.boomed && K.t >= 1.15) {
+      K.boomed = true;
+      this.ui.flash('#ffffff', 0.7);
+      this.shake(1.1);
+      this.audio.play('burst');
+      this.audio.play('thunder');
+      for (let r = 0; r < 4; r++) this.fx.ring(K.at, 3 + r * 2.4, r % 2 ? f1 : '#ffffff', 0.45 + r * 0.15);
+      for (let i = 0; i < 140; i++) {
+        const a = Math.random() * Math.PI * 2, sp = rand(3, 13);
+        this.fx.add.emit({ x: K.at.x, y: K.at.y + rand(0.5, 2.5), z: K.at.z, vx: Math.cos(a) * sp, vy: rand(1, 9), vz: Math.sin(a) * sp, g: 6, drag: 1.8, life: rand(0.6, 1.4), size: rand(2, 5), endSize: 1, color: i % 3 ? '#fff4c0' : f1, color2: f2 });
+      }
+      const el = document.getElementById('cine');
+      el.querySelector('.cine-sub').textContent = BOSS_EPITHET[e.type] || '';
+      el.querySelector('.cine-name').textContent = `${e.T.name} 격파!`;
+      el.className = 'show defeat';
+    }
+    if (K.t >= K.dur) {
+      this.killCam = null;
+      document.body.classList.remove('killcam');
+      document.getElementById('cine').className = '';
+      document.getElementById('app').classList.remove('cine-on');
     }
   }
 
@@ -4394,6 +4457,8 @@ class Game {
     // 히트스톱: 월드 시간 멈춤
     let wdt = dt;
     if (this.hitstop > 0) { this.hitstop -= dt; wdt = dt * 0.05; }
+    // 보스 격파: 처음 1.2초는 시간이 4분의 1로 흐름
+    if (this.killCam && !this.paused) { this.updateKillCam(dt); if (this.killCam && this.killCam.t < 1.2) wdt *= 0.25; }
     this.time += wdt;
     shared.time.value += wdt;
 
@@ -4429,6 +4494,7 @@ class Game {
       this.lead.z = damp(this.lead.z, p.vel.z * 0.28, 3, dt);
       target = V(p.pos.x + this.lead.x, p.y + 0.6, p.pos.z + this.lead.z - 0.8);
       if (this.cine) { const b = this.cine.e; target = V(lerp(p.pos.x, b.pos.x, 0.85), b.y + 1.2, lerp(p.pos.z, b.pos.z, 0.85) - 0.8); }
+      if (this.killCam) { const b = this.killCam.at; target = V(lerp(p.pos.x, b.x, 0.8), b.y + 1.0, lerp(p.pos.z, b.z, 0.8) - 0.6); }
       this.focus.x = damp(this.focus.x, target.x, 7, dt);
       this.focus.y = damp(this.focus.y, target.y, 5, dt);
       this.focus.z = damp(this.focus.z, target.z, 7, dt);

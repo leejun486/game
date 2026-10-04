@@ -841,7 +841,9 @@ export class Enemy {
         this.root.scale.setScalar(Math.max(0.01, 1 - this.deadT * 4));
       } else {
         this.rig.animate(dt, { speed: 0, dead: true });
-        this.rig.setFlash(Math.max(0, 0.8 - this.deadT * 2));
+        // 쓰러지는 동안 하얗게 바래며 몸이 살짝 작아짐
+        this.rig.setFlash(Math.min(1, 0.4 + this.deadT * 1.4));
+        if (!this.isBoss) this.root.scale.setScalar(this.sizeMul * Math.max(0.6, 1 - Math.max(0, this.deadT - 0.25) * 0.8));
         if (this.deadT > 0.55 && !this.poofed) {
           this.poofed = true;
           const big = this.isBoss;
@@ -849,6 +851,8 @@ export class Enemy {
           g.fx.smoke(this.pos.x, this.y + 0.3, this.pos.z, big ? 30 : 12);
           g.fx.colorFire(this.pos.x, this.y + 0.2, this.pos.z, big ? 60 : 24, big ? 1.4 : 0.6, f1, f2);
           g.fx.coins(this.pos.x, this.y, this.pos.z, big ? 30 : 6);
+          // 넋: 빛 알갱이 몇 개가 위로 흩어져 오름
+          for (let k = 0; k < (big ? 30 : 8); k++) g.fx.add.emit({ x: this.pos.x + rand(-0.4, 0.4), y: this.y + rand(0.3, 1.2), z: this.pos.z + rand(-0.4, 0.4), vx: rand(-0.6, 0.6), vy: rand(1.5, 3.5), vz: rand(-0.6, 0.6), wob: 1, life: rand(0.6, 1.1), size: 2.5, endSize: 1, color: '#ffffff', color2: f1 });
           g.audio.play('coin');
           this.root.visible = false;
         }

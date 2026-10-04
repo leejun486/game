@@ -475,6 +475,10 @@ em.ult { color: #ff9a7a; }
 #cine .cine-sub { display: block; font-size: 16px; letter-spacing: 6px; color: #e8c8b0; text-shadow: 2px 2px 0 #000; }
 #cine .cine-name { display: block; font-size: 54px; font-weight: bold; color: #fff2e0; letter-spacing: 8px; text-shadow: 0 0 18px rgba(255, 90, 60, 0.7), 3px 3px 0 #000; }
 #cine.first .cine-name { font-size: 64px; }
+#cine.bars .cine-title { opacity: 0; }
+body.killcam #banner, body.killcam #ach-pop, body.killcam #toast { opacity: 0 !important; }
+#cine.defeat .cine-name { color: #fff8d8; text-shadow: 0 0 22px rgba(255, 220, 120, 0.85), 3px 3px 0 #000; }
+#cine.defeat .cine-sub { color: #ffe8b0; }
 #app.cine-on #hud, #app.cine-on #hpbars, #app.cine-on #banner { opacity: 0; transition: opacity 0.3s; }
 @media (max-width: 600px), (max-height: 520px) { #cine .cine-name { font-size: 34px; } #cine.first .cine-name { font-size: 40px; } #cine .cine-sub { font-size: 12px; } }
 

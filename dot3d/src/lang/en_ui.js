@@ -213,6 +213,7 @@ export const pats = [
   [/^(\d+)단계$/, 'Phase $1'],
   [/^(\d+)층부터 이어서 도전$/, 'Resume from floor $1'],
   [/^(.+) 출현!$/, '$1 appears!'],
+  [/^(.+) 격파!$/, '$1 Defeated!'],
   [/^적 (\d+)마리( · 정예 포함)?$/, (T, n, e) => `${n} foes${e ? ' · elites included' : ''}`],
   [/^(\d+)층 돌파!$/, 'Floor $1 cleared!'],
   [/^최고 기록 갱신 · 경험치 \+(\d+)$/, 'New record · EXP +$1'],
