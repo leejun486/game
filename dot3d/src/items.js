@@ -18,6 +18,8 @@ export const BOSS_SETS = {
   bulgasari: { boss: '쇠먹는 불가사리', set: '불가사리' },
   baekho: { boss: '산군 백호', set: '백호' },
   dragon: { boss: '동해 용왕', set: '용왕' },
+  centipede: { boss: '천년 왕지네', set: '왕지네' },
+  frostgiant: { boss: '서리 거인 동장군', set: '동장군' },
   yeomra: { boss: '염라대왕 (시련탑 10층마다)', set: '염라' },
 };
 export const PERKS = {
@@ -37,6 +39,10 @@ export const PERKS = {
   tigerhide: '백호 가죽: 받는 피해 -8%, 이동 속도 +10%',
   storm: '용왕 비늘: 맞힐 때 15% 확률로 가까운 적 셋에게 번개가 튐',
   pearl: '여의주: 3초마다 최대 체력의 2% 회복',
+  venom: '지네 독: 맞힐 때 25% 확률로 적이 4초 동안 독에 상함',
+  carapace: '지네 껍질: 받는 피해 -10%, 느려지는 시간 절반',
+  frostbite: '동상: 언 적에게 피해 +35%, 맞힐 때 12% 확률로 적을 얼림',
+  winterheart: '겨울 심장: 받는 피해 -6%, 맞으면 20% 확률로 주변 적을 얼림',
 };
 
 // 보스 무기 고유 기술 (U 키). 보스 무기에만 붙음
@@ -48,6 +54,8 @@ export const ULTS = {
   tidal: { name: '물기둥', short: '물기둥', cd: 22, desc: '가까운 적 다섯의 발밑에서 차례로 물기둥이 솟아 띄워 올림. 일반 몬스터는 잠시 얼어붙음' },
   tigerclaw: { name: '백호 발톱', short: '발톱', cd: 20, desc: '앞으로 나아가며 세 번 크게 할퀴어 맞은 적을 기절시킴' },
   dragonstorm: { name: '용왕의 폭풍', short: '폭풍', cd: 26, desc: '주위 적 여덟에게 차례로 벼락을 내리고, 마지막에 둥근 해일로 밀쳐냄' },
+  venomrain: { name: '독침 비', short: '독침', cd: 24, desc: '앞쪽 넓은 곳에 지네 독침 열네 개가 쏟아지고 맞은 적은 독에 상함' },
+  blizzard: { name: '눈보라', short: '눈보라', cd: 26, desc: '몸 주위로 얼음 고리 세 겹이 퍼져 나가며 닿은 일반 몬스터를 얼림' },
   judgment: { name: '명부 집행', short: '명부', cd: 26, desc: '주변 적 여섯에게 명부의 낙인. 잠시 뒤 큰 피해, 체력이 35% 아래로 떨어진 일반 몬스터는 즉사' },
 };
 // 보스 처치 시 전용 장비가 나올 확률 (회차마다 조금씩 오름)
@@ -69,6 +77,8 @@ export const WEAPONS = {
     { id: 'swB5', name: '불가사리 쇠뼈검', tier: 5, atk: 1.25, from: 'bulgasari', perk: 'molten', ult: 'meltdown', style: { blade: '#3a3a40', edge: '#ffb060', guard: '#8a4a2a', wrap: '#2a1a14', glow: '#ff5a10', long: 1.34 } },
     { id: 'swB7', name: '백호 발톱검', tier: 5, atk: 1.32, from: 'baekho', perk: 'hunter', ult: 'tigerclaw', style: { blade: '#f4f4ee', edge: '#ffb060', guard: '#1a1a22', wrap: '#e08a2a', glow: '#ffb060', long: 1.3 } },
     { id: 'swB8', name: '용왕 청룡검', tier: 5, atk: 1.38, from: 'dragon', perk: 'storm', ult: 'dragonstorm', style: { blade: '#9ad8ff', edge: '#ffffff', guard: '#f0c040', wrap: '#1e4a9a', glow: '#3a9aff', long: 1.32 } },
+    { id: 'swB9', name: '왕지네 독니검', tier: 5, atk: 1.4, from: 'centipede', perk: 'venom', ult: 'venomrain', style: { blade: '#3a1a1a', edge: '#aaff3a', guard: '#f0a020', wrap: '#c8402a', glow: '#8aff2a', long: 1.32 } },
+    { id: 'swB10', name: '동장군 빙설검', tier: 5, atk: 1.43, from: 'frostgiant', perk: 'frostbite', ult: 'blizzard', style: { blade: '#e8f8ff', edge: '#ffffff', guard: '#7aa8c8', wrap: '#2a4a6a', glow: '#8ad8ff', long: 1.36 } },
     { id: 'swB6', name: '염라 판관검', tier: 5, atk: 1.45, from: 'yeomra', perk: 'verdict', ult: 'hellfire', style: { blade: '#2a0a10', edge: '#ff4a5a', guard: '#ffd040', wrap: '#7a0a14', glow: '#ff2030', long: 1.38 } },
   ],
   mage: [
@@ -84,6 +94,8 @@ export const WEAPONS = {
     { id: 'mgB5', name: '용광로 지팡이', tier: 5, atk: 1.25, from: 'bulgasari', perk: 'molten', ult: 'meltdown', style: { wood: '#3a3a40', moon: '#ff8a3a', orb: '#ffd080', orbGlow: '#ff4a00', big: 1.75 } },
     { id: 'mgB7', name: '백호 송곳니 지팡이', tier: 5, atk: 1.32, from: 'baekho', perk: 'hunter', ult: 'tigerclaw', style: { wood: '#eeeee6', moon: '#1a1a22', orb: '#ffd0a0', orbGlow: '#ff8a2a', big: 1.7 } },
     { id: 'mgB8', name: '용왕 여의봉', tier: 5, atk: 1.38, from: 'dragon', perk: 'storm', ult: 'dragonstorm', style: { wood: '#1e4a9a', moon: '#f0c040', orb: '#e8f8ff', orbGlow: '#3a9aff', big: 1.8 } },
+    { id: 'mgB9', name: '왕지네 독침 지팡이', tier: 5, atk: 1.4, from: 'centipede', perk: 'venom', ult: 'venomrain', style: { wood: '#3a1a1a', moon: '#f0a020', orb: '#d8ff8a', orbGlow: '#6aff1a', big: 1.75 } },
+    { id: 'mgB10', name: '동장군 얼음 지팡이', tier: 5, atk: 1.43, from: 'frostgiant', perk: 'frostbite', ult: 'blizzard', style: { wood: '#7aa8c8', moon: '#e8f8ff', orb: '#ffffff', orbGlow: '#6ac8ff', big: 1.8 } },
     { id: 'mgB6', name: '명부 판관필', tier: 5, atk: 1.45, from: 'yeomra', perk: 'verdict', ult: 'hellfire', style: { wood: '#1a0a0e', moon: '#ffd040', orb: '#ff8a9a', orbGlow: '#ff2030', big: 1.8 } },
   ],
   elf: [
@@ -99,6 +111,8 @@ export const WEAPONS = {
     { id: 'bwB5', name: '쇠심줄 활', tier: 5, atk: 1.25, from: 'bulgasari', perk: 'molten', ult: 'meltdown', style: { wood: '#3a3a40', grip: '#8a4a2a', tips: '#ffb060', glow: '#ff5a10', big: 1.4 } },
     { id: 'bwB7', name: '백호 힘줄 활', tier: 5, atk: 1.32, from: 'baekho', perk: 'hunter', ult: 'tigerclaw', style: { wood: '#eeeee6', grip: '#1a1a22', tips: '#ffb060', glow: '#ffb060', big: 1.42 } },
     { id: 'bwB8', name: '용수 청룡궁', tier: 5, atk: 1.38, from: 'dragon', perk: 'storm', ult: 'dragonstorm', style: { wood: '#1e4a9a', grip: '#f0c040', tips: '#e8f8ff', glow: '#3a9aff', big: 1.45 } },
+    { id: 'bwB9', name: '왕지네 마디활', tier: 5, atk: 1.4, from: 'centipede', perk: 'venom', ult: 'venomrain', style: { wood: '#3a1a1a', grip: '#f0a020', tips: '#aaff3a', glow: '#8aff2a', big: 1.44 } },
+    { id: 'bwB10', name: '동장군 서리활', tier: 5, atk: 1.43, from: 'frostgiant', perk: 'frostbite', ult: 'blizzard', style: { wood: '#cfe8f6', grip: '#2a4a6a', tips: '#ffffff', glow: '#8ad8ff', big: 1.45 } },
     { id: 'bwB6', name: '업경 활', tier: 5, atk: 1.45, from: 'yeomra', perk: 'verdict', ult: 'hellfire', style: { wood: '#2a0a10', grip: '#ffd040', tips: '#ff8a9a', glow: '#ff2030', big: 1.45 } },
   ],
   lancer: [
@@ -114,6 +128,8 @@ export const WEAPONS = {
     { id: 'spB5', name: '불가사리 쇠뼈창', tier: 5, atk: 1.25, from: 'bulgasari', perk: 'molten', ult: 'meltdown', style: { head: '#ffb060', shaft: '#3a3a40', tassel: '#ff5a10', ring: '#8a4a2a', glow: '#ff5a10', wings: true, long: 1.2, big: 1.3 } },
     { id: 'spB7', name: '백호 송곳창', tier: 5, atk: 1.32, from: 'baekho', perk: 'hunter', ult: 'tigerclaw', style: { head: '#f4f4ee', shaft: '#1a1a22', tassel: '#e08a2a', ring: '#1a1a22', glow: '#ffb060', wings: true, long: 1.22, big: 1.32 } },
     { id: 'spB8', name: '용왕 삼지창', tier: 5, atk: 1.38, from: 'dragon', perk: 'storm', ult: 'dragonstorm', style: { head: '#9ad8ff', shaft: '#1e4a9a', tassel: '#f0c040', ring: '#f0c040', glow: '#3a9aff', wings: true, long: 1.25, big: 1.38 } },
+    { id: 'spB9', name: '왕지네 독니창', tier: 5, atk: 1.4, from: 'centipede', perk: 'venom', ult: 'venomrain', style: { head: '#aaff3a', shaft: '#3a1a1a', tassel: '#f0a020', ring: '#c8402a', glow: '#8aff2a', wings: true, long: 1.24, big: 1.36 } },
+    { id: 'spB10', name: '동장군 빙창', tier: 5, atk: 1.43, from: 'frostgiant', perk: 'frostbite', ult: 'blizzard', style: { head: '#e8f8ff', shaft: '#2a4a6a', tassel: '#8ad8ff', ring: '#7aa8c8', glow: '#8ad8ff', wings: true, long: 1.26, big: 1.38 } },
     { id: 'spB6', name: '염라 판관창', tier: 5, atk: 1.45, from: 'yeomra', perk: 'verdict', ult: 'hellfire', style: { head: '#ff4a5a', shaft: '#2a0a10', tassel: '#ffd040', ring: '#ffd040', glow: '#ff2030', wings: true, long: 1.22, big: 1.35 } },
   ],
 };
@@ -141,6 +157,8 @@ export const OUTFITS = [
   { id: 'otB6', name: '염라 곤룡포', tier: 5, hp: 180, def: 0.25, from: 'yeomra', perk: 'rebirth', deco: ['badge', 'crown'], pal: { main: '#9a1a22', accent: '#ffd040', trim: '#ffd040', dark: '#3a0a10', decoA: '#1a1a1a', decoB: '#ffd040' } },
   { id: 'otB7', name: '백호 가죽 전포', tier: 5, hp: 168, def: 0.24, from: 'baekho', perk: 'tigerhide', acc: 'fox', pal: { main: '#eeeee6', accent: '#1a1a22', trim: '#e08a2a', dark: '#3a3a42' }, armor: 'light' },
   { id: 'otB8', name: '용궁 비늘 용포', tier: 5, hp: 175, def: 0.25, from: 'dragon', perk: 'pearl', deco: ['badge', 'crown', 'cape'], pattern: 'dragon', pal: { main: '#1e4a9a', accent: '#f0c040', trim: '#f0c040', dark: '#0e1a3a', patA: '#f0c040', patB: '#9ad8ff', decoA: '#e04a2a', decoB: '#f0c040' }, armor: 'heavy' },
+  { id: 'otB9', name: '왕지네 껍질갑옷', tier: 5, hp: 176, def: 0.25, from: 'centipede', perk: 'carapace', pal: { main: '#3a1a1a', accent: '#f0a020', trim: '#c8402a', dark: '#1a0a0a' }, armor: 'heavy' },
+  { id: 'otB10', name: '동장군 설한포', tier: 5, hp: 182, def: 0.25, from: 'frostgiant', perk: 'winterheart', deco: ['cape', 'scarf'], pattern: 'star', pal: { main: '#e8f4fa', accent: '#4a8ac8', trim: '#7aa8c8', dark: '#2a4a6a', patA: '#ffffff', patB: '#8ad8ff', decoA: '#4a8ac8', decoB: '#e8f8ff' }, armor: 'light' },
   { id: 'otB3', name: '저승사자 도포', tier: 5, hp: 120, def: 0.22, from: 'reaper', perk: 'soul', acc: 'gat', pal: { main: '#18141e', accent: '#5a3a8a', trim: '#c8b0ff', dark: '#0c0a10' } },
 ];
 
@@ -184,11 +202,11 @@ export function bossDrop(type, cls, inv, round = 0) {
 
 // 처치 보상: 적 종류·회차에 따라 등급이 오름. 무기는 지금 직업용 위주
 export function rollDrop(enemyType, round, cls) {
-  const chance = { blue: 0.07, red: 0.12, wisp: 0.1, fox: 0.09, foxfire: 0.1, jiangshi: 0.11, ghost: 0.11, waterghost: 0.12, toad: 0.12, firedok: 0.13, stonegolem: 0.2, bandit: 0.13, crow: 0.13, tiger: 0.15, crab: 0.14, jelly: 0.14, turtle: 0.22, baekho: 1, dragon: 1, boss: 1, gumiho: 1, reaper: 1, imugi: 1, bulgasari: 1, yeomra: 1 }[enemyType] ?? 0;
+  const chance = { blue: 0.07, red: 0.12, wisp: 0.1, fox: 0.09, foxfire: 0.1, jiangshi: 0.11, ghost: 0.11, waterghost: 0.12, toad: 0.12, firedok: 0.13, stonegolem: 0.2, bandit: 0.13, crow: 0.13, tiger: 0.15, crab: 0.14, jelly: 0.14, turtle: 0.22, baekho: 1, dragon: 1, centipede: 1, frostgiant: 1, boar: 0.15, mantis: 0.15, bee: 0.14, wolf: 0.15, icedok: 0.17, icewisp: 0.15, boss: 1, gumiho: 1, reaper: 1, imugi: 1, bulgasari: 1, yeomra: 1 }[enemyType] ?? 0;
   // 일반 몹은 절반으로 (보스는 반드시)
   if (Math.random() > (chance >= 1 ? 1 : chance * 0.5)) return null;
   let tier = 1;
-  const strong = { boss: 0.55, gumiho: 0.6, reaper: 0.7, imugi: 0.8, bulgasari: 0.9, yeomra: 1.1, red: 0.1, jiangshi: 0.15, ghost: 0.15, fox: 0.08, foxfire: 0.08, waterghost: 0.22, toad: 0.22, firedok: 0.3, stonegolem: 0.4, bandit: 0.38, crow: 0.38, tiger: 0.45, crab: 0.48, jelly: 0.48, turtle: 0.55, baekho: 1.0, dragon: 1.05 }[enemyType] || 0;
+  const strong = { boss: 0.55, gumiho: 0.6, reaper: 0.7, imugi: 0.8, bulgasari: 0.9, yeomra: 1.1, red: 0.1, jiangshi: 0.15, ghost: 0.15, fox: 0.08, foxfire: 0.08, waterghost: 0.22, toad: 0.22, firedok: 0.3, stonegolem: 0.4, bandit: 0.38, crow: 0.38, tiger: 0.45, crab: 0.48, jelly: 0.48, turtle: 0.55, baekho: 1.0, dragon: 1.05, boar: 0.6, mantis: 0.6, bee: 0.6, wolf: 0.7, icedok: 0.72, icewisp: 0.7, centipede: 1.1, frostgiant: 1.15 }[enemyType] || 0;
   const r = Math.random() + round * 0.12 + strong;
   if (r > 1.35) tier = 4; else if (r > 1.05) tier = 3; else if (r > 0.7) tier = 2;
   if (Math.random() < 0.55) {

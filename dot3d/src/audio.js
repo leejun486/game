@@ -8,7 +8,7 @@ const NO_DETUNE = new Set(['talk', 'levelup', 'victory', 'bigbell', 'coin', 'bel
 const DEFAULT_VOL = { master: 0.7, music: 0.55, amb: 0.6, sfx: 0.95 };
 
 // 창술사 소리 → 음원이 없을 때 대신 낼 합성음
-const PROC_ALIAS = { thrust: 'swing', spearbeam: 'skill', leap: 'dash', spearslam: 'impact', spearfall: 'arrowhit', spinspear: 'tornado' };
+const PROC_ALIAS = { thrust: 'swing', spearbeam: 'skill', leap: 'dash', spearslam: 'impact', spearfall: 'arrowhit', spinspear: 'tornado', talisman: 'cast', talisman3: 'cast', talismanhit: 'fire' };
 
 export class Audio {
   constructor() {

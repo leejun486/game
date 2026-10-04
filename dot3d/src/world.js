@@ -7,6 +7,7 @@ import { mulberry32 } from './util.js';
 import { buildBamboo, buildTemple } from './worlds2.js';
 import { buildSwamp, buildCanyon, buildTower } from './worlds3.js';
 import { buildFortress, buildSeaPalace } from './worlds4.js';
+import { buildValley, buildSnowfield } from './worlds5.js';
 import { GFX } from './gfx.js';
 import * as HD from './hdtex.js';
 
@@ -20,9 +21,11 @@ export const REGIONS = [
   { id: 'swamp', ox: 0, oz: 150.5, flip: false, x0: -19.6, x1: 19.6, z0: 122.4, z1: 172.6, from: 124.2, to: 172.6, spawn: [-11, 0, 133], center: [1, 147] },
   { id: 'canyon', ox: 0, oz: 198.7, flip: false, x0: -19.6, x1: 19.6, z0: 170.6, z1: 220.8, from: 172.6, to: 220.8, spawn: [12, 0, 178], center: [0, 196] },
   { id: 'fortress', ox: 0, oz: 246.9, flip: false, x0: -19.6, x1: 19.6, z0: 220.4, z1: 270.4, from: 220.8, to: 270, spawn: [14, 0, 224], center: [0, 238] },
-  { id: 'sea', ox: 0, oz: 295.1, flip: false, x0: -19.6, x1: 19.6, z0: 269.4, z1: 319.4, from: 270, to: 330, spawn: [-14, 0, 272], center: [0, 292] },
+  { id: 'sea', ox: 0, oz: 295.1, flip: false, x0: -19.6, x1: 19.6, z0: 269.4, z1: 319.4, from: 270, to: 318.9, spawn: [-14, 0, 272], center: [0, 292] },
+  { id: 'valley', ox: 0, oz: 343.3, flip: false, x0: -19.6, x1: 19.6, z0: 317.6, z1: 367.6, from: 318.9, to: 367.4, spawn: [14, 0, 320], center: [6, 337] },
+  { id: 'snowfield', ox: 0, oz: 391.5, flip: false, x0: -19.6, x1: 19.6, z0: 365.8, z1: 415.8, from: 367.4, to: 430, spawn: [-14, 0, 368.5], center: [0, 388] },
   // 시련탑: 다른 지역과 떨어진 허공의 단 (저승 문으로만 오감)
-  { id: 'tower', ox: 0, oz: 362, flip: false, x0: -16.5, x1: 16.5, z0: 345.5, z1: 378.5, from: 330, to: 1e9, spawn: [0, 0, 372], center: [0, 362] },
+  { id: 'tower', ox: 0, oz: 462, flip: false, x0: -16.5, x1: 16.5, z0: 445.5, z1: 478.5, from: 430, to: 1e9, spawn: [0, 0, 472], center: [0, 462] },
 ];
 
 export class World {
@@ -49,6 +52,8 @@ export class World {
     this.vents = [];     // 용암 분화구 {x,z,mat}
     this.portals = [];   // 시련탑 문 {x,z,kind,label}
     this.lavaMats = [];  // 일렁이는 용암 재질
+    this.spinners = [];  // 계속 도는 것 {obj, axis, speed} (물레방아 바퀴)
+    this.nightUniforms = []; // 밤이면 어두워지는 셰이더 (냇물)
     this.makeMaterials();
     for (const R of REGIONS) this.buildRegion(R);
     this.root = this.top;
@@ -69,6 +74,8 @@ export class World {
     else if (R.id === 'canyon') buildCanyon(this);
     else if (R.id === 'fortress') buildFortress(this);
     else if (R.id === 'sea') buildSeaPalace(this);
+    else if (R.id === 'valley') buildValley(this);
+    else if (R.id === 'snowfield') buildSnowfield(this);
     else if (R.id === 'tower') buildTower(this);
     const f = (x, z) => (R.flip ? [R.ox - x, R.oz - z] : [R.ox + x, R.oz + z]);
     const box = (r) => {
@@ -184,6 +191,8 @@ export class World {
       carving: toon({ map: T.stairCarvingTex() }),
       lattice: toon({ map: T.latticeTex(), emissiveMap: T.latticeTex(true), emissive: c('#000000') }),
       lampGlow: toon({ color: c('#f3e2b8'), emissive: c('#000000') }),
+      blossom: toon({ color: c('#f2a6c0') }),
+      blossomW: toon({ color: c('#fbe8ee') }),
     };
     // 고화질: 주요 바닥·벽·지붕을 고해상도 텍스처 + 노멀맵으로 교체
     if (GFX.hd) {
@@ -281,134 +290,102 @@ export class World {
   }
 
   // ---------- 빌드 ----------
+  // 월하궁: 달빛 연못 정원 궁. 가운데 큰 연지와 섬 위 육각정, 굽이진 돌길,
+  //  동북쪽에 낮은 침전, 서북쪽에 서고, 매화나무. 남문·큰 북·수문장 자리는 퀘스트 때문에 그대로
   build() {
     const M = this.M;
     const B = (this.batch = new Batcher());
-    const R = mulberry32(77);
     this.foliage = new Batcher();
+    this.grassAreas = [];
 
-    // 바깥 풀밭 (성벽 밖)
-    // 남쪽은 죽림 바닥과 이어지므로 z=30 까지만
+    // 바깥 흙땅 (담 밖). 남쪽은 죽림 바닥과 이어지므로 z=30 까지만
     const outer = new THREE.Mesh(new THREE.PlaneGeometry(160, 110), M.dirt);
     outer.geometry.attributes.uv.array.forEach((v, i, a) => (a[i] = v * (i % 2 === 0 ? 80 : 55)));
     outer.rotation.x = -Math.PI / 2;
     outer.position.set(0, -0.02, -25);
     outer.receiveShadow = true;
     this.root.add(outer);
+    // 담 안: 잔디 정원
+    const lawnGeo = new THREE.PlaneGeometry(44, 56);
+    lawnGeo.attributes.uv.array.forEach((v, i, a) => (a[i] = v * (i % 2 === 0 ? 11 : 14)));
+    const lawn = new THREE.Mesh(lawnGeo, M.grass);
+    lawn.rotation.x = -Math.PI / 2;
+    lawn.position.set(0, 0, -6);
+    lawn.receiveShadow = true;
+    this.root.add(lawn);
 
-    // 마당 박석
-    const floorGeo = new THREE.PlaneGeometry(48, 58);
-    floorGeo.attributes.uv.array.forEach((v, i, a) => (a[i] = v * (i % 2 === 0 ? 12 : 14.5)));
-    const floor = new THREE.Mesh(floorGeo, M.floor);
-    floor.rotation.x = -Math.PI / 2;
-    floor.position.set(0, 0, -6);
-    floor.receiveShadow = true;
-    this.root.add(floor);
+    // 굽이진 박석 길: 남문 → 북 마당 → 연못 둘레 → 침전·서고
+    const path = (pts, w) => {
+      for (let k = 0; k < pts.length - 1; k++) {
+        const [x0, z0] = pts[k], [x1, z1] = pts[k + 1];
+        const len = Math.hypot(x1 - x0, z1 - z0) + w * 0.5;
+        const geo = new THREE.PlaneGeometry(w, len);
+        geo.attributes.uv.array.forEach((v, n, a) => (a[n] = v * (n % 2 === 0 ? w / 2 : len / 2)));
+        const m = new THREE.Mesh(geo, M.floor);
+        m.rotation.order = 'YXZ';
+        m.rotation.set(-Math.PI / 2, Math.atan2(x1 - x0, z1 - z0), 0);
+        m.position.set((x0 + x1) / 2, 0.012 + k * 0.0005, (z0 + z1) / 2);
+        m.receiveShadow = true;
+        this.root.add(m);
+      }
+    };
+    path([[0, 32], [0, 21], [-1.5, 14], [-4, 8], [-11, 3], [-15, -4], [-14, -14], [-12, -22]], 3.4);
+    path([[-4, 8], [3, 4], [12, 1], [15.5, -6], [13, -14], [9, -17]], 3.0);
+    path([[12, 1], [18, 6]], 2.4);
+    // 북 마당 (수문장·큰 북 자리)
+    const yard = new THREE.Mesh(new THREE.CircleGeometry(5.2, 28), M.floor);
+    yard.geometry.attributes.uv.array.forEach((v, n, a) => (a[n] = v * 5));
+    yard.rotation.x = -Math.PI / 2; yard.position.set(-10.5, 0.014, 4.6);
+    yard.receiveShadow = true;
+    this.root.add(yard);
 
-    // 어도 (가운데 길)
-    B.add(boxGeo(5.2, 0.12, 24.6, 4), M.path, mat4(0, 0.06, 8.7));
-    this.rects.push({ x0: -2.6, x1: 2.6, z0: -3.6, z1: 21, h: 0.12 });
-    // 정문 밖 길
-    B.add(boxGeo(5.2, 0.08, 10, 4), M.path, mat4(0, 0.04, 27));
-    this.rects.push({ x0: -2.6, x1: 2.6, z0: 21, z1: 32, h: 0.08 });
+    // 큰 연지 + 섬 위 육각정 + 무지개 다리
+    this.pond(-8.5, 7.5, -15, -3.5);
+    this.pavilion6(-0.5, -9.2);
+    this.archBridge(-0.5, -3.3, -6.2);
 
-    // 월대 1, 2
-    this.terrace(-15, 15, -14, -6, 0.9);
-    this.terrace(-12, 12, -22, -13, 1.8);
-    this.stairs(-6, -3.6, 0.9, 0);
-    this.stairs(-13, -10.6, 1.8, 0.9);
+    // 동북쪽 침전 (낮은 기단 위 한 채), 서북쪽 서고
+    this.gardenHall(8.5, -24, 12.5, 5.2, true);
+    this.gardenHall(-13.5, -27, 8.5, 4.2, false);
+    for (const x of [4.6, 12.4]) this.cauldron(x, 0, -19.6);
 
-    // 난간
-    this.balustrade(-15, -6, -2.9, -6, 0.9);
-    this.balustrade(2.9, -6, 15, -6, 0.9);
-    this.balustrade(-15, -14, -15, -6, 0.9);
-    this.balustrade(15, -14, 15, -6, 0.9);
-    this.balustrade(-12, -13, -2.9, -13, 1.8);
-    this.balustrade(2.9, -13, 12, -13, 1.8);
-    this.balustrade(-12, -22, -12, -13, 1.8);
-    this.balustrade(12, -22, 12, -13, 1.8);
+    // 큰 북 (수문장 옆)
+    this.drum(-9.6, 2.6, -1);
 
-    // 해태상
-    for (const s of [-1, 1]) {
-      this.haetae(s * 3.3, 0.9, -6.5, s);
-      this.haetae(s * 3.3, 1.8, -13.5, s);
-    }
-
-    // 전각
-    this.hall();
-
-    // 드무 (방화수 솥)
-    for (const s of [-1, 1]) this.cauldron(s * 6.2, 0.9, -8.2);
-    for (const s of [-1, 1]) this.cauldron(s * 10.5, 1.8, -15.2);
-
-    // 깃발
-    for (const s of [-1, 1]) {
-      this.flag(s * 5.4, 1.8, -13.45, 'red', s);
-      this.flag(s * 4.6, 0.9, -8.6, 'white', s);
-      this.flag(s * 4.8, 0, 1.2, 'red', s);
-      this.flag(s * 4.8, 0, 9.5, 'white', s);
-      this.flag(s * 19.5, 0, -24, 'navy', s);
-      this.flag(s * 20, 0, -11, 'navy', s);
-      this.flag(s * 20, 0, 18, 'navy', s);
-    }
-
-    // 큰 북
-    for (const s of [-1, 1]) this.drum(s * 10.5, 4.2, s);
-
-    // 바닥 문양
-    for (const s of [-1, 1]) {
-      const m = new THREE.Mesh(new THREE.PlaneGeometry(6, 6), M.medallion);
-      m.rotation.x = -Math.PI / 2;
-      m.position.set(s * 17, 0.012, 4.2);
-      m.receiveShadow = true;
-      this.root.add(m);
-    }
-
-    // 화단 + 소나무
-    this.planter(-14.6, -6, -6, -1.4);
-    this.planter(6, 14.6, -6, -1.4);
-    this.planter(-14, -7.4, 9.2, 14.2);
-    this.planter(7.4, 14, 9.2, 14.2);
-    this.pine(-11.2, 0.3, -3.6, 1.15, 3);
-    this.pine(11.4, 0.3, -3.4, 1.1, 4);
-    this.pine(-10.6, 0.3, 11.8, 0.85, 5);
-    this.pine(10.8, 0.3, 11.6, 0.8, 6);
-    this.shrub(-7.4, 0.3, -2.6); this.shrub(7.6, 0.3, -2.4); this.shrub(-13.2, 0.3, -2.2); this.shrub(13, 0.3, -4.6);
-    this.shrub(-8.4, 0.3, 13.1); this.shrub(8.6, 0.3, 10.2);
-
-    // 뒤뜰 나무
-    for (const [x, z, s, sd] of [[-16, -28, 1.2, 11], [15, -27, 1.3, 12], [-5, -30, 1.0, 13], [6, -31, 0.95, 14], [17.5, -18.5, 0.9, 15], [-17.5, -18, 0.95, 16]]) this.pine(x, 0, z, s, sd);
+    // 매화·벚나무, 소나무 몇 그루
+    const blossom = (x, z, s, seed, white) => {
+      const keep = [M.leaf, M.leaf2];
+      M.leaf = white ? M.blossomW : M.blossom; M.leaf2 = white ? M.blossom : M.blossomW;
+      this.pine(x, 0, z, s, seed);
+      [M.leaf, M.leaf2] = keep;
+    };
+    for (const [x, z, s, sd, w] of [[-15.5, 12.5, 0.9, 41, 0], [9.5, 12.5, 0.85, 42, 1], [16.5, -12, 1.0, 43, 0], [-17.5, -9.5, 0.95, 44, 1], [-4.5, 16.5, 0.7, 45, 1], [5.5, 17, 0.75, 46, 0], [17.5, -27, 1.1, 47, 1], [-3.5, -28.5, 0.9, 48, 0]]) blossom(x, z, s, sd, w);
+    for (const [x, z, s, sd] of [[-18.5, -19.5, 1.15, 11], [2.5, -30.5, 1.0, 13], [15, 15.5, 0.9, 14], [-17.5, 18, 0.95, 15]]) this.pine(x, 0, z, s, sd);
     // 성 밖 나무
     for (const [x, z, s, sd] of [[-12, 27, 1.2, 21], [11, 28, 1.3, 22], [-30, 10, 1.3, 27], [31, -5, 1.2, 28], [-31, -20, 1.2, 29], [30, 15, 1.1, 30]]) this.pine(x, 0, z, s, sd, false);
+    // 괴석과 꽃 무리
+    for (const [x, z, s, sd] of [[-10.5, -2, 0.8, 61], [9.2, -2.2, 0.7, 62], [-9.6, -14.2, 0.6, 63], [8.4, -14.6, 0.75, 64]]) this.rockery(x, z, s, sd);
+    for (const [x, z] of [[-6.5, 13], [7, 9], [17, 0.5], [-17, -1], [3.5, -18], [-8, -22]]) this.shrub(x, 0, z);
+    for (const [x, z] of [[2.5, 12], [-14.2, -16], [14.6, -2.5]]) this.flowerPot(x, z);
 
-    // 화분 받침
-    for (const s of [-1, 1]) {
-      this.flowerPot(s * 3.7, 4.6);
-      this.flowerPot(s * 3.7, 13.4);
-      this.flowerPot(s * 3.7, -1.6);
-    }
+    // 석등과 청사초롱 기둥
+    for (const [x, z] of [[-3.2, 18.5], [3.2, 18.5], [-12.5, -10], [11.5, -9.5], [-8.5, -23], [4, -21.5]]) this.stoneLantern(x, 0, z);
+    for (const [x, z] of [[-6, 6.5], [6.5, 3.5], [15, -1], [-16.5, -6]]) this.lanternPost(x, z);
 
-    // 석등
-    for (const s of [-1, 1]) {
-      this.stoneLantern(s * 7.6, 0, 17.2);
-      this.stoneLantern(s * 16.5, 0, -2.2);
-      this.stoneLantern(s * 16.5, 0, 12);
-      this.stoneLantern(s * 10.9, 1.8, -21);
-      this.stoneLantern(s * 13.6, 0.9, -7);
-    }
-    this.stoneLantern(-11, 0, -26);
-    this.stoneLantern(11, 0, -24);
-
-    // 연못
-    this.pond(-21, -15, -31.2, -24.6);
-
-    // 행각과 담장
-    this.corridor(-1);
-    this.corridor(1);
+    // 담: 동서는 꽃담, 북은 기와담, 남은 정문
+    this.flowerWall(-1);
+    this.flowerWall(1);
     this.northWall();
     this.southWall();
 
-    // 풀
+    // 잔디 풀 (길·연못·건물 자리는 비움)
+    const R = mulberry32(77);
+    for (let i = 0; i < 26; i++) {
+      const x = -19 + R() * 38, z = -30 + R() * 50;
+      if (x > -10 && x < 9 && z > -16 && z < -2) continue;
+      if (z < -19 && Math.abs(x - 8.5) < 8) continue;
+      this.grassAreas.push({ x0: x - 1, x1: x + 1, z0: z - 0.8, z1: z + 0.8, y: 0 });
+    }
     this.scatterGrass();
 
     B.build(this.root);
@@ -417,6 +394,107 @@ export class World {
 
     // 적 등장 지점 (정문 밖)
     this.spawnPoints.push(new THREE.Vector3(0, 0, 25), new THREE.Vector3(-1.5, 0, 26), new THREE.Vector3(1.5, 0, 26));
+  }
+
+  // 섬 위의 육각 정자 (2단 지붕, 금빛 절병통)
+  pavilion6(cx, cz) {
+    const M = this.M, B = this.batch;
+    B.add(cylGeo(3.1, 3.3, 0.5, 18), M.blockDark, mat4(cx, 0.2, cz));
+    B.add(cylGeo(2.5, 2.6, 0.4, 6), M.stoneLight, mat4(cx, 0.6, cz));
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * Math.PI * 2;
+      B.add(cylGeo(0.13, 0.15, 2.4, 8), M.red, mat4(cx + Math.cos(a) * 2.1, 2.0, cz + Math.sin(a) * 2.1));
+      // 난간
+      const b = a + Math.PI / 6, r = 2.05;
+      B.add(boxGeo(2.1, 0.08, 0.08, 1), M.wood, mat4(cx + Math.cos(b) * r * 0.87, 1.25, cz + Math.sin(b) * r * 0.87, -b + Math.PI / 2));
+    }
+    B.add(cylGeo(2.45, 2.45, 0.32, 6), M.dancheong, mat4(cx, 3.3, cz));
+    const roof1 = new THREE.ConeGeometry(3.5, 1.3, 6, 1, true);
+    B.add(roof1, M.roof, mat4(cx, 4.1, cz));
+    B.add(cylGeo(1.2, 1.2, 0.5, 6), M.dancheong, mat4(cx, 4.75, cz));
+    B.add(new THREE.ConeGeometry(1.9, 1.2, 6), M.roof, mat4(cx, 5.5, cz));
+    B.add(new THREE.SphereGeometry(0.22, 8, 6), M.gold, mat4(cx, 6.2, cz));
+    B.add(cylGeo(0.06, 0.1, 0.6, 6), M.gold, mat4(cx, 6.55, cz));
+  }
+
+  // 연못 남쪽 기슭에서 섬으로 건너가는 무지개 다리 (보기용)
+  archBridge(x, z0, z1) {
+    const M = this.M, B = this.batch;
+    const n = 7;
+    for (let k = 0; k <= n; k++) {
+      const t = k / n, z = z0 + (z1 - z0) * t, y = 0.35 + Math.sin(t * Math.PI) * 0.55;
+      B.add(boxGeo(2.0, 0.12, (Math.abs(z1 - z0) / n) * 1.05, 1), M.wood, mat4(x, y, z));
+      if (k % 2 === 0) for (const s of [-1, 1]) B.add(cylGeo(0.05, 0.05, 0.6, 5), M.red, mat4(x + s * 0.95, y + 0.3, z));
+    }
+    for (const s of [-1, 1]) B.add(boxGeo(0.07, 0.07, Math.abs(z1 - z0), 1), M.red, mat4(x + s * 0.95, 0.95, (z0 + z1) / 2));
+  }
+
+  // 낮은 기단 위 한 채 건물 (침전·서고). 앞면 창호, 단청, 팔작지붕
+  gardenHall(cx, cz, w, d, main) {
+    const M = this.M, B = this.batch;
+    B.add(boxGeo(w + 1.2, 0.6, d + 1.2, 2), M.block, mat4(cx, 0.3, cz));
+    B.add(boxGeo(w + 1.3, 0.06, d + 1.3, 2), M.stoneLight, mat4(cx, 0.62, cz));
+    this.blockRects.push({ x0: cx - w / 2 - 0.6, x1: cx + w / 2 + 0.6, z0: cz - d / 2 - 0.6, z1: cz + d / 2 + 0.6 });
+    // 앞 계단 (보기용)
+    B.add(boxGeo(2.6, 0.3, 0.6, 1), M.stoneLight, mat4(cx, 0.15, cz + d / 2 + 0.9));
+    const y0 = 0.62, h = 3.0;
+    B.add(boxGeo(w - 0.8, h, d - 1.4, 2), M.plaster, mat4(cx, y0 + h / 2, cz - 0.3));
+    const n = Math.round(w / 2.6);
+    for (let i = 0; i <= n; i++) {
+      const x = cx - w / 2 + 0.4 + (i * (w - 0.8)) / n;
+      for (const z of [cz + d / 2 - 0.4, cz - d / 2 + 0.4]) B.add(cylGeo(0.18, 0.2, h, 8), M.wood, mat4(x, y0 + h / 2, z));
+      if (i < n) {
+        const xm = x + (w - 0.8) / n / 2;
+        B.add(new THREE.BoxGeometry((w - 0.8) / n - 0.5, h * 0.78, 0.08), M.lattice, mat4(xm, y0 + h * 0.45, cz + d / 2 - 1.05));
+      }
+    }
+    // 툇마루
+    B.add(boxGeo(w - 0.6, 0.12, 0.9, 2), M.wood, mat4(cx, y0 + 0.45, cz + d / 2 - 0.55));
+    B.add(boxGeo(w, 0.36, d, 3), M.dancheong, mat4(cx, y0 + h + 0.18, cz));
+    this.roof({ cx, cy: y0 + h + 0.36, cz, w, d, h: main ? 2.1 : 1.7, overhang: 1.4, lift: 0.75, ridge: true });
+    if (main) this.hallLightPos = [new THREE.Vector3(cx - w / 4, 2.4, cz + d / 2 + 0.2), new THREE.Vector3(cx + w / 4, 2.4, cz + d / 2 + 0.2)];
+  }
+
+  // 괴석: 구멍 뚫린 정원석
+  rockery(x, z, s, seed) {
+    const M = this.M, B = this.batch;
+    const R = mulberry32(seed);
+    B.add(cylGeo(0.7 * s, 0.8 * s, 0.25, 8), M.stoneGrey, mat4(x, 0.12, z));
+    for (let i = 0; i < 4; i++) {
+      const h = (0.5 + R() * 0.6) * s;
+      B.add(new THREE.IcosahedronGeometry(0.42 * s, 0), i % 2 ? M.rock || M.stoneGrey : M.stoneLight, mat4(x + (R() - 0.5) * 0.4 * s, 0.25 + i * 0.42 * s, z + (R() - 0.5) * 0.4 * s, R() * 6, R(), 0, [1, 1.3 + R() * 0.5, 0.8]));
+      void h;
+    }
+    this.circles.push({ x, z, r: 0.75 * s, y: 0 });
+  }
+
+  // 청사초롱 기둥: 붉은 기둥 끝에 매단 등 (밤에 빛남)
+  lanternPost(x, z) {
+    const M = this.M, B = this.batch;
+    B.add(cylGeo(0.07, 0.09, 2.6, 6), M.darkWood, mat4(x, 1.3, z));
+    B.add(boxGeo(0.7, 0.06, 0.06, 1), M.darkWood, mat4(x + 0.3, 2.55, z));
+    B.add(cylGeo(0.2, 0.2, 0.42, 8), M.lampGlow, mat4(x + 0.55, 2.2, z));
+    B.add(cylGeo(0.22, 0.22, 0.08, 8), M.red, mat4(x + 0.55, 2.43, z));
+    B.add(cylGeo(0.22, 0.22, 0.08, 8), M.blue, mat4(x + 0.55, 1.97, z));
+    this.lanterns.push(new THREE.Vector3(x + 0.55, 2.2, z));
+    this.circles.push({ x, z, r: 0.3, y: 0 });
+  }
+
+  // 꽃담: 회벽에 붉은 벽돌 무늬 띠와 둥근 꽃 문양, 기와 지붕
+  flowerWall(side) {
+    const M = this.M, B = this.batch;
+    const x = side * 22.4, z0 = -34, z1 = 22.2, len = z1 - z0, cz = (z0 + z1) / 2;
+    B.add(boxGeo(0.7, 3.0, len, 6), M.plaster, mat4(x, 1.5, cz));
+    B.add(boxGeo(0.74, 0.5, len, 6), M.blockDark, mat4(x, 0.25, cz));
+    B.add(boxGeo(0.74, 0.22, len, 6), M.red, mat4(x, 2.2, cz));
+    for (let z = z0 + 3; z < z1 - 2; z += 4.5) {
+      const m = new THREE.Mesh(new THREE.TorusGeometry(0.45, 0.07, 4, 16), M.red);
+      m.position.set(x - side * 0.38, 1.35, z);
+      m.rotation.y = Math.PI / 2;
+      this.root.add(m);
+      B.add(new THREE.SphereGeometry(0.14, 6, 4), M.gold, mat4(x - side * 0.38, 1.35, z));
+    }
+    this.roof({ cx: x, cy: 3.0, cz, w: len, d: 0.7, h: 0.55, overhang: 0.6, lift: 0, ridge: true, power: 1.2, rot: Math.PI / 2 });
   }
 
   terrace(x0, x1, z0, z1, h) {
@@ -1130,6 +1208,8 @@ export class World {
       }
     }
     if (this.water) this.water.material.uniforms.uNight.value = shared.night.value;
+    for (const S of this.spinners) S.obj.rotation[S.axis] = t * S.speed;
+    for (const u of this.nightUniforms) u.value = shared.night.value;
     for (const P of this.portals) if (P.mesh) P.mesh.children[1].rotation.z = t * 1.5;
     for (const L of this.lavaMats) L.mat.emissiveIntensity = L.base * (0.85 + 0.15 * Math.sin(t * 1.7) + 0.08 * Math.sin(t * 5.3));
   }

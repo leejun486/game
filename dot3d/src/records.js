@@ -30,6 +30,14 @@ export const MONSTERS = [
   { type: 'jelly', name: '해파리', region: '용궁', desc: '물속을 둥둥 떠다니며 독 방울을 쏜다. 맞으면 몸이 무거워진다.' },
   { type: 'turtle', name: '거북 장군', region: '용궁', desc: '투구를 쓴 거북 경비대장. 아주 단단하고, 등딱지로 내려찍는다.' },
   { type: 'dragon', name: '동해 용왕', region: '용궁', desc: '동해를 다스리는 용. 물속으로 숨었다가 솟구치고, 벼락과 해일을 부른다.', boss: true },
+  { type: 'boar', name: '멧돼지', region: '청류 계곡', desc: '성이 난 멧돼지. 몸을 낮췄다가 엄니로 들이받는다.' },
+  { type: 'mantis', name: '사마귀 요괴', region: '청류 계곡', desc: '사람만 한 사마귀. 낫 같은 앞발로 재빠르게 베어 낸다.' },
+  { type: 'bee', name: '왕벌 요괴', region: '청류 계곡', desc: '떼로 다니는 큰 벌. 독침을 쏘아 몸을 무겁게 만든다.' },
+  { type: 'centipede', name: '천년 왕지네', region: '청류 계곡', desc: '천 년 묵은 거대한 지네. 냇물을 독으로 물들이고, 경고선을 따라 돌진한다.', boss: true },
+  { type: 'wolf', name: '눈늑대', region: '백설 고원', desc: '눈보라 속을 떼로 달리는 늑대. 순식간에 덮친다.' },
+  { type: 'icedok', name: '얼음 도깨비', region: '백설 고원', desc: '얼어붙은 도깨비. 몽둥이에 맞으면 몸이 얼어 느려진다.' },
+  { type: 'icewisp', name: '서리 도깨비불', region: '백설 고원', desc: '차가운 푸른 불덩이. 얼음 구슬을 쏜다.' },
+  { type: 'frostgiant', name: '서리 거인 동장군', region: '백설 고원', desc: '겨울을 몰고 오는 얼음 거인. 뛰어올라 내려찍고, 고드름을 쏟아붓는다.', boss: true },
   { type: 'yeomra', name: '염라대왕', region: '저승 시련탑', desc: '저승을 다스리는 왕. 판관들을 불러 다섯 번 판결을 내린다.', boss: true },
 ];
 
@@ -49,6 +57,8 @@ export const ACHIEVEMENTS = [
   { id: 'b_bulgasari', name: '쇠를 녹이다', desc: '쇠먹는 불가사리 물리치기', test: (g, S) => bossK(S, 'bulgasari') > 0 },
   { id: 'b_baekho', name: '산군을 꺾다', desc: '산군 백호 물리치기', test: (g, S) => bossK(S, 'baekho') > 0 },
   { id: 'b_dragon', name: '용궁의 평화', desc: '동해 용왕 물리치기', test: (g, S) => bossK(S, 'dragon') > 0 },
+  { id: 'b_centipede', name: '맑은 냇물', desc: '천년 왕지네 물리치기', test: (g, S) => bossK(S, 'centipede') > 0 },
+  { id: 'b_frostgiant', name: '봄을 부르다', desc: '서리 거인 동장군 물리치기', test: (g, S) => bossK(S, 'frostgiant') > 0 },
   { id: 'b_yeomra', name: '저승의 판결', desc: '염라대왕 물리치기', test: (g, S) => bossK(S, 'yeomra') > 0 },
   { id: 'main', name: '평안해진 땅', desc: '메인 퀘스트 모두 마치기', test: (g) => g.quest.step > 0 && !g.curQuest() },
   { id: 'ending', name: '달거울 복원', desc: '엔딩 보기', test: (g) => !!g.quest.ended },

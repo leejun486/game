@@ -1406,8 +1406,11 @@ export class QuadRig {
     // clone: 구미호가 2단계에서 만드는 반투명 분신
     // tiger: 산속 범 / baekho: 산군 백호 (줄무늬, 둥근 귀, 굵은 꼬리 하나)
     const boss = variant === 'gumiho' || variant === 'clone';
-    const tiger = variant === 'tiger' || variant === 'baekho';
-    const pal = variant === 'baekho' ? { fur: '#eeeee6', belly: '#ffffff', tip: '#1a1a22', dark: '#1a1a22', mark: '#1a1a22' }
+    const tiger = variant === 'tiger' || variant === 'baekho' || variant === 'boar';
+    const boar = variant === 'boar', wolf = variant === 'wolf';
+    const pal = boar ? { fur: '#5a3e2a', belly: '#8a6a4a', tip: '#2a1a10', dark: '#2a1a10', mark: '#3a2818' }
+      : wolf ? { fur: '#c8ccd4', belly: '#f0f2f6', tip: '#7a8494', dark: '#3a3e48', mark: '#3a3e48' }
+      : variant === 'baekho' ? { fur: '#eeeee6', belly: '#ffffff', tip: '#1a1a22', dark: '#1a1a22', mark: '#1a1a22' }
       : variant === 'tiger' ? { fur: '#e08a2a', belly: '#f6eedc', tip: '#1a1210', dark: '#1a1210', mark: '#1a1210' }
       : boss
       ? { fur: '#f4ecdc', belly: '#ffffff', tip: '#7fd8ff', dark: '#3a3040', mark: '#c8302c' }
@@ -1418,7 +1421,7 @@ export class QuadRig {
     const tipM = boss ? toon({ color: C(pal.tip), emissive: C('#2a7aff') }) : mat({ color: C(pal.tip) });
     this.root = new THREE.Group();
     this.body = new THREE.Group();
-    this.body.scale.setScalar(variant === 'clone' ? 1.35 : boss ? 2.1 : variant === 'baekho' ? 2.5 : tiger ? 1.5 : 1.1);
+    this.body.scale.setScalar(variant === 'clone' ? 1.35 : boss ? 2.1 : variant === 'baekho' ? 2.5 : boar ? 1.6 : wolf ? 1.45 : tiger ? 1.5 : 1.1);
     this.root.add(this.body);
     this.torso = new THREE.Group();
     this.torso.position.y = 0.42;
@@ -1436,7 +1439,14 @@ export class QuadRig {
     snout.rotation.x = Math.PI / 2;
     this.head.add(snout);
     this.head.add(mesh(new THREE.SphereGeometry(0.035, 5, 4), dark, 0, -0.03, 0.32));
-    if (tiger) {
+    if (boar) {
+      // 멧돼지: 뭉툭한 코, 위로 휜 엄니, 등갈기
+      snout.scale.set(1.6, 1.0, 0.7);
+      const tusk = mat({ color: C('#f4ecd8') });
+      for (const s of [-1, 1]) this.head.add(mesh(new THREE.ConeGeometry(0.025, 0.14, 4), tusk, s * 0.08, -0.06, 0.27, -0.5, 0, s * 0.4));
+      for (let k = 0; k < 5; k++) this.torso.add(mesh(new THREE.ConeGeometry(0.03, 0.12, 4), dark, 0, 0.17, 0.2 - k * 0.1, -0.4, 0, 0));
+      trunk.scale.set(1.25, 1.2, 1);
+    } else if (tiger) {
       // 줄무늬: 등과 옆구리, 이마
       const st = mat({ color: C(pal.mark) });
       // 몸통(z축 캡슐)을 위에서 감싸는 활 모양 띠
@@ -1451,14 +1461,14 @@ export class QuadRig {
     for (const s of [-1, 1]) {
       if (tiger) {
         this.head.add(mesh(new THREE.SphereGeometry(0.06, 6, 4), fur, s * 0.12, 0.14, -0.03)).scale.set(1, 1, 0.5);
-        this.head.add(mesh(new THREE.BoxGeometry(0.06, 0.035, 0.02), toon({ color: C(variant === 'baekho' ? '#7fd8ff' : '#ffd040'), emissive: C(variant === 'baekho' ? '#1a6aff' : '#5a3a00') }), s * 0.08, 0.04, 0.15));
+        this.head.add(mesh(new THREE.BoxGeometry(0.06, 0.035, 0.02), toon({ color: C(variant === 'baekho' ? '#7fd8ff' : boar ? '#ff4a2a' : '#ffd040'), emissive: C(variant === 'baekho' ? '#1a6aff' : boar ? '#6a0a00' : '#5a3a00') }), s * 0.08, 0.04, 0.15));
         continue;
       }
       const ear = mesh(new THREE.ConeGeometry(0.07, 0.2, 4), fur, s * 0.1, 0.17, -0.02);
       ear.rotation.z = -s * 0.25;
       this.head.add(ear);
       this.head.add(mesh(new THREE.ConeGeometry(0.035, 0.1, 4), dark, s * 0.1, 0.2, 0.01)).rotation.z = 0;
-      this.head.add(mesh(new THREE.BoxGeometry(0.06, 0.035, 0.02), toon({ color: C(boss ? '#ff4a6a' : '#ffd040'), emissive: C(boss ? '#8a0a2a' : '#5a3a00') }), s * 0.08, 0.04, 0.15));
+      this.head.add(mesh(new THREE.BoxGeometry(0.06, 0.035, 0.02), toon({ color: C(boss ? '#ff4a6a' : wolf ? '#8ad8ff' : '#ffd040'), emissive: C(boss ? '#8a0a2a' : wolf ? '#1a5aaa' : '#5a3a00') }), s * 0.08, 0.04, 0.15));
       if (boss) this.head.add(mesh(new THREE.BoxGeometry(0.03, 0.09, 0.02), mat({ color: C(pal.mark) }), s * 0.05, 0.1, 0.15));
     }
     // 꼬리 (구미호는 아홉 개를 부채처럼)
@@ -1472,10 +1482,12 @@ export class QuadRig {
       const t = mesh(new THREE.SphereGeometry(1, 8, 6), fur, 0, 0, -0.32);
       t.scale.set(0.12, 0.12, 0.36);
       if (tiger) { t.scale.set(0.06, 0.06, 0.4); tg.rotation.x = -0.35; }
+      if (boar) t.scale.set(0.03, 0.03, 0.18);
       tg.add(t);
       const tip = mesh(new THREE.SphereGeometry(1, 6, 5), tipM, 0, 0, -0.62);
       tip.scale.set(0.09, 0.09, 0.12);
       tg.add(tip);
+      if (boar) tip.visible = false;
       this.torso.add(tg);
       this.tails.push({ g: tg, base: tg.rotation.clone(), ph: i * 0.7 });
     }
@@ -1548,6 +1560,7 @@ export function makeDokkaebi(variant = 'blue') {
     boss: { skin: '#b03a5a', hair: '#f0e8d8', horns: 2, scale: 2.3, horn: '#f0c040' },
     fire: { skin: '#3a2a2a', hair: '#ff7a1a', horns: 2, scale: 1.2, horn: '#ffb040' },
     bandit: { skin: '#6a7a3a', hair: '#1a1410', horns: 1, scale: 1.22, horn: '#d8c8a0' },
+    ice: { skin: '#9ccce8', hair: '#f4fbff', horns: 2, scale: 1.25, horn: '#e0f6ff' },
   }[variant];
   return new Rig({
     type: 'dokkaebi', skin: V.skin, hair: V.hair, horns: V.horns, horn: V.horn, scale: V.scale,
@@ -1665,9 +1678,9 @@ export class SerpentRig {
   constructor(variant = 'imugi') {
     this.mats = [];
     const mat = (o) => { const m = toon(o); this.mats.push(m); return m; };
-    const dragon = variant === 'dragon';
-    const scale = mat({ color: C(dragon ? '#2a64b0' : '#2a4a5a') }), belly = mat({ color: C(dragon ? '#f0d890' : '#c8c09a') }), fin = mat({ color: C(dragon ? '#f0b030' : '#3a8a8a') }), dark = mat({ color: C(dragon ? '#0e1a3a' : '#16222a') });
-    const eyeM = toon({ color: C(dragon ? '#ff6a3a' : '#ffe060'), emissive: C(dragon ? '#c82000' : '#aa6a00') });
+    const dragon = variant === 'dragon', centi = variant === 'centipede';
+    const scale = mat({ color: C(dragon ? '#2a64b0' : centi ? '#3a1a1a' : '#2a4a5a') }), belly = mat({ color: C(dragon ? '#f0d890' : centi ? '#d89a3a' : '#c8c09a') }), fin = mat({ color: C(dragon ? '#f0b030' : centi ? '#c8402a' : '#3a8a8a') }), dark = mat({ color: C(dragon ? '#0e1a3a' : centi ? '#f0a020' : '#16222a') });
+    const eyeM = toon({ color: C(dragon ? '#ff6a3a' : centi ? '#aaff3a' : '#ffe060'), emissive: C(dragon ? '#c82000' : centi ? '#3a8a00' : '#aa6a00') });
     this.root = new THREE.Group();
     this.body = new THREE.Group();
     this.root.add(this.body);
@@ -1717,6 +1730,15 @@ export class SerpentRig {
         this.head.add(wh);
       }
     }
+    if (centi) {
+      // 지네: 큰 집게 턱과 더듬이
+      for (const s of [-1, 1]) {
+        const fang = mesh(new THREE.ConeGeometry(0.06 * S, 0.45 * S, 5), fin, s * 0.16 * S, -0.08 * S, 0.62 * S, Math.PI / 2, 0, -s * 0.5);
+        this.head.add(fang);
+        const ant = mesh(new THREE.CylinderGeometry(0.01 * S, 0.02 * S, 0.9 * S, 4), dark, s * 0.12 * S, 0.3 * S, 0.3 * S, 0.9, 0, -s * 0.5);
+        this.head.add(ant);
+      }
+    }
     if (dragon) {
       // 여의주: 턱 아래에서 빛나는 구슬
       const pearl = mesh(new THREE.SphereGeometry(0.16 * S, 12, 10), toon({ color: C('#f0f8ff'), emissive: C('#4ab0ff'), emissiveIntensity: 1.2 }), 0, -0.32 * S, 0.62 * S);
@@ -1743,6 +1765,11 @@ export class SerpentRig {
       }
       if (i % 3 === 1) for (const s of [-1, 1]) g.add(mesh(new THREE.SphereGeometry(r * 0.2, 5, 4), dark, s * r * 0.75, r * 0.3, 0));
       // 용: 앞뒤 두 쌍의 발톱 달린 다리
+      // 지네: 마디마다 다리 한 쌍
+      if (centi && i < N - 1) for (const s of [-1, 1]) {
+        const leg = mesh(new THREE.CylinderGeometry(r * 0.06, r * 0.1, r * 1.5, 4), belly, s * r * 1.1, -r * 0.35, 0, 0, 0, s * 1.15);
+        g.add(leg);
+      }
       if (dragon && (i === 3 || i === 10)) for (const s of [-1, 1]) {
         const leg = mesh(new THREE.CapsuleGeometry(r * 0.18, r * 0.9, 3, 6), scale, s * r * 0.95, -r * 0.35, 0, 0.3, 0, s * 0.9);
         g.add(leg);
@@ -1825,18 +1852,22 @@ export class SerpentRig {
 
 export function makeImugi() { return new SerpentRig(); }
 export function makeDragon() { return new SerpentRig('dragon'); }
+export function makeCentipede() { return new SerpentRig('centipede'); }
 
 // ======================= 불가사리 협곡 =======================
 // 돌장승: 장승이 쇳물에 깨어나 걸어 다님. 네모난 몸, 부릅뜬 눈에 불빛, 바위 주먹
 export class StoneRig {
-  constructor() {
+  // frost: 서리 거인 동장군 (얼음 몸, 푸른 눈빛, 고드름 관)
+  constructor(variant = 'stone') {
     this.mats = [];
     const mat = (o) => { const m = toon(o); this.mats.push(m); return m; };
-    const stone = mat({ color: C('#8a827a') }), dark = mat({ color: C('#5a544e') }), hat = mat({ color: C('#2a2624') });
-    const glow = toon({ color: C('#ffb060'), emissive: C('#ff5a00'), emissiveIntensity: 1.6 });
+    const frost = variant === 'frost';
+    const stone = mat({ color: C(frost ? '#cfe8f6' : '#8a827a') }), dark = mat({ color: C(frost ? '#7aa8c8' : '#5a544e') }), hat = mat({ color: C(frost ? '#e8f6ff' : '#2a2624') });
+    const glow = frost ? toon({ color: C('#bff4ff'), emissive: C('#2a9aff'), emissiveIntensity: 1.8 }) : toon({ color: C('#ffb060'), emissive: C('#ff5a00'), emissiveIntensity: 1.6 });
     this.root = new THREE.Group();
     this.body = new THREE.Group();
-    this.body.scale.setScalar(1.35);
+    this.body.scale.setScalar(frost ? 2.9 : 1.35);
+    this.frost = frost;
     this.root.add(this.body);
     this.torso = new THREE.Group();
     this.torso.position.y = 0.45;
@@ -1907,6 +1938,17 @@ export class StoneRig {
 }
 
 export function makeStoneGolem() { return new StoneRig(); }
+export function makeFrostGiant() {
+  const r = new StoneRig('frost');
+  // 고드름 관과 어깨 얼음
+  const ice = toon({ color: C('#e8f8ff'), transparent: true, opacity: 0.85 });
+  for (let k = 0; k < 7; k++) {
+    const a = (k / 7) * Math.PI * 2;
+    r.torso.add(mesh(new THREE.ConeGeometry(0.05, 0.3, 4), ice, Math.cos(a) * 0.3, 1.38, Math.sin(a) * 0.3));
+  }
+  for (const s of [-1, 1]) r.torso.add(mesh(new THREE.IcosahedronGeometry(0.2, 0), ice, s * 0.45, 0.98, 0));
+  return r;
+}
 
 // 불가사리: 쇠를 먹고 자라는 괴물. 곰의 몸, 코끼리 코, 등에 쇠바늘, 소꼬리, 범의 다리
 export class BeastRig {

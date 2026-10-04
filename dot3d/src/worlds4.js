@@ -307,10 +307,28 @@ export function buildSeaPalace(W) {
     const x = side < 2 ? (side ? 1 : -1) * (20.5 + R() * 4) : (R() - 0.5) * 46;
     const z = side >= 2 ? (side === 2 ? -27.5 - R() * 2 : 23.5 + R() * 2.5) : (R() - 0.5) * 50;
     if (side === 2 && Math.abs(x + 15) < 5) continue;
+    if (side === 3 && Math.abs(x - 14) < 5) continue;
     if (R() < 0.5) coral(W, x, z, 1.2 + R() * 0.6, 700 + i); else seaweed(W, x, z, 700 + i);
   }
   // 바위
   for (const [x, z, s, sd] of [[-12, -12, 1, 51], [12, -13, 1.2, 52], [-5, 6, 0.8, 53], [5, 5, 0.8, 54]]) cairn(W, x, z, s, sd);
+
+  // 남쪽 경계와 계곡으로 가는 샘물길: 큰 대합 조개가 입을 다물고 막고 있다가 퀘스트로 열림
+  W.blockRects.push({ x0: -20, x1: 11.8, z0: 22.6, z1: 23.6 }, { x0: 16.2, x1: 20, z0: 22.6, z1: 23.6 });
+  const clam = new THREE.Group();
+  clam.position.set(14, 0, 23.1);
+  const lidTop = new THREE.Mesh(new THREE.SphereGeometry(1, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2), M.shell);
+  lidTop.scale.set(2.2, 1.0, 1.0);
+  clam.add(lidTop);
+  const pearlC = new THREE.Mesh(new THREE.SphereGeometry(0.35, 10, 8), M.pearl);
+  pearlC.position.y = 0.3;
+  clam.add(pearlC);
+  clam.traverse((o) => { if (o.isMesh) o.castShadow = true; });
+  W.root.add(clam);
+  W.addGate('valley', { x0: 11.8, x1: 16.2, z0: 22.6, z1: 23.6 }, (k) => {
+    clam.position.y = -k * 1.6;
+    clam.visible = k < 0.99;
+  });
 
   B.build(W.root);
   for (const m of W.foliage.build(W.root)) animateMesh(m, ANIM.foliage);

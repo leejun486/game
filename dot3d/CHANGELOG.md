@@ -2,16 +2,21 @@
 
 ## 1.1.0
 
-새 지역 둘과 더 긴 모험.
+새 지역 넷, 새로 꾸민 월하궁, 더 긴 모험.
+
+- **월하궁을 새로 꾸몄습니다:** 일직선 어도와 2층 정전 대신, 굽이진 박석 길과 가운데 연지·섬 위 육각정, 동북쪽 침전과 서북쪽 서고, 꽃담과 매화·벚나무, 청사초롱이 있는 달빛 정원 궁입니다. 남문·큰 북·수문장 자리는 그대로입니다.
+- **청류 계곡(여름):** 용궁 뒤 샘물길 너머. 폭포에서 시작한 시냇물이 졸졸 흐르고(흐르는 물살과 물거품), 나무다리·징검돌, 물레방아, 산신 제단, 수국과 원추리 꽃밭이 있습니다. 멧돼지, 사마귀 요괴, 왕벌 요괴, 우두머리 천년 왕지네.
+- **백설 고원(겨울):** 계곡 남서쪽. 눈 쌓인 소나무와 눈더미, 얼어붙은 못, 눈 덮인 초가 마을, 화톳불, 비스듬히 몰아치는 눈보라. 눈늑대, 얼음 도깨비, 서리 도깨비불, 우두머리 서리 거인 동장군.
+- **도사 기본 공격 소리:** 부적을 휙 던지면 종이가 탁 펴지고 오음 풍경 소리와 함께 불이 붙는 소리로 바꿨습니다. 세 번째 부채꼴 공격과 맞았을 때 소리도 따로 있습니다.
 
 - **새 지역 둘:**
   - **단풍 산성:** 협곡 남쪽 산길 너머의 옛 산성입니다. 산적 도깨비, 까마귀 요괴(깃털 화살 세 발), 범(덮치기)이 있고, 우두머리는 산군 백호입니다(돌진·도약·바람 발톱, 3단계는 세 번 연달아).
   - **동해 용궁:** 산성 남서쪽 물길 아래 바다 밑 궁전입니다. 꽃게 병사(단단함), 해파리(독 방울), 거북 장군(아주 단단, 내려찍기)이 있고, 우두머리는 동해 용왕입니다(잠수 후 솟구치기·벼락 폭풍·해일).
   - 지역마다 국악 배경음악과 환경음, 날리는 단풍잎과 떠오르는 물방울이 있습니다.
-- **퀘스트 12단계 추가:** 의병장 강호, 용녀 해랑과 함께하는 산적 소탕, 범 발톱, 봉수대, 용궁 경비대, 거북 장군, 진주 등. 메인 퀘스트는 34단계가 됐습니다.
-- **이야기:** 달거울은 이제 여덟 조각입니다. 백호와 용왕이 조각을 하나씩 갖고 있습니다.
-- **보스 장비 추가:** 백호·용왕 무기(직업마다 하나씩, 고유 기술 `백호 발톱`·`용왕의 폭풍`)와 옷 두 벌.
-- **현상수배 4개, 업적 2개, 도감 8종 추가.** 시련탑 보스 층에도 백호와 용왕이 나옵니다.
+- **퀘스트 24단계 추가:** 의병장 강호, 용녀 해랑, 포수 만복, 심마니 영감과 함께합니다. 메인 퀘스트는 46단계가 됐습니다.
+- **이야기:** 달거울은 이제 열 조각입니다. 백호, 용왕, 왕지네, 동장군이 조각을 하나씩 갖고 있습니다.
+- **보스 장비 추가:** 백호·용왕·왕지네·동장군 무기(직업마다 하나씩, 고유 기술 `백호 발톱`·`용왕의 폭풍`·`독침 비`·`눈보라`)와 옷 네 벌.
+- **현상수배 8개, 업적 4개, 도감 16종 추가.** 시련탑 보스 층에도 새 보스 넷이 나옵니다.
 - **플레이 시간과 드롭:**
   - 일반 몬스터의 장비 드롭을 줄였습니다(종류별 확률의 절반, 방어구·장신구 6~8%, 세트 조각 6%). 보스 전용 무기는 12%, 옷은 22% 확률입니다.
   - 레벨업에 필요한 경험치가 높은 레벨에서 더 가파르게 늘어납니다.
@@ -20,10 +25,12 @@
 
 ### English
 
-Two new regions and a longer adventure.
+Four new regions, a redesigned Wolhagung and a longer adventure.
 
-- New regions: the Maple Fortress (bandit dokkaebi, crow demons, tigers; boss: the White Tiger) and the Dragon Palace beneath the East Sea (crab soldiers, jellyfish, turtle generals; boss: the Dragon King). Each has its own music and ambience.
-- 12 new quest steps (34 in total), two new Moon Mirror shards (eight in all), new boss weapons and outfits with unique skills, 4 bounties, 2 achievements and 8 codex entries. Both new bosses also appear on tower boss floors.
+- Wolhagung redesigned as a moonlit garden palace: a winding stone path, a lotus pond with an island pavilion, side halls, flower walls and blossoming trees.
+- New regions: the Maple Fortress (boss: the White Tiger), the Dragon Palace beneath the East Sea (boss: the Dragon King), Cheongryu Valley with a babbling summer stream (boss: the Thousand-Year Centipede) and the White Snow Highland (boss: General Winter). Each has its own music and ambience.
+- New Taoist basic-attack sounds (talisman throw, fan throw, hit).
+- 24 new quest steps (46 in total), four new Moon Mirror shards (ten in all), new boss weapons and outfits with unique skills, 8 bounties, 4 achievements and 16 codex entries. All new bosses also appear on tower boss floors.
 - Longer play: lower gear drop rates, a steeper level curve at high levels, and larger quest targets.
 - Old saves continue; if the main quest was finished, it resumes at the new chapter.
 

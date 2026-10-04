@@ -103,5 +103,25 @@
   "samples": 1389150,
   "rate": 44100,
   "dur": 31.5
+ },
+ "valley": {
+  "samples": 2328480,
+  "rate": 44100,
+  "dur": 52.8
+ },
+ "snowfield": {
+  "samples": 1968624,
+  "rate": 44100,
+  "dur": 44.64
+ },
+ "amb_valley": {
+  "samples": 1389150,
+  "rate": 44100,
+  "dur": 31.5
+ },
+ "amb_snowfield": {
+  "samples": 1389150,
+  "rate": 44100,
+  "dur": 31.5
  }
 }

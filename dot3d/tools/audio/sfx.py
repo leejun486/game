@@ -447,6 +447,48 @@ def s_spinspear(v):
     return mix((0, x, 1.0), (0, sweep_noise(d, 1500, 2600, 3) * am * env_bell(n, 0.3), 0.4))
 
 
+# 도사 평타: 부적을 '휙' 던지면 종이가 '탁' 펴지고, 오음 풍경 소리 두 음과 함께 '확' 불이 붙음
+PENTA = [1046.5, 1174.7, 1396.9, 1568.0, 1760.0, 2093.0]
+
+
+def paper_flick(d=0.05):
+    n = N(d)
+    return highpass(noise(n), 1800) * exp_env(n, 0.006)
+
+
+def ignite(d=0.35, f=900):
+    n = N(d)
+    w = sweep_noise(d, f, f * 2.6, 1.5) * env_bell(n, 0.12)
+    crack = np.zeros(n)
+    for _ in range(14):
+        i = R.integers(0, n - 60)
+        crack[i:i + 50] += highpass(noise(50), 3000) * R.uniform(0.2, 0.8)
+    return mix((0, w, 0.7), (0, crack * exp_env(n, 0.12), 0.45), (0, thump(0.18, 180, 70, 0.05), 0.35))
+
+
+def s_talisman(v):
+    whoosh = sweep_noise(0.2, 700 + 120 * v, 3200, 2.2) * env_bell(N(0.2), 0.35)
+    notes = [PENTA[(v + k * 2) % 6] for k in range(2)]
+    chime = mix(*[(k * 0.06, metal(0.55, f, ratios=(1, 2.76, 5.4), tau=0.22), 0.16 - k * 0.04) for k, f in enumerate(notes)])
+    return room(mix((0, whoosh, 0.75), (0.07, paper_flick(), 0.9), (0.08, chime, 1.0), (0.1, ignite(0.3, 800 + 100 * v), 0.55)), 0.5, 0.16, seed=3 + v)
+
+
+def s_talisman3(v):
+    # 세 장 부채꼴: 부적 셋이 차르륵 펼쳐지고 세 음이 오르며 불길이 크게 붙음
+    flicks = mix(*[(k * 0.045, paper_flick(0.06), 0.8) for k in range(3)])
+    whoosh = sweep_noise(0.28, 500, 3600, 2.0) * env_bell(N(0.28), 0.4)
+    chime = mix(*[(k * 0.07, metal(0.7, f, ratios=(1, 2.76, 5.4), tau=0.28), 0.15) for k, f in enumerate([PENTA[v], PENTA[v + 2], PENTA[v + 3]])])
+    return room(mix((0, whoosh, 0.8), (0.06, flicks, 1.0), (0.08, chime, 1.0), (0.14, ignite(0.42, 700), 0.8)), 0.7, 0.2, seed=9 + v)
+
+
+def s_talismanhit(v):
+    # 부적이 맞으면 '퍽' 하고 불꽃이 튐
+    n = N(0.4)
+    pop = mix((0, thump(0.2, 220, 60, 0.05), 1.0), (0, bandpass(noise(N(0.05)), 1500, 0.8) * exp_env(N(0.05), 0.01), 0.7))
+    sizzle = highpass(noise(n), 2500) * exp_env(n, 0.09)
+    return mix((0, pop, 0.9), (0.01, sizzle, 0.35), (0.02, ignite(0.3, 1100 + 150 * v), 0.6))
+
+
 SFX = {
     'swing': (s_swing, 3, -15), 'swing3': (s_swing3, 2, -14), 'hit': (s_hit, 3, -13), 'crit': (s_crit, 2, -11),
     'drum': (s_drum, 1, -12), 'draw': (s_draw, 1, -18), 'sheathe': (s_sheathe, 1, -18), 'bowdraw': (s_bowdraw, 1, -22),
@@ -461,6 +503,7 @@ SFX = {
     'victory': (s_victory, 1, -14), 'block': (s_block, 1, -15), 'gong': (s_gong, 1, -13),
     'thrust': (s_thrust, 3, -15), 'spearbeam': (s_spearbeam, 1, -13), 'leap': (s_leap, 1, -17), 'spearslam': (s_spearslam, 1, -11),
     'spearfall': (s_spearfall, 3, -17), 'spinspear': (s_spinspear, 1, -16),
+    'talisman': (s_talisman, 4, -16), 'talisman3': (s_talisman3, 2, -15), 'talismanhit': (s_talismanhit, 3, -16),
 }
 
 

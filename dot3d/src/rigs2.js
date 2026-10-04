@@ -292,7 +292,145 @@ export class TurtleRig extends BaseRig {
   }
 }
 
+// ======================= 청류 계곡 =======================
+// 왕벌 요괴: 노랑·검정 줄무늬 배, 빠르게 떠는 날개. 공중에서 독침을 쏨
+export class BeeRig extends BaseRig {
+  constructor() {
+    super();
+    const yel = this.mat({ color: C('#f0c020') }), blk = this.mat({ color: C('#1a1410') });
+    const wingM = this.mat({ color: C('#e8f4ff'), transparent: true, opacity: 0.55 });
+    const eyeM = toon({ color: C('#ff3a1a'), emissive: C('#8a0a00') });
+    this.body.scale.setScalar(1.3);
+    this.fly = new THREE.Group();
+    this.fly.position.y = 1.2;
+    this.body.add(this.fly);
+    this.fly.add(mesh(new THREE.SphereGeometry(0.13, 10, 8), blk, 0, 0, 0.08)).scale.set(1, 0.95, 1.1);
+    this.head = new THREE.Group();
+    this.head.position.set(0, 0.02, 0.24);
+    this.fly.add(this.head);
+    this.head.add(mesh(new THREE.SphereGeometry(0.1, 10, 8), yel));
+    for (const s of [-1, 1]) {
+      this.head.add(mesh(new THREE.SphereGeometry(0.05, 6, 4), eyeM, s * 0.06, 0.03, 0.05));
+      this.head.add(mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.18, 4), blk, s * 0.04, 0.13, 0.04, 0.4, 0, s * 0.3));
+    }
+    // 배: 줄무늬 마디 + 침
+    this.abd = new THREE.Group();
+    this.abd.position.set(0, -0.02, -0.08);
+    this.fly.add(this.abd);
+    for (let k = 0; k < 4; k++) {
+      const b = mesh(new THREE.SphereGeometry(0.15 - k * 0.02, 10, 8), k % 2 ? blk : yel, 0, -k * 0.03, -k * 0.11);
+      b.scale.set(1, 0.9, 0.8);
+      this.abd.add(b);
+    }
+    this.abd.add(mesh(new THREE.ConeGeometry(0.03, 0.14, 5), blk, 0, -0.12, -0.48, -Math.PI / 2 - 0.3, 0, 0));
+    this.wings = [];
+    for (const s of [-1, 1]) {
+      const w = new THREE.Group();
+      w.position.set(s * 0.08, 0.1, 0.06);
+      const m = mesh(new THREE.SphereGeometry(0.2, 8, 4), wingM, s * 0.18, 0, -0.04);
+      m.scale.set(1, 0.08, 0.45);
+      w.add(m);
+      this.fly.add(w);
+      this.wings.push({ g: w, s });
+    }
+    for (let k = 0; k < 3; k++) for (const s of [-1, 1]) this.fly.add(mesh(new THREE.CylinderGeometry(0.01, 0.008, 0.16, 4), blk, s * 0.08, -0.12, 0.12 - k * 0.07, 0, 0, s * 0.5));
+    this.finish();
+    for (const w of this.wings) w.g.children[0].castShadow = false;
+  }
+  animate(dt, p) {
+    this.phase += dt * 60;
+    for (const w of this.wings) w.g.rotation.z = w.s * Math.sin(this.phase) * 0.6;
+    let curl = 0;
+    if (p.attack) { const [a, b, r] = this.atk(p); curl = (a - b * 0.5) * (1 - r); }
+    this.abd.rotation.x = curl * 0.9;
+    this.fly.position.y = 1.2 + Math.sin(this.phase * 0.05) * 0.1;
+    this.fly.rotation.z = p.hurt > 0 ? Math.sin(this.phase * 0.5) * 0.2 * p.hurt : 0;
+    if (p.dead) {
+      this.deadT += dt;
+      const k = smooth(clamp(this.deadT / 0.4, 0, 1));
+      this.fly.position.y = lerp(1.2, 0.12, k);
+      this.fly.rotation.z = k * 3;
+    } else this.deadT = 0;
+  }
+}
+
+// 사마귀 요괴: 꼿꼿이 선 가슴, 낫 같은 앞발 둘로 베어 냄
+export class MantisRig extends BaseRig {
+  constructor() {
+    super();
+    const g1 = this.mat({ color: C('#6ab04a') }), g2 = this.mat({ color: C('#a8d86a') }), dk = this.mat({ color: C('#2a5a2a') });
+    const eyeM = toon({ color: C('#e8ff7a'), emissive: C('#5a8a00') });
+    this.body.scale.setScalar(1.45);
+    // 배 (뒤로 길게)
+    const abd = mesh(new THREE.SphereGeometry(0.16, 10, 8), g1, 0, 0.42, -0.3);
+    abd.scale.set(0.9, 0.8, 2.0);
+    this.body.add(abd);
+    // 가슴 (곧추섬)
+    this.torso = new THREE.Group();
+    this.torso.position.set(0, 0.45, -0.02);
+    this.body.add(this.torso);
+    const th = mesh(new THREE.CapsuleGeometry(0.06, 0.45, 3, 6), g2, 0, 0.25, 0.04);
+    th.rotation.x = 0.35;
+    this.torso.add(th);
+    this.head = new THREE.Group();
+    this.head.position.set(0, 0.58, 0.16);
+    this.torso.add(this.head);
+    const hd = mesh(new THREE.ConeGeometry(0.11, 0.16, 3), g2, 0, 0, 0.02, Math.PI, 0, 0);
+    this.head.add(hd);
+    for (const s of [-1, 1]) {
+      this.head.add(mesh(new THREE.SphereGeometry(0.045, 6, 4), eyeM, s * 0.09, 0.03, 0.02));
+      this.head.add(mesh(new THREE.CylinderGeometry(0.006, 0.006, 0.3, 3), dk, s * 0.04, 0.17, 0.06, 0.6, 0, s * 0.3));
+    }
+    // 낫 앞발
+    this.arms = [];
+    for (const s of [-1, 1]) {
+      const a = new THREE.Group();
+      a.position.set(s * 0.07, 0.42, 0.12);
+      a.add(mesh(new THREE.CapsuleGeometry(0.03, 0.22, 3, 5), g1, 0, -0.06, 0.1, 1.0, 0, 0));
+      const fore = new THREE.Group();
+      fore.position.set(0, -0.12, 0.22);
+      fore.add(mesh(new THREE.BoxGeometry(0.03, 0.3, 0.05), g2, 0, 0.15, 0));
+      for (let k = 0; k < 4; k++) fore.add(mesh(new THREE.ConeGeometry(0.012, 0.06, 3), dk, 0, 0.05 + k * 0.06, 0.03, Math.PI / 2, 0, 0));
+      a.add(fore);
+      this.torso.add(a);
+      this.arms.push({ a, fore, s });
+    }
+    // 다리 넷
+    this.legs = [];
+    for (const [x, z] of [[-1, 0], [1, 0], [-1, -0.25], [1, -0.25]]) {
+      const g = new THREE.Group();
+      g.position.set(x * 0.08, 0.42, z);
+      g.add(mesh(new THREE.CylinderGeometry(0.015, 0.012, 0.5, 4), dk, x * 0.12, -0.2, 0, 0, 0, x * 0.5));
+      this.body.add(g);
+      this.legs.push(g);
+    }
+    // 날개 (등에 접힘)
+    const wing = mesh(new THREE.SphereGeometry(0.16, 8, 4), this.mat({ color: C('#c8e8a0'), transparent: true, opacity: 0.7 }), 0, 0.52, -0.32);
+    wing.scale.set(0.9, 0.15, 2.2);
+    this.body.add(wing);
+    this.finish();
+  }
+  animate(dt, p) {
+    const s = p.speed || 0;
+    this.phase += dt * (3 + s * 3);
+    this.legs.forEach((l, i) => (l.rotation.x = s > 0 ? Math.sin(this.phase + i * 1.6) * 0.4 : 0));
+    const [a, b, r] = this.atk(p);
+    for (const A of this.arms) {
+      A.a.rotation.x = (-1.3 * a + 1.8 * b) * (1 - r) + Math.sin(this.phase * 0.5 + A.s) * 0.05;
+      A.fore.rotation.x = -0.8 + (0.9 * a - 0.6 * b) * (1 - r);
+    }
+    this.torso.rotation.x = (-0.25 * a + 0.4 * b) * (1 - r) + (p.hurt > 0 ? -0.3 * p.hurt : 0);
+    this.head.rotation.y = Math.sin(this.phase * 0.3) * 0.3;
+    if (p.dead) {
+      this.deadT += dt;
+      this.body.rotation.z = smooth(clamp(this.deadT / 0.45, 0, 1)) * Math.PI / 2;
+    } else { this.deadT = 0; this.body.rotation.z = 0; }
+  }
+}
+
 export const makeCrow = () => new CrowRig();
 export const makeCrab = () => new CrabRig();
 export const makeJelly = () => new JellyRig();
 export const makeTurtle = () => new TurtleRig();
+export const makeBee = () => new BeeRig();
+export const makeMantis = () => new MantisRig();

@@ -118,14 +118,52 @@ export const QUESTS = [
     startLines: ['해랑: 용궁의 진주 등 셋이 꺼져 있어요. 다시 밝히면 용고를 울릴 수 있어요.'] },
   { title: '용고', type: 'wave', region: 'sea', desc: '본전 앞 <b>용고</b>를 울려 <b>동해 용왕</b>과 맞서자', reward: { exp: 1300 },
     startLines: ['해랑: 용고를 울리면 용왕님이 나오실 거예요. 물속으로 사라지면 발밑의 푸른 원을, 하늘이 번쩍이면 벼락을 피하세요!'] },
+  { title: '샘물길', type: 'talk', npc: 'envoy', desc: '용궁 어귀의 <b>용녀 해랑</b>에게 돌아가자',
+    lines: () => [
+      '용왕님이 제정신을 찾으셨어요! 거울 조각을 토해 내시고는 고맙다고 전하라 하셨어요.',
+      '그런데 조각이 하나 더 있대요. 용궁 뒤 샘물길을 따라 올라가면 여름 골짜기가 나오는데, 거기 냇물이 독으로 물들고 있대요.',
+      '남쪽 큰 대합이 길을 막고 있죠? 제가 열어 드릴게요. 골짜기 어귀에 포수 아저씨가 산대요.',
+    ], gateAfter: 'valley', reward: { exp: 420 } },
+  { title: '골짜기의 포수', type: 'talk', npc: 'hunter', desc: '용궁 남동쪽 샘물길 너머 <b>청류 계곡</b>의 <b>포수 만복</b>을 찾아가자',
+    lines: () => [
+      '어허, 바닷속에서 사람이 올라오다니! 난 이 골짜기에서 사냥하는 포수 만복이오.',
+      '요즘 멧돼지가 미쳐 날뛰고, 사마귀 요괴가 낫을 휘두르고, 왕벌이 떼로 몰려다니오.',
+      '냇물에 들어가면 발이 무거워지니 나무다리나 징검돌로 건너시오.',
+    ] },
+  { title: '골짜기 소동', type: 'kill', region: 'valley', need: { boar: 8, mantis: 6 }, desc: '골짜기의 <b>멧돼지</b>와 <b>사마귀 요괴</b>를 물리치자', reward: { exp: 820 } },
+  { title: '왕벌 독침', type: 'collect', region: 'valley', item: '왕벌 독침', from: ['bee'], chance: 0.55, n: 6, desc: '<b>왕벌 요괴</b>를 쓰러뜨려 <b>왕벌 독침</b>을 모으자', reward: { exp: 760, item: 'cls:4' },
+    startLines: ['만복: 냇물을 물들인 건 천년 묵은 왕지네요. 놈은 왕벌 독 냄새를 맡으면 기어 나오지.', '만복: 왕벌 독침을 여섯 개만 모아 오시오. 독 방울에 맞으면 몸이 무거워지니 조심하고!'] },
+  { title: '산신 제단', type: 'light', region: 'valley', n: 3, desc: '골짜기 곳곳의 <b>산신 제단</b>에 촛불을 밝히자 (제단 앞에서 E)', reward: { exp: 700 },
+    startLines: ['만복: 산신님께 먼저 고해야 하오. 제단 셋에 촛불을 밝혀 주시오.'] },
+  { title: '물레방아', type: 'wave', region: 'valley', desc: '냇가의 <b>물레방아</b>를 돌려 <b>천년 왕지네</b>와 맞서자', reward: { exp: 1500 },
+    startLines: ['만복: 독침을 물레방아에 걸어 두었소. 바퀴를 돌리면 냄새가 퍼져 놈이 올 거요.', '만복: 몸을 낮추면 돌진하오. 독액 부채는 옆으로 피하시오!'] },
+  { title: '고원 길', type: 'talk', npc: 'hunter', desc: '골짜기 어귀의 <b>포수 만복</b>에게 돌아가자',
+    lines: () => [
+      '왕지네를 잡다니! 냇물이 다시 맑아졌소. 이 골짜기 사람들 대신 고맙다 하리다.',
+      '헌데 놈의 껍질 속에서 나온 거울 조각이 자꾸 남쪽 고원을 가리키오. 한여름인데 거기만 눈보라가 친다오.',
+      '남서쪽 넝쿨 바위를 치워 두리다. 고원엔 심마니 영감이 혼자 버티고 계시오.',
+    ], gateAfter: 'snowfield', reward: { exp: 450 } },
+  { title: '설원의 심마니', type: 'talk', npc: 'ginseng', desc: '계곡 남서쪽 고원 길 너머 <b>백설 고원</b>의 <b>심마니 영감</b>을 찾아가자',
+    lines: () => [
+      '허허, 이 눈보라를 뚫고 왔소? 난 산삼 캐는 심마니요. 마을 사람들은 다 내려가고 나만 남았지.',
+      '겨울 장수 동장군이 깨어나 이 고원을 얼려 버렸소. 눈늑대가 떼로 다니고, 얼음 도깨비에게 맞으면 몸이 얼어붙소.',
+      '먼저 늑대와 도깨비들부터 쫓아 주시오.',
+    ] },
+  { title: '눈보라 속 사냥', type: 'kill', region: 'snowfield', need: { wolf: 10, icedok: 6 }, desc: '고원의 <b>눈늑대</b>와 <b>얼음 도깨비</b>를 물리치자', reward: { exp: 950 } },
+  { title: '설삼', type: 'collect', region: 'snowfield', item: '설삼', from: ['icewisp', 'icedok'], chance: 0.45, n: 6, desc: '<b>서리 도깨비불</b>과 <b>얼음 도깨비</b>에게서 <b>설삼</b>을 모으자', reward: { exp: 880, item: 'ot11' },
+    startLines: ['심마니: 동장군의 냉기를 견디려면 눈 속에서 자라는 설삼을 먹어야 하오.', '심마니: 얼음 요괴들이 설삼을 품고 다니니 여섯 뿌리만 모아 오시오.'] },
+  { title: '화톳불', type: 'light', region: 'snowfield', n: 3, desc: '버려진 마을의 꺼진 <b>화톳불</b>을 피우자 (화톳불 앞에서 E)', reward: { exp: 820 },
+    startLines: ['심마니: 화톳불 셋을 피우면 동장군이 불빛을 보고 성이 나서 내려올 거요.'] },
+  { title: '얼음 북', type: 'wave', region: 'snowfield', desc: '고원 한가운데 <b>얼음 북</b>을 울려 <b>서리 거인 동장군</b>과 맞서자', reward: { exp: 1800 },
+    startLines: ['심마니: 북을 울리면 동장군이 나오오. 뛰어오르면 떨어질 자리를, 하늘이 하얘지면 고드름을 피하시오!'] },
   { title: '귀환', type: 'talk', npc: 'guard', desc: '월하궁의 <b>수문장</b>에게 돌아가 소식을 전하자',
     lines: (g) => [
-      `${g.player.cfg.title} 나리! 저승사자에 이무기, 불가사리, 백호에 용왕까지 물리치셨다고요? 소문이 궁 안까지 퍼졌소!`,
-      '이제 궁도, 대숲도, 옛 절터도, 늪과 협곡, 산성과 바다까지 모두 평안하오. 참으로 고맙소.',
-      '그 거울 조각들… 깨진 달거울이로구려! 일곱 조각이 모였으니 남은 건 하나뿐이오.',
+      `${g.player.cfg.title} 나리! 저승사자에 이무기, 불가사리, 백호, 용왕, 왕지네에 동장군까지 물리치셨다고요? 소문이 궁 안까지 퍼졌소!`,
+      '이제 궁도, 대숲도, 옛 절터도, 늪과 협곡, 산성과 바다, 골짜기와 고원까지 모두 평안하오. 참으로 고맙소.',
+      '그 거울 조각들… 깨진 달거울이로구려! 아홉 조각이 모였으니 남은 건 하나뿐이오.',
       '마지막 조각은 저승에 있다 하오. 협곡 대장간 옆에 열린 저승 문으로 시련탑에 올라, 열 번째 층의 염라대왕을 만나 보시오.',
       '현상수배가 붙으면 내게 오시오. 그동안 이 땅은 내가 지키고 있겠소.',
-      '(메인 퀘스트 완료! 시련탑 10층의 염라대왕을 물리치면 엔딩을 볼 수 있습니다. 현상수배를 받거나, 북·방울·범종·징·풀무·봉화·용고를 다시 울려 회차를 올릴 수도 있습니다)',
+      '(메인 퀘스트 완료! 시련탑 10층의 염라대왕을 물리치면 엔딩을 볼 수 있습니다. 현상수배를 받거나, 북·방울·범종·징·풀무·봉화·용고·물레방아·얼음 북을 다시 울려 회차를 올릴 수도 있습니다)',
     ], reward: { exp: 400, item: 'cls:3' } },
 ];
 
@@ -143,6 +181,10 @@ export const BOUNTIES = [
   { region: 'fortress', title: '현상수배: 식인 범', need: { tiger: 5 } },
   { region: 'sea', title: '현상수배: 꽃게 떼', need: { crab: 10 } },
   { region: 'sea', title: '현상수배: 독해파리', need: { jelly: 8 } },
+  { region: 'valley', title: '현상수배: 성난 멧돼지', need: { boar: 8 } },
+  { region: 'valley', title: '현상수배: 왕벌 떼', need: { bee: 8 } },
+  { region: 'snowfield', title: '현상수배: 눈늑대 무리', need: { wolf: 10 } },
+  { region: 'snowfield', title: '현상수배: 얼음 도깨비', need: { icedok: 6 } },
 ];
 
-export const KILL_NAME = { fox: '여우', foxfire: '여우불', jiangshi: '강시', ghost: '원귀', waterghost: '물귀신', toad: '두꺼비 요괴', firedok: '화염 도깨비', stonegolem: '돌장승', bandit: '산적 도깨비', crow: '까마귀 요괴', tiger: '범', crab: '꽃게 병사', jelly: '해파리', turtle: '거북 장군', blue: '꼬마 도깨비', red: '붉은 도깨비', wisp: '도깨비불' };
+export const KILL_NAME = { fox: '여우', foxfire: '여우불', jiangshi: '강시', ghost: '원귀', waterghost: '물귀신', toad: '두꺼비 요괴', firedok: '화염 도깨비', stonegolem: '돌장승', bandit: '산적 도깨비', crow: '까마귀 요괴', tiger: '범', crab: '꽃게 병사', jelly: '해파리', turtle: '거북 장군', boar: '멧돼지', mantis: '사마귀 요괴', bee: '왕벌 요괴', wolf: '눈늑대', icedok: '얼음 도깨비', icewisp: '서리 도깨비불', blue: '꼬마 도깨비', red: '붉은 도깨비', wisp: '도깨비불' };
