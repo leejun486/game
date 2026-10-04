@@ -3367,7 +3367,7 @@ class Game {
   skillIssen(pl, o = {}) {
     const dir = V(Math.sin(pl.yaw), 0, Math.cos(pl.yaw));
     const from = pl.pos.clone();
-    this.fx.ghost(pl.rig, '#ffffff', 0.4);
+    this.fx.ghost(pl.rig, '#7ab8ff', 0.4, 0.34);
     this.world.move(pl.pos, dir.x * 7, dir.z * 7, pl.moveR);
     pl.vel.set(0, 0, 0);
     pl.invuln = Math.max(pl.invuln, 0.6);

@@ -447,12 +447,13 @@ export class FX {
   }
 
   // 잔상: 캐릭터를 통째로 복제해 푸른 빛으로 칠한 뒤 서서히 사라지게
-  ghost(rig, color = '#5ab8ff', dur = 0.28) {
-    const mat = new THREE.MeshBasicMaterial({ color: new THREE.Color(color), transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false });
+  // 잔상: 몸이 겹치는 곳이 더해져 하얗게 뜨지 않게 옅게 (예전 0.55는 캐릭터가 하얗게 깜빡이는 것처럼 보였음)
+  ghost(rig, color = '#5ab8ff', dur = 0.28, alpha = 0.26) {
+    const mat = new THREE.MeshBasicMaterial({ color: new THREE.Color(color), transparent: true, opacity: alpha, blending: THREE.AdditiveBlending, depthWrite: false });
     const c = cloneSkinned(rig.root);
     c.traverse((o) => { if (o.isMesh) { o.material = mat; o.castShadow = false; o.receiveShadow = false; } });
     this.scene.add(c);
-    this.ghosts.push({ c, mat, t: 0, dur });
+    this.ghosts.push({ c, mat, t: 0, dur, alpha });
   }
 
   ring(pos, radius, color = '#ffffff', dur = 0.35, mode = 0) {
@@ -567,7 +568,7 @@ export class FX {
       const gh = this.ghosts[i];
       gh.t += dt;
       const k = gh.t / gh.dur;
-      gh.mat.opacity = 0.55 * Math.max(0, 1 - k);
+      gh.mat.opacity = gh.alpha * (1 - k) * (1 - k);
       if (k >= 1) { this.scene.remove(gh.c); gh.mat.dispose(); disposeSkeletons(gh.c); this.ghosts.splice(i, 1); }
     }
     for (let i = this.numbers.length - 1; i >= 0; i--) {
