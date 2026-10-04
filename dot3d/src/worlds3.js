@@ -427,8 +427,25 @@ export function buildCanyon(W) {
   }
   for (let x = -18; x <= 18; x += 2.8) {
     if (Math.abs(x - 12) > 3.2) crag(W, x, -27 - Rb(), 1.2 + Rb() * 0.5, 500 + Math.round(x * 3), false);
-    crag(W, x, 23.5 + Rb(), 1.3 + Rb() * 0.5, 600 + Math.round(x * 3), false);
+    if (Math.abs(x - 15) > 3.2) crag(W, x, 23.5 + Rb(), 1.3 + Rb() * 0.5, 600 + Math.round(x * 3), false);
   }
+  // 남쪽 경계와 단풍 산성으로 가는 산길: 쓰러진 통나무 목책이 막고 있다가 퀘스트로 치워짐
+  W.blockRects.push({ x0: -20, x1: 12.8, z0: 22.2, z1: 23.4 }, { x0: 17.2, x1: 20, z0: 22.2, z1: 23.4 });
+  const logs = new THREE.Group();
+  for (let i = 0; i < 5; i++) {
+    const lg = new THREE.Mesh(cylGeo(0.18, 0.2, 4.8, 7), M.darkWood || M.basaltDark);
+    lg.rotation.z = Math.PI / 2;
+    lg.rotation.y = (i - 2) * 0.08;
+    lg.position.set(15, 0.2 + (i % 3) * 0.36, 22.6 + (i % 2) * 0.35);
+    lg.castShadow = true;
+    logs.add(lg);
+  }
+  for (const s of [-1, 1]) { const st = new THREE.Mesh(cylGeo(0.12, 0.14, 1.8, 6), M.darkWood || M.basaltDark); st.position.set(15 + s * 2.1, 0.9, 22.8); logs.add(st); }
+  W.root.add(logs);
+  W.addGate('fortress', { x0: 12.8, x1: 17.2, z0: 22.2, z1: 23.4 }, (k) => {
+    logs.position.y = -k * 1.6;
+    logs.visible = k < 0.99;
+  });
   W.blockRects.push({ x0: -20, x1: 9.2, z0: -26.6, z1: -25.4 }, { x0: 14.8, x1: 20, z0: -26.6, z1: -25.4 });
   // 안쪽 바위
   for (const [x, z, s, sd] of [[-10, -18, 1.1, 1], [14, -18, 1.0, 2], [-15, 2, 1.2, 3], [16, 2, 1.0, 4], [-15, 19.5, 1.1, 5], [12, 12, 0.9, 6], [-2, -16, 0.7, 7]]) crag(W, x, z, s, 700 + sd);

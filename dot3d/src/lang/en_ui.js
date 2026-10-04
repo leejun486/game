@@ -196,6 +196,7 @@ export const pats = [
   [/^\(지금 할 일: (.+) — (.+)\)$/, '(Current task: $1 — $2)'],
   [/^어이, 거기 젊은 (.+)! 마침 잘 왔소\.$/, 'Hey there, young $1! Good timing.'],
   [/^(.+) 나리! 저승사자에 이무기, 불가사리까지 물리치셨다고요\? 소문이 궁 안까지 퍼졌소!$/, 'Sir $1! You beat the Reaper, the Imugi and even the Bulgasari? Word has spread all through the palace!'],
+  [/^(.+) 나리! 저승사자에 이무기, 불가사리, 백호에 용왕까지 물리치셨다고요\? 소문이 궁 안까지 퍼졌소!$/, 'Sir $1! The Reaper, the Imugi, the Bulgasari, the White Tiger and even the Dragon King? Word has spread all through the palace!'],
   [/^(.+) 일은 어찌 되어 가오\? (.+)\.$/, 'How goes "$1"? $2.'],
   [/^허허, 대왕까지 쫓아내다니! 벌써 (\d+)마리나 혼쭐을 냈구려\.$/, 'Ha! You even chased off the King! That\'s $1 taught a lesson already.'],
   [/^저승 시련탑 · (\d+)층$/, 'Tower of Trials · Floor $1'],

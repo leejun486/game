@@ -1,5 +1,32 @@
 # 바뀐 점 / Changelog
 
+## 1.1.0
+
+새 지역 둘과 더 긴 모험.
+
+- **새 지역 둘:**
+  - **단풍 산성:** 협곡 남쪽 산길 너머의 옛 산성입니다. 산적 도깨비, 까마귀 요괴(깃털 화살 세 발), 범(덮치기)이 있고, 우두머리는 산군 백호입니다(돌진·도약·바람 발톱, 3단계는 세 번 연달아).
+  - **동해 용궁:** 산성 남서쪽 물길 아래 바다 밑 궁전입니다. 꽃게 병사(단단함), 해파리(독 방울), 거북 장군(아주 단단, 내려찍기)이 있고, 우두머리는 동해 용왕입니다(잠수 후 솟구치기·벼락 폭풍·해일).
+  - 지역마다 국악 배경음악과 환경음, 날리는 단풍잎과 떠오르는 물방울이 있습니다.
+- **퀘스트 12단계 추가:** 의병장 강호, 용녀 해랑과 함께하는 산적 소탕, 범 발톱, 봉수대, 용궁 경비대, 거북 장군, 진주 등. 메인 퀘스트는 34단계가 됐습니다.
+- **이야기:** 달거울은 이제 여덟 조각입니다. 백호와 용왕이 조각을 하나씩 갖고 있습니다.
+- **보스 장비 추가:** 백호·용왕 무기(직업마다 하나씩, 고유 기술 `백호 발톱`·`용왕의 폭풍`)와 옷 두 벌.
+- **현상수배 4개, 업적 2개, 도감 8종 추가.** 시련탑 보스 층에도 백호와 용왕이 나옵니다.
+- **플레이 시간과 드롭:**
+  - 일반 몬스터의 장비 드롭을 줄였습니다(종류별 확률의 절반, 방어구·장신구 6~8%, 세트 조각 6%). 보스 전용 무기는 12%, 옷은 22% 확률입니다.
+  - 레벨업에 필요한 경험치가 높은 레벨에서 더 가파르게 늘어납니다.
+  - 퀘스트 목표 수를 늘렸습니다(여우 10, 여우구슬 6, 강시 8·원귀 5, 물귀신 9·두꺼비 5, 화염 도깨비 9·돌장승 3, 쇳조각 7).
+- 예전 저장 파일은 그대로 이어집니다. 메인 퀘스트를 마쳤거나 마지막 단계였다면 `산길 너머`부터 새 지역을 이어서 합니다.
+
+### English
+
+Two new regions and a longer adventure.
+
+- New regions: the Maple Fortress (bandit dokkaebi, crow demons, tigers; boss: the White Tiger) and the Dragon Palace beneath the East Sea (crab soldiers, jellyfish, turtle generals; boss: the Dragon King). Each has its own music and ambience.
+- 12 new quest steps (34 in total), two new Moon Mirror shards (eight in all), new boss weapons and outfits with unique skills, 4 bounties, 2 achievements and 8 codex entries. Both new bosses also appear on tower boss floors.
+- Longer play: lower gear drop rates, a steeper level curve at high levels, and larger quest targets.
+- Old saves continue; if the main quest was finished, it resumes at the new chapter.
+
 ## 1.0.0
 
 첫 판매판입니다.

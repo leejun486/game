@@ -64,7 +64,7 @@ MAPS.swamp = {
 };
 
 MAPS.canyon = {
-  id: 'canyon', han: '불가사리 협곡', name: '불가사리 협곡', sub: '쇠를 먹는 괴물', next: 'palace', prev: 'swamp', lvl: 8,
+  id: 'canyon', han: '불가사리 협곡', name: '불가사리 협곡', sub: '쇠를 먹는 괴물', next: 'fortress', prev: 'swamp', lvl: 8,
   foe: '화염 도깨비', night: ['풀무질', '꺼진 가마에 다시 불이 붙는다…'],
   summonLine: '불가사리: "크르릉… 쇠! 쇠를 내놓아라!"',
   field: { cap: 6, pack: 3, types: [['firedok', 3], ['stonegolem', 1]] },
@@ -79,8 +79,40 @@ MAPS.canyon = {
   },
 };
 
+MAPS.fortress = {
+  id: 'fortress', han: '단풍 산성', name: '단풍 산성', sub: '산군의 포효', next: 'sea', prev: 'canyon', lvl: 10,
+  foe: '산적 도깨비', night: ['봉화', '봉화가 오르자 산이 울린다…'],
+  summonLine: '산군 백호: "어흥— 이 산의 주인이 누구인지 잊었느냐!"',
+  field: { cap: 6, pack: 3, types: [['bandit', 3], ['crow', 2], ['tiger', 2]] },
+  waves(n, r) {
+    if (n === 1) return [['bandit', 4 + r], ['crow', 1 + Math.floor(r / 2)]];
+    if (n === 2) return [['bandit', 3 + r], ['tiger', 2 + Math.floor(r / 2)], ['crow', 1]];
+    return [['baekho', 1], ['tiger', 1 + r], ['bandit', 2 + r]];
+  },
+  theme: {
+    sun: ['#ffd8a8', '#a87a6a'], sunI: [2.3, 0.85], sky: ['#f4dcc0', '#4a3a4a'], ground: ['#8a6a3a', '#1e1614'],
+    hemiI: [1.1, 0.95], bg: ['#5a3a26', '#120c0a'], ambient: 'maple',
+  },
+};
+
+MAPS.sea = {
+  id: 'sea', han: '용궁', name: '동해 용궁', sub: '바다 밑 궁전', next: 'palace', prev: 'fortress', lvl: 12,
+  foe: '꽃게 병사', night: ['용고', '용고 소리에 바닷물이 소용돌이친다…'],
+  summonLine: '동해 용왕: "뭍의 것이 감히 용궁의 북을 울리느냐!"',
+  field: { cap: 6, pack: 3, types: [['crab', 3], ['jelly', 2], ['turtle', 1]] },
+  waves(n, r) {
+    if (n === 1) return [['crab', 4 + r], ['jelly', 1 + Math.floor(r / 2)]];
+    if (n === 2) return [['crab', 3 + r], ['turtle', 1 + Math.floor(r / 2)], ['jelly', 2]];
+    return [['dragon', 1], ['crab', 2 + r], ['jelly', 1 + Math.floor(r / 2)]];
+  },
+  theme: {
+    sun: ['#c8f0ff', '#4a7aff'], sunI: [1.9, 0.9], sky: ['#a8e0f0', '#1a2a5a'], ground: ['#4a7a8a', '#0a1428'],
+    hemiI: [1.15, 1.0], bg: ['#2a6a8a', '#04081a'], ambient: 'bubble',
+  },
+};
+
 MAPS.tower = {
-  id: 'tower', han: '시련탑', name: '저승 시련탑', sub: '끝없는 저승의 탑', next: 'canyon', prev: 'canyon', lvl: 10,
+  id: 'tower', han: '시련탑', name: '저승 시련탑', sub: '끝없는 저승의 탑', next: 'canyon', prev: 'canyon', lvl: 14,
   foe: '망자', night: ['시련', ''], summonLine: '염라대왕: "명부에 적힌 이름은 지울 수 없느니라!"',
   waves() { return []; },
   theme: {
@@ -89,6 +121,6 @@ MAPS.tower = {
   },
 };
 
-export const BOSS_TYPES = new Set(['boss', 'gumiho', 'reaper', 'imugi', 'bulgasari', 'yeomra']);
-export const BOSS_NAME = { palace: '도깨비 대왕 두억시니', bamboo: '천년 구미호', temple: '저승사자', swamp: '천년 이무기', canyon: '쇠먹는 불가사리' };
-export const WIN_LINE = { palace: '도깨비들이 달아나고 동이 튼다', bamboo: '여우들이 숲 깊이 사라진다', temple: '망자들이 저승으로 돌아간다', swamp: '늪의 물안개가 걷히고 수면이 잠잠해진다', canyon: '가마의 불이 사그라들고 쇳소리가 멎는다' };
+export const BOSS_TYPES = new Set(['boss', 'gumiho', 'reaper', 'imugi', 'bulgasari', 'baekho', 'dragon', 'yeomra']);
+export const BOSS_NAME = { palace: '도깨비 대왕 두억시니', bamboo: '천년 구미호', temple: '저승사자', swamp: '천년 이무기', canyon: '쇠먹는 불가사리', fortress: '산군 백호', sea: '동해 용왕' };
+export const WIN_LINE = { palace: '도깨비들이 달아나고 동이 튼다', bamboo: '여우들이 숲 깊이 사라진다', temple: '망자들이 저승으로 돌아간다', swamp: '늪의 물안개가 걷히고 수면이 잠잠해진다', canyon: '가마의 불이 사그라들고 쇳소리가 멎는다', fortress: '산성의 봉화가 잦아들고 단풍잎만 흩날린다', sea: '소용돌이가 잦아들고 용궁에 고요한 물빛이 돈다' };

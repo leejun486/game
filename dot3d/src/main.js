@@ -32,13 +32,15 @@ const V = (x, y, z) => new THREE.Vector3(x, y, z);
 function _noTower(g) { return g.tower?.active ? { mapId: 'canyon' } : {}; }
 
 // 보스 등장 연출의 별칭 / 단계 전환 대사
-const BOSS_EPITHET = { boss: '도깨비들의 왕', gumiho: '천 년을 산 여우', reaper: '명부를 든 저승의 사자', imugi: '용이 되지 못한 뱀', bulgasari: '쇠를 먹고 자라는 괴물', yeomra: '저승을 다스리는 왕' };
+const BOSS_EPITHET = { boss: '도깨비들의 왕', gumiho: '천 년을 산 여우', reaper: '명부를 든 저승의 사자', imugi: '용이 되지 못한 뱀', bulgasari: '쇠를 먹고 자라는 괴물', baekho: '산을 다스리는 범의 왕', dragon: '동해를 다스리는 용', yeomra: '저승을 다스리는 왕' };
 const BOSS_PHASE_LINE = {
   boss: ['"금 나와라, 뚝딱! 금덩이 맛 좀 봐라!"', '"이놈! 혼쭐을 내주마!" — 쉬지 않고 뛰어내린다'],
   gumiho: ['"내 아이들아, 나와라" — 분신이 나타났다', '아홉 꼬리에서 여우불이 사방으로 쏟아진다'],
   reaper: ['명부에 이름이 적히면 낙인이 따라붙는다', '사방이 어둠에 잠긴다…'],
   imugi: ['늪 곳곳에서 물기둥이 솟는다', '"용이 되지 못할 바엔!" — 꼬리를 휘두른다'],
   bulgasari: ['쇠바늘이 달아올라 지나간 자리가 불탄다', '세 번 연달아 들이받는다!'],
+  baekho: ['포효가 산을 울리며 바람 발톱이 사방으로 날아간다', '세 번 연달아 덮쳐 온다!'],
+  dragon: ['바다가 끓어오르며 물기둥이 솟는다', '"감히 용궁을!" — 몸을 휘감아 휘두른다'],
   yeomra: ['"판관들아, 나와라" — 판결이 다섯 번 내려친다', '지옥의 불이 사방으로 터져 나간다'],
 };
 
@@ -98,7 +100,7 @@ class Game {
     this.cleared = {};
     this.regionBanner = {};
     // 퀘스트 진행: step = QUESTS 순번, prog = 이 단계 진행도, lit = 밝힌 석등, bounty = 현상수배
-    this.quest = { step: 0, prog: {}, lit: [], bounty: null, shards: [], prologue: false, ended: false };
+    this.quest = { step: 0, prog: {}, lit: [], bounty: null, shards: [], prologue: false, ended: false, qv: 2 };
     this.flames = [];
     this.fieldT = 0;
     this.themeCur = this.cloneTheme(MAPS.palace.theme);
@@ -386,6 +388,16 @@ class Game {
         '여기가 옛 대장간 터요. 불가사리란 놈이 쇠붙이란 쇠붙이는 죄다 먹어 치웠지.',
         '바닥의 분화구가 벌겋게 달아오르면 곧 터지니 얼른 비키시오.',
         '돌장승은 칼이 잘 안 먹히오. 얼리거나 기술로 몰아치시오.',
+      ]),
+      new NPC(this, 'captain', 9.5, 226.9, -2.6, '의병장 강호', [
+        '이 산성은 임진년 난리 때 의병들이 지키던 곳이오.',
+        '산적 도깨비는 몽둥이로 후려치고, 까마귀 요괴는 하늘에서 깃털 화살을 세 발씩 쏘오.',
+        '범은 몸을 날려 덮치니, 몸을 낮추면 옆으로 비키시오.',
+      ]),
+      new NPC(this, 'envoy', -9.5, 273.1, 2.6, '용녀 해랑', [
+        '여기는 동해 용왕님의 궁이에요. 뭍사람은 정말 오랜만이네요.',
+        '해파리의 독 방울을 맞으면 몸이 무거워져요. 거북 장군은 등딱지가 아주 단단하고요.',
+        '본전 앞 용고를 울리면 용왕님이 나오세요… 지금은 성정이 사나우시니 조심하세요.',
       ]),
       new NPC(this, 'ferry', -12.5, 135.5, 2.4, '사공 영감', [
         '이 늪은 물이 얕아도 발이 푹푹 빠지오. 나무 다리를 따라 다니시오.',
@@ -963,11 +975,14 @@ class Game {
     if (d.cleared) this.cleared = { ...d.cleared };
     else if (d.round > 0) this.cleared = { palace: true };
     // 퀘스트: 예전 기록은 평정한 지역으로 진행 단계를 짐작
-    if (d.quest && typeof d.quest.step === 'number') this.quest = { step: d.quest.step, prog: d.quest.prog || {}, lit: d.quest.lit || [], bounty: d.quest.bounty || null, shards: d.quest.shards || [], prologue: !!d.quest.prologue, ended: !!d.quest.ended };
+    if (d.quest && typeof d.quest.step === 'number') this.quest = { step: d.quest.step, prog: d.quest.prog || {}, lit: d.quest.lit || [], bounty: d.quest.bounty || null, shards: d.quest.shards || [], prologue: !!d.quest.prologue, ended: !!d.quest.ended, qv: d.quest.qv };
     else {
       const c = this.cleared;
       this.quest.step = c.temple ? 11 : c.bamboo ? 7 : c.palace ? 2 : (d.stage | 0) >= 1 ? 1 : 0;
     }
+    // 단풍 산성·용궁이 생기기 전 기록: 협곡 다음(귀환·완료)이었으면 새 지역의 첫 단계(산길 너머)부터
+    if (!this.quest.qv && this.quest.step >= 21) { this.quest.step = 21; this.quest.prog = {}; }
+    this.quest.qv = 2;
     // 이야기가 생기기 전 기록: 이미 평정한 지역의 조각은 가진 것으로, 프롤로그는 건너뜀
     if (!d.quest?.shards) this.quest.shards = Object.keys(this.cleared).filter((k) => SHARD_LINES[k]);
     if (this.quest.step > 0 || this.round > 0) this.quest.prologue = true;
@@ -1143,7 +1158,7 @@ class Game {
     this.kills = 0; this.round = 0; this.stage = 0; this.bestCombo = 0; this.playTime = 0; this.flags = {}; this.stats = newStats();
     this.progress = {}; this.inv = new Set(['sw0', 'mg0', 'bw0', 'sp0', 'ot0']); this.gear = [];
     this.cleared = {};
-    this.quest = { step: 0, prog: {}, lit: [], bounty: null, shards: [], prologue: false, ended: false };
+    this.quest = { step: 0, prog: {}, lit: [], bounty: null, shards: [], prologue: false, ended: false, qv: 2 };
     for (const f of this.flames) this.scene.remove(f);
     this.flames = [];
     this.updateGates(true);
@@ -1712,10 +1727,33 @@ class Game {
     const p = this.player.pos;
     const dx = tx - p.x, dz = tz - p.z, d = Math.hypot(dx, dz) || 1;
     let mx = dx / d, mz = dz / d;
+    this.steerNoPath = false;
     if (!(d < 7 && this.world.clearLine(p.x, p.z, tx, tz, 0.4))) {
       this.world.updateFlow(tx, tz, 0, slot, maxD);
       const nd = this.world.navDir(p, 0, slot);
-      if (nd) { mx = nd.x; mz = nd.z; }
+      if (nd) { mx = nd.x; mz = nd.z; } else this.steerNoPath = true;
+    }
+    // 돌탑·석등 모서리에 정면으로 걸려 제자리걸음이면 잠깐 옆으로 비켜 감 (좌우를 번갈아)
+    const lp = this.steerLast;
+    this.steerStuck = lp && Math.hypot(p.x - lp.x, p.z - lp.z) < 0.01 ? (this.steerStuck || 0) + 1 : 0;
+    this.steerLast = { x: p.x, z: p.z };
+    if (this.steerStuck > 6) {
+      // 닿아 있는 둥근 장애물이 있으면 그 둘레를 따라(가려는 쪽으로) 돌고, 없으면 옆·뒤로 번갈아
+      let c = null, cd = 1.2;
+      for (const o of this.world.circles) { const k = Math.hypot(p.x - o.x, p.z - o.z) - o.r; if (k < cd) { cd = k; c = o; } }
+      let sx, sz;
+      if (c) {
+        const ox = (p.x - c.x) / (Math.hypot(p.x - c.x, p.z - c.z) || 1), oz = (p.z - c.z) / (Math.hypot(p.x - c.x, p.z - c.z) || 1);
+        let tx = -oz, tz = ox;
+        if (tx * mx + tz * mz < 0) { tx = -tx; tz = -tz; }
+        if (Math.floor(this.steerStuck / 40) % 2) { tx = -tx; tz = -tz; }
+        sx = tx + ox * 0.35; sz = tz + oz * 0.35;
+      } else {
+        const a = [Math.PI / 2, -Math.PI / 2, Math.PI, Math.PI / 4][Math.floor(this.steerStuck / 15) % 4];
+        sx = mx * Math.cos(a) - mz * Math.sin(a); sz = mx * Math.sin(a) + mz * Math.cos(a);
+      }
+      const l = Math.hypot(sx, sz) || 1;
+      mx = sx / l; mz = sz / l;
     }
     inp.mx = mx; inp.mz = mz; inp.moveLen = 1; inp.mouseRecent = false; inp.mouseWorld = null;
     return inp;
@@ -1761,6 +1799,7 @@ class Game {
     for (const e of this.enemies) {
       if (e.dead || e.spawning || (aggroOnly && e.field && !e.aggro)) continue;
       const d = Math.hypot(e.pos.x - p.x, e.pos.z - p.z);
+      if (e.huntSkipT > this.time) continue; // 길이 없어 잠시 포기한 적 (닫힌 문 너머 등)
       if (d < bd && Math.abs(e.pos.y - p.y) < 1.6) { bd = d; best = e; }
     }
     return best;
@@ -1770,7 +1809,7 @@ class Game {
   autoHuntStep(inp, dt) {
     const p = this.player;
     const range = { sword: 1.6, mage: 6.5, elf: 7.5, lancer: 2.6 }[p.cls];
-    const t = this.validTarget(this.target) && Math.hypot(this.target.pos.x - p.pos.x, this.target.pos.z - p.pos.z) < 24 ? this.target : this.nearestEnemy(24);
+    const t = this.validTarget(this.target) && !(this.target.huntSkipT > this.time) && Math.hypot(this.target.pos.x - p.pos.x, this.target.pos.z - p.pos.z) < 24 ? this.target : this.nearestEnemy(24);
     if (!t) {
       let dr = null, dd = 14;
       for (const d of this.drops) { const k = Math.hypot(d.g.position.x - p.pos.x, d.g.position.z - p.pos.z); if (k < dd) { dd = k; dr = d; } }
@@ -1789,7 +1828,13 @@ class Game {
       : lv >= SKILL_LEVEL[3] && (p.cd3 || 0) <= 0 ? 3 : 0;
     // 기술마다 닿는 거리: 멀리 나가는 기술(검기, 일섬, 창기, 도약, 창비)은 붙지 않고 그 거리에서 바로 씀
     const reach = ready ? ({ sword: { 1: 6, 2: 6, 3: 2 }, lancer: { 1: 6, 2: 6, 3: 9, ult: 5 } }[p.cls]?.[ready] ?? range) : range;
-    if (d > Math.max(range, ready ? reach : 0)) return this.steerTo(inp, t.pos.x, t.pos.z, 2, 80);
+    if (d > Math.max(range, ready ? reach : 0)) {
+      this.steerTo(inp, t.pos.x, t.pos.z, 2, 80);
+      // 1초 넘게 길을 못 찾으면 그 적은 잠시 쫓지 않음
+      t.noPathT = this.steerNoPath ? (t.noPathT || 0) + dt : 0;
+      if (t.noPathT > 1) { t.huntSkipT = this.time + 8; t.noPathT = 0; this.target = null; }
+      return inp;
+    }
     // 사거리 안: 적을 바라보고 (마우스 방향 말고) 공격
     p.yaw = Math.atan2(t.pos.x - p.pos.x, t.pos.z - p.pos.z);
     inp.mouseRecent = false; inp.mouseWorld = null;
@@ -1868,6 +1913,8 @@ class Game {
       temple: ['bell', '금줄이 걷혔다! 일주문 너머 폐사찰로 들어갈 수 있다'],
       swamp: ['bell', '뒷문의 부적이 떨어졌다! 폐사찰 뒤편으로 가면 물안개 늪이다'],
       canyon: ['slam', '무너진 바위가 치워졌다! 늪 남동쪽 길로 가면 불가사리 협곡이다'],
+      fortress: ['slam', '목책이 치워졌다! 협곡 남동쪽 산길로 가면 단풍 산성이다'],
+      sea: ['bell', '금줄이 걷혔다! 산성 남서쪽 바위 사이 물길로 내려가면 용궁이다'],
     };
     QUESTS.forEach((q, i) => {
       if (!q.gateAfter) return;
@@ -2216,6 +2263,7 @@ class Game {
   // ---------- 저승 시련탑 (엔드게임) ----------
   // 층마다 섞인 적 무리, 5층마다 지역 보스, 10층마다 염라대왕. 5층 단위로 이어서 도전
   towerUnlocked() { return !!this.cleared.canyon; }
+  towerZ() { return this.world.regions.find((r) => r.id === 'tower').center[1]; }
 
   usePortal(P) {
     if (P.kind === 'enter') {
@@ -2232,7 +2280,7 @@ class Game {
     const P = this.world.portals.find((x) => x.kind === 'enter');
     this.towerReturn = V(P.x, 0, P.z - 1.6);
     this.tower = { active: true, floor: start, best, cleared: true };
-    this.teleport(0, 270);
+    this.teleport(0, this.towerZ() + 8);
     this.audio.play('portal');
     this.ui.banner('저승 시련탑', start ? `${start + 1}층부터 이어서 도전` : '끝없는 저승의 탑', 2.6, 'night-banner');
     this.after(2.2, () => { if (this.tower?.active) this.startTowerFloor(start + 1); });
@@ -2260,10 +2308,10 @@ class Game {
       return out;
     }
     if (n % 5 === 0) {
-      const bosses = ['boss', 'gumiho', 'reaper', 'imugi', 'bulgasari'];
+      const bosses = ['boss', 'gumiho', 'reaper', 'imugi', 'bulgasari', 'baekho', 'dragon'];
       const b = bosses[(n / 5 - 1) % bosses.length];
       out.push({ type: b });
-      const adds = { boss: ['red', 'blue'], gumiho: ['fox', 'foxfire'], reaper: ['ghost', 'jiangshi'], imugi: ['waterghost', 'toad'], bulgasari: ['firedok', 'stonegolem'] }[b];
+      const adds = { boss: ['red', 'blue'], gumiho: ['fox', 'foxfire'], reaper: ['ghost', 'jiangshi'], imugi: ['waterghost', 'toad'], bulgasari: ['firedok', 'stonegolem'], baekho: ['tiger', 'bandit'], dragon: ['crab', 'jelly'] }[b];
       for (let i = 0; i < 3; i++) out.push({ type: adds[i % 2] });
       return out;
     }
@@ -2284,7 +2332,7 @@ class Game {
     this.player.hp = Math.min(this.player.maxHp, this.player.hp + Math.round(this.player.maxHp * 0.3));
     const list = this.towerWave(n);
     const boss = list.some((q) => BOSS_TYPES.has(q.type));
-    this.ui.banner(`${n}층`, boss ? `${{ boss: '도깨비 대왕', gumiho: '천년 구미호', reaper: '저승사자', imugi: '천년 이무기', bulgasari: '불가사리', yeomra: '염라대왕' }[list[0].type]} 출현!` : `적 ${list.length}마리${list.some((q) => q.elite) ? ' · 정예 포함' : ''}`, 2.4, boss ? 'boss-banner' : '');
+    this.ui.banner(`${n}층`, boss ? `${{ boss: '도깨비 대왕', gumiho: '천년 구미호', reaper: '저승사자', imugi: '천년 이무기', bulgasari: '불가사리', baekho: '산군 백호', dragon: '동해 용왕', yeomra: '염라대왕' }[list[0].type]} 출현!` : `적 ${list.length}마리${list.some((q) => q.elite) ? ' · 정예 포함' : ''}`, 2.4, boss ? 'boss-banner' : '');
     this.audio.play(boss ? 'gong' : 'wave');
     let delay = 1.0;
     for (const q of list) {
@@ -2308,7 +2356,7 @@ class Game {
     this.fx.number(this.player.pos.clone().add(V(0, 2.4, 0)), `+${exp} EXP`, 'exp');
     // 보상: 층이 높을수록 좋은 장비, 처음 돌파하면 하나 더. 5층마다 세트 조각
     const lv = 1 + n + Math.floor((this.player.level - 1) / 3);
-    const center = V(0, 0, 262);
+    const center = V(0, 0, this.towerZ());
     const k = 1 + (first ? 1 : 0) + (n % 5 === 0 ? 1 : 0);
     for (let i = 0; i < k; i++) this.spawnDrop(V(center.x + rand(-1.5, 1.5), 0, center.z + 2 + rand(-1, 1)), makeGear(lv, rollGearTier(0.3 + n * 0.03, n / 5)));
     if (n % 5 === 0) {
@@ -2499,6 +2547,7 @@ class Game {
     let mul = (pl.atkMul || 1) * (pl.cfg.power || 1); // power: 직업별 위력 보정 (classes.js)
     if (perks?.has('rage') && pl.hp < pl.maxHp * 0.4) mul *= 1.35;
     if (perks?.has('verdict') && (e.isBoss || e.elite)) mul *= 1.3;
+    if (perks?.has('hunter') && !e.isBoss && !e.elite) mul *= 1.25;
     const exec = perks?.has('execute') && e.hp < e.maxHp * 0.35;
     if (exec) mul *= 1.6;
     // 장비 옵션: 치명타 확률·치명타 피해
@@ -3045,6 +3094,48 @@ class Game {
             if (!o.dead && !o.isBoss) o.freeze(1.2);
           }
         });
+      });
+    } else if (pl.ult === 'tigerclaw') {
+      // 백호 발톱: 앞으로 세 번 크게 할퀴며 나아감. 맞은 적은 기절
+      this.audio.play('howl');
+      for (let i = 0; i < 3; i++) this.after(0.1 + i * 0.26, () => {
+        if (pl.dead) return;
+        const fx = Math.sin(pl.yaw), fz = Math.cos(pl.yaw);
+        this.world.move(pl.pos, fx * 1.6, fz * 1.6, pl.radius);
+        const c = V(pl.pos.x + fx * 1.8, pl.y, pl.pos.z + fz * 1.8);
+        this.fx.slash(V(pl.pos.x, pl.y + 0.9, pl.pos.z), pl.yaw + (i - 1) * 0.5, 0, { inner: 0.6, outer: 3.4, len: 2.4, dur: 0.3, color: i === 1 ? '#ffffff' : '#ffb060' });
+        this.fx.ring(c, 3, '#ffd0a0', 0.3);
+        this.audio.play('swing3');
+        this.shake(0.25 + i * 0.1);
+        this.hitstop = Math.max(this.hitstop, 0.05);
+        for (const o of this.enemiesIn(c, 3.2)) {
+          const crit = Math.random() < 0.3;
+          this.damageEnemy(o, Math.round(rand(58, 68) * (1 + i * 0.2) * (crit ? 1.8 : 1)), crit, 7, 0.6);
+        }
+      });
+    } else if (pl.ult === 'dragonstorm') {
+      // 용왕의 폭풍: 주위 적 여덟에게 차례로 벼락, 마지막엔 둥근 해일
+      const c = feet();
+      const tgt = this.enemies.filter((e) => !e.dead && !e.spawning && Math.hypot(e.pos.x - c.x, e.pos.z - c.z) < 11)
+        .sort((a, b) => Math.hypot(a.pos.x - c.x, a.pos.z - c.z) - Math.hypot(b.pos.x - c.x, b.pos.z - c.z)).slice(0, 8);
+      this.audio.play('charge');
+      this.ui.flash('#9ad8ff', 0.3);
+      tgt.forEach((e, i) => this.after(0.2 + i * 0.12, () => {
+        if (pl.dead || e.dead) return;
+        const at = V(e.pos.x, e.y, e.pos.z);
+        this.fx.bolt(at, 1.1);
+        this.fx.ring(at, 1.8, '#bfe8ff', 0.3);
+        this.audio.play('thunder');
+        const crit = Math.random() < 0.25;
+        this.damageEnemy(e, Math.round(rand(62, 74) * (crit ? 1.8 : 1)), crit, 3, 0.5);
+      }));
+      this.after(0.3 + tgt.length * 0.12, () => {
+        if (pl.dead) return;
+        const f = feet();
+        this.fx.ring(f, 5, '#2a9aff', 0.5);
+        this.fx.ring(f, 4.4, '#e8fff8', 0.35);
+        this.shake(0.4);
+        for (const o of this.enemiesIn(f, 5)) this.damageEnemy(o, Math.round(rand(40, 48)), false, 8, 0.4);
       });
     } else if (pl.ult === 'judgment') {
       // 명부 집행: 주변 적 여섯에게 낙인 → 1초 뒤 하늘에서 심판
@@ -3835,6 +3926,21 @@ class Game {
       e.freeze(1.0);
       this.fx.colorFire(c.x, c.y, c.z, 12, 0.3, '#e8fff8', '#2affd0');
     }
+    if (pl.perks.has('storm') && !this.inQuake && Math.random() < 0.15) {
+      // 용왕 비늘: 가까운 적 셋에게 번개가 튐
+      this.inQuake = true;
+      let prev = c.clone();
+      const near = this.enemies.filter((o) => o !== e && !o.dead && !o.spawning && Math.hypot(o.pos.x - e.pos.x, o.pos.z - e.pos.z) < 6)
+        .sort((a, b) => Math.hypot(a.pos.x - e.pos.x, a.pos.z - e.pos.z) - Math.hypot(b.pos.x - e.pos.x, b.pos.z - e.pos.z)).slice(0, 3);
+      for (const o of near) {
+        const oc = o.center().clone();
+        this.fx.arc(prev, oc, '#9ad8ff', 0.6);
+        this.damageEnemy(o, Math.max(4, Math.round(base * 0.7)), false, 2, 0.3);
+        prev = oc;
+      }
+      if (near.length) this.audio.play('thunder');
+      this.inQuake = false;
+    }
     if (pl.perks.has('quake') && !this.inQuake && Math.random() < 0.2) {
       // 도깨비 벼락: 맞은 적 자리에 벼락 + 주변 충격파
       this.inQuake = true;
@@ -3866,13 +3972,13 @@ class Game {
       if (!bd.some((id) => item(id).kind === 'weapon')) this.after(1.2, () => this.ui.toast('보스 무기는 나오지 않았어요… 다시 도전해 보세요', 2.4));
     }
     // 방어구·장신구: 일반 몬스터는 가끔, 보스는 두세 개 (등급이 높게)
-    const gearN = e.isBoss ? 2 + (Math.random() < 0.5 ? 1 : 0) : Math.random() < (e.field ? 0.16 : 0.12) ? 1 : 0;
+    const gearN = e.isBoss ? 1 + (Math.random() < 0.5 ? 1 : 0) : Math.random() < (e.field ? 0.08 : 0.06) ? 1 : 0;
     for (let i = 0; i < gearN; i++) {
       const strong = e.isBoss ? 0.6 : e.T.hp > 60 ? 0.12 : 0;
       const lv = Math.max(1, e.lvl || 1) + this.round;
       // 가끔은 그 지역 세트의 조각 (보스는 자주)
       const sid = setFor(e.type);
-      if (sid && Math.random() < (e.isBoss ? 0.4 : 0.09)) this.spawnDrop(e.pos, makeSetPiece(sid, lv));
+      if (sid && Math.random() < (e.isBoss ? 0.3 : 0.06)) this.spawnDrop(e.pos, makeSetPiece(sid, lv));
       else this.spawnDrop(e.pos, makeGear(lv, rollGearTier(strong, this.round)));
     }
     const pl = this.player;
@@ -4087,6 +4193,17 @@ class Game {
       // 늪: 낮게 깔려 흐르는 물안개
       if (Math.random() < dt * 9) this.fx.norm.emit({ x: f.x + rand(-20, 20), y: rand(0.2, 1.2), z: f.z + rand(-16, 12), vx: rand(0.2, 0.6), vy: 0.02, vz: rand(-0.1, 0.1), wob: 0.3, life: rand(5, 8), size: rand(10, 16), endSize: 18, color: '#e8f4ec', alpha: 0.16 });
     }
+    if (amb === 'maple' && Math.random() < dt * 9) {
+      // 산성: 붉고 노란 단풍잎이 밤낮없이 흩날림
+      const r = Math.random();
+      this.fx.norm.emit({ x: f.x + rand(-18, 18), y: rand(4, 8), z: f.z + rand(-16, 10), vx: rand(0.3, 1.0), vy: -0.6, vz: rand(-0.2, 0.3), wob: 1.8, life: 8, size: Math.random() < 0.3 ? 3 : 2, color: r < 0.45 ? '#e04a2a' : r < 0.8 ? '#f08a2a' : '#f4c040', floor: 0.02 });
+    }
+    if (amb === 'bubble') {
+      // 용궁: 바닥에서 떠오르는 물방울과 물속의 빛 알갱이
+      if (Math.random() < dt * 12) this.fx.norm.emit({ x: f.x + rand(-20, 20), y: rand(0, 1), z: f.z + rand(-16, 12), vx: rand(-0.1, 0.1), vy: rand(0.8, 1.6), vz: rand(-0.1, 0.1), wob: 0.6, life: rand(3, 5), size: Math.random() < 0.3 ? 3 : 2, color: '#e8f8ff', alpha: 0.7 });
+      if (Math.random() < dt * 6) this.fx.add.emit({ x: f.x + rand(-18, 18), y: rand(1, 5), z: f.z + rand(-14, 10), vx: rand(0.1, 0.4), vy: rand(-0.1, 0.1), vz: rand(-0.1, 0.1), wob: 0.8, life: rand(3, 5), size: 2, color: '#9ae8ff', flicker: 0.5 });
+      return;
+    }
     if (amb === 'leaf' && Math.random() < dt * 7 * (1 - n)) {
       this.fx.norm.emit({ x: f.x + rand(-18, 18), y: rand(4, 7), z: f.z + rand(-16, 10), vx: rand(0.2, 0.8), vy: -0.7, vz: rand(-0.2, 0.3), wob: 1.6, life: 7, size: 2, color: Math.random() < 0.5 ? '#8ad06a' : '#c8e08a', floor: 0.02 });
     }
@@ -4169,7 +4286,7 @@ class Game {
     const night = this.night > 0.5;
     const region = id === 'palace' ? (night ? 'night' : 'palace') : id === 'tower' ? (this.tower?.active && !this.tower.cleared ? 'battle' : 'tower') : id;
     const music = boss ? 'boss' : this.waveActive || this.combatHeat > 0 ? 'battle' : region;
-    const amb = id === 'palace' ? (night ? 'amb_night' : 'amb_day') : id === 'bamboo' ? (night ? 'amb_night' : 'amb_bamboo') : id === 'swamp' ? 'amb_swamp' : id === 'canyon' ? 'amb_canyon' : id === 'tower' ? 'amb_tower' : 'amb_temple';
+    const amb = id === 'palace' ? (night ? 'amb_night' : 'amb_day') : id === 'bamboo' ? (night ? 'amb_night' : 'amb_bamboo') : id === 'swamp' ? 'amb_swamp' : id === 'canyon' ? 'amb_canyon' : id === 'fortress' ? 'amb_fortress' : id === 'sea' ? 'amb_sea' : id === 'tower' ? 'amb_tower' : 'amb_temple';
     this.audio.setScene(music, amb);
   }
 

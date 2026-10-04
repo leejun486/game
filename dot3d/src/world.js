@@ -6,6 +6,7 @@ import * as T from './textures.js';
 import { mulberry32 } from './util.js';
 import { buildBamboo, buildTemple } from './worlds2.js';
 import { buildSwamp, buildCanyon, buildTower } from './worlds3.js';
+import { buildFortress, buildSeaPalace } from './worlds4.js';
 import { GFX } from './gfx.js';
 import * as HD from './hdtex.js';
 
@@ -17,9 +18,11 @@ export const REGIONS = [
   { id: 'bamboo', ox: 0, oz: 55.6, flip: false, x0: -19.6, x1: 19.6, z0: 29, z1: 78, from: 29.5, to: 77.2, spawn: [0, 0, 36] },
   { id: 'temple', ox: 0, oz: 98.8, flip: true, x0: -19.6, x1: 19.6, z0: 76.2, z1: 124.4, from: 77.2, to: 124.2, spawn: [0, 0, 84] },
   { id: 'swamp', ox: 0, oz: 150.5, flip: false, x0: -19.6, x1: 19.6, z0: 122.4, z1: 172.6, from: 124.2, to: 172.6, spawn: [-11, 0, 133], center: [1, 147] },
-  { id: 'canyon', ox: 0, oz: 198.7, flip: false, x0: -19.6, x1: 19.6, z0: 170.6, z1: 220.8, from: 172.6, to: 240, spawn: [12, 0, 178], center: [0, 196] },
+  { id: 'canyon', ox: 0, oz: 198.7, flip: false, x0: -19.6, x1: 19.6, z0: 170.6, z1: 220.8, from: 172.6, to: 220.8, spawn: [12, 0, 178], center: [0, 196] },
+  { id: 'fortress', ox: 0, oz: 246.9, flip: false, x0: -19.6, x1: 19.6, z0: 220.4, z1: 270.4, from: 220.8, to: 270, spawn: [14, 0, 224], center: [0, 238] },
+  { id: 'sea', ox: 0, oz: 295.1, flip: false, x0: -19.6, x1: 19.6, z0: 269.4, z1: 319.4, from: 270, to: 330, spawn: [-14, 0, 272], center: [0, 292] },
   // 시련탑: 다른 지역과 떨어진 허공의 단 (저승 문으로만 오감)
-  { id: 'tower', ox: 0, oz: 262, flip: false, x0: -16.5, x1: 16.5, z0: 245.5, z1: 278.5, from: 240, to: 1e9, spawn: [0, 0, 272], center: [0, 262] },
+  { id: 'tower', ox: 0, oz: 362, flip: false, x0: -16.5, x1: 16.5, z0: 345.5, z1: 378.5, from: 330, to: 1e9, spawn: [0, 0, 372], center: [0, 362] },
 ];
 
 export class World {
@@ -64,6 +67,8 @@ export class World {
     else if (R.id === 'temple') buildTemple(this);
     else if (R.id === 'swamp') buildSwamp(this);
     else if (R.id === 'canyon') buildCanyon(this);
+    else if (R.id === 'fortress') buildFortress(this);
+    else if (R.id === 'sea') buildSeaPalace(this);
     else if (R.id === 'tower') buildTower(this);
     const f = (x, z) => (R.flip ? [R.ox - x, R.oz - z] : [R.ox + x, R.oz + z]);
     const box = (r) => {

@@ -1,7 +1,7 @@
 {
   "name": "wolhagung",
   "productName": "월하궁 도깨비 야행",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "월하궁: 도깨비 야행 — 데스크톱판",
   "main": "main.js",
   "private": true,

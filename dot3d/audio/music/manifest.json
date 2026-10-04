@@ -83,5 +83,25 @@
   "samples": 1389150,
   "rate": 44100,
   "dur": 31.5
+ },
+ "fortress": {
+  "samples": 2352000,
+  "rate": 44100,
+  "dur": 53.3333
+ },
+ "sea": {
+  "samples": 2222639,
+  "rate": 44100,
+  "dur": 50.4
+ },
+ "amb_fortress": {
+  "samples": 1389150,
+  "rate": 44100,
+  "dur": 31.5
+ },
+ "amb_sea": {
+  "samples": 1389150,
+  "rate": 44100,
+  "dur": 31.5
  }
 }

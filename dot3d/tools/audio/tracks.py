@@ -242,6 +242,54 @@ def tower():
     return T, make_ir(4.8, 1.9, 4200, 900, seed=29), 1.0
 
 
+def fortress():
+    """단풍 산성: 굿거리, 평조. 태평소가 성벽 위에서 울리고 북과 꽹과리가 군악처럼 받침"""
+    sub, subs, cyc = 60 / 72 / 3, 12, 8
+    T = Track('fortress', sub * subs * cyc * 2, 111)
+    tonic, sc = 233.08, PYEONG
+    tune = make_tune(T.rng, subs, cyc, [3, 0, 3, 0, 7, 5, 3, 0], -1, 8)
+    P = sub * subs * cyc
+    lead(T, tune, 0, sub, subs, I_daegeum, tonic, sc, 'pyeong', pan=0.2, gain=1.0, octave=2, vel=0.75)
+    lead(T, tune, P, sub, subs, I_taep, tonic, sc, 'pyeong', pan=0.2, gain=0.75, send=0.4, octave=1, vel=0.8)
+    lead(T, tune, P, sub, subs, I_haegeum, tonic, sc, 'pyeong', pan=-0.25, gain=0.45, octave=1, vel=0.6)
+    for k in (0, 1):
+        gayageum_hetero(T, tune, k * P, sub, subs, tonic, sc, 'pyeong', gain=0.75, busy=0.6 + 0.3 * k)
+        bass_part(T, tune, k * P, sub, subs, tonic, sc, gain=0.7)
+    for c in range(cyc * 2):
+        T.add(buk(0.8, low=True), c * subs * sub, 0.0, 0.6, 0.3)
+        if c >= cyc:
+            for s0 in (0, 3, 6, 9):
+                T.add(kkwaenggwari(0.35 if s0 else 0.5, damped=s0 % 6 != 0), (c * subs + s0) * sub, 0.35, 0.4, 0.25)
+        if c % 4 == 0:
+            T.add(jing(0.6, 4.0), c * subs * sub, 0.0, 0.6, 0.45)
+    janggu_part(T, 'gutgeori', 0, sub, cyc * 2, gain=0.65)
+    return T, make_ir(2.8, 1.0, 6000, 1700, seed=31), 0.6
+
+
+def sea():
+    """용궁: 세마치, 평조. 물결처럼 오르내리는 가야금 위로 대금이 길게, 아쟁이 물밑처럼 깔림"""
+    sub, subs = 0.7 / 3, 9
+    cyc = 12
+    T = Track('sea', sub * subs * cyc * 2, 121)
+    tonic, sc = 174.61, PYEONG
+    tune = make_tune(T.rng, subs, cyc, [3, 0, 5, 3, 7, 5, 3, 0], -1, 8)
+    P = sub * subs * cyc
+    lead(T, tune, 0, sub, subs, I_daegeum, tonic, sc, 'pyeong', pan=0.2, gain=0.95, send=0.6, octave=2, vel=0.65)
+    lead(T, tune, P, sub, subs, I_haegeum, tonic, sc, 'pyeong', pan=0.2, gain=0.85, send=0.6, octave=2, vel=0.65)
+    for c in range(cyc * 2):
+        T.add(ajaeng(freq(tonic / 2, sc, 0 if c % 4 != 2 else 3), subs * sub * 1.02, 0.45), c * subs * sub, -0.25, 0.75, 0.55)
+        # 물결: 가야금이 아래에서 위로 쓸어 올림
+        if c % 2 == 0:
+            for i, d in enumerate([0, 1, 2, 3, 4, 5, 7]):
+                T.add(gayageum(freq(tonic, sc, d), 1.2, 0.35 + 0.04 * i, bright=1.1), c * subs * sub + i * 0.09, -0.5 + i * 0.15, 0.6, 0.5)
+    for k in (0, 1):
+        gayageum_hetero(T, tune, k * P, sub, subs, tonic, sc, 'pyeong', gain=0.55, busy=0.5)
+    T.add(jing(0.45, 5.0), 0.0, 0.0, 0.5, 0.75)
+    T.add(jing(0.4, 5.0), P, 0.0, 0.45, 0.75)
+    janggu_part(T, 'semachi', 0, sub, cyc * 2, gain=0.4, sparse=True)
+    return T, make_ir(4.2, 1.6, 4200, 1000, seed=37), 0.9
+
+
 # ---------- 환경음 (지역 분위기) ----------
 
 def amb(name, L=32.0, seed=1):
@@ -349,6 +397,39 @@ def amb(name, L=32.0, seed=1):
         for at in (5.0, 19.0):
             m = int(2.5 * SR)
             drop(lowpass(noise(m), 90) * np.hanning(m), at, 0.0, 0.25)
+    elif name == 'amb_fortress':
+        wind(0.08, 200, 2500, 1.0)
+        # 마른 잎 바스락
+        for k in range(50):
+            at = r.random() * L
+            d = r.uniform(0.15, 0.5)
+            x = bandpass(noise(int(d * SR)), r.uniform(2500, 5000), 1.2) * np.hanning(int(d * SR))
+            drop(x, at, r.uniform(-0.9, 0.9), 0.02)
+        # 먼 까마귀와 깃발 펄럭임
+        for at in (7.0, 21.0):
+            for j in range(3):
+                d = 0.22
+                tt = np.arange(int(d * SR)) / SR
+                x = np.tanh(3 * np.sin(phase_of(560 * (1 - 0.2 * tt / d)))) * np.hanning(len(tt))
+                drop(lowpass(x, 2000), at + j * 0.35, 0.6, 0.02)
+        for k in range(6):
+            at = r.random() * L
+            m = int(1.2 * SR)
+            x = lowpass(noise(m), 700) * (0.5 + 0.5 * np.sign(np.sin(2 * np.pi * 9 * np.arange(m) / SR))) * np.hanning(m)
+            drop(x, at, r.uniform(-0.6, 0.6), 0.03)
+    elif name == 'amb_sea':
+        # 물속: 낮게 웅웅거리는 물결 + 떠오르는 물방울
+        for c in range(2):
+            out[:, c] += lowpass(noise(n), 220) * 0.06 * (0.6 + 0.4 * np.sin(2 * np.pi * t / L * 3 + c * 1.7))
+        for k in range(90):
+            at = r.random() * L
+            m = int(0.08 * SR)
+            tt = np.arange(m) / SR
+            x = np.sin(2 * np.pi * r.uniform(500, 1300) * (1 + 4 * tt) * tt) * exp_env(m, 0.02)
+            drop(x, at, r.uniform(-0.8, 0.8), 0.025)
+        for at in (9.0, 25.0):
+            m = int(3.0 * SR)
+            drop(lowpass(noise(m), 120) * np.hanning(m), at, 0.0, 0.2)
     elif name == 'amb_tower':
         wind(0.05, 60, 500, 1.0)
         # 멀리서 웅얼거리는 망자들 (포먼트 잡음)
@@ -396,8 +477,8 @@ def write(name, data, kbps_ogg_q=3, mp3='112k'):
     return {'samples': len(data), 'rate': SR, 'dur': round(len(data) / SR, 4)}
 
 
-TRACKS = {'title': title, 'palace': palace, 'night': night, 'bamboo': bamboo, 'temple': temple, 'swamp': swamp, 'canyon': canyon, 'tower': tower, 'battle': battle, 'boss': boss}
-AMBS = ['amb_day', 'amb_night', 'amb_bamboo', 'amb_temple', 'amb_swamp', 'amb_canyon', 'amb_tower']
+TRACKS = {'title': title, 'palace': palace, 'night': night, 'bamboo': bamboo, 'temple': temple, 'swamp': swamp, 'canyon': canyon, 'tower': tower, 'fortress': fortress, 'sea': sea, 'battle': battle, 'boss': boss}
+AMBS = ['amb_day', 'amb_night', 'amb_bamboo', 'amb_temple', 'amb_swamp', 'amb_canyon', 'amb_tower', 'amb_fortress', 'amb_sea']
 
 if __name__ == '__main__':
     want = sys.argv[1:]
