@@ -9,6 +9,7 @@
 - 버전: `src/version.js` (지금 1.1.0). 선택 화면 아래에 표시됩니다. 바뀐 점은 [CHANGELOG.md](CHANGELOG.md)에 적습니다.
 - 판매용 빌드, itch.io·Steam 올리는 순서, 스토어 소개문(한·영), 시스템 요구 사항, 체크리스트는 [RELEASE.md](RELEASE.md)에 있습니다.
 - 웹판 묶음: `npm run dist:web` → `release/Wolhagung-web-<버전>.zip`
+- 체험판 묶음: `npm run dist:demo` → `release/Wolhagung-demo-web-<버전>.zip` (월하궁·죽림·폐사찰까지, 저승사자를 물리치면 '체험판 끝' 안내. 스토어 주소는 `src/edition.js`의 `STORE_URL`)
 - 스토어 이미지: `marketing/screenshots/`(1920×1080 열 장), `marketing/capsules/`(Steam 캡슐 규격 일곱 장과 itch.io 표지)
 - 아이콘: `icon.png`(512), `favicon.png`(64)
 

@@ -7,6 +7,7 @@
 | 대상 | 명령 (dot3d 폴더에서) | 결과 |
 | --- | --- | --- |
 | 웹판 (itch.io 브라우저 플레이) | `npm run dist:web` | `release/Wolhagung-web-<버전>.zip` (약 20MB) |
+| 체험판 웹판 (스팀 넥스트 페스트·itch.io) | `npm run dist:demo` | `release/Wolhagung-demo-web-<버전>.zip` (보스 셋, 약 30~40분) |
 | Windows | `cd desktop && npm install && npm run dist:win` | `desktop/release/Wolhagung-<버전>-win-x64.zip`, `desktop/release/win-unpacked/` |
 | Linux | `cd desktop && npm run dist:linux` | AppImage |
 | macOS | `cd desktop && npm run dist:mac` (맥에서) | dmg (서명·공증은 Apple 개발자 계정 필요) |

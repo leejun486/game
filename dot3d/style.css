@@ -645,3 +645,6 @@ body.killcam #minimap, body.shot #minimap { display: none; }
 #worldmap-log ol li { padding: 3px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.06); color: #a89e8a; }
 #worldmap-log ol li i { display: inline-block; width: 26px; font-style: normal; color: #6a6476; }
 @media (max-width: 600px) { .wm-body { flex-direction: column; overflow-y: auto; } #worldmap-cv { width: 100%; max-height: 52vh; } #worldmap-log { max-height: none; } }
+
+/* 체험판 표시 */
+.demo-badge { display: inline-block; margin-top: 6px; padding: 2px 10px; border: 2px solid var(--gold); color: var(--gold); font-size: 13px; letter-spacing: 4px; background: rgba(20, 14, 30, 0.7); }

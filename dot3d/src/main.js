@@ -25,6 +25,7 @@ import { VERSION } from './version.js';
 import { Records, newStats } from './records.js';
 import { drop } from './dispose.js';
 import { MiniMap } from './minimap.js';
+import { DEMO, DEMO_LOCKED_GATES, DEMO_QUEST, DEMO_END_LINES } from './edition.js';
 import { spearHit, lancerSkill1, lancerSkill2, lancerSkill3, updateLancer, clearLancer } from './lancer.js';
 
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
@@ -339,7 +340,8 @@ class Game {
     btn('cf-yes', () => this.newGame(true));
     btn('cf-no', () => this.showConfirm(false));
     btn('btn-gfx', () => this.toggleGfx());
-    document.querySelector('#title .credit').textContent = `3D 액션 · Three.js · v${VERSION}`;
+    document.querySelector('#title .credit').textContent = `3D 액션 · Three.js · v${VERSION}${DEMO ? ' · 체험판' : ''}`;
+    if (DEMO) document.querySelector('#title .logo-big').insertAdjacentHTML('beforeend', '<span class="demo-badge">체험판</span>');
     btn('btn-lang', () => this.setLang(LANG === 'ko' ? 'en' : 'ko'));
     document.getElementById('btn-lang').textContent = LANG === 'ko' ? 'English' : '한국어';
     document.getElementById('btn-gfx').textContent = `그래픽: ${GFX.hd ? '고화질' : '도트'} (G)`;
@@ -1937,7 +1939,10 @@ class Game {
   }
 
   // ---------- 퀘스트 ----------
-  curQuest() { return QUESTS[this.quest.step] || null; }
+  curQuest() {
+    if (DEMO && this.quest.step >= DEMO_END) return DEMO_QUEST;
+    return QUESTS[this.quest.step] || null;
+  }
 
   needMet(need, prog) { return Object.entries(need).every(([t, n]) => (prog[t] || 0) >= n); }
 
@@ -1961,6 +1966,7 @@ class Game {
     const Q = this.curQuest();
     this.updateQuest();
     if (!Q) return;
+    if (Q === DEMO_QUEST) { if (!this.flags.demoEnd) { this.flags.demoEnd = 1; this.save(false); this.playStory(DEMO_END_LINES); } return; }
     this.ui.banner('새 임무', Q.title, 2.2, '');
     if (Q.type === 'kill' || Q.type === 'collect') this.coach.tip('hunt', 4);
     this.audio.play('wave');
@@ -2007,6 +2013,7 @@ class Game {
     QUESTS.forEach((q, i) => {
       if (!q.gateAfter) return;
       const id = q.gateAfter, st = i + 1;
+      if (DEMO && DEMO_LOCKED_GATES.has(id)) { this.world.setGate(id, false, instant); return; }
       this.world.setGate(id, this.quest.step >= st, instant);
       if (!instant && this.quest.step === st && !this.gateNotice?.[id]) {
         this.gateNotice = { ...(this.gateNotice || {}), [id]: true };
@@ -4604,6 +4611,8 @@ class Game {
 
 const _a = new THREE.Vector3(), _b = new THREE.Vector3(), _c = new THREE.Vector3(), _d = new THREE.Vector3();
 const _e = new THREE.Color();
+// 체험판이 끝나는 단계: 늪으로 가는 뒷문을 여는 임무(뒷문 너머)부터
+const DEMO_END = QUESTS.findIndex((q) => q.gateAfter === 'swamp');
 
 window.addEventListener('DOMContentLoaded', () => {
   initLang();
