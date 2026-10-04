@@ -41,7 +41,7 @@
      | Library hero 3840×1240 | library_hero_3840x1240.jpg |
      | Library logo 1280×720 | library_logo_1280x720.png (투명 배경) |
 
-   - 스크린샷: 1920×1080 다섯 장 이상이 필요합니다. `marketing/screenshots/`에 여섯 장이 있습니다.
+   - 스크린샷: 1920×1080 다섯 장 이상이 필요합니다. `marketing/screenshots/`에 열 장이 있습니다.
    - 트레일러는 아직 없습니다. 권장 사항이며, F2 스크린샷 모드로 화면을 녹화해 30~60초로 만들면 좋습니다.
 3. 빌드 올리기: SteamPipe(ContentBuilder/SteamCMD)로 `desktop/release/win-unpacked/` 폴더를 Windows 디포에 올립니다. 실행 파일은 `Wolhagung.exe`입니다.
 4. Steam Cloud: Auto-Cloud에 저장 경로를 등록합니다. 경로는 `%APPDATA%/Wolhagung/save.json`이고, Steamworks 설정의 Root는 WinAppDataRoaming, 하위 경로는 `Wolhagung`입니다.
