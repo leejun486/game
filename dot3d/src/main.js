@@ -165,6 +165,9 @@ class Game {
   updateLights(dt) {
     const n = this.night;
     shared.night.value = n;
+    // 림 라이트: 낮 따뜻한 흰빛 → 밤 달빛
+    shared.rimColor.value.setRGB(1 - n * 0.35, 0.94 - n * 0.16, 0.85 + n * 0.15);
+    shared.rimK.value = 0.32 + n * 0.3;
     this.blendTheme(dt);
     const th = this.themeCur;
     const c = (pair) => _e.copy(pair[0]).lerp(pair[1], n);

@@ -131,3 +131,30 @@ float seN(vec2 p) { vec2 i = floor(p), f = fract(p); vec2 u = f * f * (3.0 - 2.0
   softCache.set(material, m);
   return m;
 }
+
+// 테두리 빛(림 라이트): 캐릭터·몬스터·NPC가 배경에서 묻히지 않게 윤곽에 은은한 빛
+//  낮엔 따뜻한 흰빛, 밤엔 달빛(푸른빛)으로 조금 더 세게 — main.js가 shared.rim*을 밤낮에 맞춰 바꿈
+//  고화질(MeshStandardMaterial)만. 도트 모드는 외곽선이 그 역할을 함
+shared.rimColor = { value: new THREE.Color('#fff0d8') };
+shared.rimK = { value: 0.35 };
+export function addRim(root) {
+  if (!GFX.hd) return;
+  root.traverse((o) => {
+    if (!o.isMesh) return;
+    for (const m of Array.isArray(o.material) ? o.material : [o.material]) {
+      if (!m || !m.isMeshStandardMaterial || m.userData.rim) continue;
+      m.userData.rim = true;
+      const prev = m.onBeforeCompile, prevKey = m.customProgramCacheKey?.bind(m);
+      m.onBeforeCompile = (shader, r) => {
+        prev?.call(m, shader, r);
+        shader.uniforms.uRimColor = shared.rimColor;
+        shader.uniforms.uRimK = shared.rimK;
+        shader.fragmentShader = 'uniform vec3 uRimColor;\nuniform float uRimK;\n' + shader.fragmentShader.replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
+          float rimF = 1.0 - clamp(dot(normalize(normal), normalize(vViewPosition)), 0.0, 1.0);
+          totalEmissiveRadiance += uRimColor * (pow(rimF, 2.6) * uRimK);`);
+      };
+      m.customProgramCacheKey = () => (prevKey ? prevKey() : '') + '|rim';
+      m.needsUpdate = true;
+    }
+  });
+}

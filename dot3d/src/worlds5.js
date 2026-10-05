@@ -284,7 +284,7 @@ export function buildValley(W) {
 function snowMaterials(W) {
   const M = W.M;
   M.deepSnow = M.snow;
-  M.snowCap = toon({ color: C('#f4f8fc') });
+  M.snowCap = toon({ color: C('#e6ecf4') });
   M.iceLake = toon({ color: C('#a8d8f0'), roughness: 0.2, metalness: GFX.hd ? 0.2 : 0 });
   M.iceCrystal = toon({ color: C('#d8f4ff'), emissive: C('#2a8aff'), emissiveIntensity: 0.6, transparent: true, opacity: 0.85 });
   M.mudWall = M.mudWall || toon({ color: C('#c8a878') });
@@ -311,7 +311,7 @@ export function buildSnowfield(W) {
   const M = W.M, B = (W.batch = new Batcher());
   W.foliage = new Batcher();
   // 고원 바닥: 큰 얼룩 없이 고르게 쌓인 눈 (살짝 푸른 그늘)
-  M.snowGround = toon({ color: C('#eef3f9') });
+  M.snowGround = toon({ color: C('#d6dee9') }); // 살짝 푸르스름하게: 캐릭터와 그림자가 보이도록
   ground(W, M.snowGround);
   for (let i = 0; i < 40; i++) { const R = mulberry32(3000 + i); const d = disc(W, M.snowCap, (R() - 0.5) * 38, -24 + R() * 46, 0.8 + R() * 1.6); d.position.y = 0.004; d.scale.set(1.6, 1, 1); }
   if (M.summerGrass) blendStrip(W, M.summerGrass, -60, 60, -26.1, -20.5, 0.004);

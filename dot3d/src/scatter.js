@@ -100,7 +100,7 @@ const SETS = {
     { kind: 'pebble', d: 0.06, where: 'any', colors: ['#8a8478', '#6e6a60'], s: [0.6, 1.3] },
   ],
   temple: [
-    { kind: 'lump', d: 0.18, where: 'off', colors: ['#f2f4f8', '#e6eaf2'], s: [0.6, 1.4] },
+    { kind: 'lump', d: 0.18, where: 'off', colors: ['#e6eaf2', '#dde3ee'], s: [0.6, 1.4] },
     { kind: 'tuft', d: 0.35, where: 'off', edge: 1.5, colors: ['#b8a878', '#a89868', '#c8b890'], s: [0.7, 1.1], wind: true },
     { kind: 'pebble', d: 0.12, where: 'any', colors: ['#8a8a90', '#a4a4aa', '#6e6e76'], s: [0.6, 1.4] },
   ],
@@ -129,7 +129,7 @@ const SETS = {
     { kind: 'pebble', d: 0.07, where: 'any', colors: ['#9a9488', '#7c766c'], s: [0.6, 1.3] },
   ],
   snowfield: [
-    { kind: 'lump', d: 0.22, where: 'off', colors: ['#ffffff', '#eef2fa'], s: [0.6, 1.6] },
+    { kind: 'lump', d: 0.22, where: 'off', colors: ['#dfe6f0', '#e6ecf4'], s: [0.6, 1.6] },
     { kind: 'tuft', d: 0.22, where: 'off', edge: 1.2, colors: ['#a89a78', '#bcae88'], s: [0.6, 1.0], wind: true },
     { kind: 'pebble', d: 0.06, where: 'any', colors: ['#5a5a66', '#70707a'], s: [0.6, 1.4] },
   ],

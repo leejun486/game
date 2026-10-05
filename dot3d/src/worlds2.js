@@ -26,11 +26,11 @@ export function extraMaterials(W) {
   if (GFX.hd) {
     M.fgrass = toon({ ...HD.hdGrass([70, 112, 58]), roughness: 1 });
     M.fpath = toon({ ...HD.hdDirt([132, 104, 72]), roughness: 1 });
-    M.snow = toon({ ...HD.hdSnow(), roughness: 0.8, color: new THREE.Color(1.2, 1.2, 1.24) });
+    M.snow = toon({ ...HD.hdSnow(), roughness: 0.8, color: new THREE.Color(0.96, 0.98, 1.03) }); // 예전 1.2배는 하얗게 날아갔음
     M.snowLeaf = toon({ ...HD.hdNeedle([226, 236, 244], true), roughness: 0.85 });
   }
   // 소나무 위 눈: 매끈한 흰 덩어리 (고화질 솔잎 무늬를 쓰면 회색 잡음처럼 보임)
-  M.snowPad = toon({ color: C('#f4f8fc') });
+  M.snowPad = toon({ color: C('#eaf0f6') });
   M.ice = toon({ color: C('#bfe8ff'), emissive: C('#000000') });
   M.rock = toon({ color: C('#8a8478') });
   M.rockDark = toon({ color: C('#6a665e') });

@@ -41,8 +41,8 @@ export const MAPS = {
       return [['reaper', 1], ['ghost', 2 + r], ['jiangshi', 1 + r]];
     },
     theme: {
-      sun: ['#f4f8ff', '#8ea6ff'], sunI: [2.4, 1.0], sky: ['#e8f0ff', '#5a6a9e'], ground: ['#c8d4e8', '#2a3050'],
-      hemiI: [1.2, 1.0], bg: ['#b8c4d4', '#0c1020'], ambient: 'snow',
+      sun: ['#f4f8ff', '#8ea6ff'], sunI: [1.9, 1.0], sky: ['#d8e2f4', '#5a6a9e'], ground: ['#9aa8c0', '#2a3050'],
+      hemiI: [0.95, 1.0], bg: ['#b8c4d4', '#0c1020'], ambient: 'snow',
     },
   },
 };
@@ -138,8 +138,8 @@ MAPS.snowfield = {
     return [['frostgiant', 1], ['wolf', 2 + r], ['icedok', 1 + Math.floor(r / 2)]];
   },
   theme: {
-    sun: ['#f8fbff', '#9ab0ff'], sunI: [2.5, 1.0], sky: ['#eef6ff', '#4a5a8a'], ground: ['#d8e4f0', '#2a3050'],
-    hemiI: [1.25, 1.0], bg: ['#c8d8e8', '#0a1020'], ambient: 'blizzard',
+    sun: ['#f8fbff', '#9ab0ff'], sunI: [1.9, 1.0], sky: ['#dce6f4', '#4a5a8a'], ground: ['#98a6be', '#2a3050'],
+    hemiI: [0.92, 1.0], bg: ['#c8d8e8', '#0a1020'], ambient: 'blizzard',
   },
 };
 
@@ -161,12 +161,12 @@ export const WIN_LINE = { palace: '도깨비들이 달아나고 동이 튼다', 
 export const GRADE = {
   palace: { tint: [1.04, 1.0, 0.94], sat: 1.04, haze: '#ffe8c8', hz: 0.10 },
   bamboo: { tint: [0.96, 1.04, 0.95], sat: 1.0, haze: '#cfe8c8', hz: 0.16 },
-  temple: { tint: [0.96, 0.98, 1.06], sat: 0.84, haze: '#e4eaf4', hz: 0.18 },
+  temple: { tint: [0.96, 0.98, 1.05], sat: 0.92, haze: '#d8e0ec', hz: 0.12 },
   swamp: { tint: [0.98, 1.03, 0.93], sat: 0.92, haze: '#a8b890', hz: 0.15 },
   canyon: { tint: [1.06, 0.97, 0.9], sat: 1.05, haze: '#ff9a60', hz: 0.14 },
   fortress: { tint: [1.08, 0.98, 0.88], sat: 1.12, haze: '#f4c890', hz: 0.14 },
   sea: { tint: [0.95, 1.01, 1.06], sat: 1.04, haze: '#90d4ea', hz: 0.14 },
   valley: { tint: [1.02, 1.04, 0.95], sat: 1.14, haze: '#eaf8ff', hz: 0.12 },
-  snowfield: { tint: [0.93, 0.98, 1.1], sat: 0.8, haze: '#eef4ff', hz: 0.2 },
+  snowfield: { tint: [0.92, 0.97, 1.08], sat: 0.95, haze: '#dce6f6', hz: 0.12 },
   tower: { tint: [0.98, 0.9, 1.1], sat: 0.92, haze: '#4a2a62', hz: 0.2 },
 };

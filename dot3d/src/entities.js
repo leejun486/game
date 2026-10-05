@@ -12,7 +12,7 @@ import { item, WEAPONS, perksOf, ULTS } from './items.js';
 export const SKILL_LEVEL = { 2: 3, 3: 5 };
 // 레벨이 오를수록 가파르게 (Lv.10 약 1.7배, Lv.20 약 2.2배 — 플레이 시간에 맞춤)
 export const expNeed = (lv) => Math.round(50 + lv * 40 + lv * lv * 1.4);
-import { toon } from './materials.js';
+import { toon, addRim } from './materials.js';
 import { NAV_R } from './world.js';
 import { clamp, angleDiff, dampAngle, rand, lerp, smooth } from './util.js';
 
@@ -84,6 +84,7 @@ export class Player {
       this.rig.root.position.copy(old.root.position);
       this.rig.root.rotation.y = old.root.rotation.y;
     }
+    addRim(this.rig.root);
     this.game.scene.add(this.rig.root);
   }
 
@@ -686,6 +687,7 @@ export class Enemy {
     this.phase = 1;
     if (T.make) {
       this.rig = T.make();
+      addRim(this.rig.root);
       game.scene.add(this.rig.root);
     } else this.buildWisp();
     this.root = this.rig ? this.rig.root : this.wisp;
@@ -1530,6 +1532,7 @@ export class NPC {
     this.name = name;
     this.lines = lines;
     this.radius = 0.4;
+    addRim(this.rig.root);
     game.scene.add(this.rig.root);
     game.world.circles.push({ x, z, r: 0.4, y: this.pos.y });
   }
