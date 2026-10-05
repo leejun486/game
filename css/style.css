@@ -767,3 +767,14 @@ body.touch #chat { bottom: 150px; }
 /* 9 skills + 4 items: on touch screens the bar wraps into two rows */
 body.touch #slots { flex-wrap: wrap; justify-content: center; max-width: 380px; }
 @media (orientation: portrait) { body.touch #slots { width: 346px; max-width: 346px; } }
+
+/* inventory: sort / auto-equip bar and upgrade arrows */
+.inv-tools { display: flex; gap: 6px; align-items: center; margin-bottom: 8px; flex-wrap: wrap; }
+.inv-tools .dark-btn, .inv-tools .gold-btn { padding: 5px 12px; font-size: 12px; }
+.inv-tools .sub { font-size: 11px; margin-left: auto; }
+.inv-tools .up, .cell .up { color: #5dff7a; }
+.cell .up { position: absolute; right: 3px; bottom: 1px; font-size: 13px; font-weight: 900; text-shadow: 0 0 3px #000, 0 0 2px #000; animation: upBob 1s ease-in-out infinite; }
+.cell .c ~ .up, .cell .up + .c { bottom: 12px; }
+@keyframes upBob { 50% { transform: translateY(-2px); } }
+.item-detail .cmp { margin-top: 4px; font-size: 12px; }
+.item-detail .cmp .up { color: #5dff7a; } .item-detail .cmp .down { color: #ff7a6a; }

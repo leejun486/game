@@ -417,12 +417,16 @@ const UI = (() => {
             <div>치명타 <b>${st.crit.toFixed(1)}%</b></div><div>회피 <b>${st.eva}</b></div>
             <div>피해 감소 <b>${st.dmgRed}</b></div><div>이동 속도 <b>+${st.moveSpd}%</b></div>
           </div></div>
-        <div><div class="bag">${p.s.inv.map((it) => {
+        <div><div class="inv-tools"><button class="dark-btn" data-sort="grade">등급순</button><button class="dark-btn" data-sort="kind">종류순</button><button class="gold-btn" data-auto>자동 장착</button>
+          <span class="sub"><b class="up">▲</b> 지금 장비보다 좋음</span></div>
+        <div class="bag">${p.s.inv.map((it) => {
           const def = D.ITEMS[it.id];
           const eq = Object.values(p.s.equip).includes(it.uid);
           const why = D.isEquip(def) && p.canEquip(it);
           const lock = why ? `<span class="req">${def.cls && def.cls !== p.cls ? D.CLASSES[def.cls].name : 'Lv' + def.lv}</span>` : '';
-          return `<div class="cell bg${def.grade} ${invSel === it.uid ? 'sel' : ''} ${why ? 'cant' : ''}" data-uid="${it.uid}" title="${esc(def.name)}${why ? ' - ' + esc(why) : ''}">${ico(def.icon)}${lock}${it.en ? `<span class="e">+${it.en}</span>` : ''}${eq ? '<span class="eq">E</span>' : ''}${it.n > 1 ? `<span class="c">${U.fmt(it.n)}</span>` : ''}</div>`;
+          // ▲: wearable and stronger than what is in that slot now
+          const better = D.isEquip(def) && !eq && !why && p.gearScore(it) > p.gearScore(p.equipped(def.kind));
+          return `<div class="cell bg${def.grade} ${invSel === it.uid ? 'sel' : ''} ${why ? 'cant' : ''}" data-uid="${it.uid}" title="${esc(def.name)}${why ? ' - ' + esc(why) : ''}">${ico(def.icon)}${lock}${it.en ? `<span class="e">+${it.en}</span>` : ''}${eq ? '<span class="eq">E</span>' : ''}${better ? '<span class="up">▲</span>' : ''}${it.n > 1 ? `<span class="c">${U.fmt(it.n)}</span>` : ''}</div>`;
         }).join('')}</div>
         <div class="item-detail" id="item-detail"></div></div></div>`;
       renderDetail();
@@ -444,8 +448,18 @@ const UI = (() => {
       if (def.lv > 1) lines.push(`착용 레벨 ${def.lv}`);
       const why = D.isEquip(def) && p.canEquip(it);
       const sell = Math.floor((def.price || 1000) * 0.3);
+      // compared with the item worn in the same slot
+      let cmp = '';
+      const worn = D.isEquip(def) && p.equipped(def.kind);
+      if (D.isEquip(def) && !eq) {
+        const val = (x) => { if (!x) return { atk: 0, def: 0, hp: 0 }; const d = D.ITEMS[x.id], en = x.en || 0; return { atk: (d.atk || 0) + (d.kind === 'weapon' ? D.enchantAtk(d, en) : 0), def: (d.def || 0) + (d.kind === 'armor' ? D.enchantDef(en) : 0), hp: (d.hp || 0) + (d.kind === 'armor' ? D.enchantHp(en) : 0) }; };
+        const a = val(it), b = val(worn);
+        cmp = [['공격력', a.atk - b.atk], ['방어력', a.def - b.def], ['HP', a.hp - b.hp]].filter(([, v]) => v).map(([n, v]) => `<span class="${v > 0 ? 'up' : 'down'}">${n} ${v > 0 ? '▲ +' : '▼ '}${v}</span>`).join(' ');
+        if (cmp) cmp = `<div class="cmp">착용 중 대비: ${cmp}</div>`;
+      }
       box.innerHTML = `<h4 class="${D.GRADES[def.grade].cls}">${it.en ? '+' + it.en + ' ' : ''}${esc(def.name)} <small style="color:#888">[${D.GRADES[def.grade].name}]</small></h4>
         <div style="color:#bbb">${def.desc ? esc(def.desc) : ''}${lines.join(' · ')}</div>
+        ${cmp}
         ${def.set ? `<div class="set-line ${p.activeSet() === def.set ? 'on' : ''}">[${esc(D.SETS[def.set].name)} 세트] 무기+갑옷 착용 시: ${D.setBonusText(D.SETS[def.set].bonus)}${p.activeSet() === def.set ? ' (적용 중)' : ''}</div>` : ''}
         ${why ? `<div class="req-msg">⚠ ${esc(why)} (현재 Lv.${p.s.lv} ${esc(p.classDef.name)})</div>` : ''}
         <div class="btns">
@@ -456,8 +470,22 @@ const UI = (() => {
           ${!eq && def.kind !== 'ticket' ? `<button class="red-btn" data-do="sell">판매 (${U.fmt(sell)} 아데나${it.n > 1 ? ' x' + it.n : ''})</button>` : ''}
         </div>`;
     };
+    const KIND_ORDER = ['weapon', 'armor', 'ring', 'potion', 'buff', 'scroll', 'enchant', 'ticket', 'skillbook'];
     body.onclick = (e) => {
       const p = game.player;
+      const so = e.target.closest('[data-sort]');
+      if (so) { // reorders the bag itself, so the order stays
+        const kind = (it) => { const i = KIND_ORDER.indexOf(D.ITEMS[it.id].kind); return i < 0 ? 99 : i; };
+        const grade = (it) => D.ITEMS[it.id].grade, score = (it) => (D.isEquip(D.ITEMS[it.id]) ? p.gearScore(it) : 0);
+        p.s.inv.sort(so.dataset.sort === 'grade' ? (a, b) => grade(b) - grade(a) || kind(a) - kind(b) || score(b) - score(a) : (a, b) => kind(a) - kind(b) || grade(b) - grade(a) || score(b) - score(a));
+        U.sfx.ui(); render(); return;
+      }
+      if (e.target.closest('[data-auto]')) {
+        const before = JSON.stringify(p.s.equip);
+        p.autoEquipBest();
+        if (JSON.stringify(p.s.equip) === before) toast('이미 가장 좋은 장비를 착용 중입니다.'); else U.sfx.success();
+        refreshHud(); render(); return;
+      }
       const c = e.target.closest('[data-uid]');
       if (c) { invSel = +c.dataset.uid; render(); return; }
       const s = e.target.closest('[data-slot]');
