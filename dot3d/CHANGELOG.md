@@ -9,6 +9,7 @@
 - **백설 고원(겨울):** 계곡 남서쪽. 눈 쌓인 소나무와 눈더미, 얼어붙은 못, 눈 덮인 초가 마을, 화톳불, 비스듬히 몰아치는 눈보라. 눈늑대, 얼음 도깨비, 서리 도깨비불, 우두머리 서리 거인 동장군.
 - **그래픽·연출:** 범·백호·멧돼지·늑대를 새 몸(가슴·엉덩이 덩어리, 무릎이 굽는 다리, 벌어지는 턱, 마디 꼬리)으로 바꿨고, 왕지네는 등딱지 마디와 물결치는 관절 다리를 달았습니다. 보스 격파 연출(느린 시간, 갈라지는 빛, 빛 폭발, `격파!`), 치명타 섬광, 쓰러지는 몬스터의 넋 연출을 넣었습니다. 눈 쌓인 소나무와 고원 바닥을 깔끔하게 다듬었습니다.
 - **지도와 퀘스트 일지:** 화면 오른쪽 아래에 지금 지역의 작은 지도(막힌 곳·물·북·NPC·적·퀘스트 목표 별·내 위치와 방향)가 있습니다. V 키(또는 작은 지도 클릭)로 큰 지도를 열면 모든 지역의 이어짐과 평정 여부(★), 지금 할 일, 지나온 퀘스트 목록을 볼 수 있습니다. 여는 동안 게임은 멈춥니다.
+- **그래픽 2차:** 흙길 가장자리가 잔디와 자연스럽게 섞임(돌 포장은 반듯하게). 지역마다 풀포기·들꽃·자갈·낙엽·갈대·조개·눈덩이를 촘촘히 깔고, 덤불·바위·고사리·산호·그루터기를 무리 지어 배치(길을 막지 않음). 늪 웅덩이에 하늘 반사·물결·물가 거품. 단풍·벚·여름 나무의 잎을 둥글고 풍성한 잎뭉치로. 캐릭터·몬스터에 은은한 테두리 빛(밤엔 달빛). 설원·폐사찰이 하얗게 날아가지 않게 노출 조정. 한쪽에서 풀잎이 까맣게 보이던 문제 수정.
 - **연출:** 보스마다 등장 연출(하늘에서 떨어져 내려찍기 · 땅이나 물을 가르고 솟기 · 기운이 모여 터지기)과 카메라 당김. 지역마다 다른 색감과 먼 곳의 대기(고화질). 창술사 `창기`에 날아가는 빛의 창과 잔상.
 - **체험판 빌드:** `npm run dist:demo`. 월하궁·죽림·폐사찰(보스 셋)까지 하고, 저승사자를 물리치면 체험판 끝 안내가 나옵니다. 기록은 정식판에서 그대로 이어집니다.
 - **저사양:** 플레이 중 프레임이 낮으면(초당 40 미만) 화질이 저절로 한 단계씩 낮아집니다. 화질을 직접 고르면 그대로 둡니다. 화질 '보통'·'낮음'의 그림자 해상도가 실제로 낮아지지 않던 문제(늘 최고 해상도)를 고쳤고, 이제 새로고침 없이 바로 바뀝니다.
@@ -37,6 +38,7 @@ Four new regions, a redesigned Wolhagung and a longer adventure.
 
 - Wolhagung redesigned as a moonlit garden palace: a winding stone path, a lotus pond with an island pavilion, side halls, flower walls and blossoming trees.
 - New regions: the Maple Fortress (boss: the White Tiger), the Dragon Palace beneath the East Sea (boss: the Dragon King), Cheongryu Valley with a babbling summer stream (boss: the Thousand-Year Centipede) and the White Snow Highland (boss: General Winter). Each has its own music and ambience.
+- Graphics pass 2: soil paths blend into grass with ragged edges; dense per-region ground details (tufts, flowers, pebbles, leaves, reeds, shells, snow) and clustered props (bushes, rocks, ferns, corals, stumps) that never block movement; swamp pools with reflections, ripples and shore foam; rounded, fuller broadleaf canopies; a soft rim light on characters; tamer snow exposure; grass blades no longer render black from one side.
 - Presentation: boss entrances (fall and slam, rise from ground or water, gather and burst) with a camera pull-in; per-region color grading and distant haze in HD; a flying spirit spear for the Lancer's spear beam.
 - Demo build (`npm run dist:demo`): the first three regions and bosses, ending with a demo-complete message after the Grim Reaper. Saves carry over to the full game.
 - Low-end PCs: quality now steps down automatically when the frame rate drops below 40 (unless you pick it yourself). Medium/Low shadow resolution now actually applies, without a reload.
