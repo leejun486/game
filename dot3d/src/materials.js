@@ -102,3 +102,32 @@ export const ANIM = {
       wPos.y -= push * h * 0.5;`,
   },
 };
+
+// 길·흙 바닥의 가장자리를 월드 좌표 노이즈로 들쭉날쭉하게 깎아 잔디와 자연스럽게 섞이게 함
+//  기하에 aEdge(가장자리까지 거리, 월드 단위) 속성이 있어야 함 (worlds2.js의 pathStrip·disc)
+//  가장자리 근처는 살짝 어둡게 (젖은 흙·풀에 덮인 느낌)
+const softCache = new Map();
+export function softEdge(material) {
+  if (softCache.has(material)) return softCache.get(material);
+  const m = material.clone();
+  m.onBeforeCompile = (shader) => {
+    shader.vertexShader = 'attribute float aEdge;\nvarying float vEdge;\nvarying vec2 vWXZ;\n' + shader.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
+      vEdge = aEdge;
+      vWXZ = (modelMatrix * vec4(transformed, 1.0)).xz;`);
+    shader.fragmentShader = `varying float vEdge;
+varying vec2 vWXZ;
+float seH(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float seN(vec2 p) { vec2 i = floor(p), f = fract(p); vec2 u = f * f * (3.0 - 2.0 * f);
+  return mix(mix(seH(i), seH(i + vec2(1.0, 0.0)), u.x), mix(seH(i + vec2(0.0, 1.0)), seH(i + vec2(1.0, 1.0)), u.x), u.y); }
+` + shader.fragmentShader
+      .replace('#include <clipping_planes_fragment>', `#include <clipping_planes_fragment>
+      float seNoise = seN(vWXZ * 0.8) * 0.6 + seN(vWXZ * 2.9) * 0.3 + seN(vWXZ * 9.0) * 0.1;
+      float seThr = 0.05 + seNoise * 0.85;
+      if (vEdge < seThr) discard;`)
+      .replace('#include <map_fragment>', `#include <map_fragment>
+      diffuseColor.rgb *= mix(0.82, 1.0, smoothstep(seThr, seThr + 0.55, vEdge));`);
+  };
+  m.customProgramCacheKey = () => 'softEdge';
+  softCache.set(material, m);
+  return m;
+}

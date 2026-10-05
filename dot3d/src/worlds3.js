@@ -6,7 +6,7 @@ import { boxGeo, cylGeo, Batcher, latheGeo } from './geom.js';
 import * as T from './textures.js';
 import { mulberry32 } from './util.js';
 import { mat4, blendStrip } from './world.js';
-import { extraMaterials, ground, pathStrip, disc, trigger, cairn } from './worlds2.js';
+import { extraMaterials, ground, pathStrip, disc, trigger, cairn, PAVED } from './worlds2.js';
 import { GFX } from './gfx.js';
 import * as HD from './hdtex.js';
 
@@ -275,6 +275,7 @@ function canyonMaterials(W) {
     M.ash = toon({ ...HD.hdDirt([84, 70, 62]), roughness: 1 });
     M.basalt = toon({ ...HD.hdBlock([92, 84, 82]), roughness: 0.95 });
   }
+  PAVED.add(M.basalt);
   M.lava = toon({ color: C('#ff7a1a'), emissive: C('#ff4a00'), emissiveIntensity: 1.4 });
   M.lavaCrust = toon({ color: C('#2a1e1a'), emissive: C('#4a1200') });
   M.ember = toon({ color: C('#ffb060'), emissive: C('#ff6a00'), emissiveIntensity: 2 });

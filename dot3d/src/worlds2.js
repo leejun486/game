@@ -1,6 +1,6 @@
 // 새 지역: 죽림(대나무 숲) · 설원 폐사찰
 import * as THREE from 'three';
-import { toon, animateMesh, ANIM } from './materials.js';
+import { toon, animateMesh, ANIM, softEdge } from './materials.js';
 import { boxGeo, cylGeo, Batcher, latheGeo } from './geom.js';
 import * as T from './textures.js';
 import { mulberry32 } from './util.js';
@@ -53,30 +53,40 @@ export function ground(W, mat, y = 0) {
   W.root.add(g);
 }
 
+// 돌로 포장한 바닥 재질 (가장자리를 깎지 않음)
+export const PAVED = new Set();
+
 export function pathStrip(W, mat, pts, width, y0 = 0.012) {
+  // 넓은 길은 가장자리를 들쭉날쭉하게 (softEdge), 좁은 띠는 그대로
+  const soft = width >= 1.5 && !PAVED.has(mat);
   for (let i = 0; i < pts.length - 1; i++) {
     const [x0, z0] = pts[i], [x1, z1] = pts[i + 1];
     const len = Math.hypot(x1 - x0, z1 - z0) + width * 0.6;
-    const geo = new THREE.PlaneGeometry(width, len);
+    const geo = new THREE.PlaneGeometry(width, len, soft ? 2 : 1, 1);
+    if (soft) geo.setAttribute('aEdge', new THREE.Float32BufferAttribute(Array.from({ length: geo.attributes.position.count }, (_, k) => width / 2 - Math.abs(geo.attributes.position.getX(k))), 1));
     geo.attributes.uv.array.forEach((v, k, a) => (a[k] = v * (k % 2 === 0 ? width / 2 : len / 2)));
-    const m = new THREE.Mesh(geo, mat);
+    const m = new THREE.Mesh(geo, soft ? softEdge(mat) : mat);
     m.rotation.order = 'YXZ';
     m.rotation.y = Math.atan2(x1 - x0, z1 - z0);
     m.rotation.x = -Math.PI / 2;
     m.position.set((x0 + x1) / 2, y0 + (i % 2) * 0.002, (z0 + z1) / 2); // 높이를 쌓지 않음: 바닥 효과가 길 아래로 묻히지 않게
     m.receiveShadow = true;
     W.root.add(m);
+    if (width >= 1.5) (W.pathShapes ||= []).push({ type: 'strip', x0, z0, x1, z1, w: width });
   }
 }
 
 export function disc(W, mat, x, z, r) {
-  const geo = new THREE.CircleGeometry(r, 24);
+  const soft = r >= 2 && !PAVED.has(mat);
+  const geo = new THREE.CircleGeometry(r, soft ? 40 : 24);
+  if (soft) geo.setAttribute('aEdge', new THREE.Float32BufferAttribute(Array.from({ length: geo.attributes.position.count }, (_, k) => r - Math.hypot(geo.attributes.position.getX(k), geo.attributes.position.getY(k))), 1));
   geo.attributes.uv.array.forEach((v, k, a) => (a[k] = v * r));
-  const m = new THREE.Mesh(geo, mat);
+  const m = new THREE.Mesh(geo, soft ? softEdge(mat) : mat);
   m.rotation.x = -Math.PI / 2;
   m.position.set(x, 0.01, z);
   m.receiveShadow = true;
   W.root.add(m);
+  if (r >= 2) (W.pathShapes ||= []).push({ type: 'disc', x, z, r });
   return m;
 }
 

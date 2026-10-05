@@ -4,12 +4,14 @@ import { toon, animateMesh, ANIM, shared } from './materials.js';
 import { boxGeo, cylGeo, Batcher, roofGeometry, latheGeo } from './geom.js';
 import * as T from './textures.js';
 import { mulberry32 } from './util.js';
-import { buildBamboo, buildTemple } from './worlds2.js';
+import { buildBamboo, buildTemple, PAVED } from './worlds2.js';
 import { buildSwamp, buildCanyon, buildTower } from './worlds3.js';
 import { buildFortress, buildSeaPalace } from './worlds4.js';
 import { buildValley, buildSnowfield } from './worlds5.js';
 import { GFX } from './gfx.js';
 import * as HD from './hdtex.js';
+import { scatterDetails } from './scatter.js';
+import { loadSettings } from './settings.js';
 
 // 오픈월드: 지역들을 남북으로 이어 붙임. 궁궐 남문 → 죽림 → 설원 폐사찰 → (뒷문) 물안개 늪
 //  ox/oz: 지역 원점의 월드 위치, flip: 180° 돌려 놓음(폐사찰 입구가 죽림 쪽을 보게)
@@ -55,8 +57,13 @@ export class World {
     this.spinners = [];  // 계속 도는 것 {obj, axis, speed} (물레방아 바퀴)
     this.nightUniforms = []; // 밤이면 어두워지는 셰이더 (냇물)
     this.makeMaterials();
+    PAVED.add(this.M.slab); PAVED.add(this.M.path); // 돌 포장: 가장자리를 깎지 않음
+    this.pathShapes = [];  // 흙길·마당 모양 (바닥 장식이 길을 피하고 가장자리를 덮도록)
     for (const R of REGIONS) this.buildRegion(R);
     this.root = this.top;
+    // 바닥 장식: 모든 지역의 충돌 정보가 월드 좌표로 옮겨진 뒤에
+    const q = loadSettings().quality || 'high';
+    for (const R of REGIONS) scatterDetails(this, R, q);
   }
 
   // 지역 하나를 제 좌표계(그룹)에 짓고, 충돌·높이 정보를 월드 좌표로 옮김
@@ -66,7 +73,7 @@ export class World {
     if (R.flip) g.rotation.y = Math.PI;
     this.top.add(g);
     this.root = g;
-    const n = { portals: this.portals.length, vents: this.vents.length, wet: this.wet.length, boards: this.boards.length, rects: this.rects.length, ramps: this.ramps.length, blockRects: this.blockRects.length, circles: this.circles.length, drums: this.drums.length, lanterns: this.lanterns.length, spawnPoints: this.spawnPoints.length };
+    const n = { pathShapes: this.pathShapes.length, portals: this.portals.length, vents: this.vents.length, wet: this.wet.length, boards: this.boards.length, rects: this.rects.length, ramps: this.ramps.length, blockRects: this.blockRects.length, circles: this.circles.length, drums: this.drums.length, lanterns: this.lanterns.length, spawnPoints: this.spawnPoints.length };
     if (R.id === 'palace') this.build();
     else if (R.id === 'bamboo') buildBamboo(this);
     else if (R.id === 'temple') buildTemple(this);
@@ -86,6 +93,11 @@ export class World {
     for (const r of this.blockRects.slice(n.blockRects)) box(r);
     for (const r of this.ramps.slice(n.ramps)) { box(r); if (R.flip) [r.h0, r.h1] = [r.h1, r.h0]; }
     for (const c of this.circles.slice(n.circles)) [c.x, c.z] = f(c.x, c.z);
+    for (const s of this.pathShapes.slice(n.pathShapes)) {
+      s.region = R.id;
+      if (s.type === 'disc') [s.x, s.z] = f(s.x, s.z);
+      else { [s.x0, s.z0] = f(s.x0, s.z0); [s.x1, s.z1] = f(s.x1, s.z1); }
+    }
     const v = (p) => { const [x, z] = f(p.x, p.z); p.x = x; p.z = z; };
     for (const d of this.drums.slice(n.drums)) { v(d.pos); d.region = R.id; }
     for (const p of this.lanterns.slice(n.lanterns)) { v(p); p.region = R.id; }
@@ -327,6 +339,7 @@ export class World {
         m.position.set((x0 + x1) / 2, 0.022 + k * 0.0005, (z0 + z1) / 2); // 죽림 흙길(0.012)과 겹치는 곳에서 깜빡이지 않게 위로
         m.receiveShadow = true;
         this.root.add(m);
+        this.pathShapes.push({ type: 'strip', x0, z0, x1, z1, w });
       }
     };
     path([[0, 28.4], [0, 21], [-1.5, 14], [-4, 8], [-11, 3], [-15, -4], [-14, -14], [-12, -22]], 3.4);
@@ -338,6 +351,7 @@ export class World {
     yard.rotation.x = -Math.PI / 2; yard.position.set(-10.5, 0.014, 4.6);
     yard.receiveShadow = true;
     this.root.add(yard);
+    this.pathShapes.push({ type: 'disc', x: -10.5, z: 4.6, r: 5.2 });
 
     // 큰 연지 + 섬 위 육각정 + 무지개 다리
     this.pond(-8.5, 7.5, -15, -3.5);
@@ -993,10 +1007,11 @@ export class World {
     let total = 0;
     for (const a of areas) total += Math.floor((a.x1 - a.x0) * (a.z1 - a.z0) * 26);
     const blade = new THREE.BufferGeometry();
-    blade.setAttribute('position', new THREE.Float32BufferAttribute([-0.05, 0, 0, 0.05, 0, 0, 0.0, 0.38, 0], 3));
-    blade.setAttribute('normal', new THREE.Float32BufferAttribute([0, 1, 0, 0, 1, 0, 0, 1, 0], 3));
-    blade.setAttribute('color', new THREE.Float32BufferAttribute([0.55, 0.62, 0.5, 0.55, 0.62, 0.5, 1.15, 1.12, 0.95], 3));
-    const mat = toon({ color: 0xffffff, vertexColors: true, side: THREE.DoubleSide });
+    // 앞뒷면 삼각형을 따로 두고 법선은 둘 다 위로 (DoubleSide는 뒷면 법선을 뒤집어 까맣게 보였음)
+    blade.setAttribute('position', new THREE.Float32BufferAttribute([-0.05, 0, 0, 0.05, 0, 0, 0.0, 0.38, 0, 0.05, 0, 0, -0.05, 0, 0, 0.0, 0.38, 0], 3));
+    blade.setAttribute('normal', new THREE.Float32BufferAttribute([0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0], 3));
+    blade.setAttribute('color', new THREE.Float32BufferAttribute([0.55, 0.62, 0.5, 0.55, 0.62, 0.5, 1.15, 1.12, 0.95, 0.55, 0.62, 0.5, 0.55, 0.62, 0.5, 1.15, 1.12, 0.95], 3));
+    const mat = toon({ color: 0xffffff, vertexColors: true });
     const mesh = new THREE.InstancedMesh(blade, mat, total);
     const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler();
     const col = new THREE.Color();
