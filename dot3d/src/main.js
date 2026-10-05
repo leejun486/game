@@ -25,6 +25,7 @@ import { VERSION } from './version.js';
 import { Records, newStats } from './records.js';
 import { drop } from './dispose.js';
 import { MiniMap } from './minimap.js';
+import { padGlyph } from './glyph.js';
 import { DEMO, DEMO_LOCKED_GATES, DEMO_QUEST, DEMO_END_LINES } from './edition.js';
 import { spearHit, lancerSkill1, lancerSkill2, lancerSkill3, updateLancer, clearLancer } from './lancer.js';
 
@@ -223,6 +224,7 @@ class Game {
       if (this.rebind) { e.preventDefault(); this.finishRebind(e.code); return; }
       if (e.repeat) { this.keys.add(e.code); return; }
       this.keys.add(e.code);
+      this.setPadMode(false);
       const act = this.binds[e.code];
       this.onKey(act || e.code, e);
     });
@@ -1229,15 +1231,25 @@ class Game {
     let gp = null;
     for (const p of pads) if (p && p.connected) { gp = p; break; }
     if (!gp) { if (this.padMove) this.padMove.x = this.padMove.z = 0; return; }
-    if (!this.padPrev) { this.padPrev = []; this.padIdx = 0; this.ui.toast('게임패드가 연결되었어요', 2); document.body.classList.add('pad'); }
+    if (!this.padPrev) { this.padPrev = []; this.padIdx = 0; this.ui.toast('게임패드가 연결되었어요', 2); this.setPadMode(true); }
     const dz = (v) => (Math.abs(v) < 0.22 ? 0 : (v - Math.sign(v) * 0.22) / 0.78);
     const menu = this.padMenu();
+    // 창이 새로 열리면 첫 칸에 바로 테두리 (패드로 무엇을 고를지 보이게)
+    if (menu !== this.padLastMenu) {
+      this.padLastMenu = menu; this.padFocus = null; this.padIdx = 0;
+      if (menu) requestAnimationFrame(() => {
+        if (!this.padMode || this.padMenu() !== menu) return;
+        const first = [...menu.querySelectorAll('button:not([disabled]), input[type=range], .it, .eqs, .evo-opt, .evo-train')].find((e) => e.offsetParent !== null);
+        if (first) { for (const e of document.querySelectorAll('.pad-focus')) e.classList.remove('pad-focus'); first.classList.add('pad-focus'); this.padFocus = first; }
+      });
+    }
     this.padMove = menu ? { x: 0, z: 0 } : { x: dz(gp.axes[0] || 0), z: dz(gp.axes[1] || 0) };
     const pressed = gp.buttons.map((b) => b.pressed || b.value > 0.5);
     // 메뉴에서는 스틱도 십자키처럼 (한 번씩)
     const sy = gp.axes[1] || 0, sx = gp.axes[0] || 0;
     pressed[100] = sy < -0.6; pressed[101] = sy > 0.6; pressed[102] = sx < -0.6; pressed[103] = sx > 0.6;
-    for (let i = 0; i < pressed.length; i++) if (pressed[i] && !this.padPrev[i]) this.padButton(i, menu);
+    for (let i = 0; i < pressed.length; i++) if (pressed[i] && !this.padPrev[i]) { this.setPadMode(true); this.padButton(i, menu); }
+    if (!menu && (Math.abs(this.padMove.x) > 0.3 || Math.abs(this.padMove.z) > 0.3)) this.setPadMode(true);
     this.padPrev = pressed;
   }
 
@@ -1247,7 +1259,26 @@ class Game {
     if (document.getElementById('confirm').classList.contains('show')) return document.getElementById('confirm');
     if (this.ui.bagOpen) return document.getElementById('bag');
     if (this.ui.skillsOpen) return document.getElementById('skills');
+    if (this.mapOpen) return document.getElementById('worldmap');
     return null;
+  }
+
+  // 마지막으로 쓴 입력 장치에 맞춰 화면의 조작 안내를 키보드 글자 ↔ 패드 버튼 그림으로 바꿈
+  setPadMode(on) {
+    if (this.padMode === on) return;
+    this.padMode = on;
+    document.body.classList.toggle('pad', on);
+    // 기술 칸의 키 표시 (처음 한 번 키보드 글자를 기억해 둠)
+    const PAD = { atk: 'A', dash: 'B', skill: 'X', skill2: 'Y', skill3: 'RB', ult: 'RT' };
+    for (const sk of document.querySelectorAll('#status .skills .sk')) {
+      const k = sk.querySelector('.key');
+      if (!k) continue;
+      if (k.dataset.kb === undefined) k.dataset.kb = k.textContent;
+      const slot = sk.dataset.slot || 'atk';
+      k.innerHTML = on ? padGlyph(PAD[slot]) : k.dataset.kb;
+    }
+    const qg = document.querySelector('#quest-go span');
+    if (qg) { if (qg.dataset.kb === undefined) qg.dataset.kb = qg.textContent; qg.innerHTML = on ? padGlyph('↑') : qg.dataset.kb; }
   }
 
   padButton(i, menu) {
@@ -1260,22 +1291,52 @@ class Game {
     }
     const dir = { 12: -1, 100: -1, 13: 1, 101: 1, 14: -1, 102: -1, 15: 1, 103: 1 }[i];
     if (menu) {
-      const els = [...menu.querySelectorAll('button:not([disabled]), input[type=range], .it, .eqs, .evo-opt, .evo-train')].filter((e) => e.offsetParent !== null && getComputedStyle(e).visibility !== 'hidden');
-      for (const e of menu.querySelectorAll('.pad-focus')) e.classList.remove('pad-focus');
+      const SEL = 'button:not([disabled]), input[type=range], .it, .eqs, .evo-opt, .evo-train, [data-look], [data-skin]';
+      const els = [...menu.querySelectorAll(SEL)].filter((e) => e.offsetParent !== null && getComputedStyle(e).visibility !== 'hidden');
       if (!els.length) { if (i === 1 || i === 9) this.onKey('Escape'); return; }
-      this.padIdx = Math.max(0, Math.min(els.length - 1, this.padIdx || 0));
-      let cur = els[this.padIdx];
+      let cur = this.padFocus && els.includes(this.padFocus) ? this.padFocus : els[Math.max(0, Math.min(els.length - 1, this.padIdx || 0))];
+      const isH = i === 14 || i === 15 || i === 102 || i === 103;
       if (dir !== undefined) {
         // 슬라이더에서 좌우는 값 조절
-        if (cur.type === 'range' && (i === 14 || i === 15 || i === 102 || i === 103)) { cur.value = +cur.value + dir * 5; cur.dispatchEvent(new Event('input')); }
-        else { this.padIdx = (this.padIdx + dir + els.length) % els.length; cur = els[this.padIdx]; this.audio.play('talk'); }
-      } else if (i === 0) { cur.click(); this.padIdx = Math.min(this.padIdx, els.length - 1); }
+        if (cur.type === 'range' && isH) { cur.value = +cur.value + dir * 5; cur.dispatchEvent(new Event('input')); }
+        else {
+          // 누른 방향에서 가장 가까운 칸으로 (격자 모양 창도 자연스럽게)
+          const a = cur.getBoundingClientRect(), ax = a.left + a.width / 2, ay = a.top + a.height / 2;
+          const dx = isH ? dir : 0, dy = isH ? 0 : dir;
+          let best = null, bs = Infinity;
+          for (const e of els) {
+            if (e === cur) continue;
+            const b = e.getBoundingClientRect(), vx = b.left + b.width / 2 - ax, vy = b.top + b.height / 2 - ay;
+            const along = vx * dx + vy * dy;
+            if (along <= 4) continue;
+            const across = Math.abs(vx * dy - vy * dx);
+            const score = along + across * 2.2;
+            if (score < bs) { bs = score; best = e; }
+          }
+          if (best) { cur = best; this.audio.play('talk'); }
+        }
+      } else if (i === 0) { cur.click(); }
+      else if (i === 4 || i === 5) {
+        // LB/RB: 탭 넘기기 (가방·일시정지 메뉴)
+        const tabs = [...menu.querySelectorAll('.bag-tabs button, .pz-menu button[data-p]:not([data-p=resume])')].filter((e) => e.offsetParent !== null);
+        if (tabs.length) {
+          const k = Math.max(0, tabs.findIndex((t) => t.classList.contains('on')));
+          tabs[(k + (i === 5 ? 1 : -1) + tabs.length) % tabs.length].click();
+          this.audio.play('talk');
+        }
+      }
       else if (i === 1 || i === 9) { if (this.pauseOpen) this.togglePause(false); else if (menu.id === 'confirm') this.showConfirm(false); else this.onKey('Escape'); }
       else if (i === 8 && menu.id === 'bag') this.toggleBag(false);
+      this.padFocus = cur;
+      this.padIdx = els.indexOf(cur);
       requestAnimationFrame(() => {
-        const list = [...menu.querySelectorAll('button:not([disabled]), input[type=range], .it, .eqs, .evo-opt, .evo-train')].filter((e) => e.offsetParent !== null);
-        const el = list[Math.min(this.padIdx, list.length - 1)];
-        if (el) { el.classList.add('pad-focus'); el.scrollIntoView?.({ block: 'nearest' }); }
+        for (const e of document.querySelectorAll('.pad-focus')) e.classList.remove('pad-focus');
+        const m2 = this.padMenu();
+        if (!m2) return;
+        const list = [...m2.querySelectorAll(SEL)].filter((e) => e.offsetParent !== null);
+        // 다시 그려진 창이면 같은 순번 칸으로
+        const el = this.padFocus && list.includes(this.padFocus) ? this.padFocus : list[Math.min(this.padIdx, list.length - 1)];
+        if (el) { this.padFocus = el; el.classList.add('pad-focus'); el.scrollIntoView?.({ block: 'nearest' }); }
       });
       return;
     }
@@ -1288,7 +1349,7 @@ class Game {
       return;
     }
     if (this.state === 'dead') { if (i === 0 || i === 9) this.onKey('act'); return; }
-    const MAP = { 0: 'atk', 1: 'dash', 2: 'skill', 3: 'skill2', 5: 'skill3', 7: 'ult', 4: 'act', 6: 'Tab', 8: 'bag', 9: 'pause', 12: 'auto', 13: 'hunt', 14: 'skills' };
+    const MAP = { 0: 'atk', 1: 'dash', 2: 'skill', 3: 'skill2', 5: 'skill3', 7: 'ult', 4: 'act', 6: 'Tab', 8: 'bag', 9: 'pause', 12: 'auto', 13: 'hunt', 14: 'skills', 15: 'map' };
     const act = MAP[i];
     if (act) this.onKey(act);
   }

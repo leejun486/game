@@ -1,3 +1,4 @@
+import { padGlyph, padMode } from './glyph.js';
 import { item, itemDesc, drawItemIcon, RARITY, WEAPONS, OUTFITS, ULTS } from './items.js';
 import { tr } from './i18n.js';
 import { EVOS, RUNES, branchOf, rankOf, runeOf, freePoints, RANK_NAME, MAX_RANK } from './evolve.js';
@@ -476,7 +477,7 @@ export class UI {
     if (it && !this.inDialog && g.state === 'play') {
       const s = g.pixel.project(it.promptPos);
       el.prompt.style.transform = `translate(${Math.round(s.x / ps) * ps}px, ${Math.round(s.y / ps) * ps}px)`;
-      el.prompt.innerHTML = `<b>E</b>${it.label}`;
+      el.prompt.innerHTML = `${padMode() ? padGlyph('LB') : '<b>E</b>'}${it.label}`;
       el.prompt.classList.add('show');
     } else el.prompt.classList.remove('show');
   }
