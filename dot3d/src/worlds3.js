@@ -7,6 +7,7 @@ import * as T from './textures.js';
 import { mulberry32 } from './util.js';
 import { mat4, blendStrip } from './world.js';
 import { extraMaterials, ground, pathStrip, disc, trigger, cairn, PAVED } from './worlds2.js';
+import { pondMaterial } from './water.js';
 import { GFX } from './gfx.js';
 import * as HD from './hdtex.js';
 
@@ -21,7 +22,8 @@ function swampMaterials(W) {
     M.marsh = toon({ ...HD.hdGrass([62, 84, 54]), roughness: 1 });
     M.mud = toon({ ...HD.hdDirt([92, 80, 62]), roughness: 0.95 });
   }
-  M.water = new THREE.MeshStandardMaterial({ color: C('#2e4a44'), roughness: 0.12, metalness: 0.1, transparent: true, opacity: 0.86, emissive: C('#000000') });
+  // 늪 웅덩이: 물결·반사·물가 거품이 있는 고인 물 (water.js)
+  M.water = pondMaterial(W, { deep: '#1a3430', shallow: '#3a6450', sky: '#9cc4b4', foam: '#cfe2d4' });
   M.waterEdge = toon({ color: C('#4a5a3e') });
   M.plank = toon({ ...(GFX.hd ? HD.hdWood([112, 84, 58]) : { map: T.woodTex() }), color: GFX.hd ? undefined : C('#a08870'), roughness: 0.9 });
   M.reed = toon({ color: C('#8a9a5a') });
