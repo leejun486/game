@@ -370,7 +370,7 @@ export class World {
     const blossom = (x, z, s, seed, white) => {
       const keep = [M.leaf, M.leaf2];
       M.leaf = white ? M.blossomW : M.blossom; M.leaf2 = white ? M.blossom : M.blossomW;
-      this.pine(x, 0, z, s, seed);
+      this.pine(x, 0, z, s, seed, true, false, true);
       [M.leaf, M.leaf2] = keep;
     };
     for (const [x, z, s, sd, w] of [[-15.5, 12.5, 0.9, 41, 0], [9.5, 12.5, 0.85, 42, 1], [16.5, -12, 1.0, 43, 0], [-17.5, -9.5, 0.95, 44, 1], [-4.5, 16.5, 0.7, 45, 1], [5.5, 17, 0.75, 46, 0], [17.5, -27, 1.1, 47, 1], [-3.5, -28.5, 0.9, 48, 0]]) blossom(x, z, s, sd, w);
@@ -812,7 +812,8 @@ export class World {
     this.grassAreas.push({ x0: x0 + bw, x1: x1 - bw, z0: z0 + bw, z1: z1 - bw, y: 0.26 });
   }
 
-  pine(x, y, z, s, seed, collide = true, snowy = false) {
+  // leafy: 넓은잎 나무(단풍·벚·여름 나무) — 고화질에서 납작한 솔잎층 대신 둥글고 울퉁불퉁한 잎뭉치를 겹겹이
+  pine(x, y, z, s, seed, collide = true, snowy = false, leafy = false) {
     const B = this.batch, F = this.foliage, M = this.M;
     const R = mulberry32(seed * 97 + 3);
     const up = new THREE.Vector3(0, 1, 0);
@@ -843,6 +844,11 @@ export class World {
       const k = GFX.hd ? 1.12 : 1;
       F.add(geo, mat, new THREE.Matrix4().compose(c, new THREE.Quaternion().setFromEuler(new THREE.Euler((R() - 0.5) * 0.15, R() * 6, (R() - 0.5) * 0.15)), new THREE.Vector3(sx * k, sy * (GFX.hd ? 0.9 : 1), sz * k)));
     };
+    // 넓은잎 잎뭉치: 둥글고 울퉁불퉁한 덩어리 (아래는 살짝 납작)
+    const puff = (c, sx, sy, sz, mat) => {
+      F.add(puffGeo(R), mat, new THREE.Matrix4().compose(c, new THREE.Quaternion().setFromEuler(new THREE.Euler((R() - 0.5) * 0.3, R() * 6, (R() - 0.5) * 0.3)), new THREE.Vector3(sx, sy, sz)));
+    };
+    const broad = leafy && GFX.hd && !snowy;
     // 가지 + 잎뭉치 (우산형)
     for (let i = 2; i < segs; i++) {
       const base = pts[i - 1];
@@ -856,7 +862,13 @@ export class World {
         const q = new THREE.Quaternion().setFromUnitVectors(up, bd);
         B.add(geo, M.bark, new THREE.Matrix4().compose(base.clone().add(end).multiplyScalar(0.5), q, new THREE.Vector3(1, 1, 1)));
         const ps = (0.8 + R() * 0.4) * s * (GFX.hd ? 0.6 : 1);
-        if (GFX.hd) {
+        if (broad) {
+          // 가지 끝마다 잎뭉치 두세 개를 엇갈려 쌓아 풍성하게
+          const o = () => new THREE.Vector3((R() - 0.5) * 0.7 * ps, 0, (R() - 0.5) * 0.7 * ps);
+          puff(end.clone().add(new THREE.Vector3(0, 0.1 * s, 0)), 1.05 * ps, 0.78 * ps, 0.98 * ps, M.leaf);
+          puff(end.clone().add(o()).add(new THREE.Vector3(0, 0.45 * s, 0)), 0.85 * ps, 0.68 * ps, 0.8 * ps, M.leaf2);
+          if (R() < 0.7) puff(end.clone().add(o()).add(new THREE.Vector3(0, -0.15 * s, 0)), 0.7 * ps, 0.55 * ps, 0.68 * ps, M.leaf);
+        } else if (GFX.hd) {
           // 분재처럼: 가지 끝마다 납작한 솔잎층 두세 겹, 줄기가 비쳐 보이게
           pad(end.clone().add(new THREE.Vector3(0, 0.05 * s, 0)), 1.25 * ps, 0.32 * ps, 1.05 * ps, M.leaf);
           pad(end.clone().add(new THREE.Vector3((R() - 0.5) * 0.3, 0.32 * s, (R() - 0.5) * 0.3)), 0.85 * ps, 0.26 * ps, 0.75 * ps, snowy ? (M.snowPad || M.snowLeaf) : M.leaf2);
@@ -868,8 +880,18 @@ export class World {
       }
     }
     const top = pts[segs - 1];
-    pad(top.clone().add(new THREE.Vector3(0, 0.2 * s, 0)), 1.5 * s, 0.5 * s, 1.3 * s, M.leaf);
-    pad(top.clone().add(new THREE.Vector3(0.1, 0.55 * s, 0)), 1.0 * s, 0.35 * s, 0.9 * s, snowy ? (M.snowPad || M.snowLeaf) : M.leaf2);
+    if (broad) {
+      // 꼭대기: 큰 잎뭉치 하나에 작은 것들을 둘러 둥근 수관
+      puff(top.clone().add(new THREE.Vector3(0, 0.3 * s, 0)), 1.25 * s, 0.9 * s, 1.15 * s, M.leaf);
+      puff(top.clone().add(new THREE.Vector3(0.15 * s, 0.85 * s, -0.1 * s)), 0.85 * s, 0.7 * s, 0.8 * s, M.leaf2);
+      for (let k = 0; k < 3; k++) {
+        const a = (k / 3) * Math.PI * 2 + R();
+        puff(top.clone().add(new THREE.Vector3(Math.cos(a) * 0.85 * s, 0.05 * s + R() * 0.3 * s, Math.sin(a) * 0.85 * s)), 0.7 * s, 0.58 * s, 0.68 * s, k % 2 ? M.leaf2 : M.leaf);
+      }
+    } else {
+      pad(top.clone().add(new THREE.Vector3(0, 0.2 * s, 0)), 1.5 * s, 0.5 * s, 1.3 * s, M.leaf);
+      pad(top.clone().add(new THREE.Vector3(0.1, 0.55 * s, 0)), 1.0 * s, 0.35 * s, 0.9 * s, snowy ? (M.snowPad || M.snowLeaf) : M.leaf2);
+    }
     if (collide) this.circles.push({ x, z, r: 0.45 * s, y });
   }
 
@@ -1284,6 +1306,33 @@ export function blendStrip(W, baseMat, x0, x1, zSolid, zClear, y = -0.01) {
 
 // 솔잎층 하나: 위는 낮은 돔, 아래는 납작, 가장자리는 들쭉날쭉 (반지름 1 기준)
 const padCache = [];
+// 넓은잎 나무의 잎뭉치: 정이십면체를 노이즈로 울퉁불퉁하게, 바닥은 살짝 납작 (모양 4가지를 돌려 씀)
+const puffCache = [];
+function puffGeo(R) {
+  const v = Math.floor(R() * 4);
+  if (puffCache[v]) return puffCache[v];
+  const g = new THREE.IcosahedronGeometry(1, 1);
+  const P = g.attributes.position, rr = mulberry32(500 + v);
+  const bump = Array.from({ length: 6 }, () => [rr() * 2 - 1, rr() * 2 - 1, rr() * 2 - 1, 0.1 + rr() * 0.12]);
+  const seen = new Map(); // 같은 자리의 꼭짓점은 같이 움직여 틈이 안 생기게
+  for (let i = 0; i < P.count; i++) {
+    const x = P.getX(i), y = P.getY(i), z = P.getZ(i);
+    const key = `${x.toFixed(3)},${y.toFixed(3)},${z.toFixed(3)}`;
+    let k = seen.get(key);
+    if (k === undefined) {
+      k = 1;
+      for (const [bx, by, bz, a] of bump) k += a * Math.max(0, x * bx + y * by + z * bz);
+      k -= 0.12;
+      seen.set(key, k);
+    }
+    P.setXYZ(i, x * k, (y < -0.2 ? y * 0.65 : y) * k, z * k);
+  }
+  const ng = g.toNonIndexed();
+  ng.computeVertexNormals(); // 면마다 각진 저폴리 느낌
+  puffCache[v] = ng;
+  return ng;
+}
+
 function needlePad(R) {
   const v = Math.floor(R() * 4);
   if (padCache[v]) return padCache[v];

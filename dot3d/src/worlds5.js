@@ -72,7 +72,7 @@ function ribbon(W, curve, width, y, mat, n = 90) {
 function leafyTree(W, x, z, s, seed, l1, l2, collide = true, snowy = false) {
   const M = W.M, keep = [M.leaf, M.leaf2];
   M.leaf = l1; M.leaf2 = l2;
-  W.pine(x, 0, z, s, seed, collide, snowy);
+  W.pine(x, 0, z, s, seed, collide, snowy, !snowy);
   [M.leaf, M.leaf2] = keep;
 }
 

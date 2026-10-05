@@ -36,7 +36,7 @@ function maple(W, x, z, s, seed, collide = true) {
   const R = mulberry32(seed);
   M.leaf = R() < 0.5 ? M.maple : M.maple2;
   M.leaf2 = R() < 0.3 ? M.maple3 : M.maple2;
-  W.pine(x, 0, z, s, seed, collide);
+  W.pine(x, 0, z, s, seed, collide, false, true);
   [M.leaf, M.leaf2] = keep;
 }
 
