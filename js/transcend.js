@@ -92,7 +92,7 @@ const Transcend = (() => {
         <div class="tr-side">
           <button class="on">${ico('transcend')}초월</button>
           <button data-wl>${ico('sword')}무기 외형</button>
-          <button data-soon>${ico('wings')}스킨</button>
+          <button data-skin>${ico('wings')}스킨</button>
           <button data-coll>${ico('collection')}수집</button>
         </div>
         <div class="tr-main">
@@ -145,6 +145,7 @@ const Transcend = (() => {
       if (t.closest('[data-coll]')) return UI.open('collection');
       if (t.closest('[data-soon]')) return UI.toast('업데이트 예정입니다.');
       if (t.closest('[data-wl]')) { cancelAnimationFrame(raf); return UI.open('weaponlook'); }
+      if (t.closest('[data-skin]')) { cancelAnimationFrame(raf); return UI.open('skin'); }
       if (t.closest('[data-summon]')) return UI.open('summon');
       if (t.closest('[data-equip]')) {
         if (!owned(p, sel)) return;

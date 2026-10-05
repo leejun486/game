@@ -6,6 +6,10 @@ They are licensed under the licenses listed per layer below (CC-BY-SA 3.0 / GPL 
 
 Composed sheets are shared under CC-BY-SA 3.0.
 
+Character skin sheets (`skin_*_nw.png`, built by `tools/build_skins.py`) use the same body, head, hair, cape, leg, feet
+and torso layers as the class sheets below, in other colours, plus `torso/armour/legion` (LPC Legion armour, same
+licences as the plate armour entries).
+
 ## body/bodies/female
 - Authors: Benjamin K. Smith (BenCreating), bluecarrot16, TheraHedwig, Evert, MuffinElZangano, Durrani, Pierre Vigier (pvigier), ElizaWy, Matthew Krohn (makrohn), Johannes Sjölund (wulax), Stephen Challener (Redshrike)
 - Licenses: OGA-BY 3.0, CC-BY-SA 3.0, GPL 3.0

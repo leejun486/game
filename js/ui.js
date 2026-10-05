@@ -754,7 +754,6 @@ const UI = (() => {
   };
   OPENERS.stats = OPENERS.character;
   OPENERS.weaponlook = () => OPENERS.transcend();
-  OPENERS.skin = () => OPENERS.transcend();
 
   // Quest tracker click: claim if done, otherwise teleport straight to where the quest happens.
   // Works mid-hunt: the current target is dropped and AI mode resumes on arrival.
