@@ -1,6 +1,6 @@
 // 궁궐 마당 레벨: 지오메트리 + 충돌/높이
 import * as THREE from 'three';
-import { toon, animateMesh, ANIM, shared } from './materials.js';
+import { toon, animateMesh, ANIM, shared, softEdge } from './materials.js';
 import { boxGeo, cylGeo, Batcher, roofGeometry, latheGeo } from './geom.js';
 import * as T from './textures.js';
 import { mulberry32 } from './util.js';
@@ -1285,16 +1285,28 @@ function ditherAlpha() {
   return t;
 }
 
+// 이웃 지역 바닥이 경계 쪽으로 번져 들어오는 띠 (zSolid 쪽은 꽉 차고 zClear 쪽으로 갈수록 사라짐)
+//  도트 모드: 격자 디더 무늬 / 고화질: 노이즈로 굽이치는 들쭉날쭉한 경계 (예전 디더는 겹쳐 깨진 것처럼 보였음)
 export function blendStrip(W, baseMat, x0, x1, zSolid, zClear, y = -0.01) {
   const w = x1 - x0, d = Math.abs(zSolid - zClear);
   const map = baseMat.map.clone();
   map.needsUpdate = true;
   map.wrapS = map.wrapT = THREE.RepeatWrapping;
   map.repeat.set(w / 2, d / 2);
-  const alpha = ditherAlpha().clone();
-  alpha.needsUpdate = true;
-  alpha.repeat.set(w, 1);
-  const m = new THREE.Mesh(new THREE.PlaneGeometry(w, d), toon({ map, alphaMap: alpha, alphaTest: 0.5 }));
+  let m;
+  if (GFX.hd) {
+    const geo = new THREE.PlaneGeometry(w, d, 1, 4);
+    // aEdge: 사라지는 쪽(판의 북쪽 끝, zClear) 가장자리에서 0, 꽉 찬 쪽(남쪽)으로 d
+    const P = geo.attributes.position;
+    geo.setAttribute('aEdge', new THREE.Float32BufferAttribute(Array.from({ length: P.count }, (_, k) => d / 2 - P.getY(k)), 1));
+    const base = toon({ map, color: baseMat.color?.clone(), roughness: baseMat.roughness ?? 0.9 });
+    m = new THREE.Mesh(geo, softEdge(base, d * 0.75, 0.22));
+  } else {
+    const alpha = ditherAlpha().clone();
+    alpha.needsUpdate = true;
+    alpha.repeat.set(w, 1);
+    m = new THREE.Mesh(new THREE.PlaneGeometry(w, d), toon({ map, alphaMap: alpha, alphaTest: 0.5 }));
+  }
   m.rotation.x = -Math.PI / 2;
   // 판의 위쪽(uv.y=1)이 북쪽(-z): 불투명한 쪽이 남쪽이 아니면 뒤집음
   if (zSolid < zClear) m.rotation.z = Math.PI;

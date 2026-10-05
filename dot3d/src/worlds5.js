@@ -127,7 +127,7 @@ export function buildValley(W) {
   disc(W, M.fpath, 6, -6, 3.2);
 
   // 시냇물: 북서쪽 폭포에서 남쪽으로 굽이쳐 흐름
-  const pts = [[-10, -29], [-8, -22], [-4, -16], [-1, -10], [0, -4], [-1.5, 2], [1.5, 8], [3.5, 14], [1.5, 20], [-0.5, 27]].map(([x, z]) => new THREE.Vector3(x, 0, z));
+  const pts = [[-10, -29], [-8, -22], [-4, -16], [-1, -10], [0, -4], [-1.5, 2], [1.5, 8], [3.5, 14], [1.5, 20], [-0.5, 25.6]].map(([x, z]) => new THREE.Vector3(x, 0, z));
   const curve = new THREE.CatmullRomCurve3(pts);
   ribbon(W, curve, 5.0, 0.012, M.bank);
   ribbon(W, curve, 3.4, 0.035, streamMaterial(W));
@@ -286,6 +286,7 @@ function snowMaterials(W) {
   M.deepSnow = M.snow;
   M.snowCap = toon({ color: C('#e6ecf4') });
   M.iceLake = toon({ color: C('#a8d8f0'), roughness: 0.2, metalness: GFX.hd ? 0.2 : 0 });
+  M.iceStream = toon({ color: C('#94c8e4'), roughness: 0.15, metalness: GFX.hd ? 0.2 : 0 });
   M.iceCrystal = toon({ color: C('#d8f4ff'), emissive: C('#2a8aff'), emissiveIntensity: 0.6, transparent: true, opacity: 0.85 });
   M.mudWall = M.mudWall || toon({ color: C('#c8a878') });
   M.thatch = M.thatch || toon({ color: C('#b8945a') });
@@ -320,6 +321,21 @@ export function buildSnowfield(W) {
   M.trodden = toon({ color: C('#c4c2c8') });
   pathStrip(W, M.trodden, [[-14, -27], [-12, -18], [-6, -12], [0, -6], [2, 2], [0, 9]], 1.8, 0.006);
   disc(W, M.trodden, 0, 12, 4.2).position.y = 0.008;
+
+  // 계곡에서 흘러온 시냇물이 고원에 들어서며 얼어붙어 못으로 이어짐 (경계에서 물이 뚝 끊기지 않게)
+  {
+    const ice = new THREE.CatmullRomCurve3([[-0.5, -27.5], [-0.7, -22], [1.2, -17.5], [4.8, -13.5], [8.6, -10]].map(([x, z]) => new THREE.Vector3(x, 0, z)));
+    ribbon(W, ice, 4.6, 0.009, M.snowCap);
+    ribbon(W, ice, 3.0, 0.02, M.iceStream);
+    for (let i = 0; i < 8; i++) {
+      const p = ice.getPoint(0.12 + i * 0.1);
+      const crack = new THREE.Mesh(new THREE.PlaneGeometry(0.05, 1.2 + (i % 3) * 0.5), toon({ color: C('#e8f8ff') }));
+      crack.rotation.set(-Math.PI / 2, 0, i * 1.3);
+      crack.position.set(p.x + (i % 2 ? 0.4 : -0.3), 0.025, p.z);
+      crack.userData.noOutline = true;
+      W.root.add(crack);
+    }
+  }
 
   // 얼어붙은 못
   const lake = new THREE.Mesh(new THREE.CircleGeometry(5.5, 32), M.iceLake);

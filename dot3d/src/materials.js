@@ -107,8 +107,10 @@ export const ANIM = {
 //  기하에 aEdge(가장자리까지 거리, 월드 단위) 속성이 있어야 함 (worlds2.js의 pathStrip·disc)
 //  가장자리 근처는 살짝 어둡게 (젖은 흙·풀에 덮인 느낌)
 const softCache = new Map();
-export function softEdge(material) {
-  if (softCache.has(material)) return softCache.get(material);
+// range: 가장자리에서 얼마나 깊이(월드 단위)까지 들쭉날쭉할지, freq: 굽이의 촘촘함
+export function softEdge(material, range = 0.85, freq = 0.8) {
+  const ck = material.uuid + '|' + range + '|' + freq;
+  if (softCache.has(ck)) return softCache.get(ck);
   const m = material.clone();
   m.onBeforeCompile = (shader) => {
     shader.vertexShader = 'attribute float aEdge;\nvarying float vEdge;\nvarying vec2 vWXZ;\n' + shader.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
@@ -121,14 +123,14 @@ float seN(vec2 p) { vec2 i = floor(p), f = fract(p); vec2 u = f * f * (3.0 - 2.0
   return mix(mix(seH(i), seH(i + vec2(1.0, 0.0)), u.x), mix(seH(i + vec2(0.0, 1.0)), seH(i + vec2(1.0, 1.0)), u.x), u.y); }
 ` + shader.fragmentShader
       .replace('#include <clipping_planes_fragment>', `#include <clipping_planes_fragment>
-      float seNoise = seN(vWXZ * 0.8) * 0.6 + seN(vWXZ * 2.9) * 0.3 + seN(vWXZ * 9.0) * 0.1;
-      float seThr = 0.05 + seNoise * 0.85;
+      float seNoise = seN(vWXZ * ${freq.toFixed(3)}) * 0.6 + seN(vWXZ * ${(freq * 3.6).toFixed(3)}) * 0.3 + seN(vWXZ * 9.0) * 0.1;
+      float seThr = 0.05 + seNoise * ${range.toFixed(3)};
       if (vEdge < seThr) discard;`)
       .replace('#include <map_fragment>', `#include <map_fragment>
       diffuseColor.rgb *= mix(0.82, 1.0, smoothstep(seThr, seThr + 0.55, vEdge));`);
   };
-  m.customProgramCacheKey = () => 'softEdge';
-  softCache.set(material, m);
+  m.customProgramCacheKey = () => 'softEdge' + range + '|' + freq;
+  softCache.set(ck, m);
   return m;
 }
 
