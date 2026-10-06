@@ -122,6 +122,8 @@ export const dict = {
   '먹빛': 'Ink', '쪽빛': 'Indigo', '진달래': 'Azalea', '송홧빛': 'Pine Pollen', '비취': 'Jade', '소색': 'Undyed', '구미호 주홍': 'Fox Vermilion', '용궁 청옥': 'Sea Sapphire', '눈꽃': 'Snowflake',
   '저승 먹보라': 'Netherworld Violet', '금빛 전설': 'Legendary Gold', '달빛 은': 'Moon Silver', '새벽빛': 'Dawn', '붉은 달': 'Blood Moon',
   '밤색': 'Chestnut', '적갈색': 'Auburn', '회청색': 'Slate', '은발': 'Silver', '백발': 'White', '금발': 'Golden', '홍발': 'Crimson',
+  '보기 편하게': 'Accessibility', '글자·메뉴 크기': 'Text & menu size', '위험 표시 색': 'Danger marker color', '노랑': 'Yellow', '하늘색': 'Sky blue', '자홍': 'Magenta', '화면 번쩍임': 'Screen flashes', '줄이기': 'Reduce',
+  '위험 표시 색: 보스·몬스터 공격이 떨어질 바닥 원과 돌진 경고선을 모두 한 색으로 칠해요. 빨강·초록이 잘 구분되지 않으면 노랑이나 하늘색을 골라 보세요.': 'Danger marker color paints every ground circle and charge line for boss and monster attacks in one color. If red and green are hard to tell apart, try yellow or sky blue.',
   '하루하루': 'Day by Day', '오늘의 목표를 모두 마친 날 7일': 'Finish all daily goals on 7 days',
   '오늘의 목표': 'Daily Goals', '오늘의 목표 달성': 'Daily goal complete', '오늘의 목표 모두 달성!': 'All daily goals complete!', '희귀 장비 보상': 'Rare gear reward',
   '새 날이 밝았어요 — 오늘의 목표가 생겼어요 (메뉴 → 오늘의 목표)': 'A new day — fresh daily goals (Menu → Daily Goals)',

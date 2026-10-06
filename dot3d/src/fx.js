@@ -223,8 +223,12 @@ export class FX {
     this.streaks = [];
     this.spikes = [];
     this.numLayer = document.getElementById('numbers');
+    this.warnCol = null; // 접근성: 적의 공격 예고 색을 하나로 (설정 → 위험 표시 색)
     this.time = 0;
   }
+
+  // 적 공격 예고(바닥 원·경고선)의 색
+  warn(c) { return this.warnCol || c; }
 
   spark(x, y, z, n = 10, color = '#fff6c8', speed = 6) {
     for (let i = 0; i < n; i++) {

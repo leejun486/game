@@ -385,7 +385,7 @@ export class UI {
     const f = this.el.flash;
     f.style.transition = 'none';
     f.style.background = color;
-    f.style.opacity = String(strength);
+    f.style.opacity = String(strength * (this.flashMul ?? 1));
     requestAnimationFrame(() => { f.style.transition = 'opacity 0.35s'; f.style.opacity = '0'; });
   }
 

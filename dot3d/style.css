@@ -686,3 +686,10 @@ body.killcam #minimap, body.shot #minimap { display: none; }
 body.pad #help { display: none; }
 body.pad:not(.touch) #help-pad { display: flex; }
 #prompt .gp { margin-right: 4px; }
+
+/* 접근성: 글자·메뉴 크기 (설정 → 화면 → 보기 편하게). 화면 전체가 아니라 글자 판들만 키움 */
+#hud > *, #bag, #skills, #pause, #dialog, #toast, #coach, #ach-pop, #banner, .wm-box, #gameover > * { zoom: var(--ui, 1); }
+#bag, #skills { max-height: calc(88vh / var(--ui, 1)); }
+#pause { max-height: calc(90vh / var(--ui, 1)); }
+#dialog { width: min(760px, calc(92vw / var(--ui, 1))); }
+.pz-seg .sw { display: inline-block; width: 10px; height: 10px; margin-right: 4px; border: 1px solid #000; vertical-align: -1px; }

@@ -94,8 +94,8 @@ class Game {
     this.fx = new FX(scene, this.pixel);
     this.audio = new Audio();
     this.settings = loadSettings();
-    this.applySettings();
     this.ui = new UI(this);
+    this.applySettings();
     // 직업별 레벨·경험치·착용 장비, 공용 가방
     this.progress = {};
     this.inv = new Set(['sw0', 'mg0', 'bw0', 'sp0', 'ot0']);
@@ -1379,6 +1379,10 @@ class Game {
     this.binds = bindMap(S);
     this.audio.setVolumes(S.vol);
     document.body.classList.toggle('no-dmg', !S.numbers);
+    // 접근성: 적 공격 예고 색, 글자·UI 크기, 화면 번쩍임
+    if (this.fx) this.fx.warnCol = S.warn || null;
+    this.ui.flashMul = S.flash ?? 1;
+    document.documentElement.style.setProperty('--ui', String(S.ui || 1));
   }
 
   // 화질 단계: 화면 해상도·AO·MSAA(pixel.js)와 그림자 지도 크기
@@ -1461,6 +1465,11 @@ class Game {
         <div class="pz-row"><label>화질</label>${seg('quality', [['high', '높음'], ['mid', '보통'], ['low', '낮음']], S.quality)}</div>
         <div class="pz-row"><label>화면 흔들림</label>${seg('shake', [[1, '보통'], [0.5, '약하게'], [0, '끔']], S.shake)}</div>
         <div class="pz-row"><label>도움말</label>${seg('tips', [[1, '보이기'], [0, '숨기기']], S.tips === false ? 0 : 1)}</div>
+        <h3 style="margin-top:14px">보기 편하게</h3>
+        <div class="pz-row"><label>글자·메뉴 크기</label>${seg('ui', [[1, '100%'], [1.15, '115%'], [1.3, '130%']], S.ui || 1)}</div>
+        <div class="pz-row"><label>위험 표시 색</label>${seg('warn', [['', '원래 색'], ['#ffe600', '<i class="sw" style="background:#ffe600"></i>노랑'], ['#30c8ff', '<i class="sw" style="background:#30c8ff"></i>하늘색'], ['#ff3af0', '<i class="sw" style="background:#ff3af0"></i>자홍']], S.warn || '')}</div>
+        <div class="pz-row"><label>화면 번쩍임</label>${seg('flash', [[1, '보통'], [0.3, '줄이기']], S.flash ?? 1)}</div>
+        <div class="pz-note" style="margin-top:-4px">위험 표시 색: 보스·몬스터 공격이 떨어질 바닥 원과 돌진 경고선을 모두 한 색으로 칠해요. 빨강·초록이 잘 구분되지 않으면 노랑이나 하늘색을 골라 보세요.</div>
         <div class="pz-row"><label>데미지 숫자</label>${seg('numbers', [[1, '보이기'], [0, '숨기기']], S.numbers ? 1 : 0)}</div>
         ${GFX.hd ? '' : `<div class="pz-row"><label>외곽선</label>${seg('outline', [[1, '켜기'], [0, '끄기']], this.pixel.compMat.uniforms.outline.value ? 1 : 0)}</div>`}
         <div class="pz-note">화질 '낮음'은 해상도를 줄이고 그늘(AO)·계단 현상 제거·그림자 해상도를 낮춰 저사양 노트북·휴대폰에서 부드럽게 돌아가요. 버벅이면 화질이 저절로 한 단계씩 낮아지고, 직접 고르면 그대로 둡니다. 그래픽 모드는 새로고침해야 바뀝니다.</div>`;
@@ -1473,6 +1482,9 @@ class Game {
         if (k === 'shake') this.setSetting((s) => { s.shake = +v; });
         if (k === 'numbers') this.setSetting((s) => { s.numbers = v === '1'; });
         if (k === 'tips') this.setSetting((s) => { s.tips = v === '1'; });
+        if (k === 'ui') this.setSetting((s) => { s.ui = +v; });
+        if (k === 'warn') this.setSetting((s) => { s.warn = v; });
+        if (k === 'flash') this.setSetting((s) => { s.flash = +v; });
         if (k === 'outline') { this.pixel.compMat.uniforms.outline.value = +v; this.save(false); }
         this.pausePane('screen');
       });
@@ -2374,7 +2386,7 @@ class Game {
   hazards(spots, { r = 1.4, delay = 1.0, color = '#ff6a2a', dmg = 20, step = 0.08, onHit, boom } = {}) {
     const p = this.player;
     spots.forEach((at, i) => {
-      this.fx.circle(at, r, color, delay + i * step, 3);
+      this.fx.circle(at, r, this.fx.warn(color), delay + i * step, 3);
       this.after(delay + i * step, () => {
         boom ? boom(at) : (this.fx.spark(at.x, at.y + 0.3, at.z, 14, color, 6), this.fx.ring(at, r, color, 0.3));
         this.audio.play('impact');
@@ -2603,7 +2615,7 @@ class Game {
     for (let i = 0; i < n; i++) this.after(i * (n > 3 ? 0.42 : 0.55), () => {
       if (w.dead) return;
       const at = V(p.pos.x + p.vel.x * 0.25, p.y, p.pos.z + p.vel.z * 0.25);
-      this.fx.circle(at, 2.2, '#ff3a4a', 0.9, 3);
+      this.fx.circle(at, 2.2, this.fx.warn('#ff3a4a'), 0.9, 3);
       this.after(0.9, () => {
         this.fx.bolt(at, 1.6);
         this.fx.ring(at, 2.4, '#ff8a9a', 0.35);
@@ -4093,7 +4105,7 @@ class Game {
       spots.push(V(x, this.world.heightAt(x, z), z));
     }
     spots.forEach((at, i) => {
-      this.fx.circle(at, 1.3, '#8ad8ff', 1.0 + i * 0.07, 3);
+      this.fx.circle(at, 1.3, this.fx.warn('#8ad8ff'), 1.0 + i * 0.07, 3);
       this.after(1.0 + i * 0.07, () => {
         this.fx.streak(V(at.x, at.y + 7, at.z), V(at.x, at.y + 0.2, at.z), '#e8f8ff', 0.25, 0.3);
         this.fx.spark(at.x, at.y + 0.3, at.z, 16, '#e8f8ff', 7);
@@ -4113,7 +4125,7 @@ class Game {
       spots.push(V(x, this.world.heightAt(x, z), z));
     }
     spots.forEach((at, i) => {
-      this.fx.circle(at, 1.3, '#ff6a2a', 1.0 + i * 0.08, 3);
+      this.fx.circle(at, 1.3, this.fx.warn('#ff6a2a'), 1.0 + i * 0.08, 3);
       this.after(1.0 + i * 0.08, () => {
         this.fx.streak(V(at.x, at.y + 7, at.z), V(at.x, at.y + 0.2, at.z), '#ffb060', 0.25, 0.3);
         this.fx.spark(at.x, at.y + 0.3, at.z, 16, '#ffd090', 7);
@@ -4135,7 +4147,7 @@ class Game {
       const warn = v.period - 1.3;
       if (v.t >= warn && !v.warned) {
         v.warned = true;
-        if (Math.hypot(v.x - p.pos.x, v.z - p.pos.z) < 22) this.fx.circle(V(v.x, 0, v.z), 1.9, '#ff4a1a', 1.3, 4);
+        if (Math.hypot(v.x - p.pos.x, v.z - p.pos.z) < 22) this.fx.circle(V(v.x, 0, v.z), 1.9, this.fx.warn('#ff4a1a'), 1.3, 4);
       }
       v.mat.emissiveIntensity = v.t >= warn ? 0.6 + (v.t - warn) * 2.4 : 0.4 + Math.sin(this.time * 2 + v.x) * 0.1;
       if (v.t >= v.period) {

@@ -26,6 +26,9 @@ export const DEFAULTS = {
   tips: true,          // 처음 겪는 순간의 도움말
   binds: {},           // 동작 → 사용자가 바꾼 키 코드
   lang: 'auto',        // ko | en | auto (브라우저 언어)
+  warn: '',            // 적 공격 예고 색 ('' 원래 색, 아니면 그 색 하나로)
+  ui: 1,               // 글자·UI 크기 배율
+  flash: 1,            // 화면 번쩍임 세기 (1 보통, 0.3 줄이기)
 };
 
 export function loadSettings() {

@@ -906,7 +906,7 @@ export class Enemy {
       } else if ((T.boss === 'dokkaebi' || T.leap) && this.leapCd <= 0 && dist > (this.phase === 3 ? 1.5 : 4.5) && dist < 14) {
         this.state = 'leapPrep'; this.st = 0;
         this.leapTarget = p.pos.clone();
-        this.tele = g.fx.ring(this.leapTarget, 3.6, '#ff4a3a', 1, 1);
+        this.tele = g.fx.ring(this.leapTarget, 3.6, g.fx.warn('#ff4a3a'), 1, 1);
       } else if (this.isBoss && this.bossPattern(dt, dist, toYaw)) {
         // 보스 고유 패턴 시작
         // 구미호·저승사자 고유 패턴 시작
@@ -930,7 +930,7 @@ export class Enemy {
           this.state = 'windup'; this.st = 0;
           if (this.isBoss) {
             const f = new THREE.Vector3(this.pos.x + Math.sin(this.yaw) * 1.6, this.pos.y, this.pos.z + Math.cos(this.yaw) * 1.6);
-            this.tele = g.fx.ring(f, 2.6, '#ff4a3a', 1, 1);
+            this.tele = g.fx.ring(f, 2.6, g.fx.warn('#ff4a3a'), 1, 1);
             this.smashAt = f;
           }
         }
@@ -1016,7 +1016,7 @@ export class Enemy {
             this.state = 'chargePrep'; this.st = 0.25;
             this.yaw = toYaw;
             const from = new THREE.Vector3(this.pos.x, this.y + 0.1, this.pos.z);
-            g.fx.streak(from, from.clone().add(new THREE.Vector3(Math.sin(toYaw) * 9, 0, Math.cos(toYaw) * 9)), '#ff6a2a', 0.5, 2.2);
+            g.fx.streak(from, from.clone().add(new THREE.Vector3(Math.sin(toYaw) * 9, 0, Math.cos(toYaw) * 9)), g.fx.warn('#ff6a2a'), 0.5, 2.2);
           } else this.chargeLeft = undefined;
         }
       }
@@ -1039,7 +1039,7 @@ export class Enemy {
         this.yaw = toYaw;
         this.state = 'windup'; this.st = T.windup * 0.35;
         const f = new THREE.Vector3(this.pos.x + Math.sin(this.yaw) * 1.6, this.pos.y, this.pos.z + Math.cos(this.yaw) * 1.6);
-        this.tele = g.fx.ring(f, 2.6, '#c84aff', 1, 1);
+        this.tele = g.fx.ring(f, 2.6, g.fx.warn('#c84aff'), 1, 1);
         this.smashAt = f;
       }
     } else if (this.state === 'roar') {
@@ -1066,7 +1066,7 @@ export class Enemy {
         this.state = 'submerged'; this.st = 0;
         this.root.visible = false;
         this.emergeAt = p.pos.clone();
-        this.tele = g.fx.ring(this.emergeAt, 3.4, '#2affd0', 1, 1);
+        this.tele = g.fx.ring(this.emergeAt, 3.4, g.fx.warn('#2affd0'), 1, 1);
       }
     } else if (this.state === 'submerged') {
       // 물밑에서 플레이어를 쫓다가 멈춰 솟구칠 자리를 정함
@@ -1116,7 +1116,7 @@ export class Enemy {
           if (this.leapLeft > 0 && !g.player.dead) {
             this.state = 'leapPrep'; this.st = 0.3;
             this.leapTarget = g.player.pos.clone();
-            this.tele = g.fx.ring(this.leapTarget, 3.6, '#ff4a3a', 1, 1);
+            this.tele = g.fx.ring(this.leapTarget, 3.6, g.fx.warn('#ff4a3a'), 1, 1);
           } else { this.leapLeft = undefined; this.leapCd = rand(4, 6); }
         }
       }
@@ -1143,7 +1143,7 @@ export class Enemy {
     // 이무기 3단계: 꼬리 휘두르기 (주위 큰 원)
     if ((T.boss === 'imugi' || T.boss === 'dragon' || T.boss === 'centipede') && this.phase === 3 && dist < 5 && Math.random() < 0.45) {
       this.state = 'spin'; this.st = 0;
-      this.tele = g.fx.ring(new THREE.Vector3(this.pos.x, this.y, this.pos.z), 5, '#2affd0', 1, 1);
+      this.tele = g.fx.ring(new THREE.Vector3(this.pos.x, this.y, this.pos.z), 5, g.fx.warn('#2affd0'), 1, 1);
       g.audio.play('charge');
       return true;
     }
@@ -1153,7 +1153,7 @@ export class Enemy {
         // 돌진 경로 경고선
         const from = new THREE.Vector3(this.pos.x, this.y + 0.1, this.pos.z);
         const to = from.clone().add(new THREE.Vector3(Math.sin(toYaw) * 9, 0, Math.cos(toYaw) * 9));
-        g.fx.streak(from, to, '#ff4a3a', 0.7, 1.6);
+        g.fx.streak(from, to, g.fx.warn('#ff4a3a'), 0.7, 1.6);
         g.audio.play('howl');
       } else { this.state = 'cast'; this.st = 0; g.audio.play('charge'); }
       return true;
@@ -1171,7 +1171,7 @@ export class Enemy {
         this.state = 'chargePrep'; this.st = 0;
         const from = new THREE.Vector3(this.pos.x, this.y + 0.1, this.pos.z);
         const to = from.clone().add(new THREE.Vector3(Math.sin(toYaw) * 9, 0, Math.cos(toYaw) * 9));
-        g.fx.streak(from, to, '#ff6a2a', 0.7, 2.2);
+        g.fx.streak(from, to, g.fx.warn('#ff6a2a'), 0.7, 2.2);
         g.audio.play('slam');
       } else { this.state = 'cast'; this.st = 0; g.audio.play('charge'); }
       return true;
@@ -1182,7 +1182,7 @@ export class Enemy {
         this.state = 'chargePrep'; this.st = 0;
         const from = new THREE.Vector3(this.pos.x, this.y + 0.1, this.pos.z);
         const to = from.clone().add(new THREE.Vector3(Math.sin(toYaw) * 9, 0, Math.cos(toYaw) * 9));
-        g.fx.streak(from, to, '#ff8a3a', 0.7, 1.8);
+        g.fx.streak(from, to, g.fx.warn('#ff8a3a'), 0.7, 1.8);
         g.audio.play('howl');
       } else { this.state = 'cast'; this.st = 0; g.audio.play('charge'); }
       return true;
@@ -1192,7 +1192,7 @@ export class Enemy {
       if (dist > 4 && Math.random() < 0.45) {
         this.state = 'chargePrep'; this.st = 0;
         const from = new THREE.Vector3(this.pos.x, this.y + 0.1, this.pos.z);
-        g.fx.streak(from, from.clone().add(new THREE.Vector3(Math.sin(toYaw) * 9, 0, Math.cos(toYaw) * 9)), '#aaff3a', 0.7, 1.8);
+        g.fx.streak(from, from.clone().add(new THREE.Vector3(Math.sin(toYaw) * 9, 0, Math.cos(toYaw) * 9)), g.fx.warn('#aaff3a'), 0.7, 1.8);
         g.audio.play('charge');
       } else { this.state = 'cast'; this.st = 0; g.audio.play('charge'); }
       return true;
