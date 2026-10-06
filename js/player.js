@@ -7,7 +7,6 @@ class Player extends Hero {
     Content.migrate(save);
     this.s = save; // persistent data
     Looks.migrate(this);
-    Skins.migrate(this);
     Pets.migrate(this);
     Mounts.migrate(this);
     this.mountId = save.mount; this.rideFace = 1;
@@ -157,7 +156,6 @@ class Player extends Hero {
     for (const b of Content.bonuses(this)) add(b);
     // weapon look: equip + collection bonus
     for (const b of Looks.bonuses(this)) add(b);
-    for (const b of Skins.bonuses(this)) add(b);
     for (const b of Pets.bonuses(this)) add(b);
     for (const b of Mounts.bonuses(this)) add(b);
     // buffs
@@ -173,8 +171,7 @@ class Player extends Hero {
     if (this.hp > this.maxHp) this.hp = this.maxHp;
     if (this.mp > this.maxMp) this.mp = this.maxMp;
     // bodies are drawn without their baked weapon; the weapon look is a separate layer
-    // 초월 변신 > 스킨 > 직업 기본 모습
-    const base = card ? card.sheet : Skins.sheet(this);
+    const base = card ? card.sheet : c.sheet;
     this.sheet = window.SPRITE_ROWS[base + '_nw'] ? base + '_nw' : base;
     this.power = Math.round(st.atk * 10 + st.def * 8 + st.maxHp + st.atkSpd * 15 + st.eva * 2 + lv * 50);
   }

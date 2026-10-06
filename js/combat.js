@@ -111,7 +111,6 @@ const Combat = (() => {
     Content.clanXp(p, d.boss ? 60 : 1);
     if (Math.random() < (d.boss ? 1 : 0.004)) { const dia = d.boss ? U.randi(80, 200) : U.randi(1, 5); p.s.dia += dia; UI.chat(`다이아 ${dia}개를 획득했습니다.`, 'drop'); }
     if (d.boss) UI.announce(`<b>${p.name}</b>님이 <em>${d.name}</em>을(를) 처치했습니다!`);
-    if (d.boss && d.id !== 'dungeon') Skins.onBossKill(game, d);
     Quests.onKill(game, d.id);
     UI.refreshHud();
   }

@@ -242,7 +242,7 @@ const Looks = (() => {
         <div class="tr-side">
           <button data-go="transcend">${ico('transcend')}초월</button>
           <button class="on">${ico('sword')}무기 외형</button>
-          <button data-go="skin">${ico('wings')}스킨</button>
+          <button data-soon>${ico('wings')}스킨</button>
           <button data-go="collection">${ico('collection')}수집</button>
         </div>
         <div class="tr-main">
