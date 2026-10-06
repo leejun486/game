@@ -2027,7 +2027,7 @@ class Game {
   autoHuntStep(inp, dt) {
     const p = this.player;
     const range = { sword: 1.6, mage: 6.5, elf: 7.5, lancer: 2.6 }[p.cls];
-    const t = this.validTarget(this.target) && !(this.target.huntSkipT > this.time) && Math.hypot(this.target.pos.x - p.pos.x, this.target.pos.z - p.pos.z) < 24 ? this.target : this.nearestEnemy(24) || (this.waveActive ? this.nearestEnemy(90, true) : null); // 밤 싸움엔 멀리 남은 적도 찾아감
+    const t = this.validTarget(this.target) && !(this.target.huntSkipT > this.time) && Math.hypot(this.target.pos.x - p.pos.x, this.target.pos.z - p.pos.z) < 24 ? this.target : this.nearestEnemy(24) || (this.waveActive || this.tower?.active ? this.nearestEnemy(90, true) : null); // 밤 싸움·시련탑엔 멀리 남은 적도 찾아감
     if (!t) {
       let dr = null, dd = 14;
       for (const d of this.drops) { const k = Math.hypot(d.g.position.x - p.pos.x, d.g.position.z - p.pos.z); if (k < dd) { dd = k; dr = d; } }
@@ -2083,7 +2083,7 @@ class Game {
     const allStuck = live.length > 0 && live.every((e) => e.spawning || e.isBoss ? false : stuck(e));
     for (const e of this.enemies) {
       // 밤 싸움의 적이 멀리(22칸 넘게) 떨어진 채 6초가 지나면 (길이 끊겨 못 오거나, 쫓다 멀어짐) 가까이 데려옴 — 싸움이 끝나지 않던 문제
-      if (this.waveActive && !e.dead && !e.spawning && !e.field && Math.hypot(e.pos.x - p.x, e.pos.z - p.z) > 22) {
+      if ((this.waveActive || (this.tower?.active && !this.tower.cleared)) && !e.dead && !e.spawning && !e.field && Math.hypot(e.pos.x - p.x, e.pos.z - p.z) > 22) {
         e.farT = (e.farT || 0) + 0.5;
         if (e.farT >= 6) {
           e.farT = 0;

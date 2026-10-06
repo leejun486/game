@@ -177,6 +177,11 @@ async function runClass(ctx, cls) {
       const B = window.__bot, G = window.game;
       for (let i = 0; i < 30 * 30; i++) { B.tick(1 / 30); if (B.phase === 'done') break; }
       if (B.phase === 'main' && B.stepT > STUCK * 60) B.skipStuck();
+      // 시련탑: 한 층에 5분 넘게 머물면 남은 적을 기록하고 치움
+      if (B.phase === 'tower' && G.tower?.active && !G.tower.cleared && B.stepT > 300) {
+        B.stuck.push({ tower: G.tower.floor, pos: [+G.player.pos.x.toFixed(1), +G.player.pos.z.toFixed(1)], queue: G.spawnQueue.length, enemies: G.enemies.filter((e) => !e.dead).map((e) => ({ type: e.type, hp: Math.round(e.hp), state: e.state, spawning: !!e.spawning, d: +Math.hypot(e.pos.x - G.player.pos.x, e.pos.z - G.player.pos.z).toFixed(1), y: +(e.y - G.player.y).toFixed(1), field: !!e.field })) });
+        for (const e of G.enemies) e.dispose(); G.enemies = []; G.spawnQueue.length = 0; B.stepT = 0;
+      }
       return { t: B.t, step: G.quest.step, phase: B.phase, lv: G.player.level, deaths: B.deaths, floor: G.tower?.floor || 0 };
     }, STUCK_MIN);
     if (s.step !== last) { last = s.step; process.stdout.write(`  [${cls}] ${(s.t / 60).toFixed(1)}분 · ${s.phase === 'tower' ? `시련탑 ${s.floor}층` : `${s.step}단계`} · Lv.${s.lv} · 쓰러짐 ${s.deaths} (실제 ${((Date.now() - t0) / 60000).toFixed(1)}분)\n`); }
