@@ -6,6 +6,17 @@ module.exports = {
   async run(ctx) {
     const g = await openGame(ctx, { lang: 'zh' });
     await g.newGame();
+    // 지역 보스: 처음 싸울 땐(회차가 올라 있어도) 각성하지 않고, 평정한 지역을 다시 싸울 때만 각성
+    const reg = await g.eval(() => {
+      const G = window.game, out = [];
+      for (const cleared of [false, true]) {
+        G.mapId = 'temple'; G.map = G.map; G.round = 4; G.cleared = cleared ? { temple: true } : {};
+        G.spawnEnemy('reaper'); const e = G.enemies[G.enemies.length - 1]; out.push(!!e.awakened); e.dispose(); G.enemies.pop(); G.ui.setBoss(null);
+      }
+      G.round = 0; G.cleared = {}; G.mapId = 'palace';
+      return out;
+    });
+    check(reg[0] === false && reg[1] === true, `지역 보스 각성 조건이 이상함 (처음 ${reg[0]}, 다시 ${reg[1]})`);
     await g.eval(() => { const G = window.game; G.player.level = 30; G.enterTower(); });
     await g.step(3, { input: {} });
     const floor = async (n) => {

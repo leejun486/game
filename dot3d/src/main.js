@@ -2738,7 +2738,7 @@ class Game {
     const list = this.waveDef(this.wave);
     const boss = this.wave === 3;
     const bossName = BOSS_NAME[this.mapId];
-    this.ui.banner(`제${this.wave}파`, boss ? `${this.round >= 2 ? '각성 ' : ''}${bossName} 출현!` : `${this.map.foe} ${list.length}마리`, 2.4, boss ? 'boss-banner' : '');
+    this.ui.banner(`제${this.wave}파`, boss ? `${this.cleared[this.mapId] ? '각성 ' : ''}${bossName} 출현!` : `${this.map.foe} ${list.length}마리`, 2.4, boss ? 'boss-banner' : '');
     this.audio.play(boss ? 'drum' : 'wave');
     let delay = 0.6;
     for (const t of list) {
@@ -2765,8 +2765,9 @@ class Game {
     const TR = this.tower?.active ? this.tower : null;
     if (opt.weak) e.maxHp = e.hp = Math.max(1, Math.round(e.maxHp * 0.6));
     if (TR?.rule?.key === 'swift') e.T = { ...e.T, speed: e.T.speed * 1.35 };
-    // 각성 보스: 탑 20층부터의 보스 층, 또는 3회차부터의 지역 보스
-    const awake = isBoss && (TR ? TR.floor >= 20 && TR.floor % 5 === 0 : this.round >= 2);
+    // 각성 보스: 탑 20층부터의 보스 층, 또는 이미 평정한 지역을 다시 울려 부른 보스
+    //  (회차(round)는 지역을 평정할 때마다 오르므로 첫 판에도 금방 커짐 — 그래서 '다시 싸우는 지역'으로 정함)
+    const awake = isBoss && (TR ? TR.floor >= 20 && TR.floor % 5 === 0 : !!this.cleared[this.mapId]);
     if (awake) awaken(e);
     if (isBoss) { e.name = TR ? `${e.T.name} · ${TR.floor}층` : this.round > 0 ? `${e.T.name} +${this.round}` : e.T.name; if (awake) e.name = '각성 ' + e.name; this.ui.setBoss(e); this.shake(0.5); this.bossIntro(e); }
     this.enemies.push(e);

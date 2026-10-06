@@ -18,7 +18,8 @@ const CLASSES = args.filter((a) => !a.startsWith('--'));
 const MAX_MIN = +opt('max', 240); // 직업마다 게임 시간 상한 (분)
 const DIFF = opt('diff', 'normal');
 const OUT = opt('out', null);
-const STUCK_MIN = +opt('stuck', 12); // 한 단계에 이만큼(게임 분) 넘게 머물면 막힘으로 기록하고 건너뜀
+const STUCK_MIN = +opt('stuck', 12);
+const FROM = +opt('from', 0), FROM_LV = +opt('lv', 0); // 이 단계부터 (레벨도 맞춰서) — 막힌 곳만 다시 볼 때 // 한 단계에 이만큼(게임 분) 넘게 머물면 막힘으로 기록하고 건너뜀
 
 // 페이지 안에서 도는 봇
 function installBot({ diff }) {
@@ -129,9 +130,10 @@ function installBot({ diff }) {
   };
   B.skipStuck = () => {
     const Q = g.curQuest();
-    B.stuck.push({ step: g.quest.step, title: Q?.title, type: Q?.type, prog: JSON.stringify(g.quest.prog).slice(0, 160), pos: [+g.player.pos.x.toFixed(1), +g.player.pos.z.toFixed(1)], region: g.world.regionAt(g.player.pos.x, g.player.pos.z).id, wave: g.waveActive, enemies: g.enemies.filter((e) => !e.dead).length });
+    B.stuck.push({ step: g.quest.step, title: Q?.title, type: Q?.type, prog: JSON.stringify(g.quest.prog).slice(0, 160), pos: [+g.player.pos.x.toFixed(1), +g.player.pos.z.toFixed(1)], region: g.world.regionAt(g.player.pos.x, g.player.pos.z).id, wave: g.waveActive, waveN: g.wave, hunt: g.autoHunt, auto: !!g.autoMove, target: g.target?.type || null,
+      enemies: g.enemies.filter((e) => !e.dead).slice(0, 6).map((e) => ({ type: e.type, hp: Math.round(e.hp), max: e.maxHp, state: e.state, d: +near(e.pos.x, e.pos.z).toFixed(1), y: +(e.y - g.player.y).toFixed(1), field: !!e.field, skip: e.huntSkipT > g.time })) });
     g.stopAutoMove(); g.qk.clear();
-    if (g.waveActive) { for (const e of g.enemies) e.dispose(); g.enemies = []; g.spawnQueue.length = 0; g.waveActive = false; }
+    if (g.waveActive) { for (const e of g.enemies) e.dispose(); g.enemies = []; g.spawnQueue.length = 0; g.waveActive = false; g.stage = 3; g.nightTarget = 0; g.ui.setBoss(null); }
     g.quest.step++; g.quest.prog = {}; g.updateGates(true); g.startStep();
   };
 }
@@ -143,9 +145,18 @@ async function runClass(ctx, cls) {
   await g.eval(() => {
     // 퀘스트 목록 (단계 이름 기록용)
     const G = window.game, Q = [], s0 = G.quest.step;
-    for (let i = 0; i < 99; i++) { G.quest.step = i; const q = G.curQuest(); if (!q) break; Q.push({ title: q.title, type: q.type }); }
+    for (let i = 0; i < 99; i++) { G.quest.step = i; const q = G.curQuest(); if (!q) break; Q.push({ title: q.title, type: q.type, region: q.region }); }
     G.quest.step = s0; window.__QUESTS = Q;
   });
+  if (FROM) await g.eval(([from, lv]) => {
+    const G = window.game, p = G.player;
+    if (lv) { for (let k = 0; k < 4000 && p.level < lv; k++) p.addExp(200); }
+    G.quest.step = from; G.quest.prog = {}; G.updateGates(true);
+    for (let i = 0; i < from; i++) { const q = window.__QUESTS[i]; if (q.type === 'wave') G.cleared[q.region] = 1; }
+    const Q = G.curQuest(), reg = Q.region && G.world.regions.find((r) => r.id === Q.region);
+    if (reg) { G.teleport(reg.spawn[0], reg.spawn[2]); G.updateRegion(true); }
+    G.startStep();
+  }, [FROM, FROM_LV]);
   await g.eval(installBot, { diff: DIFF });
   const t0 = Date.now();
   let last = -1;
