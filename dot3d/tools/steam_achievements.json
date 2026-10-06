@@ -304,6 +304,30 @@
   "enDesc": "Fall 10 times and get back up"
  },
  {
+  "api": "ACH_HARD1",
+  "id": "hard1",
+  "ko": "험한 밤길",
+  "koDesc": "어려움 난이도에서 보스 물리치기",
+  "en": "Rough Night Road",
+  "enDesc": "Defeat a boss on Hard"
+ },
+ {
+  "api": "ACH_HARD10",
+  "id": "hard10",
+  "ko": "백귀를 꺾은 자",
+  "koDesc": "어려움 난이도에서 보스 열을 모두 물리치기",
+  "en": "Breaker of a Hundred Demons",
+  "enDesc": "Defeat all ten bosses on Hard"
+ },
+ {
+  "api": "ACH_HARDRUN",
+  "id": "hardrun",
+  "ko": "물러서지 않는 길",
+  "koDesc": "난이도를 한 번도 낮추지 않고 어려움으로 메인 퀘스트 마치기",
+  "en": "No Step Back",
+  "enDesc": "Finish the main quest on Hard without ever lowering the difficulty"
+ },
+ {
   "api": "ACH_CODEX",
   "id": "codex",
   "ko": "요괴 도감",

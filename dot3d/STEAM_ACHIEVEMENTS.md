@@ -4,7 +4,7 @@
 스팀웍스 → 앱 관리 → 통계 및 업적 → 업적에서 **API 이름**을 그대로 쓰고, 언어마다 이름과 설명을 넣습니다.
 아이콘: `marketing/achievements/<API 이름>.png` (달성), `<API 이름>_locked.png` (미달성). 모두 64×64.
 
-업적 39개
+업적 42개
 
 | API 이름 | 이름 | 설명 | Name | Description |
 | --- | --- | --- | --- | --- |
@@ -46,4 +46,7 @@
 | `ACH_GEAR100` | 보따리 장수 | 방어구·장신구 100개 줍기 | Packrat | Pick up 100 pieces of gear |
 | `ACH_BOUNTY10` | 현상금 사냥꾼 | 현상수배 10번 마치기 | Bounty Hunter | Complete 10 bounties |
 | `ACH_FALL10` | 칠전팔기 | 10번 쓰러지고도 다시 일어서기 | Never Give Up | Fall 10 times and get back up |
+| `ACH_HARD1` | 험한 밤길 | 어려움 난이도에서 보스 물리치기 | Rough Night Road | Defeat a boss on Hard |
+| `ACH_HARD10` | 백귀를 꺾은 자 | 어려움 난이도에서 보스 열을 모두 물리치기 | Breaker of a Hundred Demons | Defeat all ten bosses on Hard |
+| `ACH_HARDRUN` | 물러서지 않는 길 | 난이도를 한 번도 낮추지 않고 어려움으로 메인 퀘스트 마치기 | No Step Back | Finish the main quest on Hard without ever lowering the difficulty |
 | `ACH_CODEX` | 요괴 도감 | 몬스터 도감 완성 | Spirit Codex | Complete the monster codex |

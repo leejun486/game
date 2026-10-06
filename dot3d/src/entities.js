@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { diffOf } from './difficulty.js';
 import { disposeTree, drop } from './dispose.js';
 import { Rig, makeDokkaebi, makeGuard, makeLady, makeMage, makeFox, makeJiangshi, makeGhost, makeReaper, makeWaterGhost, makeToad, makeImugi, makeStoneGolem, makeBulgasari, makeYeomra, makeDragon, makeCentipede, makeFrostGiant } from './character.js';
 import { decorateDokkaebiKing, decorateReaper, decorateYeomra } from './bossdeco.js';
@@ -378,7 +379,7 @@ export class Player {
       g.fx.number(this.pos.clone().add(new THREE.Vector3(0, 1.9, 0)), '비늘 막기!', 'alert');
       return false;
     }
-    dmg = Math.max(1, Math.round(dmg * (1 - (this.def || 0)) * (this.perks?.has('ironhide') ? 0.88 : 1) * (this.perks?.has('tigerhide') ? 0.92 : 1) * (this.perks?.has('carapace') ? 0.9 : 1) * (this.perks?.has('winterheart') ? 0.94 : 1) * (this.guardT > 0 ? 0.6 : 1)));
+    dmg = Math.max(1, Math.round(dmg * diffOf(this.game).dmg * (1 - (this.def || 0)) * (this.perks?.has('ironhide') ? 0.88 : 1) * (this.perks?.has('tigerhide') ? 0.92 : 1) * (this.perks?.has('carapace') ? 0.9 : 1) * (this.perks?.has('winterheart') ? 0.94 : 1) * (this.guardT > 0 ? 0.6 : 1)));
     this.hp -= dmg;
     // 동장군 옷: 맞으면 20% 확률로 주변 적을 얼림
     if (this.perks?.has('winterheart') && Math.random() < 0.2) {
@@ -657,7 +658,7 @@ export class Enemy {
     this.lvl = level;
     const T = (this.T = TYPES[type]);
     const lv = 1 + (level - 1) * 0.25;
-    this.maxHp = Math.round(T.hp * lv);
+    this.maxHp = Math.round(T.hp * lv * (type === 'foxclone' ? 1 : diffOf(game).hp));
     this.hp = this.maxHp;
     this.dmg = Math.round(T.dmg * (1 + (level - 1) * 0.15));
     this.radius = T.radius;

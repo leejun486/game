@@ -42,6 +42,8 @@ export const MONSTERS = [
 ];
 
 const bossK = (S, t) => S.bosses?.[t] || 0;
+const BOSS10 = ['boss', 'gumiho', 'reaper', 'imugi', 'bulgasari', 'baekho', 'dragon', 'centipede', 'frostgiant', 'yeomra'];
+const hardK = (S) => BOSS10.filter((t) => S.hardBosses?.[t]).length;
 const maxLv = (g) => Math.max(...CLASS_ORDER.map((c) => g.progressOf(c).level || 1), g.player.level);
 
 // 업적: test(game, stats) → 참이면 달성. prog: [지금, 목표] (진행 막대)
@@ -87,6 +89,9 @@ export const ACHIEVEMENTS = [
   { id: 'gear100', name: '보따리 장수', desc: '방어구·장신구 100개 줍기', prog: (g, S) => [S.gear || 0, 100] },
   { id: 'bounty10', name: '현상금 사냥꾼', desc: '현상수배 10번 마치기', prog: (g, S) => [S.bounties || 0, 10] },
   { id: 'fall10', name: '칠전팔기', desc: '10번 쓰러지고도 다시 일어서기', prog: (g, S) => [S.deaths || 0, 10] },
+  { id: 'hard1', name: '험한 밤길', desc: '어려움 난이도에서 보스 물리치기', test: (g, S) => hardK(S) > 0 },
+  { id: 'hard10', name: '백귀를 꺾은 자', desc: '어려움 난이도에서 보스 열을 모두 물리치기', prog: (g, S) => [hardK(S), BOSS10.length] },
+  { id: 'hardrun', name: '물러서지 않는 길', desc: '난이도를 한 번도 낮추지 않고 어려움으로 메인 퀘스트 마치기', test: (g) => !!g.flags.hardRun && g.difficulty === 'hard' && g.quest.step > 0 && !g.curQuest() },
   { id: 'codex', name: '요괴 도감', desc: '몬스터 도감 완성', prog: (g, S) => [MONSTERS.filter((m) => S.killsBy?.[m.type]).length, MONSTERS.length] },
 ];
 
@@ -111,7 +116,11 @@ export class Records {
     S.kills++;
     if (e.type === 'foxclone') return;
     S.killsBy[e.type] = (S.killsBy[e.type] || 0) + 1;
-    if (e.isBoss) { S.bosses[e.type] = (S.bosses[e.type] || 0) + 1; this.check(); }
+    if (e.isBoss) {
+      S.bosses[e.type] = (S.bosses[e.type] || 0) + 1;
+      if (this.game.difficulty === 'hard') (S.hardBosses ||= {})[e.type] = 1;
+      this.check();
+    }
   }
 
   hit(dmg) { if (dmg > this.S.maxHit) this.S.maxHit = dmg; }

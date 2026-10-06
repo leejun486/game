@@ -20,6 +20,7 @@ import { MAPS, BOSS_TYPES, BOSS_NAME, WIN_LINE, GRADE } from './maps.js';
 import { PROLOGUE, SHARD_LINES, SHARD_MAX, ENDING, CREDITS, fillStory } from './story.js';
 import { clamp, lerp, rand, angleDiff, damp } from './util.js';
 import { initLang, watchDom, tr, LANG } from './i18n.js';
+import { DIFFS, DIFF_ORDER, diffOf } from './difficulty.js';
 import { Coach } from './coach.js';
 import { VERSION } from './version.js';
 import { Records, newStats } from './records.js';
@@ -36,6 +37,11 @@ function _noTower(g) { return g.tower?.active ? { mapId: 'canyon' } : {}; }
 
 // 보스 등장 연출의 별칭 / 단계 전환 대사
 const BOSS_EPITHET = { boss: '도깨비들의 왕', gumiho: '천 년을 산 여우', reaper: '명부를 든 저승의 사자', imugi: '용이 되지 못한 뱀', bulgasari: '쇠를 먹고 자라는 괴물', baekho: '산을 다스리는 범의 왕', dragon: '동해를 다스리는 용', centipede: '천 년 묵은 독의 왕', frostgiant: '겨울을 몰고 오는 장수', yeomra: '저승을 다스리는 왕' };
+const DIFF_NOTE = {
+  easy: '몬스터 체력 75% · 받는 피해 55% — 이야기와 탐험을 편하게',
+  normal: '처음 하는 분께 알맞은 기본 난이도',
+  hard: '몬스터 체력 135% · 받는 피해 145% · 경험치 125% · 장비 140%',
+};
 const BOSS_PHASE_LINE = {
   boss: ['"금 나와라, 뚝딱! 금덩이 맛 좀 봐라!"', '"이놈! 혼쭐을 내주마!" — 쉬지 않고 뛰어내린다'],
   gumiho: ['"내 아이들아, 나와라" — 분신이 나타났다', '아홉 꼬리에서 여우불이 사방으로 쏟아진다'],
@@ -123,6 +129,7 @@ class Game {
     this.selectedCls = 'sword';
     this.setupClassSelect();
     this.flags = {};    // 한 번만 보여 주는 것들 (튜토리얼·도움말)
+    this.difficulty = DIFFS[loadSettings().diff] ? loadSettings().diff : 'normal';
     this.coach = new Coach(this);
     this.stats = newStats(); // 누적 기록 (업적·도감)
     this.records = new Records(this);
@@ -342,6 +349,7 @@ class Game {
     const btn = (id, fn) => { const b = document.getElementById(id); b.addEventListener('click', (e) => { e.stopPropagation(); fn(); }); b.addEventListener('mousedown', (e) => e.stopPropagation()); };
     btn('btn-cont', () => { if (this.hasSave) this.start(); });
     btn('btn-new', () => this.newGame(false));
+    document.getElementById('title-diff')?.addEventListener('click', (ev) => { const b = ev.target.closest('[data-diff]'); if (b) { this.audio.unlock(); this.audio.play('talk'); this.setDifficulty(b.dataset.diff); } });
     btn('cf-yes', () => this.newGame(true));
     btn('cf-no', () => this.showConfirm(false));
     btn('btn-gfx', () => this.toggleGfx());
@@ -994,6 +1002,7 @@ class Game {
     const info = document.getElementById('title-save');
     this.hasSave = !!d;
     if (!d) { if (info) info.textContent = ''; this.refreshTitle(); return; }
+    this.difficulty = DIFFS[d.difficulty] ? d.difficulty : 'normal';
     this.kills = d.kills | 0;
     this.round = d.round | 0;
     this.bestCombo = d.bestCombo | 0;
@@ -1072,6 +1081,7 @@ class Game {
       towerBest: this.towerBest || 0,
       playTime: Math.round(this.playTime || 0),
       flags: this.flags,
+      difficulty: this.difficulty,
       version: VERSION,
       stats: this.stats,
       inv: [...this.inv],
@@ -1220,6 +1230,7 @@ class Game {
     if (this.hasSave && !confirmed) { this.showConfirm(true); return; }
     this.showConfirm(false);
     if (this.hasSave) this.resetProgress();
+    if (this.difficulty === 'hard') this.flags.hardRun = 1;
     this.start();
   }
 
@@ -1343,6 +1354,7 @@ class Game {
     if (this.state === 'title') {
       if (i === 0) this.onKey('Enter');
       else if (i === 2) document.getElementById('btn-new').click();
+      else if (i === 3) { const k = DIFF_ORDER[(DIFF_ORDER.indexOf(this.difficulty) + 1) % DIFF_ORDER.length]; this.audio.play('talk'); this.setDifficulty(k); }
       else if (i === 9) this.togglePause(true);
       else if (i === 14 || i === 102) this.onKey('ArrowLeft');
       else if (i === 15 || i === 103) this.onKey('ArrowRight');
@@ -1437,6 +1449,8 @@ class Game {
       el.innerHTML = `<h3>화면</h3>
         <div class="pz-row"><label>언어</label>${seg('lang', [['ko', '한국어'], ['en', 'English']], LANG)}</div>
         <div class="pz-row"><label>그래픽 모드</label>${seg('gfx', [['hd', '고화질'], ['pixel', '도트']], GFX.hd ? 'hd' : 'pixel')}</div>
+        <div class="pz-row"><label>난이도</label>${seg('diff', DIFF_ORDER.map((k) => [k, DIFFS[k].name]), this.difficulty)}</div>
+        <div class="pz-note" style="margin-top:-4px">${DIFF_NOTE[this.difficulty]}</div>
         <div class="pz-row"><label>화질</label>${seg('quality', [['high', '높음'], ['mid', '보통'], ['low', '낮음']], S.quality)}</div>
         <div class="pz-row"><label>화면 흔들림</label>${seg('shake', [[1, '보통'], [0.5, '약하게'], [0, '끔']], S.shake)}</div>
         <div class="pz-row"><label>도움말</label>${seg('tips', [[1, '보이기'], [0, '숨기기']], S.tips === false ? 0 : 1)}</div>
@@ -1447,6 +1461,7 @@ class Game {
         const k = b.dataset.k, v = b.dataset.val;
         if (k === 'gfx') { if ((v === 'hd') !== GFX.hd) { this.save(false); setGfx(v); } return; }
         if (k === 'lang') { if (v !== LANG) this.setLang(v); return; }
+        if (k === 'diff') this.setDifficulty(v);
         if (k === 'quality') { this.setSetting((s) => { s.quality = v; s.autoQ = false; }); this.applyQuality(v); }
         if (k === 'shake') this.setSetting((s) => { s.shake = +v; });
         if (k === 'numbers') this.setSetting((s) => { s.numbers = v === '1'; });
@@ -1545,7 +1560,25 @@ class Game {
   showConfirm(v) { document.getElementById('confirm').classList.toggle('show', v); }
 
   // 선택 화면 오른쪽: 고른 캐릭터의 설명·능력치 막대·스킬·장비
+  // 난이도 바꾸기: 어려움보다 낮추면 '처음부터 끝까지 어려움' 업적은 더 이상 못 받음
+  setDifficulty(v) {
+    if (!DIFFS[v] || v === this.difficulty) return;
+    this.difficulty = v;
+    if (v !== 'hard') delete this.flags.hardRun;
+    this.setSetting((s) => { s.diff = v; });
+    if (this.hasSave) this.save(false);
+    this.renderTitleDiff();
+  }
+
+  renderTitleDiff() {
+    const el = document.getElementById('title-diff');
+    if (!el) return;
+    el.innerHTML = `<span class="td-l"><span class="td-gp">${padGlyph('Y')}</span>난이도</span>` + DIFF_ORDER.map((k) => `<button data-diff="${k}" class="${k === this.difficulty ? 'on' : ''}">${DIFFS[k].name}</button>`).join('')
+      + `<span class="td-d">${DIFF_NOTE[this.difficulty]}</span>`;
+  }
+
   refreshTitle() {
+    this.renderTitleDiff();
     const C = CLASSES[this.selectedCls];
     const pr = this.progress[C.id];
     const lv = pr?.level || 1;
@@ -4195,7 +4228,7 @@ class Game {
   onEnemyKilled(e) {
     this.kills++;
     this.records.kill(e);
-    const exp = Math.round(e.T.exp * (1 + this.round * 0.25) * (e.elite ? 3 : 1) * (this.tower?.active ? 1 + this.tower.floor * 0.06 : 1));
+    const exp = Math.round(e.T.exp * diffOf(this).exp * (1 + this.round * 0.25) * (e.elite ? 3 : 1) * (this.tower?.active ? 1 + this.tower.floor * 0.06 : 1));
     this.player.addExp(exp);
     this.fx.number(V(e.pos.x, e.y + (e.isBoss ? 4 : 2.2), e.pos.z), `+${exp} EXP`, 'exp');
     const drop = rollDrop(e.type, this.round, this.player.cls);
@@ -4207,7 +4240,8 @@ class Game {
       if (!bd.some((id) => item(id).kind === 'weapon')) this.after(1.2, () => this.ui.toast('보스 무기는 나오지 않았어요… 다시 도전해 보세요', 2.4));
     }
     // 방어구·장신구: 일반 몬스터는 가끔, 보스는 두세 개 (등급이 높게)
-    const gearN = e.isBoss ? 1 + (Math.random() < 0.5 ? 1 : 0) : Math.random() < (e.field ? 0.08 : 0.06) ? 1 : 0;
+    const gm = diffOf(this).gear;
+    const gearN = e.isBoss ? 1 + (Math.random() < 0.5 * gm ? 1 : 0) : Math.random() < (e.field ? 0.08 : 0.06) * gm ? 1 : 0;
     for (let i = 0; i < gearN; i++) {
       const strong = e.isBoss ? 0.6 : e.T.hp > 60 ? 0.12 : 0;
       const lv = Math.max(1, e.lvl || 1) + this.round;
