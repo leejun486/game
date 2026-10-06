@@ -29,6 +29,21 @@ module.exports = {
     check(r.crabs === 0, `경계에 걸린 다른 지역 몬스터 ${r.crabs}마리가 남아 있음`);
     check(r.local.length > 0, '이 지역 몬스터가 나오지 않음');
     ctx.log('다른 지역 몬스터 정리, 이 지역 몬스터:', r.local.join(','));
+    // 이 지역 몬스터가 덤불에 끼어 못 움직이면(쫓아오는 중, 12칸 밖) 8초쯤 뒤 치워짐
+    const ids = await g.eval(() => {
+      const G = window.game, p = G.player.pos, out = [];
+      for (const e of G.enemies) e.dispose(); G.enemies = [];
+      for (let k = 0; k < 60 && out.length < 3; k++) {
+        const w = G.world.randomWalkable(p.x, p.z, 15, 20); if (!w) continue;
+        const e = G.spawnEnemyAt('boar', w.x, w.z); e.field = true; e.aggro = true; e.home = 'valley'; e.spawning = false; e.T = { ...e.T, speed: 0 }; e.dmg = 0; e.__wedged = true; out.push(1);
+      }
+      return out.length;
+    });
+    check(ids === 3, '끼인 몬스터를 놓지 못함');
+    await g.step(12, { input: {} });
+    const left = await g.eval(() => window.game.enemies.filter((e) => e.__wedged && !e.dead).length);
+    check(left === 0, `덤불에 끼인 몬스터 ${left}마리가 12초 뒤에도 남아 있음`);
+    ctx.log('끼인 몬스터 정리');
     await clean(g);
     await g.close();
   },

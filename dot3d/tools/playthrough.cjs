@@ -62,7 +62,8 @@ function installBot({ diff }) {
       B.phase = 'tower';
       if (!g.tower?.active) {
         const portal = g.world.portals.find((x) => x.kind === 'enter');
-        if (near(portal.x, portal.z) > 2) walkTo(portal.x, portal.z - 1, false); else g.usePortal(portal);
+        const it = g.findInteract(); // 사람처럼: 문 앞까지 가서 E
+        if (it?.kind === 'portal' && it.portal === portal) { g.stopAutoMove(); g.nearInteract = it; g.interact(); } else walkTo(portal.x, portal.z, true);
         return;
       }
       if (g.tower.cleared && !g.enemies.some((e) => !e.dead)) {
@@ -177,6 +178,11 @@ async function runClass(ctx, cls) {
       const B = window.__bot, G = window.game;
       for (let i = 0; i < 30 * 30; i++) { B.tick(1 / 30); if (B.phase === 'done') break; }
       if (B.phase === 'main' && B.stepT > STUCK * 60) B.skipStuck();
+      // 시련탑에 5분 넘게 못 들어가면 상태 기록 (한 번만)
+      if (B.phase === 'tower' && !G.tower?.active && B.stepT > 300 && !B.gateLogged) {
+        B.gateLogged = true; const P = G.world.portals.find((x) => x.kind === 'enter');
+        B.stuck.push({ gate: true, pos: [+G.player.pos.x.toFixed(1), +G.player.pos.z.toFixed(1)], portal: [P.x, P.z], unlocked: G.towerUnlocked(), auto: G.autoMove ? [+G.autoMove.pos.x.toFixed(1), +G.autoMove.pos.z.toFixed(1)] : null, wave: G.waveActive, state: G.state, region: G.world.regionAt(G.player.pos.x, G.player.pos.z).id });
+      }
       // 시련탑: 한 층에 5분 넘게 머물면 남은 적을 기록하고 치움
       if (B.phase === 'tower' && G.tower?.active && !G.tower.cleared && B.stepT > 300) {
         B.stuck.push({ tower: G.tower.floor, pos: [+G.player.pos.x.toFixed(1), +G.player.pos.z.toFixed(1)], queue: G.spawnQueue.length, enemies: G.enemies.filter((e) => !e.dead).map((e) => ({ type: e.type, hp: Math.round(e.hp), state: e.state, spawning: !!e.spawning, d: +Math.hypot(e.pos.x - G.player.pos.x, e.pos.z - G.player.pos.z).toFixed(1), y: +(e.y - G.player.y).toFixed(1), field: !!e.field })) });

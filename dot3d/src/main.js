@@ -492,7 +492,12 @@ class Game {
       if (!e.field || e.dead) continue;
       const d = Math.hypot(e.pos.x - p.pos.x, e.pos.z - p.pos.z);
       // 멀어진 것, 그리고 다른 지역에서 따라오다 경계에 걸린 것(18칸 밖)은 치움 — 남아 있으면 이 지역 몬스터가 나오지 않아 처치 퀘스트가 막힘
-      if (d > 40 || (e.home && e.home !== R.id && d > 18)) { e.dispose(); e.removed = true; removed = true; if (this.target === e) this.target = null; }
+      // 쫓아오는데 8초 넘게 제자리(덤불·바위에 끼임)이고 12칸 밖이면 치움 — 자리만 차지해 새 몬스터가 안 나옴
+      const moved = !e.lastPos || Math.hypot(e.pos.x - e.lastPos.x, e.pos.z - e.lastPos.z) > 0.4;
+      e.stillT = moved ? 0 : (e.stillT || 0) + 1.2;
+      e.lastPos = { x: e.pos.x, z: e.pos.z };
+      const wedged = e.aggro && e.stillT > 8 && d > 12;
+      if (d > 40 || wedged || (e.home && e.home !== R.id && d > 18)) { e.dispose(); e.removed = true; removed = true; if (this.target === e) this.target = null; }
     }
     if (removed) this.enemies = this.enemies.filter((e) => !e.removed);
     if (this.state !== 'play' || p.dead || this.waveActive) return;

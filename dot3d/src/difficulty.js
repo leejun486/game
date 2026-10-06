@@ -4,8 +4,8 @@
 //  처음 값으로 다 같이 세게 하면 첫 지역에서만 많이 쓰러지고 뒤는 여전히 쉬웠음 (자동 완주 봇으로 맞춤 — tools/playthrough.cjs)
 export const DIFFS = {
   easy: { name: '쉬움', hp: 0.75, dmg: [0.55, 0.7], bossHp: [1, 1.6], bossDmg: [1, 1.2], exp: 1, gear: 1 },
-  normal: { name: '보통', hp: 1, dmg: [1, 1.7], bossHp: [1.3, 3.2], bossDmg: [1, 2], exp: 1, gear: 1 },
-  hard: { name: '어려움', hp: 1.35, dmg: [1.5, 2.4], bossHp: [1.8, 3.8], bossDmg: [1.4, 2.4], exp: 1.25, gear: 1.4 },
+  normal: { name: '보통', hp: 1, dmg: [1, 1.9], bossHp: [1.3, 3.4], bossDmg: [1, 2.3], exp: 1, gear: 1 },
+  hard: { name: '어려움', hp: 1.35, dmg: [1.45, 2.6], bossHp: [1.7, 4.2], bossDmg: [1.3, 2.8], exp: 1.25, gear: 1.4 },
 };
 export const DIFF_ORDER = ['easy', 'normal', 'hard'];
 const raw = (g) => DIFFS[g?.difficulty] || DIFFS.normal;
