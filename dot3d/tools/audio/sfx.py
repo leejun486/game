@@ -489,6 +489,85 @@ def s_talismanhit(v):
     return mix((0, pop, 0.9), (0.01, sizzle, 0.35), (0.02, ignite(0.3, 1100 + 150 * v), 0.6))
 
 
+# ---------- 발소리 (땅 종류마다) · 보스 등장 ----------
+def _rv(v, a, b):
+    """변형마다 조금씩 다른 값"""
+    return a + (b - a) * ((v * 0.618) % 1)
+
+
+def s_step_grass(v):
+    n = N(0.13)
+    rustle = bandpass(noise(n), _rv(v, 1800, 3200), 1.2) * env_bell(n, 0.15)
+    return mix((0, thump(0.08, 120, 70, 0.02), 0.35), (0.004, rustle, 0.8))
+
+
+def s_step_stone(v):
+    n = N(0.06)
+    click = highpass(noise(n), 2500) * exp_env(n, 0.008)
+    return room(mix((0, thump(0.09, _rv(v, 260, 340), 110, 0.014), 0.9), (0, click, 0.5)), 0.4, 0.12)
+
+
+def s_step_snow(v):
+    # 뽀드득: 잘게 부서지는 소리를 여러 번 겹침
+    n = N(0.18)
+    x = np.zeros(n)
+    for k in range(14):
+        i = int(R.integers(0, N(0.12)))
+        m = N(0.008)
+        x[i:i + m] += bandpass(noise(m), R.uniform(900, 3200), 2.5) * np.linspace(1, 0, m) * R.uniform(0.4, 1)
+    return mix((0, x * env_bell(n, 0.35), 1.0), (0, thump(0.08, 100, 60, 0.03), 0.25))
+
+
+def s_step_water(v):
+    n = N(0.22)
+    splash = highpass(noise(n), 900) * exp_env(n, 0.05)
+    bub = mix(*[(R.uniform(0.02, 0.12), sine_sweep(0.05, R.uniform(500, 900), R.uniform(1200, 1800), 0.02), 0.25) for _ in range(3)])
+    return mix((0, splash, 0.7), (0, bub, 1.0), (0, thump(0.1, 90, 50, 0.03), 0.3))
+
+
+def s_step_wood(v):
+    n = N(0.15)
+    body = bandpass(noise(n), _rv(v, 520, 700), 6) * exp_env(n, 0.05)
+    return room(mix((0, sine_sweep(0.15, _rv(v, 190, 230), 150, 0.05), 0.8), (0, body, 0.6)), 0.5, 0.15)
+
+
+def s_step_sand(v):
+    n = N(0.14)
+    return mix((0, lowpass(noise(n), _rv(v, 1600, 2400)) * env_bell(n, 0.25), 0.8), (0, thump(0.07, 90, 55, 0.02), 0.25))
+
+
+def s_fall(v):
+    # 보스가 하늘에서 떨어짐: 내려가는 휘파람 + 바람
+    d = 0.7
+    n = N(d)
+    whistle = sine_sweep(d, 1600, 260) * np.linspace(0.2, 1, n) ** 1.5
+    wind = sweep_noise(d, 3000, 500, 1.5) * np.linspace(0.3, 1, n)
+    return mix((0, whistle, 0.45), (0, wind, 0.6))
+
+
+def s_rumble(v):
+    # 땅이 흔들리며 무언가 솟아오름: 낮은 우르릉 + 돌 부스러지는 소리
+    d = 1.5
+    n = N(d)
+    low = lowpass(noise(n), 140) * env_bell(n, 0.55) * 2.5
+    grit = np.zeros(n)
+    for _ in range(40):
+        i = int(R.integers(0, N(1.3)))
+        m = N(0.02)
+        grit[i:i + m] += bandpass(noise(m), R.uniform(600, 2000), 3) * np.linspace(1, 0, m) * R.uniform(0.2, 0.8)
+    return room(mix((0, low, 1.0), (0, grit * env_bell(n, 0.6), 0.4), (0.2, thump(1.0, 55, 30, 0.4), 0.7)), 1.2, 0.2)
+
+
+def s_gather(v):
+    # 기운이 빨려 들어옴: 점점 높아지고 커지는 숨 들이쉬기 + 반짝임
+    d = 0.95
+    n = N(d)
+    swell = np.linspace(0, 1, n) ** 2.2
+    air = sweep_noise(d, 400, 3200, 2.0) * swell
+    tone = sine_sweep(d, 220, 880) * swell * 0.6 + sine_sweep(d, 330, 1320) * swell * 0.3
+    return mix((0, air, 0.8), (0, tone, 0.5))
+
+
 SFX = {
     'swing': (s_swing, 3, -15), 'swing3': (s_swing3, 2, -14), 'hit': (s_hit, 3, -13), 'crit': (s_crit, 2, -11),
     'drum': (s_drum, 1, -12), 'draw': (s_draw, 1, -18), 'sheathe': (s_sheathe, 1, -18), 'bowdraw': (s_bowdraw, 1, -22),
@@ -504,6 +583,9 @@ SFX = {
     'thrust': (s_thrust, 3, -15), 'spearbeam': (s_spearbeam, 1, -13), 'leap': (s_leap, 1, -17), 'spearslam': (s_spearslam, 1, -11),
     'spearfall': (s_spearfall, 3, -17), 'spinspear': (s_spinspear, 1, -16),
     'talisman': (s_talisman, 4, -16), 'talisman3': (s_talisman3, 2, -15), 'talismanhit': (s_talismanhit, 3, -16),
+    'step_grass': (s_step_grass, 4, -27), 'step_stone': (s_step_stone, 4, -27), 'step_snow': (s_step_snow, 4, -26), 'step_water': (s_step_water, 4, -26),
+    'step_wood': (s_step_wood, 4, -26), 'step_sand': (s_step_sand, 4, -28),
+    'fall': (s_fall, 1, -15), 'rumble': (s_rumble, 1, -13), 'gather': (s_gather, 1, -16),
 }
 
 

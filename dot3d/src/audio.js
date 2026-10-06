@@ -8,7 +8,9 @@ const NO_DETUNE = new Set(['talk', 'levelup', 'victory', 'bigbell', 'coin', 'bel
 const DEFAULT_VOL = { master: 0.7, music: 0.55, amb: 0.6, sfx: 0.95 };
 
 // 창술사 소리 → 음원이 없을 때 대신 낼 합성음
-const PROC_ALIAS = { thrust: 'swing', spearbeam: 'skill', leap: 'dash', spearslam: 'impact', spearfall: 'arrowhit', spinspear: 'tornado', talisman: 'cast', talisman3: 'cast', talismanhit: 'fire' };
+const PROC_ALIAS = { thrust: 'swing', spearbeam: 'skill', leap: 'dash', spearslam: 'impact', spearfall: 'arrowhit', spinspear: 'tornado', talisman: 'cast', talisman3: 'cast', talismanhit: 'fire', fall: 'dash', rumble: 'slam', gather: 'charge' };
+// 음원이 아직 없을 때 대신 내지 않는 소리 (발소리는 합성음으로 대신하면 시끄러움)
+const NO_PROC = new Set(['step_grass', 'step_stone', 'step_snow', 'step_water', 'step_wood', 'step_sand']);
 
 export class Audio {
   constructor() {
@@ -152,6 +154,7 @@ export class Audio {
       }
     }
     // 음원을 아직 못 불러왔을 때: 새 소리는 비슷한 기존 합성음으로
+    if (NO_PROC.has(name)) return;
     this.playProc(PROC_ALIAS[name] || name);
   }
 

@@ -501,7 +501,7 @@ export class Player {
       }
       // 발걸음 먼지
       this.stepAcc += speed * dt;
-      if (this.stepAcc > 1.1 && this.dashT <= 0) { this.stepAcc = 0; g.fx.dust(this.pos.x, this.pos.y, this.pos.z, 2); }
+      if (this.stepAcc > 1.1 && this.dashT <= 0) { this.stepAcc = 0; g.fx.dust(this.pos.x, this.pos.y, this.pos.z, 2); g.audio.play('step_' + g.world.surfaceAt(this.pos.x, this.pos.z)); }
 
       // 공격 진행
       if (this.attack) {
@@ -1408,7 +1408,11 @@ export class Enemy {
     if (!E.started) {
       E.started = true;
       g.fx.circle(at, 2.2 + big, c1, E.dur + 0.4, E.kind === 'burst' ? 2.4 : 1.2);
+      // 떨어지기: 휘파람은 몸이 보일 때 / 솟기: 땅울림 / 터지기: 기운을 들이쉬는 소리
+      if (E.kind === 'rise') g.audio.play('rumble');
+      else if (E.kind === 'burst') g.audio.play('gather');
     }
+    if (E.kind === 'drop' && t >= 0.5 && !E.whistle) { E.whistle = true; g.audio.play('fall'); }
     if (E.kind === 'drop') {
       // 0~0.55초: 바닥에 그림자 고리만, 0.55~1.0초: 떨어짐, 1.0초: 쾅
       const k = clamp((t - 0.55) / 0.45, 0, 1);

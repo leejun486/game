@@ -50,5 +50,14 @@
 "spinspear": 1,
 "talisman": 4,
 "talisman3": 2,
-"talismanhit": 3
+"talismanhit": 3,
+"step_grass": 4,
+"step_stone": 4,
+"step_snow": 4,
+"step_water": 4,
+"step_wood": 4,
+"step_sand": 4,
+"fall": 1,
+"rumble": 1,
+"gather": 1
 }

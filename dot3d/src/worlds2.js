@@ -72,7 +72,7 @@ export function pathStrip(W, mat, pts, width, y0 = 0.012) {
     m.position.set((x0 + x1) / 2, y0 + (i % 2) * 0.002, (z0 + z1) / 2); // 높이를 쌓지 않음: 바닥 효과가 길 아래로 묻히지 않게
     m.receiveShadow = true;
     W.root.add(m);
-    if (width >= 1.5) (W.pathShapes ||= []).push({ type: 'strip', x0, z0, x1, z1, w: width });
+    if (width >= 1.5) (W.pathShapes ||= []).push({ type: 'strip', x0, z0, x1, z1, w: width, paved: PAVED.has(mat) });
   }
 }
 
@@ -86,7 +86,7 @@ export function disc(W, mat, x, z, r) {
   m.position.set(x, 0.01, z);
   m.receiveShadow = true;
   W.root.add(m);
-  if (r >= 2) (W.pathShapes ||= []).push({ type: 'disc', x, z, r });
+  if (r >= 2) (W.pathShapes ||= []).push({ type: 'disc', x, z, r, paved: PAVED.has(mat) });
   return m;
 }
 

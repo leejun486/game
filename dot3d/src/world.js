@@ -148,6 +148,35 @@ export class World {
     return REGIONS[0];
   }
 
+  // 발밑 바닥 종류 (발소리): water·wood·stone·snow·sand·grass
+  surfaceAt(x, z) {
+    for (const b of this.boards) {
+      const ex = b.x1 - b.x0, ez = b.z1 - b.z0, L2 = ex * ex + ez * ez || 1;
+      const t = Math.max(0, Math.min(1, ((x - b.x0) * ex + (z - b.z0) * ez) / L2));
+      if (Math.hypot(x - (b.x0 + ex * t), z - (b.z0 + ez * t)) < b.w) return 'wood';
+    }
+    if (this.inWater(x, z)) return 'water';
+    if (this.heightAt(x, z) > 0.05) return 'stone'; // 기단·계단·다리 위
+    const R = this.regionAt(x, z);
+    let on = null;
+    for (const s of this.pathShapes) {
+      if (s.region !== R.id) continue;
+      let d;
+      if (s.type === 'disc') d = Math.hypot(x - s.x, z - s.z) - s.r;
+      else {
+        const ex = s.x1 - s.x0, ez = s.z1 - s.z0, L2 = ex * ex + ez * ez || 1;
+        const t = Math.max(0, Math.min(1, ((x - s.x0) * ex + (z - s.z0) * ez) / L2));
+        d = Math.hypot(x - (s.x0 + ex * t), z - (s.z0 + ez * t)) - s.w / 2;
+      }
+      if (d < 0) { on = s; if (s.paved) break; }
+    }
+    if (on?.paved) return 'stone';
+    if (R.id === 'temple' || R.id === 'snowfield') return 'snow';
+    if (R.id === 'tower') return 'stone';
+    if (R.id === 'sea' || on) return 'sand'; // 흙길·모래는 사각사각
+    return 'grass';
+  }
+
   // 어느 지역 안이든 걸을 수 있는 범위인지 (몸체 반경 r 만큼 여유)
   inside(x, z, r = 0) {
     for (const R of REGIONS) {
@@ -339,7 +368,7 @@ export class World {
         m.position.set((x0 + x1) / 2, 0.022 + k * 0.0005, (z0 + z1) / 2); // 죽림 흙길(0.012)과 겹치는 곳에서 깜빡이지 않게 위로
         m.receiveShadow = true;
         this.root.add(m);
-        this.pathShapes.push({ type: 'strip', x0, z0, x1, z1, w });
+        this.pathShapes.push({ type: 'strip', x0, z0, x1, z1, w, paved: true });
       }
     };
     path([[0, 28.4], [0, 21], [-1.5, 14], [-4, 8], [-11, 3], [-15, -4], [-14, -14], [-12, -22]], 3.4);
@@ -351,7 +380,7 @@ export class World {
     yard.rotation.x = -Math.PI / 2; yard.position.set(-10.5, 0.014, 4.6);
     yard.receiveShadow = true;
     this.root.add(yard);
-    this.pathShapes.push({ type: 'disc', x: -10.5, z: 4.6, r: 5.2 });
+    this.pathShapes.push({ type: 'disc', x: -10.5, z: 4.6, r: 5.2, paved: true });
 
     // 큰 연지 + 섬 위 육각정 + 무지개 다리
     this.pond(-8.5, 7.5, -15, -3.5);
