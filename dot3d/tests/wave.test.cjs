@@ -32,6 +32,8 @@ module.exports = {
       back = await g.eval(() => { const G = window.game, e = G.enemies.find((e) => e.__far); return !e || e.dead || Math.hypot(e.pos.x - G.player.pos.x, e.pos.z - G.player.pos.z) < 22; });
     }
     check(back, `${far}칸 떨어진 밤 싸움 적이 20초가 지나도 돌아오지 않음`);
+    // 데려온 뒤에는 다시 움직이게 (실제로는 못 움직이는 적이 아니므로 — 가까이 와도 닿지 못하는 자리면 싸움이 안 끝남)
+    await g.eval(() => { const e = window.game.enemies.find((e) => e.__far); if (e) e.T = { ...e.T, speed: 2.4 }; });
     // 세 파 끝까지 (최대 게임 4분)
     for (let k = 0; k < 48 && (await g.eval(() => window.game.waveActive)); k++) await g.step(5);
     const r = await g.eval(() => ({ active: window.game.waveActive, cleared: !!window.game.cleared.palace, wave: window.game.wave, left: window.game.enemies.filter((e) => !e.dead && !e.field).map((e) => e.type) }));
@@ -43,6 +45,10 @@ module.exports = {
     const after = await g.eval(() => window.game.quest.step);
     check(after > before, `이긴 직후 쓰러졌더니 퀘스트가 넘어가지 않음 (${before} → ${after})`);
     ctx.log('이긴 직후 쓰러져도 퀘스트 완료');
+    // 이긴 직후(퀘스트가 넘어가기 전) 북을 다시 쳐도 싸움이 다시 시작되지 않아야 함
+    const re = await g.eval(() => { const G = window.game; G.quest.step = 1; G.mapId = 'palace'; G.waveActive = true; G.victory(); const d = G.world.drums.find((x) => x.region === 'palace'); G.drumHit(d, true); return G.waveActive; });
+    check(!re, '이긴 직후 북을 치니 밤 싸움이 다시 시작됨');
+    await g.step(3, { input: {} });
     await clean(g);
     await g.close();
   },

@@ -495,13 +495,13 @@ class Game {
       // 쫓아오는데 10초 넘게 조금도 가까워지지 않고(덤불·바위에 끼임, 제자리에서 맴돔) 12칸 밖이면 치움 — 자리만 차지해 새 몬스터가 안 나옴
       if (!e.aggro || d < (e.bestD ?? 1e9) - 1) { e.bestD = d; e.stillT = 0; } else e.stillT = (e.stillT || 0) + 1.2;
       const wedged = e.aggro && e.stillT > 10 && d > 12;
-      if (d > 40 || wedged || (e.home && e.home !== R.id && d > 18)) { e.dispose(); e.removed = true; removed = true; if (this.target === e) this.target = null; }
+      if (d > 40 || wedged || (e.homeRegion && e.homeRegion !== R.id && d > 18)) { e.dispose(); e.removed = true; removed = true; if (this.target === e) this.target = null; }
     }
     if (removed) this.enemies = this.enemies.filter((e) => !e.removed);
     if (this.state !== 'play' || p.dead || this.waveActive) return;
     const F = MAPS[R.id].field;
     if (!F) return;
-    const here = () => this.enemies.filter((e) => e.field && !e.dead && (!e.home || e.home === R.id)).length;
+    const here = () => this.enemies.filter((e) => e.field && !e.dead && (!e.homeRegion || e.homeRegion === R.id)).length;
     if (here() >= F.cap) return;
     const at = this.world.randomWalkable(p.pos.x, p.pos.z, 13, 22);
     if (!at || this.world.regionAt(at.x, at.z) !== R) return;
@@ -520,7 +520,7 @@ class Game {
     for (let i = 0; i < n; i++) {
       const pos = (i && this.world.randomWalkable(at.x, at.z, 0.8, 2.5)) || at;
       const fe = new Enemy(this, type, pos, lv, { field: true });
-      fe.home = R.id;
+      fe.homeRegion = R.id; // (home은 몬스터가 돌아다니는 중심 자리로 따로 쓰임)
       this.earlyEase(fe);
       this.enemies.push(fe);
     }
@@ -2720,6 +2720,8 @@ class Game {
     this.fx.spark(drum.pos.x, 2.2, drum.pos.z, 14, '#fff2c0', 5);
     const Q = this.curQuest();
     const reg = drum.region || 'palace';
+    // 이긴 직후(퀘스트가 넘어가기 전 몇 초) 다시 울리면 같은 싸움이 각성 보스로 다시 시작되던 문제
+    if (!this.waveActive && this.time - (this.wonAt ?? -99) < 4) return;
     if (!this.waveActive && this.stage !== 2 && !this.cleared[reg] && !(Q && Q.type === 'wave' && Q.region === reg)) {
       if (this.time - (this.drumDenyT || -9) > 3) { this.drumDenyT = this.time; this.ui.toast(Q ? `아직 울릴 때가 아니다 — ${Q.title}: ${Q.desc.replace(/<[^>]+>/g, '')}` : '아직 울릴 때가 아니다', 3); }
       return;
@@ -4476,6 +4478,7 @@ class Game {
     this.audio.play('victory');
     this.player.hp = this.player.maxHp;
     this.player.invuln = Math.max(this.player.invuln || 0, 3); // 이긴 뒤 남은 공격(장판·투사체)에 쓰러지지 않게
+    this.wonAt = this.time;
     const first = !this.cleared[this.mapId];
     this.cleared[this.mapId] = true;
     this.gainShard(this.mapId);

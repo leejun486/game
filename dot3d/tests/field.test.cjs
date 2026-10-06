@@ -19,14 +19,14 @@ module.exports = {
       const p = G.player.pos; let n = 0;
       for (let k = 0; k < 60 && n < 6; k++) {
         const w = G.world.randomWalkable(p.x, p.z, 26, 32); if (!w) continue;
-        const e = G.spawnEnemyAt('crab', w.x, w.z); e.field = true; e.aggro = true; e.home = 'sea'; e.spawning = false; e.T = { ...e.T, speed: 0 }; e.dmg = 0; n++;
+        const e = G.spawnEnemyAt('crab', w.x, w.z); e.field = true; e.aggro = true; e.homeRegion = 'sea'; e.spawning = false; e.T = { ...e.T, speed: 0 }; e.dmg = 0; n++;
       }
       return n;
     });
     check(placed === 6, `게를 ${placed}마리만 놓음`);
     // 몬스터는 1.2초마다 무작위 자리에 나오므로 최대 12초까지 기다림
-    for (let k = 0; k < 6; k++) { await g.step(2, { input: {} }); if (await g.eval(() => window.game.enemies.some((e) => e.field && !e.dead && e.home === 'valley'))) break; }
-    const r = await g.eval(() => { const G = window.game; const f = G.enemies.filter((e) => e.field && !e.dead); return { crabs: f.filter((e) => e.type === 'crab').length, local: f.filter((e) => e.home === 'valley').map((e) => e.type) }; });
+    for (let k = 0; k < 6; k++) { await g.step(2, { input: {} }); if (await g.eval(() => window.game.enemies.some((e) => e.field && !e.dead && e.homeRegion === 'valley'))) break; }
+    const r = await g.eval(() => { const G = window.game; const f = G.enemies.filter((e) => e.field && !e.dead); return { crabs: f.filter((e) => e.type === 'crab').length, local: f.filter((e) => e.homeRegion === 'valley').map((e) => e.type) }; });
     check(r.crabs === 0, `경계에 걸린 다른 지역 몬스터 ${r.crabs}마리가 남아 있음`);
     check(r.local.length > 0, '이 지역 몬스터가 나오지 않음');
     ctx.log('다른 지역 몬스터 정리, 이 지역 몬스터:', r.local.join(','));
@@ -36,7 +36,7 @@ module.exports = {
       for (const e of G.enemies) e.dispose(); G.enemies = [];
       for (let k = 0; k < 60 && out.length < 3; k++) {
         const w = G.world.randomWalkable(p.x, p.z, 15, 20); if (!w) continue;
-        const e = G.spawnEnemyAt('boar', w.x, w.z); e.field = true; e.aggro = true; e.home = 'valley'; e.spawning = false; e.T = { ...e.T, speed: 0 }; e.dmg = 0; e.__wedged = true; out.push(1);
+        const e = G.spawnEnemyAt('boar', w.x, w.z); e.field = true; e.aggro = true; e.homeRegion = 'valley'; e.spawning = false; e.T = { ...e.T, speed: 0 }; e.dmg = 0; e.__wedged = true; out.push(1);
       }
       return out.length;
     });
