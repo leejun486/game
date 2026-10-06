@@ -1107,8 +1107,8 @@ export class World {
       ok[0][k] = this.isBlocked(x, z, NAV_R[0], hh) ? 0 : 1;
       ok[1][k] = this.isBlocked(x, z, NAV_R[1], hh) ? 0 : 1;
     }
-    // dist[0]/[1]: 적(작은·큰 몸)이 플레이어에게 가는 길, dist[2]: 플레이어 자동 이동 길
-    this.nav = { cs, x0, z0, nx, nz, h, ok, dist: [new Float32Array(N), new Float32Array(N), new Float32Array(N)], target: [-1, -1, -1], heap: new Int32Array(N * 8), hd: new Float32Array(N * 8) };
+    // dist[0]/[1]: 적(작은·큰 몸)이 플레이어에게 가는 길, dist[2]: 플레이어 자동 이동 길, dist[3]: 퀘스트(호위 NPC·물건 놓을 자리)
+    this.nav = { cs, x0, z0, nx, nz, h, ok, dist: [new Float32Array(N), new Float32Array(N), new Float32Array(N), new Float32Array(N)], target: [-1, -1, -1, -1], heap: new Int32Array(N * 8), hd: new Float32Array(N * 8) };
   }
 
   navCell(x, z) {

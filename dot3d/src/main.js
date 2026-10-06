@@ -22,6 +22,7 @@ import { clamp, lerp, rand, angleDiff, damp } from './util.js';
 import { initLang, watchDom, tr, LANG, LANGS } from './i18n.js';
 import { DIFFS, DIFF_ORDER, diffOf } from './difficulty.js';
 import { Daily } from './daily.js';
+import { QuestKinds } from './questkinds.js';
 import { rigOptions } from './looks.js';
 import { Coach } from './coach.js';
 import { VERSION } from './version.js';
@@ -113,7 +114,7 @@ class Game {
     this.cleared = {};
     this.regionBanner = {};
     // 퀘스트 진행: step = QUESTS 순번, prog = 이 단계 진행도, lit = 밝힌 석등, bounty = 현상수배
-    this.quest = { step: 0, prog: {}, lit: [], bounty: null, shards: [], prologue: false, ended: false, qv: 3 };
+    this.quest = { step: 0, prog: {}, lit: [], bounty: null, shards: [], prologue: false, ended: false, qv: 4 };
     this.flames = [];
     this.fieldT = 0;
     this.themeCur = this.cloneTheme(MAPS.palace.theme);
@@ -137,6 +138,7 @@ class Game {
     this.records = new Records(this);
     this.daily = null;  // 오늘의 목표 { day, goals, bonus }
     this.dailyGoals = new Daily(this);
+    this.qk = new QuestKinds(this); // 추격·찾기·순서·호위·버티기 퀘스트
     this.applySave(loadSave());
     this.preview = new ClassPreview(this);
     this.ui.setClass(this.player.cfg);
@@ -1036,7 +1038,13 @@ class Game {
     if (!this.quest.qv && this.quest.step >= 21) { this.quest.step = 21; this.quest.prog = {}; }
     // 청류 계곡·백설 고원이 생기기 전(1.1) 기록: 용궁 다음(귀환·완료)이었으면 `샘물길`부터
     if (this.quest.qv === 2 && this.quest.step >= 33) { this.quest.step = 33; this.quest.prog = {}; }
-    this.quest.qv = 3;
+    // 지역마다 새 방식 퀘스트(added: 4)가 끼어들기 전 기록: 같은 퀘스트를 가리키게 단계 번호를 옮김 (그 사이 새 퀘스트는 건너뜀)
+    if ((this.quest.qv || 0) < 4) {
+      const old = QUESTS.filter((q) => !q.added);
+      const s0 = this.quest.step;
+      this.quest.step = s0 >= old.length ? QUESTS.length : QUESTS.indexOf(old[s0]);
+    }
+    this.quest.qv = 4;
     // 이야기가 생기기 전 기록: 이미 평정한 지역의 조각은 가진 것으로, 프롤로그는 건너뜀
     if (!d.quest?.shards) this.quest.shards = Object.keys(this.cleared).filter((k) => SHARD_LINES[k]);
     if (this.quest.step > 0 || this.round > 0) this.quest.prologue = true;
@@ -1048,6 +1056,7 @@ class Game {
     if (!d.flags && (this.quest.step > 0 || this.round > 0)) this.flags.tut = 1; // 이미 해 본 사람은 튜토리얼 생략
     this.quest.lit.forEach((i) => this.world.lanterns[i] && this.addFlame(this.world.lanterns[i]));
     this.updateGates(true);
+    this.qk.resume();
     // 마지막 위치에서 이어서 (예전 기록은 그 지역 입구에서)
     let at = null;
     if (Array.isArray(d.pos) && this.world.inside(d.pos[0], d.pos[1], 0.4) && !this.world.isBlocked(d.pos[0], d.pos[1], 0.4, this.world.heightAt(d.pos[0], d.pos[1]))) at = d.pos;
@@ -1217,9 +1226,10 @@ class Game {
     this.kills = 0; this.round = 0; this.stage = 0; this.bestCombo = 0; this.playTime = 0; this.flags = {}; this.stats = newStats(); this.daily = null;
     this.progress = {}; this.inv = new Set(['sw0', 'mg0', 'bw0', 'sp0', 'ot0']); this.gear = [];
     this.cleared = {};
-    this.quest = { step: 0, prog: {}, lit: [], bounty: null, shards: [], prologue: false, ended: false, qv: 3 };
+    this.quest = { step: 0, prog: {}, lit: [], bounty: null, shards: [], prologue: false, ended: false, qv: 4 };
     for (const f of this.flames) this.scene.remove(f);
     this.flames = [];
+    this.qk.clear();
     this.updateGates(true);
     this.player.pos.copy(this.world.spawn); this.player.y = this.player.pos.y;
     this.startPos = null;
@@ -1778,6 +1788,8 @@ class Game {
         if (d < 2.2 && d < bd) { bd = d; best = { kind: 'lantern', idx, label: '석등 밝히기', promptPos: L.clone().add(V(0, 1.2, 0)) }; }
       });
     }
+    const qo = this.qk.findInteract(p, bd);
+    if (qo) { bd = qo.d; best = qo; }
     for (const P of this.world.portals) {
       if (P.kind === 'next' && !(this.tower?.active && this.tower.cleared)) continue;
       const d = Math.hypot(P.x - p.x, P.z - p.z);
@@ -1809,6 +1821,9 @@ class Game {
       this.usePortal(it.portal);
     } else if (it.kind === 'lantern') {
       this.lightLantern(it.idx);
+    } else if (it.kind === 'qobj') {
+      this.player.yaw = Math.atan2(it.o.x - this.player.pos.x, it.o.z - this.player.pos.z);
+      this.qk.use(it);
     } else if (it.kind === 'drum') {
       this.player.yaw = Math.atan2(it.drum.pos.x - this.player.pos.x, it.drum.pos.z - this.player.pos.z);
       this.player.startAttack({ moveLen: 0, mx: 0, mz: 0 });
@@ -1875,12 +1890,15 @@ class Game {
     if (!T.length) { this.ui.toast('지금은 갈 곳이 없어요', 2); return; }
     let best = null, bd = Infinity;
     for (const t of T) {
+      if (t.hidden) continue;
+      // 찾기 퀘스트: 그 지역 안에서는 직접 찾게 함
+      if (t.search && this.world.regionAt(p.x, p.z).id === t.area) { this.ui.toast('여기서부터는 직접 찾아보세요 — 가까이 가면 소리가 나요', 3); return; }
       // 사냥 지역 안에 이미 있으면 바로 자동 사냥
       if (t.area && this.world.regionAt(p.x, p.z).id === t.area) { this.setAutoHunt(true); return; }
       const d = Math.hypot(t.pos.x - p.x, t.pos.z - p.z);
       if (d < bd) { bd = d; best = t; }
     }
-    this.autoMove = { pos: V(best.pos.x, 0, best.pos.z), area: best.area, stuck: 0, last: p.clone() };
+    this.autoMove = { pos: V(best.pos.x, 0, best.pos.z), area: best.area, search: best.search, obj: best.obj, stuck: 0, last: p.clone() };
     this.world.updateFlow(best.pos.x, best.pos.z, 0, 2, 4000);
     if (bd > 3 && !this.world.navDir(p, 0, 2)) { this.autoMove = null; this.ui.toast('길이 막혀 있어요 (닫힌 문이 있나 봐요)', 2.4); return; }
     document.getElementById('quest').classList.add('moving');
@@ -1943,7 +1961,9 @@ class Game {
     const blockedNear = !A.area && d < 3.2 && A.stuck > 0.5;
     if (d < (A.area ? 3.5 : 1.9) || blockedNear) {
       this.stopAutoMove();
+      if (A.search) { this.ui.toast('여기서부터는 직접 찾아보세요 — 가까이 가면 소리가 나요', 3); return inp; }
       if (A.area) { if (!this.autoHunt) this.setAutoHunt(true); return inp; }
+      if (A.obj) return inp; // 순서 퍼즐은 직접 고르게 (대신 두드리지 않음)
       // 도착: 퀘스트 대상(사람·석등·북)과 바로 상호작용 (옆의 다른 물건 말고)
       const Q = this.curQuest();
       const pp = p.pos;
@@ -2072,6 +2092,7 @@ class Game {
     if (Q.type === 'kill') return '<br>' + Object.entries(Q.need).map(([t, n]) => `${KILL_NAME[t]} <b>${Math.min(n, prog[t] || 0)}</b>/${n}`).join(' · ');
     if (Q.type === 'collect') return `<br>${Q.item} <b>${prog.n || 0}</b>/${Q.n}`;
     if (Q.type === 'light') return `<br>석등 <b>${this.litCount(Q)}</b>/${Q.n}`;
+    if (this.qk.handles(Q)) return this.qk.progText(Q);
     return '';
   }
 
@@ -2090,6 +2111,7 @@ class Game {
     if (!Q) return;
     if (Q === DEMO_QUEST) { if (!this.flags.demoEnd) { this.flags.demoEnd = 1; this.save(false); this.playStory(DEMO_END_LINES); } return; }
     this.ui.banner('새 임무', Q.title, 2.2, '');
+    if (this.qk.handles(Q)) this.qk.start(Q);
     if (Q.type === 'kill' || Q.type === 'collect') this.coach.tip('hunt', 4);
     this.audio.play('wave');
     // 다른 대화(달거울 조각 이야기 등)가 열려 있으면 닫힐 때까지 기다렸다가
@@ -2147,6 +2169,7 @@ class Game {
   }
 
   questOnKill(e) {
+    this.qk.onKill(e);
     const Q = this.curQuest();
     const pr = this.quest.prog;
     if (Q && Q.type === 'kill' && Q.need[e.type] && (pr[e.type] || 0) < Q.need[e.type]) {
@@ -2269,6 +2292,7 @@ class Game {
       else out.push({ pos: regionCenter(BOUNTIES[B.i].region), area: BOUNTIES[B.i].region });
       return out;
     }
+    if (this.qk.handles(Q)) return this.qk.targets(Q, regionCenter);
     if (Q.type === 'talk') { const n = npc(Q.npc); out.push({ pos: n.pos.clone().add(V(0, 2.5, 0)), mark: true }); }
     else if (Q.type === 'wave') { const d = this.world.drums.find((x) => x.region === Q.region); out.push({ pos: d.pos.clone().add(V(0, (d.promptY || 4) + 0.6, 0)), mark: !this.waveActive }); }
     else if (Q.type === 'light') this.world.lanterns.forEach((L, i) => { if (L.region === (Q.region || 'temple') && !this.quest.lit.includes(i)) out.push({ pos: L.clone().add(V(0, 1.1, 0)), mark: true }); });
@@ -4597,6 +4621,7 @@ class Game {
     this.updateVents(wdt);
     this.updateTower();
     this.updateField(wdt);
+    this.qk.update(wdt); // 추격·찾기·순서·호위·버티기 (게임 시간으로)
     this.updateQuestMarkers(wdt);
     this.minimap.update(wdt);
     // 길찾기 흐름장 (플레이어가 다른 칸으로 옮겼을 때만 실제로 다시 계산)

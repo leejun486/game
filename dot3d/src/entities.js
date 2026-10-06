@@ -882,6 +882,8 @@ export class Enemy {
     let attackAnim = null;
     const T = this.T;
 
+    // 퀘스트 도둑: 가까이 오면 도망 (questkinds.js 'chase')
+    if (this.flee) return this.updateFlee(dt, dist, toYaw);
     // 필드 몬스터: 플레이어를 알아채기 전엔 제자리 근처를 어슬렁, 멀리 달아나면 포기
     if (this.field) {
       if (this.aggro && (dist > 24 || p.dead)) { this.aggro = false; this.home = this.pos.clone(); this.state = 'chase'; this.clearTele(); }
@@ -1471,6 +1473,33 @@ export class Enemy {
     return true;
   }
 
+  // 도망: 플레이어 반대쪽으로 달아나고, 막히면 옆으로 꺾음. 맞으면 잠깐 멈칫. 구석에 몰리면 잡힘
+  updateFlee(dt, dist, toYaw) {
+    const g = this.game;
+    if (this.vel.lengthSq() > 0.001) {
+      g.world.move(this.pos, this.vel.x * dt, this.vel.z * dt, this.moveR);
+      this.vel.multiplyScalar(Math.exp(-9 * dt));
+    }
+    let speed = 0;
+    if (this.hurtT > 0 || this.frozenT > 0) {
+      // 경직
+    } else if (dist < 11) {
+      const away = toYaw + Math.PI + Math.sin(this.st * 1.3) * 0.5;
+      const sp = this.T.speed * 1.2;
+      for (const off of [0, 0.7, -0.7, 1.4, -1.4, 2.1, -2.1]) {
+        const a = away + off, ox = this.pos.x, oz = this.pos.z;
+        g.world.move(this.pos, Math.sin(a) * sp * dt, Math.cos(a) * sp * dt, this.moveR);
+        const R = this.fleeRegion;
+        if (R) { this.pos.x = clamp(this.pos.x, R.x0 + 2, R.x1 - 2); this.pos.z = clamp(this.pos.z, R.z0 + 2, R.z1 - 2); }
+        if (Math.hypot(this.pos.x - ox, this.pos.z - oz) > sp * dt * 0.5) { this.yaw = dampAngle(this.yaw, a, 10, dt); speed = sp; break; }
+        this.pos.x = ox; this.pos.z = oz;
+      }
+    } else this.yaw = dampAngle(this.yaw, toYaw, 4, dt);
+    this.place(dt, speed);
+    if (this.isWisp && !this.rig) this.root.position.set(this.pos.x, this.pos.y + 1.3, this.pos.z);
+    return true;
+  }
+
   place(dt, speed, attackAnim = null) {
     const g = this.game;
     const h = g.world.heightAt(this.pos.x, this.pos.z);
@@ -1540,11 +1569,12 @@ export class NPC {
   update(dt) {
     const p = this.game.player;
     const d = Math.hypot(p.pos.x - this.pos.x, p.pos.z - this.pos.z);
-    const target = d < 4 ? Math.atan2(p.pos.x - this.pos.x, p.pos.z - this.pos.z) : this.baseYaw;
-    this.yaw = dampAngle(this.yaw, target, 4, dt);
+    // 호위 중엔 걷는 방향을 봄 (questkinds.js 'escort')
+    const target = this.walk ? this.walk.yaw : d < 4 ? Math.atan2(p.pos.x - this.pos.x, p.pos.z - this.pos.z) : this.baseYaw;
+    this.yaw = dampAngle(this.yaw, target, this.walk ? 8 : 4, dt);
     this.rig.root.position.copy(this.pos);
     this.rig.root.rotation.y = this.yaw;
-    this.rig.animate(dt, { speed: 0 });
+    this.rig.animate(dt, { speed: this.walk ? this.walk.speed : 0 });
   }
 }
 
