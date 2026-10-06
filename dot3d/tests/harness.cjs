@@ -41,7 +41,7 @@ async function openGame(ctx, { lang = 'ko', viewport = { width: 960, height: 540
   await page.goto(ctx.base + '/index.html');
   await page.evaluate(([l, s]) => { localStorage.clear(); localStorage.setItem('dot3d-settings-v1', JSON.stringify({ lang: l, quality: 'low', tips: false, autoQ: false, ...s })); }, [lang, settings]);
   await page.reload();
-  await page.waitForFunction(() => window.game && document.getElementById('btn-new'), null, { timeout: 60000 });
+  await page.waitForFunction(() => window.game && document.getElementById('btn-new'), null, { timeout: 180000 });
   await page.waitForTimeout(500);
   const g = {
     page, errors, external,

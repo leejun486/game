@@ -24,12 +24,13 @@ module.exports = {
       return n;
     });
     check(placed === 6, `게를 ${placed}마리만 놓음`);
-    await g.step(4, { input: {} });
+    // 몬스터는 1.2초마다 무작위 자리에 나오므로 최대 12초까지 기다림
+    for (let k = 0; k < 6; k++) { await g.step(2, { input: {} }); if (await g.eval(() => window.game.enemies.some((e) => e.field && !e.dead && e.home === 'valley'))) break; }
     const r = await g.eval(() => { const G = window.game; const f = G.enemies.filter((e) => e.field && !e.dead); return { crabs: f.filter((e) => e.type === 'crab').length, local: f.filter((e) => e.home === 'valley').map((e) => e.type) }; });
     check(r.crabs === 0, `경계에 걸린 다른 지역 몬스터 ${r.crabs}마리가 남아 있음`);
     check(r.local.length > 0, '이 지역 몬스터가 나오지 않음');
     ctx.log('다른 지역 몬스터 정리, 이 지역 몬스터:', r.local.join(','));
-    // 이 지역 몬스터가 덤불에 끼어 못 움직이면(쫓아오는 중, 12칸 밖) 8초쯤 뒤 치워짐
+    // 이 지역 몬스터가 덤불에 끼어 못 오면(쫓아오는 중, 12칸 밖) 10초쯤 뒤 치워짐
     const ids = await g.eval(() => {
       const G = window.game, p = G.player.pos, out = [];
       for (const e of G.enemies) e.dispose(); G.enemies = [];
@@ -40,9 +41,9 @@ module.exports = {
       return out.length;
     });
     check(ids === 3, '끼인 몬스터를 놓지 못함');
-    await g.step(12, { input: {} });
+    await g.step(14, { input: {} });
     const left = await g.eval(() => window.game.enemies.filter((e) => e.__wedged && !e.dead).length);
-    check(left === 0, `덤불에 끼인 몬스터 ${left}마리가 12초 뒤에도 남아 있음`);
+    check(left === 0, `덤불에 끼인 몬스터 ${left}마리가 14초 뒤에도 남아 있음`);
     ctx.log('끼인 몬스터 정리');
     await clean(g);
     await g.close();

@@ -492,11 +492,9 @@ class Game {
       if (!e.field || e.dead) continue;
       const d = Math.hypot(e.pos.x - p.pos.x, e.pos.z - p.pos.z);
       // 멀어진 것, 그리고 다른 지역에서 따라오다 경계에 걸린 것(18칸 밖)은 치움 — 남아 있으면 이 지역 몬스터가 나오지 않아 처치 퀘스트가 막힘
-      // 쫓아오는데 8초 넘게 제자리(덤불·바위에 끼임)이고 12칸 밖이면 치움 — 자리만 차지해 새 몬스터가 안 나옴
-      const moved = !e.lastPos || Math.hypot(e.pos.x - e.lastPos.x, e.pos.z - e.lastPos.z) > 0.4;
-      e.stillT = moved ? 0 : (e.stillT || 0) + 1.2;
-      e.lastPos = { x: e.pos.x, z: e.pos.z };
-      const wedged = e.aggro && e.stillT > 8 && d > 12;
+      // 쫓아오는데 10초 넘게 조금도 가까워지지 않고(덤불·바위에 끼임, 제자리에서 맴돔) 12칸 밖이면 치움 — 자리만 차지해 새 몬스터가 안 나옴
+      if (!e.aggro || d < (e.bestD ?? 1e9) - 1) { e.bestD = d; e.stillT = 0; } else e.stillT = (e.stillT || 0) + 1.2;
+      const wedged = e.aggro && e.stillT > 10 && d > 12;
       if (d > 40 || wedged || (e.home && e.home !== R.id && d > 18)) { e.dispose(); e.removed = true; removed = true; if (this.target === e) this.target = null; }
     }
     if (removed) this.enemies = this.enemies.filter((e) => !e.removed);
@@ -4477,6 +4475,7 @@ class Game {
     this.audio.mood = 'day';
     this.audio.play('victory');
     this.player.hp = this.player.maxHp;
+    this.player.invuln = Math.max(this.player.invuln || 0, 3); // 이긴 뒤 남은 공격(장판·투사체)에 쓰러지지 않게
     const first = !this.cleared[this.mapId];
     this.cleared[this.mapId] = true;
     this.gainShard(this.mapId);
@@ -4485,7 +4484,7 @@ class Game {
     if (first && SCENE) this.after(6, () => this.whenFree(() => playScene(this, SCENE), true));
     this.dailyGoals.event('night');
     const Q = this.curQuest();
-    if (Q && Q.type === 'wave' && Q.region === this.mapId) this.after(2.0, () => this.completeStep());
+    if (Q && Q.type === 'wave' && Q.region === this.mapId) this.after(2.0, () => this.completeStep(), true);
     this.after(0.1, () => this.updateRegion(true));
     this.ui.banner('승리', WIN_LINE[this.mapId], 4, 'win-banner');
 
@@ -4510,7 +4509,7 @@ class Game {
     this.spawnQueue = [];
     for (const pr of this.projectiles) if (pr.mesh) drop(this.scene, pr.mesh);
     this.projectiles = [];
-    this.timers = [];
+    this.timers = this.timers.filter((t) => t.keep);
     for (const r of this.rains) this.fx.removeRing(r.tele);
     this.rains = [];
     for (const T of this.tornados) for (const ring of T.rings) this.scene.remove(ring);
@@ -4731,7 +4730,8 @@ class Game {
   }
 
   // 게임 시간 기준 예약 (일시정지·지역 이동 시 함께 멈추거나 취소됨)
-  after(sec, fn) { this.timers.push({ at: this.time + sec, fn }); }
+  //  keep: 쓰러져 다시 할 때도 지우지 않음 (승리 뒤 퀘스트 완료처럼 꼭 일어나야 하는 것)
+  after(sec, fn, keep = false) { this.timers.push({ at: this.time + sec, fn, keep }); }
 
   // 테스트·디버그용: 렌더링 없이 시간만 진행
   stepSim(dt) {

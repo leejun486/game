@@ -37,6 +37,12 @@ module.exports = {
     const r = await g.eval(() => ({ active: window.game.waveActive, cleared: !!window.game.cleared.palace, wave: window.game.wave, left: window.game.enemies.filter((e) => !e.dead && !e.field).map((e) => e.type) }));
     check(!r.active && r.cleared, `밤 싸움이 4분 안에 끝나지 않음 ${JSON.stringify(r)}`);
     ctx.log(`멀리(${far}칸) 떨어진 적 복귀, 세 파 완료`);
+    // 이긴 직후(퀘스트 완료가 일어나기 전 2초) 쓰러져 다시 해도 퀘스트는 넘어가야 함 — 예전엔 완료가 사라져 같은 밤 싸움을 다시 해야 했음
+    const before = await g.eval(() => { const G = window.game; G.quest.step = 1; G.mapId = 'palace'; G.waveActive = true; G.victory(); G.state = 'play'; G.onPlayerDeath(); G.retry(); return G.quest.step; });
+    await g.step(3, { input: {} });
+    const after = await g.eval(() => window.game.quest.step);
+    check(after > before, `이긴 직후 쓰러졌더니 퀘스트가 넘어가지 않음 (${before} → ${after})`);
+    ctx.log('이긴 직후 쓰러져도 퀘스트 완료');
     await clean(g);
     await g.close();
   },
