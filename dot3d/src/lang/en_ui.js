@@ -268,6 +268,9 @@ export const dict = {
   '이미 사냥터예요': 'You\'re already at the hunting ground',
   '사냥터에 도착했어요': 'Arrived at the hunting ground',
   '싸우려면 자동 사냥을 켜세요': 'turn on Auto-hunt to fight',
+  '몬스터 체력 75% · 받는 피해 절반쯤 — 이야기와 탐험을 편하게': 'Monster HP 75% · about half the damage taken — relax and enjoy the story',
+  '처음 하는 분께 알맞은 기본 난이도 — 남쪽 지역일수록 우두머리가 세짐': 'The standard difficulty for first-timers — bosses grow tougher further south',
+  '몬스터 체력 130% · 받는 피해와 우두머리가 더 셈 · 경험치 125% · 장비 140%': 'Monster HP 130% · harder hits and tougher bosses · EXP 125% · gear 140%',
 };
 
 const RN = '([ⅠⅡⅢⅣⅤ])';

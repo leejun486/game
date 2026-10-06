@@ -43,9 +43,9 @@ function _noTower(g) { return g.tower?.active ? { mapId: 'canyon' } : {}; }
 // 보스 등장 연출의 별칭 / 단계 전환 대사
 const BOSS_EPITHET = { boss: '도깨비들의 왕', gumiho: '천 년을 산 여우', reaper: '명부를 든 저승의 사자', imugi: '용이 되지 못한 뱀', bulgasari: '쇠를 먹고 자라는 괴물', baekho: '산을 다스리는 범의 왕', dragon: '동해를 다스리는 용', centipede: '천 년 묵은 독의 왕', frostgiant: '겨울을 몰고 오는 장수', yeomra: '저승을 다스리는 왕' };
 const DIFF_NOTE = {
-  easy: '몬스터 체력 75% · 받는 피해 55% — 이야기와 탐험을 편하게',
-  normal: '처음 하는 분께 알맞은 기본 난이도',
-  hard: '몬스터 체력 135% · 받는 피해 145% · 경험치 125% · 장비 140%',
+  easy: '몬스터 체력 75% · 받는 피해 절반쯤 — 이야기와 탐험을 편하게',
+  normal: '처음 하는 분께 알맞은 기본 난이도 — 남쪽 지역일수록 우두머리가 세짐',
+  hard: '몬스터 체력 130% · 받는 피해와 우두머리가 더 셈 · 경험치 125% · 장비 140%',
 };
 const BOSS_PHASE_LINE = {
   boss: ['"금 나와라, 뚝딱! 금덩이 맛 좀 봐라!"', '"이놈! 혼쭐을 내주마!" — 쉬지 않고 뛰어내린다'],
