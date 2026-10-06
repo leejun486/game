@@ -23,6 +23,7 @@ import { initLang, watchDom, tr, LANG, LANGS } from './i18n.js';
 import { DIFFS, DIFF_ORDER, diffOf } from './difficulty.js';
 import { Daily } from './daily.js';
 import { QuestKinds } from './questkinds.js';
+import { playScene } from './scenes.js';
 import { rigOptions } from './looks.js';
 import { Coach } from './coach.js';
 import { VERSION } from './version.js';
@@ -1122,6 +1123,12 @@ class Game {
       else if (['Space', 'Enter', 'KeyJ', 'KeyE', 'atk', 'act', 'dash'].includes(code)) this.storyNext();
       return;
     }
+    // 연출 장면: Esc로 건너뛰기, 대사는 넘기기만
+    if (this.cut) {
+      if (code === 'Escape' || code === 'pause') this.cut.skip();
+      else if (this.ui.inDialog && ['KeyE', 'Space', 'Enter', 'KeyJ', 'KeyZ', 'act', 'atk'].includes(code)) this.ui.advance();
+      return;
+    }
     if (this.state === 'title') {
       if (document.getElementById('confirm').classList.contains('show')) {
         if (code === 'Escape') this.showConfirm(false);
@@ -1319,6 +1326,7 @@ class Game {
       else if (i === 1 || i === 9) this.storySkip();
       return;
     }
+    if (this.cut) { if (i === 1 || i === 9) this.cut.skip(); else if (i === 0 && this.ui.inDialog) this.ui.advance(); return; }
     const dir = { 12: -1, 100: -1, 13: 1, 101: 1, 14: -1, 102: -1, 15: 1, 103: 1 }[i];
     if (menu) {
       const SEL = 'button:not([disabled]), input[type=range], .it, .eqs, .evo-opt, .evo-train, [data-look], [data-skin]';
@@ -1655,7 +1663,7 @@ class Game {
       this.ui.banner('월하궁', '도깨비 야행', 2.8, 'title-banner');
       if (!this.flags.tut && this.quest.step === 0) this.after(2.6, () => this.coach.startTutorial());
     };
-    if (!this.quest.prologue) this.playStory(PROLOGUE, { moon: true, onDone: () => { this.quest.prologue = true; this.save(false); open(); } });
+    if (!this.quest.prologue) this.playStory(PROLOGUE, { moon: true, onDone: () => { this.quest.prologue = true; this.save(false); playScene(this, 'prologue', open); } });
     else open();
   }
 
@@ -1769,7 +1777,18 @@ class Game {
     this.quest.ended = true;
     if (!this.quest.shards.includes('tower')) this.quest.shards.push('tower');
     this.save(false);
-    this.playStory(ENDING, { moon: true, mend: true, credits: true, onDone: () => { this.ui.toast('엔딩을 봤어요! 시련탑은 계속 높아지고, 회차와 현상수배도 이어집니다', 4); this.save(false); } });
+    this.whenFree(() => playScene(this, 'mirror', () => this.playStory(ENDING, { moon: true, mend: true, credits: true, onDone: () => { this.ui.toast('엔딩을 봤어요! 시련탑은 계속 높아지고, 회차와 현상수배도 이어집니다', 4); this.save(false); } })));
+  }
+
+  // 대화·이야기·연출·격파 장면이 모두 끝난 뒤에 실행 (장면이 겹치지 않게)
+  whenFree(fn, hold = false) {
+    if (hold) this.scenePending = (this.scenePending || 0) + 1;
+    const go = () => {
+      if (this.ui.inDialog || this.story || this.cut || this.killCam || this.cine || this.state !== 'play') return this.after(0.5, go);
+      if (hold) this.scenePending--;
+      fn();
+    };
+    go();
   }
 
   // ---------- 상호작용 ----------
@@ -2104,6 +2123,8 @@ class Game {
   }
 
   startStep() {
+    // 연출 장면이 진행 중이거나 곧 시작하면 끝난 뒤에 새 임무를 띄움
+    if (this.cut || this.scenePending) { this.after(0.5, () => this.startStep()); return; }
     this.quest.prog = {};
     this.updateGates();
     const Q = this.curQuest();
@@ -2115,7 +2136,7 @@ class Game {
     if (Q.type === 'kill' || Q.type === 'collect') this.coach.tip('hunt', 4);
     this.audio.play('wave');
     // 다른 대화(달거울 조각 이야기 등)가 열려 있으면 닫힐 때까지 기다렸다가
-    const say = () => { if (this.curQuest() !== Q || this.state !== 'play') return; if (this.ui.inDialog || this.story) return this.after(0.5, say); this.sayLines(Q.startLines); };
+    const say = () => { if (this.curQuest() !== Q || this.state !== 'play') return; if (this.ui.inDialog || this.story || this.cut || this.scenePending) return this.after(0.5, say); this.sayLines(Q.startLines); };
     if (Q.startLines && this.state === 'play') this.after(0.6, say);
     this.save(false);
   }
@@ -4406,6 +4427,9 @@ class Game {
     const first = !this.cleared[this.mapId];
     this.cleared[this.mapId] = true;
     this.gainShard(this.mapId);
+    // 몇몇 보스는 처음 물리치면 짧은 연출 (달거울 조각 이야기가 끝난 뒤)
+    const SCENE = { palace: 'palaceWin', sea: 'seaWin' }[this.mapId];
+    if (first && SCENE) this.after(6, () => this.whenFree(() => playScene(this, SCENE), true));
     this.dailyGoals.event('night');
     const Q = this.curQuest();
     if (Q && Q.type === 'wave' && Q.region === this.mapId) this.after(2.0, () => this.completeStep());
@@ -4721,6 +4745,7 @@ class Game {
     let inp = this.readInput();
     if (this.state === 'play' && !this.paused) inp = this.autoControl(inp, wdt);
     if (this.cine) { inp = { mx: 0, mz: 0, moveLen: 0, mouseRecent: false, mouseWorld: null }; this.updateCine(dt); }
+    if (this.cut) inp = this.cut.update(this.paused ? 0 : wdt);
     if (this.slowmoT > 0) this.slowmoT -= dt;
     if (this.state !== 'title' && !this.paused) this.simulate(wdt, inp);
     else this.player.update(wdt, inp);
@@ -4730,7 +4755,7 @@ class Game {
     this.ambient(wdt);
     this.fx.update(wdt);
     shared.player.value.copy(this.player.pos);
-    this.nearInteract = this.state === 'play' ? this.findInteract() : null;
+    this.nearInteract = this.state === 'play' && !this.cut ? this.findInteract() : null;
     this.updateMarker(dt);
 
     // 카메라
@@ -4748,6 +4773,8 @@ class Game {
       this.pixel.camK = damp(this.pixel.camK ?? 1, this.cine ? 0.74 : this.killCam ? 0.85 : 1, 3, dt);
       if (this.cine) { const b = this.cine.e; target = V(lerp(p.pos.x, b.pos.x, 0.85), b.y + 1.2, lerp(p.pos.z, b.pos.z, 0.85) - 0.8); }
       if (this.killCam) { const b = this.killCam.at; target = V(lerp(p.pos.x, b.x, 0.8), b.y + 1.0, lerp(p.pos.z, b.z, 0.8) - 0.6); }
+      const ct = this.cut?.camTarget();
+      if (ct) { target = ct; this.pixel.camK = damp(this.pixel.camK ?? 1, this.cut.k, this.cut.camSpeed || 2.5, dt); }
       this.focus.x = damp(this.focus.x, target.x, 7, dt);
       this.focus.y = damp(this.focus.y, target.y, 5, dt);
       this.focus.z = damp(this.focus.z, target.z, 7, dt);

@@ -1556,6 +1556,7 @@ export class NPC {
       : kind === 'hermit' ? makeMage({ robe: '#c8c8c0', sleeve: '#c8c8c0', cuff: '#4a4a5a', belt: '#4a4a5a', pants: '#5a5a62', hair: '#e8e8e8' })
       : makeLady();
     this.pos = new THREE.Vector3(x, game.world.heightAt(x, z), z);
+    this.home = this.pos.clone(); // 연출·호위 뒤 돌아올 자리
     this.baseYaw = yaw;
     this.yaw = yaw;
     this.name = name;

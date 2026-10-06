@@ -12,6 +12,10 @@
 - **그래픽 2차:** 흙길 가장자리가 잔디와 자연스럽게 섞임(돌 포장은 반듯하게). 지역마다 풀포기·들꽃·자갈·낙엽·갈대·조개·눈덩이를 촘촘히 깔고, 덤불·바위·고사리·산호·그루터기를 무리 지어 배치(길을 막지 않음). 늪 웅덩이에 하늘 반사·물결·물가 거품. 단풍·벚·여름 나무의 잎을 둥글고 풍성한 잎뭉치로. 캐릭터·몬스터에 은은한 테두리 빛(밤엔 달빛). 설원·폐사찰이 하얗게 날아가지 않게 노출 조정. 한쪽에서 풀잎이 까맣게 보이던 문제 수정.
 - **연출:** 보스마다 등장 연출(하늘에서 떨어져 내려찍기 · 땅이나 물을 가르고 솟기 · 기운이 모여 터지기)과 카메라 당김. 지역마다 다른 색감과 먼 곳의 대기(고화질). 창술사 `창기`에 날아가는 빛의 창과 잔상.
 - **난이도:** 쉬움(몬스터 체력 75%·받는 피해 55%) / 보통 / 어려움(체력 135%·받는 피해 145%·경험치 125%·장비 드롭 140%). 선택 화면에서 고르고(패드 Y), 메뉴 → 화면에서 언제든 바꿀 수 있습니다. 저장 파일마다 따로 기억합니다. 어려움 업적 셋(보스 하나, 보스 열 모두, 한 번도 낮추지 않고 메인 퀘스트 완료)이 생겨 업적은 43개입니다(오늘의 목표 포함).
+- **짧은 연출 장면:** 게임 화면 그대로 카메라가 움직이고 사람이 걸어오는 장면을 넣었습니다(Esc·패드 B로 건너뛰기).
+  - 첫 밤: 남문으로 들어서는 주인공, 큰 북 곁에서 피어오르는 도깨비불, 돌아보는 수문장
+  - 도깨비 대왕을 처음 물리친 뒤 달려와 기뻐하는 수문장, 동해 용왕을 물리친 뒤 물빛이 돌아오는 용궁과 해랑
+  - 엔딩 직전: 열 조각이 주인공 둘레를 돌며 떠올라 하나의 달로 모임
 - **지역마다 새 방식 퀘스트 (메인 퀘스트 46 → 55단계):** 말 걸기·처치·불 켜기만 되풀이되지 않게 지역마다 하나씩 넣었습니다.
   - 추격: 궁궐 `북채 도둑`, 산성 `전령 까마귀` — 가까이 가면 도망치는 도둑을 구석에 몰거나 기술로 끊어 잡기
   - 찾기: 죽림 `여우의 홀림`, 용궁 `흩어진 진주` — 지도·화살표 없이, 가까이 가면 들리는 소리를 따라 숨은 물건 넷 찾기
@@ -58,6 +62,7 @@ Four new regions, a redesigned Wolhagung and a longer adventure.
 - Graphics pass 2: soil paths blend into grass with ragged edges; dense per-region ground details (tufts, flowers, pebbles, leaves, reeds, shells, snow) and clustered props (bushes, rocks, ferns, corals, stumps) that never block movement; swamp pools with reflections, ripples and shore foam; rounded, fuller broadleaf canopies; a soft rim light on characters; tamer snow exposure; grass blades no longer render black from one side.
 - Presentation: boss entrances (fall and slam, rise from ground or water, gather and burst) with a camera pull-in; per-region color grading and distant haze in HD; a flying spirit spear for the Lancer's spear beam.
 - Difficulty: Easy (monster HP 75%, damage taken 55%) / Normal / Hard (HP 135%, damage taken 145%, EXP 125%, gear drops 140%). Pick it on the title screen (pad Y) or change it any time under Menu → Screen; it is stored per save. Three Hard achievements (43 in total with the daily-goal one).
+- Short in-engine cutscenes (skippable with Esc / pad B): the first night's arrival, the Gatekeeper after the Dokkaebi King, Haerang after the Dragon King, and the ten shards gathering into a moon before the ending.
 - One new kind of quest per region (main quest 46 → 55 steps): chase a thief, search for hidden objects by sound, strike steles/poles in order, escort an NPC through ambushes, and hold a circle for 40 seconds. Old saves continue at the same quest.
 - The serif title/banner font is now bundled (subset of Noto Serif KR/JP/SC), so the logo looks the same offline. The game makes no external requests.
 - Japanese and Simplified Chinese: every screen, quest, dialogue, story line, item and achievement is translated. Pick a language with the 🌐 button on the title screen or under Menu → Display → Language. Chinese uses a matching pixel font (Fusion Pixel, OFL).

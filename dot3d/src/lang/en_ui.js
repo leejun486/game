@@ -240,6 +240,11 @@ export const dict = {
   '같이 가 주시오!': 'Stay with me!',
   '순서가 틀렸다! 처음부터 다시': 'Wrong order! Start again',
   '매복이다! 지켜 드리자': 'Ambush! Protect them',
+  '해냈구려! 도깨비 대왕이 꽁무니를 빼고 달아나는 꼴이라니!': 'You did it! The Dokkaebi King turned tail and ran!',
+  '그 빛나는 조각은… 대왕이 품고 있던 것이오? 달빛을 머금은 걸 보니 예사 물건이 아니구려.': 'That glowing shard… was the King holding it? It\'s full of moonlight; that\'s no ordinary thing.',
+  '보세요… 용궁에 물빛이 돌아오고 있어요.': 'Look… the light is returning to the Dragon Palace.',
+  '고마워요, 뭍의 손님. 용왕님도 곧 정신을 차리실 거예요.': 'Thank you, guest from the land. His Majesty will come to his senses soon too.',
+  'B: 건너뛰기': 'B: skip',
 };
 
 const RN = '([ⅠⅡⅢⅣⅤ])';
