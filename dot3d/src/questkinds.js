@@ -385,6 +385,8 @@ export class QuestKinds {
 
   targets(Q, regionCenter) {
     const g = this.game, out = [], p = g.player.pos;
+    // 단계가 넘어간 뒤 새 임무가 실제로 시작되기 전(2초쯤): 지역 쪽만 가리킴 (원·물건이 아직 없음)
+    if (this.Q !== Q) return Q.region ? [{ pos: regionCenter(Q.region) }] : [];
     if (Q.type === 'search') {
       // 지도에 찍지 않음: 지역만 가리키고, 아주 가까울 때만 표시
       out.push({ pos: regionCenter(Q.region), area: Q.region, search: true });

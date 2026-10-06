@@ -38,6 +38,10 @@ module.exports = {
     check(!blocked.length, `목표까지 갈 수 없는 단계 ${blocked.length}개:\n    ` + blocked.join('\n    '));
     ctx.log(`전 단계 ${steps.length}개: 목표·길 확인`);
 
+    // 1-2) 단계가 넘어간 직후(새 임무가 시작되기 전)에도 목표 계산이 오류 없이 되는지 (예전엔 버티기 퀘스트에서 매 프레임 오류)
+    const early = await g.eval(() => { const G = window.game, out = []; for (let i = 0; i < 99; i++) { G.qk.clear(); G.quest.step = i; G.quest.prog = {}; const Q = G.curQuest(); if (!Q) break; try { G.questTargets(); G.progText(Q, G.quest.prog); } catch (e) { out.push(`${i} ${Q.title}: ${e.message}`); } } return out; });
+    check(!early.length, `임무 시작 전 목표 계산 오류:\n    ${early.join('\n    ')}`);
+
     // 2) 새 방식 퀘스트
     const fresh = steps.filter((s) => s[4]);
     check(fresh.length === 9, `새 방식 퀘스트가 ${fresh.length}개 (9개여야 함)`);

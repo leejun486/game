@@ -71,12 +71,12 @@ function installBot({ diff }) {
       }
       case 'search': {
         const o = g.qk.objs?.[0];
-        if (o) { if (near(o.x, o.z) < 1.6) { g.stopAutoMove(); useHere(); } else walkTo(o.x + 0.8, o.z); return; }
+        if (o) { if (near(o.x, o.z) < 2.1) { g.stopAutoMove(); useHere(); } else walkTo(o.x, o.z); return; } // 줍는 거리 2.2
         break;
       }
       case 'order': {
         const o = g.qk.objs?.find((o) => P.dots?.[o.i] === P.next);
-        if (o) { if (near(o.x, o.z) < 1.8) { g.stopAutoMove(); useHere(); } else walkTo(o.x + 1, o.z); return; }
+        if (o) { if (near(o.x, o.z) < 2.1) { g.stopAutoMove(); useHere(); } else walkTo(o.x, o.z); return; }
         break;
       }
       case 'escort': {
