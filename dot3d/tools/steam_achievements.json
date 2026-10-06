@@ -328,6 +328,14 @@
   "enDesc": "Finish the main quest on Hard without ever lowering the difficulty"
  },
  {
+  "api": "ACH_DAILY7",
+  "id": "daily7",
+  "ko": "하루하루",
+  "koDesc": "오늘의 목표를 모두 마친 날 7일",
+  "en": "Day by Day",
+  "enDesc": "Finish all daily goals on 7 days"
+ },
+ {
   "api": "ACH_CODEX",
   "id": "codex",
   "ko": "요괴 도감",

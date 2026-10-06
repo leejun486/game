@@ -395,6 +395,16 @@ body.touch #gameover .s b::after { content: ' / 화면 탭'; }
 .cd-skills small { color: #8a7e6a; }
 .cd-gear { font-size: 10.5px; color: #a89e8a; line-height: 1.5; border-top: 1px solid #3a3020; padding-top: 4px; }
 .title-btns { display: flex; gap: 12px; }
+#daily-line { font-size: 11px; color: #ffe08a; cursor: pointer; margin-top: 2px; }
+#daily-line:empty { display: none; }
+#daily-line b { color: #fff6e2; font-weight: normal; }
+.dl-list { display: flex; flex-direction: column; gap: 10px; margin: 6px 0 12px; }
+.dl-row { display: grid; grid-template-columns: 1fr 160px 52px; gap: 10px; align-items: center; font-size: 14px; color: #e8dcc0; }
+.dl-row.done .dl-t { color: #9ee08a; }
+.dl-bar { height: 10px; background: #2a2230; border: 1px solid #4a3e2a; }
+.dl-bar i { display: block; height: 100%; background: linear-gradient(90deg, #ffb84a, #ffe08a); }
+.dl-row.done .dl-bar i { background: #8ad07a; }
+.dl-n { text-align: right; font-size: 12px; color: #c8bea8; }
 #title-diff { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 6px; max-width: min(560px, 94vw); }
 #title-diff .td-l { font-size: 12px; color: var(--gold); margin-right: 4px; }
 #title-diff button { font-family: var(--font); font-size: 12px; padding: 4px 12px; cursor: pointer; border: 2px solid #4a3e2a; background: #2a2230; color: #e8dcc0; }

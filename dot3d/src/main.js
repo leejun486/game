@@ -21,6 +21,7 @@ import { PROLOGUE, SHARD_LINES, SHARD_MAX, ENDING, CREDITS, fillStory } from './
 import { clamp, lerp, rand, angleDiff, damp } from './util.js';
 import { initLang, watchDom, tr, LANG } from './i18n.js';
 import { DIFFS, DIFF_ORDER, diffOf } from './difficulty.js';
+import { Daily } from './daily.js';
 import { Coach } from './coach.js';
 import { VERSION } from './version.js';
 import { Records, newStats } from './records.js';
@@ -133,6 +134,8 @@ class Game {
     this.coach = new Coach(this);
     this.stats = newStats(); // 누적 기록 (업적·도감)
     this.records = new Records(this);
+    this.daily = null;  // 오늘의 목표 { day, goals, bonus }
+    this.dailyGoals = new Daily(this);
     this.applySave(loadSave());
     this.preview = new ClassPreview(this);
     this.ui.setClass(this.player.cfg);
@@ -349,6 +352,7 @@ class Game {
     const btn = (id, fn) => { const b = document.getElementById(id); b.addEventListener('click', (e) => { e.stopPropagation(); fn(); }); b.addEventListener('mousedown', (e) => e.stopPropagation()); };
     btn('btn-cont', () => { if (this.hasSave) this.start(); });
     btn('btn-new', () => this.newGame(false));
+    document.getElementById('daily-line')?.addEventListener('click', () => { if (this.state === 'play' && !this.pauseOpen) { this.togglePause(true); this.pausePane('daily'); } });
     document.getElementById('title-diff')?.addEventListener('click', (ev) => { const b = ev.target.closest('[data-diff]'); if (b) { this.audio.unlock(); this.audio.play('talk'); this.setDifficulty(b.dataset.diff); } });
     btn('cf-yes', () => this.newGame(true));
     btn('cf-no', () => this.showConfirm(false));
@@ -494,6 +498,7 @@ class Game {
     if (Q?.type === 'kill') for (const [t, n] of Object.entries(Q.need)) if ((this.quest.prog?.[t] || 0) < n) want.add(t);
     const B = !Q && this.quest.bounty;
     if (B) for (const [t, n] of Object.entries(BOUNTIES[B.i].need)) if ((B.prog[t] || 0) < n) want.add(t);
+    for (const t of this.dailyGoals.wanted()) want.add(t);
     const W = F.types.map(([t, w]) => [t, want.has(t) ? w * 4 + 2 : w]);
     let roll = Math.random() * W.reduce((a, t) => a + t[1], 0), type = W[0][0];
     for (const [t, w] of W) { roll -= w; if (roll <= 0) { type = t; break; } }
@@ -1035,6 +1040,7 @@ class Game {
     if (this.quest.step > 0 || this.round > 0) this.quest.prologue = true;
     this.playTime = d.playTime || 0;
     this.flags = d.flags || {};
+    this.daily = d.daily || null;
     this.stats = { ...newStats(), ...(d.stats || {}) };
     this.stats.kills = Math.max(this.stats.kills, this.kills); // 기록이 생기기 전 퇴치 수
     if (!d.flags && (this.quest.step > 0 || this.round > 0)) this.flags.tut = 1; // 이미 해 본 사람은 튜토리얼 생략
@@ -1082,6 +1088,7 @@ class Game {
       playTime: Math.round(this.playTime || 0),
       flags: this.flags,
       difficulty: this.difficulty,
+      daily: this.daily,
       version: VERSION,
       stats: this.stats,
       inv: [...this.inv],
@@ -1205,7 +1212,7 @@ class Game {
   // 기록을 모두 지우고 처음 상태로 (선택 화면에서)
   resetProgress() {
     clearSave();
-    this.kills = 0; this.round = 0; this.stage = 0; this.bestCombo = 0; this.playTime = 0; this.flags = {}; this.stats = newStats();
+    this.kills = 0; this.round = 0; this.stage = 0; this.bestCombo = 0; this.playTime = 0; this.flags = {}; this.stats = newStats(); this.daily = null;
     this.progress = {}; this.inv = new Set(['sw0', 'mg0', 'bw0', 'sp0', 'ot0']); this.gear = [];
     this.cleared = {};
     this.quest = { step: 0, prog: {}, lit: [], bounty: null, shards: [], prologue: false, ended: false, qv: 3 };
@@ -1469,6 +1476,8 @@ class Game {
         if (k === 'outline') { this.pixel.compMat.uniforms.outline.value = +v; this.save(false); }
         this.pausePane('screen');
       });
+    } else if (tab === 'daily') {
+      this.dailyGoals.render(el);
     } else if (tab === 'records') {
       this.records.render(el);
     } else if (tab === 'keys') {
@@ -1814,6 +1823,8 @@ class Game {
 
   updateQuest() {
     const ui = this.ui, M = this.map;
+    const dl = document.getElementById('daily-line');
+    if (dl) { const h = this.dailyGoals.line(); if (dl.dataset.h !== h) { dl.dataset.h = h; dl.innerHTML = h; } }
     if (this.tower?.active) {
       const T = this.tower;
       const left = this.enemies.filter((e) => !e.dead && !e.field).length + this.spawnQueue.length;
@@ -2545,6 +2556,7 @@ class Game {
     const first = n > T.best;
     T.best = Math.max(T.best, n);
     this.towerBest = Math.max(this.towerBest || 0, n);
+    this.dailyGoals.event('tower');
     const exp = Math.round((60 + n * 30) * (first ? 1.5 : 1));
     this.player.addExp(exp);
     this.fx.number(this.player.pos.clone().add(V(0, 2.4, 0)), `+${exp} EXP`, 'exp');
@@ -2777,6 +2789,7 @@ class Game {
     this.hitCombo = this.time - this.lastHitTime < 2 ? this.hitCombo + 1 : 1;
     this.lastHitTime = this.time;
     if (this.hitCombo > this.bestCombo) this.bestCombo = this.hitCombo;
+    if (this.hitCombo % 5 === 0) this.dailyGoals.event('combo', this.hitCombo);
     pl.lastCombat = this.time;
     // 보스 체력에 따른 졸개 소환
     if (e.isBoss && !e.dead) {
@@ -4355,6 +4368,7 @@ class Game {
     const first = !this.cleared[this.mapId];
     this.cleared[this.mapId] = true;
     this.gainShard(this.mapId);
+    this.dailyGoals.event('night');
     const Q = this.curQuest();
     if (Q && Q.type === 'wave' && Q.region === this.mapId) this.after(2.0, () => this.completeStep());
     this.after(0.1, () => this.updateRegion(true));
@@ -4647,6 +4661,7 @@ class Game {
     if (this.state === 'play') { this.saveT -= dt; if (this.saveT <= 0) this.save(); if (!this.paused) this.playTime = (this.playTime || 0) + dt; }
     this.coach.update(dt);
     this.records.update(dt);
+    this.dailyGoals.update(dt);
     this.autoQuality((now - this.last0) / 1000 || 0);
     this.last0 = now;
 

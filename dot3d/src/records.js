@@ -92,6 +92,7 @@ export const ACHIEVEMENTS = [
   { id: 'hard1', name: '험한 밤길', desc: '어려움 난이도에서 보스 물리치기', test: (g, S) => hardK(S) > 0 },
   { id: 'hard10', name: '백귀를 꺾은 자', desc: '어려움 난이도에서 보스 열을 모두 물리치기', prog: (g, S) => [hardK(S), BOSS10.length] },
   { id: 'hardrun', name: '물러서지 않는 길', desc: '난이도를 한 번도 낮추지 않고 어려움으로 메인 퀘스트 마치기', test: (g) => !!g.flags.hardRun && g.difficulty === 'hard' && g.quest.step > 0 && !g.curQuest() },
+  { id: 'daily7', name: '하루하루', desc: '오늘의 목표를 모두 마친 날 7일', prog: (g, S) => [S.daily || 0, 7] },
   { id: 'codex', name: '요괴 도감', desc: '몬스터 도감 완성', prog: (g, S) => [MONSTERS.filter((m) => S.killsBy?.[m.type]).length, MONSTERS.length] },
 ];
 
