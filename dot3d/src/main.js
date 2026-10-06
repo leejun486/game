@@ -5,7 +5,7 @@ import { FX } from './fx.js';
 import { Audio } from './audio.js';
 import { UI } from './ui.js';
 import { Player, Enemy, NPC, Bird } from './entities.js';
-import { shared } from './materials.js';
+import { shared, addRim } from './materials.js';
 import { loadSave, writeSave, clearSave, exportSave, importSave } from './save.js';
 import { loadSettings, saveSettings, ACTIONS, keyOf, bindMap, keyName, DEFAULTS } from './settings.js';
 import { CLASSES, CLASS_ORDER } from './classes.js';
@@ -22,6 +22,7 @@ import { clamp, lerp, rand, angleDiff, damp } from './util.js';
 import { initLang, watchDom, tr, LANG } from './i18n.js';
 import { DIFFS, DIFF_ORDER, diffOf } from './difficulty.js';
 import { Daily } from './daily.js';
+import { rigOptions } from './looks.js';
 import { Coach } from './coach.js';
 import { VERSION } from './version.js';
 import { Records, newStats } from './records.js';
@@ -4637,6 +4638,8 @@ class Game {
   }
 
   // 테스트·디버그용: 장비 하나 만들기
+  // 키 아트·스토어 그림용: 다른 직업의 캐릭터 모델 (입은 장비·외형 그대로)
+  heroRig(cls) { const r = CLASSES[cls].make(rigOptions(this, cls)); addRim(r.root); return r; }
   testGear(kind, tier, lv = 5, set = null) { return set ? makeSetPiece(set, lv, kind) : makeGear(lv, tier, kind); }
 
   spawnEnemyAt(type, x, z) {

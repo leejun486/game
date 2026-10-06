@@ -2,7 +2,6 @@
 import * as THREE from 'three';
 import { toon } from './materials.js';
 import { GFX } from './gfx.js';
-import { hdFabric } from './hdtex.js';
 import { tigerTex, clothTex } from './textures.js';
 import { clamp, lerp, smooth } from './util.js';
 
@@ -94,7 +93,8 @@ export class Rig {
 
     // 무늬 옷감: 옷에 pattern이 있으면 바탕색 위에 무늬 텍스처 (h = 감싸는 높이, 세로 반복 맞춤)
     // 고화질: 옷감에 날실·씨실 결(노멀맵)을 입혀 플라스틱처럼 보이지 않게
-    const fab = HDC ? { normalMap: hdFabric(), normalScale: new THREE.Vector2(0.28, 0.28), roughness: 0.9 } : {};
+    // (옷감 결 노멀맵은 고화질 화면에서 옷 색을 하얗게 날려 버려서 뺐음 — 무광 거칠기만)
+    const fab = HDC ? { roughness: 0.9 } : {};
     const cloth = (color, h = 0.4, kind = cfg.pattern) => {
       if (!kind) return mat({ color: C(color), ...fab });
       const t = clothTex(kind, color, cfg.patA || '#ffffff', cfg.patB || '#ffd040').clone();

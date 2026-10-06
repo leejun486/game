@@ -39,6 +39,7 @@ cd .. && npm run build:demo && cd desktop && npm run dist:win:demo     # 체험�
 
 ## 6. 스토어 페이지 자료
 - 캡슐 이미지: `marketing/capsules/` (헤더 920×430, 작은 462×174, 메인 1232×706, 세로 748×896, 라이브러리 600×900·3840×1240·로고)
+  - 키 아트 원본은 `marketing/keyart/`. 다시 만들 때: 게임 서버(`python3 -m http.server 8765`)를 띄우고 `node tools/key_art.cjs '…'`(설정은 파일 맨 위)로 찍은 뒤 `node tools/make_capsules.cjs`.
 - 스크린샷: `marketing/screenshots/` (1920×1080, 10장)
 - 트레일러: `marketing/trailer/` (1280×720)
 - 소개 문구: [`RELEASE.md`](RELEASE.md)
