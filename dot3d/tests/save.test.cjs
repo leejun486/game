@@ -42,7 +42,7 @@ module.exports = {
     ctx.log('왕복 같음');
 
     // 2) 옛 기록 옮기기: [옛 단계, 옮겨진 뒤 퀘스트 이름]
-    for (const [old, want] of [[20, '검은 쇳조각'], [12, '늪의 사공'], [2, '남문이 열리다'], [46, null]]) {
+    for (const [old, want] of [[20, '불가사리의 풀무'], [19, '검은 쇳조각'], [12, '늪의 사공'], [2, '남문이 열리다'], [46, null]]) {
       await g.eval(([k, old]) => { const d = JSON.parse(localStorage.getItem(k)); d.quest.step = old; d.quest.qv = 3; d.quest.prog = {}; localStorage.setItem(k, JSON.stringify(d)); window.game.noSave = true; }, [KEY, old]);
       await cont();
       const r = await g.eval(() => [window.game.curQuest()?.title || null, window.game.quest.qv]);
