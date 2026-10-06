@@ -658,6 +658,7 @@ export class Enemy {
     this.dmg = Math.round(T.dmg * (1 + (level - 1) * 0.15));
     this.radius = T.radius;
     this.isBoss = T.ai === 'boss';
+    if (this.isBoss) { const D = diffOf(game); this.maxHp = this.hp = Math.round(this.maxHp * (D.bossHp || 1)); this.dmg = Math.round(this.dmg * (D.bossDmg || 1)); }
     this.isWisp = T.ai === 'wisp';
     this.name = T.name;
     // 벽·소품과의 충돌 반경은 길찾기 격자와 같게 (좁은 틈에서 끼이지 않도록)

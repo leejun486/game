@@ -487,15 +487,19 @@ class Game {
     this.fieldT = 1.2;
     const p = this.player;
     let removed = false;
+    const R = this.world.regionAt(p.pos.x, p.pos.z);
     for (const e of this.enemies) {
-      if (e.field && !e.dead && Math.hypot(e.pos.x - p.pos.x, e.pos.z - p.pos.z) > 40) { e.dispose(); e.removed = true; removed = true; if (this.target === e) this.target = null; }
+      if (!e.field || e.dead) continue;
+      const d = Math.hypot(e.pos.x - p.pos.x, e.pos.z - p.pos.z);
+      // 멀어진 것, 그리고 다른 지역에서 따라오다 경계에 걸린 것(18칸 밖)은 치움 — 남아 있으면 이 지역 몬스터가 나오지 않아 처치 퀘스트가 막힘
+      if (d > 40 || (e.home && e.home !== R.id && d > 18)) { e.dispose(); e.removed = true; removed = true; if (this.target === e) this.target = null; }
     }
     if (removed) this.enemies = this.enemies.filter((e) => !e.removed);
     if (this.state !== 'play' || p.dead || this.waveActive) return;
-    const R = this.world.regionAt(p.pos.x, p.pos.z);
     const F = MAPS[R.id].field;
     if (!F) return;
-    if (this.enemies.filter((e) => e.field && !e.dead).length >= F.cap) return;
+    const here = () => this.enemies.filter((e) => e.field && !e.dead && (!e.home || e.home === R.id)).length;
+    if (here() >= F.cap) return;
     const at = this.world.randomWalkable(p.pos.x, p.pos.z, 13, 22);
     if (!at || this.world.regionAt(at.x, at.z) !== R) return;
     // 퀘스트에 필요한 몬스터(모을 물건을 떨어뜨리는 종류, 아직 덜 잡은 종류)는 훨씬 자주 나옴
@@ -508,11 +512,12 @@ class Game {
     const W = F.types.map(([t, w]) => [t, want.has(t) ? w * 4 + 2 : w]);
     let roll = Math.random() * W.reduce((a, t) => a + t[1], 0), type = W[0][0];
     for (const [t, w] of W) { roll -= w; if (roll <= 0) { type = t; break; } }
-    const n = Math.min(1 + Math.floor(Math.random() * F.pack), F.cap - this.enemies.filter((e) => e.field && !e.dead).length);
+    const n = Math.min(1 + Math.floor(Math.random() * F.pack), F.cap - here());
     const lv = 1 + MAPS[R.id].lvl + Math.floor((p.level - 1) / 3);
     for (let i = 0; i < n; i++) {
       const pos = (i && this.world.randomWalkable(at.x, at.z, 0.8, 2.5)) || at;
       const fe = new Enemy(this, type, pos, lv, { field: true });
+      fe.home = R.id;
       this.earlyEase(fe);
       this.enemies.push(fe);
     }
