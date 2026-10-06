@@ -1,6 +1,8 @@
 import { padGlyph, padMode } from './glyph.js';
 import { item, itemDesc, drawItemIcon, RARITY, WEAPONS, OUTFITS, ULTS } from './items.js';
 import { tr } from './i18n.js';
+import { DYES, HAIRS, unlocked } from './looks.js';
+import { ACHIEVEMENTS } from './records.js';
 import { EVOS, RUNES, branchOf, rankOf, runeOf, freePoints, RANK_NAME, MAX_RANK } from './evolve.js';
 import { drawGearIcon, gearLines, gearScore, SLOT_NAME, STATS, BAG_MAX, salvageExp, GEAR_SLOTS, rarityOf, SETS, setBonuses } from './gear.js';
 import { expNeed, SKILL_LEVEL } from './entities.js';
@@ -273,12 +275,48 @@ export class UI {
       if (!g.inv.has(o.id)) { ol.append(this.itemRow(o.id, 'locked-it')); continue; }
       ol.append(this.itemRow(o.id, pr.outfit === o.id ? 'on' : '', () => g.equipItem(o.id)));
     }
+    this.renderLook();
+  }
+
+  // 외형 탭: 겉모습만 바꿈 (능력치는 입은 장비 그대로)
+  renderLook() {
+    const g = this.game, p = g.player, pr = g.progressOf(p.cls);
+    const L = (pr.look ||= {});
+    const el = document.getElementById('tab-look');
+    const achName = (id) => ACHIEVEMENTS.find((a) => a.id === id)?.name || id;
+    const chip = (k, v, label, on, extra = '') => `<button class="lk-chip${on ? ' on' : ''}" data-lk="${k}" data-v="${v}"${extra}>${label}</button>`;
+    const sw = (k, x, cols, on) => {
+      const open = unlocked(g, x);
+      const box = cols.map((c) => `<i style="background:${c}"></i>`).join('');
+      return `<button class="lk-sw${on ? ' on' : ''}${open ? '' : ' locked'}" data-lk="${k}" data-v="${x.id}"${open ? '' : ' disabled'}><span class="lk-box">${box}</span><span class="lk-n">${x.name}</span>${open ? '' : `<small>🔒 ${achName(x.ach)}</small>`}</button>`;
+    };
+    const outfits = OUTFITS.filter((o) => g.inv.has(o.id));
+    const weapons = WEAPONS[p.cls].filter((w) => g.inv.has(w.id));
+    el.innerHTML = `<div class="pz-note" style="margin:0 0 6px">겉모습만 바뀌고 능력치·고유 효과는 입은 장비 그대로예요. 직업마다 따로 기억해요.</div>
+      <div class="bag-sec">겉옷 모양</div><div class="lk-row">${chip('outfit', '', '입은 옷 그대로', !L.outfit)}${outfits.map((o) => chip('outfit', o.id, `<span style="color:${RARITY[o.tier].color}">${o.name}</span>`, L.outfit === o.id)).join('')}</div>
+      <div class="bag-sec">무기 모양</div><div class="lk-row">${chip('weapon', '', '든 무기 그대로', !L.weapon)}${weapons.map((w) => chip('weapon', w.id, `<span style="color:${RARITY[w.tier].color}">${w.name}</span>`, L.weapon === w.id)).join('')}</div>
+      <div class="bag-sec">염색</div><div class="lk-row">${chip('dye', '', '원래 색', !L.dye)}${DYES.map((d) => sw('dye', d, [d.pal.main, d.pal.accent, d.pal.trim], L.dye === d.id)).join('')}</div>
+      <div class="bag-sec">머리색</div><div class="lk-row">${chip('hair', '', '원래 색', !L.hair)}${HAIRS.map((h) => sw('hair', h, [h.c], L.hair === h.id)).join('')}</div>
+      <div class="bag-sec">방어구 색 (장갑·바지·띠)</div><div class="lk-row">${chip('gearHide', '', '보이기', !L.gearHide)}${chip('gearHide', '1', '숨기기', !!L.gearHide)}</div>`;
+    el.onclick = (e) => {
+      const b = e.target.closest('[data-lk]');
+      if (!b || b.disabled) return;
+      e.stopPropagation();
+      const k = b.dataset.lk, v = b.dataset.v;
+      if (k === 'gearHide') L.gearHide = v === '1'; else if (v) L[k] = v; else delete L[k];
+      p.buildRig();
+      g.preview?.rebuild();
+      g.audio.play('talk');
+      g.save(false);
+      this.renderLook();
+    };
   }
 
   tab(name) {
     document.querySelectorAll('.bag-tabs button').forEach((b) => b.classList.toggle('on', b.dataset.tab === name));
     document.getElementById('tab-gear').classList.toggle('hidden', name !== 'gear');
     document.getElementById('tab-main').classList.toggle('hidden', name !== 'main');
+    document.getElementById('tab-look').classList.toggle('hidden', name !== 'look');
     document.getElementById('gear-detail').classList.toggle('hidden', name !== 'gear');
   }
 

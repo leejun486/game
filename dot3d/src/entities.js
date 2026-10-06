@@ -5,8 +5,8 @@ import { Rig, makeDokkaebi, makeGuard, makeLady, makeMage, makeFox, makeJiangshi
 import { decorateDokkaebiKing, decorateReaper, decorateYeomra } from './bossdeco.js';
 import { makeCrow, makeCrab, makeJelly, makeTurtle, makeBee, makeMantis, makeBeast } from './rigs2.js';
 import { CLASSES } from './classes.js';
-import { outfitLook, gearLook } from './character.js';
-import { sumStats, gearColor, setBonuses } from './gear.js';
+import { rigOptions } from './looks.js';
+import { sumStats, setBonuses } from './gear.js';
 import { item, WEAPONS, perksOf, ULTS } from './items.js';
 
 // 스킬 해금 레벨
@@ -72,13 +72,8 @@ export class Player {
 
   // 착용 장비를 반영해 캐릭터 모델을 새로 만듦 (옷 색·갑옷·무기 모양)
   buildRig() {
-    const pr = this.game.progressOf(this.cls);
-    const w = item(pr.weapon), o = item(pr.outfit);
-    const type = { sword: 'hero', mage: 'mage', elf: 'elf', lancer: 'lancer' }[this.cls];
     const old = this.rig;
-    const gl = {};
-    for (const g of this.game.equippedGear(this.cls)) if (g.kind !== 'ring') gl[g.kind] = gearColor(g);
-    this.rig = this.cfg.make({ wstyle: w?.style, ...outfitLook(type, o), ...gearLook(gl) });
+    this.rig = this.cfg.make(rigOptions(this.game, this.cls));
     if (old) {
       this.game.scene.remove(old.root);
       disposeTree(old.root);

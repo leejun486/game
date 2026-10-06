@@ -1,9 +1,7 @@
 import * as THREE from 'three';
 import { disposeTree } from './dispose.js';
 import { CLASSES } from './classes.js';
-import { item } from './items.js';
-import { outfitLook, gearLook } from './character.js';
-import { gearColor } from './gear.js';
+import { rigOptions } from './looks.js';
 import { GFX } from './gfx.js';
 
 // 직업 선택 카드의 전신 미리보기.
@@ -12,7 +10,6 @@ import { GFX } from './gfx.js';
 // 고화질 모드에서는 카드도 크게, 오른쪽 큰 그림은 따로 고해상도(MSAA)로 그림
 const W = GFX.hd ? 96 : 48, H = GFX.hd ? 144 : 72;
 const BW = 336, BH = 504;
-const TYPE = { sword: 'hero', mage: 'mage', elf: 'elf', lancer: 'lancer' };
 
 // 선형 → sRGB (렌더 타깃은 선형 색으로 남음)
 const SRGB = new Uint8ClampedArray(256);
@@ -59,11 +56,7 @@ export class ClassPreview {
   rebuild() {
     for (const c of this.cards) {
       if (c.rig) { this.scene.remove(c.rig.root); disposeTree(c.rig.root); }
-      const pr = this.game.progressOf(c.cls);
-      const w = item(pr.weapon), o = item(pr.outfit);
-      const gl = {};
-      for (const g of this.game.equippedGear(c.cls)) if (g.kind !== 'ring') gl[g.kind] = gearColor(g);
-      c.rig = CLASSES[c.cls].make({ wstyle: w?.style, ...outfitLook(TYPE[c.cls], o), ...gearLook(gl) });
+      c.rig = CLASSES[c.cls].make(rigOptions(this.game, c.cls));
       c.rig.root.visible = false;
       this.scene.add(c.rig.root);
     }
