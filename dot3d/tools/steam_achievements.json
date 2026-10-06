@@ -264,6 +264,30 @@
   "zhDesc": "突破试炼塔第30层"
  },
  {
+  "api": "ACH_RULES10",
+  "id": "rules10",
+  "ko": "규칙을 넘어서",
+  "koDesc": "시련탑 특수 규칙 층 10번 돌파",
+  "en": "Beyond the Rules",
+  "enDesc": "Clear 10 special-rule tower floors",
+  "ja": "ルールを越えて",
+  "jaDesc": "試練の塔の特殊ルール階を10回突破",
+  "zh": "超越规则",
+  "zhDesc": "突破试炼塔特殊规则层10次"
+ },
+ {
+  "api": "ACH_AWAKE",
+  "id": "awake",
+  "ko": "깨어난 것을 잠재우다",
+  "koDesc": "각성한 보스 물리치기",
+  "en": "Lull the Awakened",
+  "enDesc": "Defeat an awakened boss",
+  "ja": "目覚めしものを鎮める",
+  "jaDesc": "覚醒したボスを倒す",
+  "zh": "平息觉醒之物",
+  "zhDesc": "击败觉醒的首领"
+ },
+ {
   "api": "ACH_LV10",
   "id": "lv10",
   "ko": "숙련",

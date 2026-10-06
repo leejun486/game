@@ -374,7 +374,7 @@ export class Player {
       g.fx.number(this.pos.clone().add(new THREE.Vector3(0, 1.9, 0)), '비늘 막기!', 'alert');
       return false;
     }
-    dmg = Math.max(1, Math.round(dmg * diffOf(this.game).dmg * (1 - (this.def || 0)) * (this.perks?.has('ironhide') ? 0.88 : 1) * (this.perks?.has('tigerhide') ? 0.92 : 1) * (this.perks?.has('carapace') ? 0.9 : 1) * (this.perks?.has('winterheart') ? 0.94 : 1) * (this.guardT > 0 ? 0.6 : 1)));
+    dmg = Math.max(1, Math.round(dmg * diffOf(this.game).dmg * (1 - (this.def || 0)) * (this.perks?.has('ironhide') ? 0.88 : 1) * (this.perks?.has('tigerhide') ? 0.92 : 1) * (this.perks?.has('carapace') ? 0.9 : 1) * (this.perks?.has('winterheart') ? 0.94 : 1) * (this.guardT > 0 ? 0.6 : 1) * (this.game.tower?.active && this.game.tower.rule?.key === 'glass' ? 1.6 : 1)));
     this.hp -= dmg;
     // 동장군 옷: 맞으면 20% 확률로 주변 적을 얼림
     if (this.perks?.has('winterheart') && Math.random() < 0.2) {
@@ -833,6 +833,8 @@ export class Enemy {
       }
     }
     if (this.isBoss && this.phase > 1 && !this.dead && Math.random() < dt * (this.phase === 3 ? 30 : 14)) { const c = this.phase === 3 ? ['#ff8a6a', '#c80a1a'] : this.T.pal.fire; g.fx.add.emit({ x: this.pos.x + rand(-1, 1), y: this.y + rand(0.3, 3), z: this.pos.z + rand(-1, 1), vy: rand(1, 2.5), life: 0.6, size: rand(3, 4), endSize: 1, color: c[0], color2: c[1] }); }
+    // 각성 보스: 검보랏빛 기운이 감돎
+    if (this.awakened && !this.dead && Math.random() < dt * 26) g.fx.add.emit({ x: this.pos.x + rand(-1.2, 1.2), y: this.y + rand(0.2, 3.2), z: this.pos.z + rand(-1.2, 1.2), vy: rand(1.2, 2.6), life: 0.8, size: rand(3, 5), endSize: 1, color: '#d8a0ff', color2: '#3a0870' });
     if (this.elite && !this.dead && Math.random() < dt * 8) g.fx.add.emit({ x: this.pos.x + rand(-0.5, 0.5), y: this.y + rand(0.2, 1.6), z: this.pos.z + rand(-0.5, 0.5), vy: rand(0.6, 1.4), life: 0.6, size: 3, endSize: 1, color: '#fff0a0', color2: '#ffb000' });
     // 불가사리: 체력이 줄수록 쇠바늘이 달아오름
     if (this.T.boss === 'bulgasari' && this.rig.setHeat) this.rig.setHeat(clamp((0.6 - this.hp / this.maxHp) / 0.4, 0, 1));

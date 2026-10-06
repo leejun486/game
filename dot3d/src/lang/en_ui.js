@@ -245,6 +245,26 @@ export const dict = {
   '보세요… 용궁에 물빛이 돌아오고 있어요.': 'Look… the light is returning to the Dragon Palace.',
   '고마워요, 뭍의 손님. 용왕님도 곧 정신을 차리실 거예요.': 'Thank you, guest from the land. His Majesty will come to his senses soon too.',
   'B: 건너뛰기': 'B: skip',
+  '질풍의 층': 'Floor of Gales',
+  '적이 훨씬 빠르다': 'Enemies are much faster',
+  '정예의 층': 'Floor of Elites',
+  '적은 적지만 모두 정예': 'Fewer foes, all elite',
+  '어둠의 층': 'Floor of Darkness',
+  '내 주변만 보인다': 'You can only see around you',
+  '불바다': 'Sea of Fire',
+  '발밑에 불기둥이 솟는다': 'Fire pillars erupt underfoot',
+  '떼의 층': 'Floor of Swarms',
+  '약한 적이 두 배로 몰려온다': 'Twice as many weaker foes',
+  '유리 몸': 'Glass Bodies',
+  '주고받는 피해가 모두 1.6배': 'All damage dealt and taken ×1.6',
+  '보상이 더 좋다': 'Better rewards',
+  '특수 규칙 보상': 'Special rule bonus',
+  '장비 하나 더': 'one extra gear',
+  '경험치 1.5배': 'EXP ×1.5',
+  '규칙을 넘어서': 'Beyond the Rules',
+  '시련탑 특수 규칙 층 10번 돌파': 'Clear 10 special-rule tower floors',
+  '깨어난 것을 잠재우다': 'Lull the Awakened',
+  '각성한 보스 물리치기': 'Defeat an awakened boss',
 };
 
 const RN = '([ⅠⅡⅢⅣⅤ])';
@@ -345,4 +365,5 @@ export const pats = [
   [/^업적 (\d+)\/(\d+)$/, 'Achievements $1/$2'], [/^몬스터 (\d+)\/(\d+)$/, 'Monsters $1/$2'], [/^장비 (\d+)\/(\d+)$/, 'Items $1/$2'],
   [/^처치 (\d+)$/, 'Killed $1'], [/^(★|☆) (.+)$/, '$1 $2'], [/^(.+) (\d)\/4$/, '$1 $2/4'],
   [new RegExp(`^(.+?)${RN}$`), '$1 $2'],
+  [/^각성 (.+)$/, 'Awakened $1'],
 ];

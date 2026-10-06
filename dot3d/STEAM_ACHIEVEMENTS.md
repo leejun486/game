@@ -4,7 +4,7 @@
 스팀웍스 → 앱 관리 → 통계 및 업적 → 업적에서 **API 이름**을 그대로 쓰고, 언어마다 이름과 설명을 넣습니다.
 아이콘: `marketing/achievements/<API 이름>.png` (달성), `<API 이름>_locked.png` (미달성). 모두 64×64.
 
-업적 43개
+업적 45개
 
 | API 이름 | 이름 | 설명 | Name | Description | 名前 (日本語) | 説明 | 名称 (简体中文) | 说明 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -30,6 +30,8 @@
 | `ACH_T10` | 염라의 방 | 시련탑 10층 돌파 | Yeomra's Hall | Clear tower floor 10 | 閻魔の間 | 試練の塔10階を突破 | 阎罗之厅 | 突破试炼塔第10层 |
 | `ACH_T20` | 저승 깊은 곳 | 시련탑 20층 돌파 | Deep Underworld | Clear tower floor 20 | あの世の深淵 | 試練の塔20階を突破 | 阴间深处 | 突破试炼塔第20层 |
 | `ACH_T30` | 끝없는 탑 | 시련탑 30층 돌파 | Endless Tower | Clear tower floor 30 | 果てなき塔 | 試練の塔30階を突破 | 无尽之塔 | 突破试炼塔第30层 |
+| `ACH_RULES10` | 규칙을 넘어서 | 시련탑 특수 규칙 층 10번 돌파 | Beyond the Rules | Clear 10 special-rule tower floors | ルールを越えて | 試練の塔の特殊ルール階を10回突破 | 超越规则 | 突破试炼塔特殊规则层10次 |
+| `ACH_AWAKE` | 깨어난 것을 잠재우다 | 각성한 보스 물리치기 | Lull the Awakened | Defeat an awakened boss | 目覚めしものを鎮める | 覚醒したボスを倒す | 平息觉醒之物 | 击败觉醒的首领 |
 | `ACH_LV10` | 숙련 | 한 직업 Lv.10 | Skilled | Reach Lv.10 with a class | 熟練 | ひとつの職業でLv.10 | 熟练 | 任一职业达到Lv.10 |
 | `ACH_LV20` | 고수 | 한 직업 Lv.20 | Expert | Reach Lv.20 with a class | 達人 | ひとつの職業でLv.20 | 高手 | 任一职业达到Lv.20 |
 | `ACH_LV30` | 달인 | 한 직업 Lv.30 | Master | Reach Lv.30 with a class | 名人 | ひとつの職業でLv.30 | 大师 | 任一职业达到Lv.30 |

@@ -24,6 +24,7 @@ import { DIFFS, DIFF_ORDER, diffOf } from './difficulty.js';
 import { Daily } from './daily.js';
 import { QuestKinds } from './questkinds.js';
 import { playScene } from './scenes.js';
+import { ruleFor, awaken } from './towerrules.js';
 import { rigOptions } from './looks.js';
 import { Coach } from './coach.js';
 import { VERSION } from './version.js';
@@ -1876,7 +1877,7 @@ class Game {
     if (this.tower?.active) {
       const T = this.tower;
       const left = this.enemies.filter((e) => !e.dead && !e.field).length + this.spawnQueue.length;
-      ui.setQuest(`저승 시련탑 · ${T.floor}층`, T.cleared ? `돌파! 가운데 <b>문</b>으로 다음 층, 남쪽 <b>홍살문</b>으로 나가기<br>최고 기록 <b>${T.best}층</b>` : `남은 적 <b>${left}</b> · 최고 기록 <b>${T.best}층</b>`);
+      ui.setQuest(`저승 시련탑 · ${T.floor}층`, T.cleared ? `돌파! 가운데 <b>문</b>으로 다음 층, 남쪽 <b>홍살문</b>으로 나가기<br>최고 기록 <b>${T.best}층</b>` : (T.rule ? `<b>${T.rule.name}</b> — ${T.rule.desc}<br>` : '') + `남은 적 <b>${left}</b> · 최고 기록 <b>${T.best}층</b>`);
       return;
     }
     if (this.stage === 2) {
@@ -2422,6 +2423,7 @@ class Game {
     const el = this.darkEl || (this.darkEl = document.getElementById('darkness'));
     let mode = null;
     for (const e of this.enemies) if (!e.dead && e.phase === 3) { if (e.type === 'reaper') mode = 'dark'; else if (e.type === 'yeomra' && !mode) mode = 'red'; }
+    if (this.tower?.active && !this.tower.cleared && this.tower.rule?.key === 'dark' && !this.cut) mode = 'dark';
     if (!mode || this.state === 'title') { if (el.className) el.className = ''; return; }
     const sp = this.pixel.project(V(this.player.pos.x, this.player.y + 0.8, this.player.pos.z));
     const c = mode === 'dark' ? 'rgba(4, 2, 10, 0.88)' : 'rgba(80, 0, 10, 0.55)';
@@ -2583,7 +2585,10 @@ class Game {
     const avail = tiers.slice(0, Math.min(tiers.length, 1 + Math.floor(n / 3))).flat();
     const count = Math.min(14, 5 + Math.floor(n * 0.5));
     const elites = n >= 3 ? Math.min(4, Math.floor(n / 4) + 1) : 0;
-    for (let i = 0; i < count; i++) out.push({ type: avail[Math.floor(Math.random() * avail.length)], elite: i < elites });
+    const R = ruleFor(n)?.key;
+    // 특수 규칙: 정예의 층은 절반이 모두 정예, 떼의 층은 두 배가 약하게
+    const c = R === 'elite' ? Math.ceil(count / 2) : R === 'swarm' ? Math.min(24, count * 2) : count;
+    for (let i = 0; i < c; i++) out.push({ type: avail[Math.floor(Math.random() * avail.length)], elite: R === 'elite' || (R !== 'swarm' && i < elites), weak: R === 'swarm' });
     return out;
   }
 
@@ -2596,8 +2601,13 @@ class Game {
     this.player.hp = Math.min(this.player.maxHp, this.player.hp + Math.round(this.player.maxHp * 0.3));
     const list = this.towerWave(n);
     const boss = list.some((q) => BOSS_TYPES.has(q.type));
-    this.ui.banner(`${n}층`, boss ? `${{ boss: '도깨비 대왕', gumiho: '천년 구미호', reaper: '저승사자', imugi: '천년 이무기', bulgasari: '불가사리', baekho: '산군 백호', dragon: '동해 용왕', centipede: '천년 왕지네', frostgiant: '동장군', yeomra: '염라대왕' }[list[0].type]} 출현!` : `적 ${list.length}마리${list.some((q) => q.elite) ? ' · 정예 포함' : ''}`, 2.4, boss ? 'boss-banner' : '');
-    this.audio.play(boss ? 'gong' : 'wave');
+    T.rule = ruleFor(n);
+    T.fireAt = this.time + 4;
+    if (T.rule) {
+      this.ui.banner(`${n}층 · ${T.rule.name}`, `${T.rule.desc} — 보상이 더 좋다`, 3, 'night-banner');
+      this.audio.play('gong');
+    } else this.ui.banner(`${n}층`, boss ? `${n >= 20 ? '각성 ' : ''}${{ boss: '도깨비 대왕', gumiho: '천년 구미호', reaper: '저승사자', imugi: '천년 이무기', bulgasari: '불가사리', baekho: '산군 백호', dragon: '동해 용왕', centipede: '천년 왕지네', frostgiant: '동장군', yeomra: '염라대왕' }[list[0].type]} 출현!` : `적 ${list.length}마리${list.some((q) => q.elite) ? ' · 정예 포함' : ''}`, 2.4, boss ? 'boss-banner' : '');
+    if (!T.rule) this.audio.play(boss ? 'gong' : 'wave');
     let delay = 1.0;
     for (const q of list) {
       this.spawnQueue.push({ ...q, at: this.time + delay });
@@ -2609,6 +2619,12 @@ class Game {
   updateTower() {
     const T = this.tower;
     if (!T?.active || T.cleared || this.player.dead) return;
+    // 불바다: 몇 초마다 내 주변에 불기둥
+    if (T.rule?.key === 'fire' && this.time > T.fireAt && !this.cut) {
+      T.fireAt = this.time + 3.5;
+      this.hazards(this.aroundPlayer(5, 1.5, 4.5), { r: 1.4, delay: 1.1, color: '#ff5a1a', dmg: Math.round(10 + T.floor * 1.4),
+        boom: (at) => { this.fx.colorFire(at.x, at.y + 0.2, at.z, 26, 0.7, '#ffd080', '#ff3a00'); this.fx.ring(at, 1.5, '#ff8a3a', 0.3); } });
+    }
     if (this.spawnQueue.length || this.enemies.some((e) => !e.dead)) return;
     T.cleared = true;
     const n = T.floor;
@@ -2616,13 +2632,16 @@ class Game {
     T.best = Math.max(T.best, n);
     this.towerBest = Math.max(this.towerBest || 0, n);
     this.dailyGoals.event('tower');
-    const exp = Math.round((60 + n * 30) * (first ? 1.5 : 1));
+    const rule = T.rule;
+    const exp = Math.round((60 + n * 30) * (first ? 1.5 : 1) * (rule ? 1.5 : 1));
     this.player.addExp(exp);
+    if (rule) { this.stats.ruleFloors = (this.stats.ruleFloors || 0) + 1; this.records.check(); }
+    T.rule = null;
     this.fx.number(this.player.pos.clone().add(V(0, 2.4, 0)), `+${exp} EXP`, 'exp');
     // 보상: 층이 높을수록 좋은 장비, 처음 돌파하면 하나 더. 5층마다 세트 조각
     const lv = 1 + n + Math.floor((this.player.level - 1) / 3);
     const center = V(0, 0, this.towerZ());
-    const k = 1 + (first ? 1 : 0) + (n % 5 === 0 ? 1 : 0);
+    const k = 1 + (first ? 1 : 0) + (n % 5 === 0 ? 1 : 0) + (rule ? 1 : 0);
     for (let i = 0; i < k; i++) this.spawnDrop(V(center.x + rand(-1.5, 1.5), 0, center.z + 2 + rand(-1, 1)), makeGear(lv, rollGearTier(0.3 + n * 0.03, n / 5)));
     if (n % 5 === 0) {
       const sets = Object.keys(SETS);
@@ -2631,7 +2650,8 @@ class Game {
     const next = this.world.portals.find((x) => x.kind === 'next');
     if (next.mesh) next.mesh.visible = true;
     this.audio.play('victory');
-    this.ui.banner(`${n}층 돌파!`, first ? `최고 기록 갱신 · 경험치 +${exp}` : `경험치 +${exp}`, 3, 'win-banner');
+    if (rule) this.after(1.2, () => this.ui.toast('특수 규칙 보상 — 장비 하나 더 · 경험치 1.5배', 2.6));
+    this.ui.banner(`${n}층 돌파!`, (first ? `최고 기록 갱신 · 경험치 +${exp}` : `경험치 +${exp}`), 3, 'win-banner');
     if (n % 10 === 0 && !this.quest.ended) this.after(3.2, () => this.playEnding());
     this.updateQuest();
     this.save(false);
@@ -2720,7 +2740,7 @@ class Game {
     const list = this.waveDef(this.wave);
     const boss = this.wave === 3;
     const bossName = BOSS_NAME[this.mapId];
-    this.ui.banner(`제${this.wave}파`, boss ? `${bossName} 출현!` : `${this.map.foe} ${list.length}마리`, 2.4, boss ? 'boss-banner' : '');
+    this.ui.banner(`제${this.wave}파`, boss ? `${this.round >= 2 ? '각성 ' : ''}${bossName} 출현!` : `${this.map.foe} ${list.length}마리`, 2.4, boss ? 'boss-banner' : '');
     this.audio.play(boss ? 'drum' : 'wave');
     let delay = 0.6;
     for (const t of list) {
@@ -2744,7 +2764,13 @@ class Game {
     const lv = this.tower?.active ? 1 + this.tower.floor + Math.floor((this.player.level - 1) / 3) : 1 + this.round + this.map.lvl + Math.floor((this.player.level - 1) / 3);
     const e = new Enemy(this, type, pos, lv, { elite: opt.elite });
     this.earlyEase(e);
-    if (isBoss) { e.name = this.tower?.active ? `${e.T.name} · ${this.tower.floor}층` : this.round > 0 ? `${e.T.name} +${this.round}` : e.T.name; this.ui.setBoss(e); this.shake(0.5); this.bossIntro(e); }
+    const TR = this.tower?.active ? this.tower : null;
+    if (opt.weak) e.maxHp = e.hp = Math.max(1, Math.round(e.maxHp * 0.6));
+    if (TR?.rule?.key === 'swift') e.T = { ...e.T, speed: e.T.speed * 1.35 };
+    // 각성 보스: 탑 20층부터의 보스 층, 또는 3회차부터의 지역 보스
+    const awake = isBoss && (TR ? TR.floor >= 20 && TR.floor % 5 === 0 : this.round >= 2);
+    if (awake) awaken(e);
+    if (isBoss) { e.name = TR ? `${e.T.name} · ${TR.floor}층` : this.round > 0 ? `${e.T.name} +${this.round}` : e.T.name; if (awake) e.name = '각성 ' + e.name; this.ui.setBoss(e); this.shake(0.5); this.bossIntro(e); }
     this.enemies.push(e);
   }
 
@@ -2822,6 +2848,7 @@ class Game {
     if (this.counterT > this.time) { this.counterT = 0; if (!crit) { crit = true; mul *= 1.8; } mul *= 1.4; this.fx.number(e.center().clone().add(V(0, 1.2, 0)), '반격!', 'alert'); }
     if (!crit && G.crit && Math.random() < G.crit) { crit = true; mul *= 1.8; }
     if (crit && G.critDmg) mul *= 1 + G.critDmg;
+    if (this.tower?.active && this.tower.rule?.key === 'glass') mul *= 1.6;
     dmg = Math.max(1, Math.round(dmg * mul));
     // 돌장승 같은 단단한 적: 얼어 있지 않으면 피해가 줄고 쇳소리
     if (e.T.armor && !(e.frozenT > 0)) {
@@ -4329,6 +4356,12 @@ class Game {
       this.fx.number(pl.pos.clone().add(V(0, 2.1, 0)), `+${h}`, 'heal');
       const c = e.center();
       for (let i = 0; i < 8; i++) this.fx.add.emit({ x: c.x + rand(-0.3, 0.3), y: c.y + rand(0, 0.5), z: c.z + rand(-0.3, 0.3), vx: (pl.pos.x - c.x) * 1.6, vy: rand(1, 2.5), vz: (pl.pos.z - c.z) * 1.6, drag: 1, life: 0.6, size: 3, color: '#e0c8ff', color2: '#6a2aff' });
+    }
+    // 각성 보스: 좋은 장비 하나 더
+    if (e.awakened) {
+      this.stats.awakened = (this.stats.awakened || 0) + 1;
+      this.spawnDrop(e.pos, makeGear(Math.max(1, e.lvl || 1) + this.round, Math.max(3, rollGearTier(1, this.round))));
+      this.records.check();
     }
     if (this.target === e) this.target = null;
     this.questOnKill(e);
