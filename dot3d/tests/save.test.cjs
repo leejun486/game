@@ -20,9 +20,11 @@ module.exports = {
       const G = window.game;
       G.player.addExp(5000); G.kills = 77; G.bestCombo = 21; G.towerBest = 7; G.difficulty = 'hard';
       G.quest.step = 8; G.updateGates(true); G.cleared.palace = 1; G.cleared.bamboo = 1;
-      G.stats.ruleFloors = 3; G.stats.awakened = 1;
-      G.save(false);
+      G.stats.ruleFloors = 3; G.stats.awakened = 1; G.stats.kills = 77;
+      G.records.check(); // 바꾼 값으로 받을 업적은 저장 전에 받아 둠 (불러온 뒤 새로 생기지 않게)
     });
+    await g.step(1, { input: {} });
+    await g.eval(() => window.game.save(false));
     const a = await read();
     await cont();
     await g.eval(() => window.game.save(false));
