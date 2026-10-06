@@ -1,6 +1,10 @@
 /* 갈무리11 (SIL OFL 1.1, fonts/OFL.md) — 게임 안에 포함해서 인터넷 없이도 나옴 */
 @font-face { font-family: 'Galmuri11'; src: url('fonts/Galmuri11.woff2') format('woff2'); font-weight: 400; font-display: swap; }
 @font-face { font-family: 'Galmuri11'; src: url('fonts/Galmuri11-Bold.woff2') format('woff2'); font-weight: 700; font-display: swap; }
+/* 제목·배너 명조체: Noto Serif KR/JP/SC 900 (OFL)에서 쓰는 글자만 — tools/i18n/serif_font.py. 인터넷 없이도 같은 글꼴 */
+@font-face { font-family: 'WolhaSerif'; src: url('fonts/serif-kr.woff2') format('woff2'); font-weight: 900; font-display: swap; }
+@font-face { font-family: 'WolhaSerifJP'; src: url('fonts/serif-jp.woff2') format('woff2'); font-weight: 900; font-display: swap; }
+@font-face { font-family: 'WolhaSerifSC'; src: url('fonts/serif-sc.woff2') format('woff2'); font-weight: 900; font-display: swap; }
 /* 중국어(간체): Fusion Pixel 12px (OFL)에서 번역에 쓰인 글자만 뽑은 것 — tools/i18n/zh_font.py */
 @font-face { font-family: 'FusionZh'; src: url('fonts/fusion-zh.woff2') format('woff2'); font-display: swap; }
 :root {
@@ -71,7 +75,7 @@ canvas.view { position: absolute; left: 0; top: 0; image-rendering: pixelated; i
 #quest .kills b { color: #fff; font-weight: normal; }
 
 #logo { position: absolute; right: 18px; top: 14px; text-align: right; line-height: 1; filter: drop-shadow(3px 3px 0 rgba(0, 0, 0, 0.6)); }
-#logo .han { display: block; font-family: 'Noto Serif KR', 'Noto Serif CJK KR', serif; font-size: 52px; font-weight: 900; color: #fff6e2; letter-spacing: -2px; -webkit-text-stroke: 2px #1a1622; paint-order: stroke fill; }
+#logo .han { display: block; font-family: 'WolhaSerif', 'WolhaSerifJP', 'WolhaSerifSC', 'Noto Serif KR', 'Noto Serif CJK KR', serif; font-size: 52px; font-weight: 900; color: #fff6e2; letter-spacing: -2px; -webkit-text-stroke: 2px #1a1622; paint-order: stroke fill; }
 #logo .sub { display: inline-block; margin-top: 4px; font-size: 13px; color: var(--gold); background: #1a1622; padding: 3px 8px; }
 
 #boss { position: absolute; left: 50%; top: 22px; width: min(560px, 60vw); transform: translateX(-50%); opacity: 0; transition: opacity 0.3s; }
@@ -92,7 +96,7 @@ canvas.view { position: absolute; left: 0; top: 0; image-rendering: pixelated; i
 
 #banner { position: absolute; left: 0; right: 0; top: 30%; text-align: center; pointer-events: none; z-index: 9; opacity: 0; }
 #banner.show { animation: banner 0.5s steps(5) forwards; }
-#banner-main { display: inline-block; font-family: 'Noto Serif KR', 'Noto Serif CJK KR', var(--font); font-size: 46px; font-weight: 900; color: #fff6e2; padding: 6px 40px; background: linear-gradient(90deg, transparent, rgba(16, 12, 24, 0.85) 20% 80%, transparent); -webkit-text-stroke: 2px #000; paint-order: stroke fill; text-shadow: 4px 4px 0 rgba(0, 0, 0, 0.5); letter-spacing: 4px; }
+#banner-main { display: inline-block; font-family: 'WolhaSerif', 'WolhaSerifJP', 'WolhaSerifSC', 'Noto Serif KR', 'Noto Serif CJK KR', var(--font); font-size: 46px; font-weight: 900; color: #fff6e2; padding: 6px 40px; background: linear-gradient(90deg, transparent, rgba(16, 12, 24, 0.85) 20% 80%, transparent); -webkit-text-stroke: 2px #000; paint-order: stroke fill; text-shadow: 4px 4px 0 rgba(0, 0, 0, 0.5); letter-spacing: 4px; }
 #banner-sub { margin-top: 8px; font-size: 15px; color: var(--gold); text-shadow: 2px 2px 0 #000; }
 #banner.night-banner #banner-main { color: #bfe8ff; }
 #banner.boss-banner #banner-main { color: #ff9a9a; }
@@ -117,7 +121,7 @@ canvas.view { position: absolute; left: 0; top: 0; image-rendering: pixelated; i
 #title { position: absolute; inset: 0; z-index: 20; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 30px; background: radial-gradient(ellipse at center, rgba(10, 10, 20, 0.15), rgba(6, 6, 12, 0.7)); transition: opacity 0.6s; }
 #title.hide { opacity: 0; pointer-events: none; }
 .logo-big { text-align: center; line-height: 1; filter: drop-shadow(5px 5px 0 rgba(0, 0, 0, 0.6)); }
-.logo-big .han { display: block; font-family: 'Noto Serif KR', 'Noto Serif CJK KR', serif; font-size: min(140px, 22vw); font-weight: 900; color: #fff6e2; -webkit-text-stroke: 4px #15121c; paint-order: stroke fill; letter-spacing: 4px; }
+.logo-big .han { display: block; font-family: 'WolhaSerif', 'WolhaSerifJP', 'WolhaSerifSC', 'Noto Serif KR', 'Noto Serif CJK KR', serif; font-size: min(140px, 22vw); font-weight: 900; color: #fff6e2; -webkit-text-stroke: 4px #15121c; paint-order: stroke fill; letter-spacing: 4px; }
 .logo-big .kr { display: block; font-size: 22px; color: var(--gold); margin-top: 6px; letter-spacing: 12px; }
 .logo-big .sub { display: block; font-size: 18px; color: #bfe8ff; margin-top: 14px; letter-spacing: 4px; }
 #classes { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; max-width: 96vw; }
@@ -144,7 +148,7 @@ canvas.view { position: absolute; left: 0; top: 0; image-rendering: pixelated; i
 
 #gameover { position: absolute; inset: 0; z-index: 15; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; background: rgba(40, 0, 6, 0.55); opacity: 0; pointer-events: none; transition: opacity 0.6s; }
 #gameover.show { opacity: 1; pointer-events: auto; }
-#gameover .t { font-family: 'Noto Serif KR', 'Noto Serif CJK KR', serif; font-size: 56px; font-weight: 900; color: #ff8a7a; -webkit-text-stroke: 2px #000; paint-order: stroke fill; }
+#gameover .t { font-family: 'WolhaSerif', 'WolhaSerifJP', 'WolhaSerifSC', 'Noto Serif KR', 'Noto Serif CJK KR', serif; font-size: 56px; font-weight: 900; color: #ff8a7a; -webkit-text-stroke: 2px #000; paint-order: stroke fill; }
 #gameover .s { font-size: 16px; }
 #gameover .s b { color: var(--gold); font-weight: normal; }
 
@@ -568,7 +572,7 @@ body.no-dmg .dmg.normal, body.no-dmg .dmg.crit, body.no-dmg .dmg.burn { display:
 #story .story-credits { display: none; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(560px, 90vw); text-align: center; color: #e8dcc0; cursor: default; }
 #story.credits .story-credits { display: block; animation: storyIn 1.2s ease; }
 #story.credits .story-text, #story.credits .story-hint, #story.credits .story-moon { display: none; }
-.story-credits h2 { font-family: 'Noto Serif KR', var(--font); font-size: 40px; margin: 0 0 4px; color: #fff2d0; letter-spacing: 6px; text-shadow: 0 0 20px rgba(255, 210, 120, 0.5), 3px 3px 0 #000; }
+.story-credits h2 { font-family: 'WolhaSerif', 'WolhaSerifJP', 'WolhaSerifSC', 'Noto Serif KR', var(--font); font-size: 40px; margin: 0 0 4px; color: #fff2d0; letter-spacing: 6px; text-shadow: 0 0 20px rgba(255, 210, 120, 0.5), 3px 3px 0 #000; }
 .story-credits .sub { font-size: 14px; color: #c8b890; letter-spacing: 4px; margin-bottom: 22px; }
 .story-credits .stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-bottom: 20px; }
 .story-credits .stats div { background: rgba(255, 255, 255, 0.05); border: 1px solid #3a3020; padding: 8px 4px; font-size: 11px; color: #a89e8a; }

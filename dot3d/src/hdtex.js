@@ -334,7 +334,7 @@ export function hdBanner(kind) {
       for (const [x, y] of [[24, 24], [W - 24, 24], [24, H - 24], [W - 24, H - 24]]) { g.beginPath(); g.arc(x, y, 7, 0, 7); g.fill(); }
     }
     g.fillStyle = S.ink;
-    g.font = `900 92px "Noto Serif KR","Noto Serif CJK KR","Batang",serif`;
+    g.font = `900 92px "WolhaSerif","Noto Serif KR","Noto Serif CJK KR","Batang",serif`;
     g.textAlign = 'center'; g.textBaseline = 'middle';
     g.fillText(S.glyph, W / 2, H / 2 + 4);
     // 천 결

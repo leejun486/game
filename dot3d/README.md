@@ -320,7 +320,7 @@ npm run dist:mac                   # dmg (macOS에서 빌드)
 
 ## 글꼴
 
-UI 글꼴 갈무리11(SIL 오픈 폰트 라이선스, `fonts/OFL.md`)을 게임 안에 포함해서 인터넷 없이도 나옵니다. 중국어(간체) 화면은 Fusion Pixel 12px(SIL 오픈 폰트 라이선스, `fonts/FusionPixel-OFL.txt`)에서 쓰는 글자만 뽑아 넣었습니다. 제목용 Noto Serif KR은 인터넷이 되면 Google Fonts에서 받고, 안 되면 기본 명조체로 대신합니다.
+UI 글꼴 갈무리11(SIL 오픈 폰트 라이선스, `fonts/OFL.md`)을 게임 안에 포함해서 인터넷 없이도 나옵니다. 중국어(간체) 화면은 Fusion Pixel 12px(SIL 오픈 폰트 라이선스, `fonts/FusionPixel-OFL.txt`)에서 쓰는 글자만 뽑아 넣었습니다. 제목·배너용 명조체 Noto Serif KR/JP/SC 900(OFL)도 게임에 쓰는 글자만 뽑아 `fonts/serif-kr|jp|sc.woff2`로 넣어 두어서 인터넷 없이도 같은 모양으로 나옵니다(합쳐 약 450KB). 글이 바뀌어 새 글자가 생기면 `python3 tools/i18n/serif_font.py`로 다시 만듭니다.
 
 ## 자동 저장
 
@@ -667,4 +667,4 @@ UI 글꼴 갈무리11(SIL 오픈 폰트 라이선스, `fonts/OFL.md`)을 게임 
 - `fx.js`: 도트 파티클(정사각 포인트), 검기 호, 충격파, 지면 경고, 데미지 숫자
 - `audio.js`: WebAudio로 만드는 효과음과, 평조 오음계 가야금풍 선율과 장구 장단의 배경음
 
-외부 이미지나 사운드 파일 없이 모두 코드로 생성합니다. 사용하는 라이브러리는 Three.js 하나이고, UI 폰트는 Galmuri를 CDN에서 불러옵니다.
+외부 이미지나 사운드 파일 없이 모두 코드로 생성합니다. 사용하는 라이브러리는 Three.js 하나이고, 글꼴(갈무리11, Fusion Pixel 일부, Noto Serif 일부)은 모두 `fonts/`에 들어 있어 인터넷 연결이 필요 없습니다.

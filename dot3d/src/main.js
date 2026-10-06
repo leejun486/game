@@ -4743,9 +4743,11 @@ const _e = new THREE.Color();
 // 체험판이 끝나는 단계: 늪으로 가는 뒷문을 여는 임무(뒷문 너머)부터
 const DEMO_END = QUESTS.findIndex((q) => q.gateAfter === 'swamp');
 
-window.addEventListener('DOMContentLoaded', () => {
+window.addEventListener('DOMContentLoaded', async () => {
   initLang();
   watchDom();
+  // 깃발·제목에 쓰는 명조체를 먼저 불러 둠 (캔버스에 그릴 때 글꼴이 없으면 다른 글꼴로 그려짐). 오래 걸리면 기다리지 않음
+  try { await Promise.race([document.fonts.load('900 92px WolhaSerif', '령용무월하궁'), new Promise((r) => setTimeout(r, 1500))]); } catch { /* 글꼴 없이 진행 */ }
   try {
     window.game = new Game();
   } catch (err) {
