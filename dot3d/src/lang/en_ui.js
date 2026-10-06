@@ -265,6 +265,9 @@ export const dict = {
   '시련탑 특수 규칙 층 10번 돌파': 'Clear 10 special-rule tower floors',
   '깨어난 것을 잠재우다': 'Lull the Awakened',
   '각성한 보스 물리치기': 'Defeat an awakened boss',
+  '이미 사냥터예요': 'You\'re already at the hunting ground',
+  '사냥터에 도착했어요': 'Arrived at the hunting ground',
+  '싸우려면 자동 사냥을 켜세요': 'turn on Auto-hunt to fight',
 };
 
 const RN = '([ⅠⅡⅢⅣⅤ])';

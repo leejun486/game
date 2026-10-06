@@ -1913,8 +1913,8 @@ class Game {
       if (t.hidden) continue;
       // 찾기 퀘스트: 그 지역 안에서는 직접 찾게 함
       if (t.search && this.world.regionAt(p.x, p.z).id === t.area) { this.ui.toast('여기서부터는 직접 찾아보세요 — 가까이 가면 소리가 나요', 3); return; }
-      // 사냥 지역 안에 이미 있으면 바로 자동 사냥
-      if (t.area && this.world.regionAt(p.x, p.z).id === t.area) { this.setAutoHunt(true); return; }
+      // 사냥 지역 안에 이미 있으면 알려만 줌 (이동은 이동만, 사냥은 직접 켬)
+      if (t.area && this.world.regionAt(p.x, p.z).id === t.area) { this.ui.toast(this.autoHunt ? '이미 사냥터예요' : '이미 사냥터예요 — 싸우려면 자동 사냥을 켜세요', 2.6); return; }
       const d = Math.hypot(t.pos.x - p.x, t.pos.z - p.z);
       if (d < bd) { bd = d; best = t; }
     }
@@ -1975,14 +1975,12 @@ class Game {
   autoMoveStep(inp, dt) {
     const A = this.autoMove, p = this.player;
     const d = Math.hypot(A.pos.x - p.pos.x, A.pos.z - p.pos.z);
-    // 자동 사냥 중이면 덤벼드는 적부터 처리
-    if (this.autoHunt && this.nearestEnemy(6, true)) return this.autoHuntStep(inp, dt);
     // 도착: 가까이 왔거나, 충분히 가까운데 더 다가갈 수 없을 때 (종각 안의 범종처럼 둘러싸인 것)
     const blockedNear = !A.area && d < 3.2 && A.stuck > 0.5;
     if (d < (A.area ? 3.5 : 1.9) || blockedNear) {
       this.stopAutoMove();
       if (A.search) { this.ui.toast('여기서부터는 직접 찾아보세요 — 가까이 가면 소리가 나요', 3); return inp; }
-      if (A.area) { if (!this.autoHunt) this.setAutoHunt(true); return inp; }
+      if (A.area) { this.ui.toast(this.autoHunt ? '사냥터에 도착했어요' : '사냥터에 도착했어요 — 싸우려면 자동 사냥을 켜세요', 2.6); return inp; }
       if (A.obj) return inp; // 순서 퍼즐은 직접 고르게 (대신 두드리지 않음)
       // 도착: 퀘스트 대상(사람·석등·북)과 바로 상호작용 (옆의 다른 물건 말고)
       const Q = this.curQuest();
