@@ -5,7 +5,7 @@
 export const DIFFS = {
   easy: { name: '쉬움', hp: 0.75, dmg: [0.55, 0.7], bossHp: [1, 1.6], bossDmg: [1, 1.2], exp: 1, gear: 1 },
   normal: { name: '보통', hp: 1, dmg: [1, 1.8], bossHp: [1.3, 3.3], bossDmg: [1, 2.1], exp: 1, gear: 1 },
-  hard: { name: '어려움', hp: 1.3, dmg: [1.35, 2.2], bossHp: [1.6, 3.7], bossDmg: [1.2, 2.4], exp: 1.25, gear: 1.4 },
+  hard: { name: '어려움', hp: 1.3, dmg: [1.2, 2.1], bossHp: [1.5, 3.4], bossDmg: [1.05, 2.2], exp: 1.25, gear: 1.4 },
 };
 export const DIFF_ORDER = ['easy', 'normal', 'hard'];
 const raw = (g) => DIFFS[g?.difficulty] || DIFFS.normal;
