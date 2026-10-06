@@ -27,6 +27,14 @@ function installBot({ diff }) {
   window.requestAnimationFrame = () => 0; // 그리기 루프 멈춤 (아래 tick이 대신 돌림)
   g.difficulty = diff;
   const B = (window.__bot = { t: 0, deaths: 0, log: [], stuck: [], step: g.quest.step, stepT: 0, decideT: 0, equipT: 0, phase: 'main', floorWait: 0, firstDeathAt: {} });
+  // 측정: 단계마다 가장 낮았던 체력(%), 레벨업으로 찬 체력, 보스를 잡는 데 걸린 시간
+  B.minHp = 1; B.lvHeal = 0; B.bossT = {}; B.bosses = [];
+  const olu = g.onLevelUp.bind(g);
+  g.onLevelUp = (pl, n) => { B.lvHeal += Math.max(0, pl.maxHp - B.hpBefore) / pl.maxHp; olu(pl, n); };
+  const ose = g.spawnEnemy.bind(g);
+  g.spawnEnemy = (type, o) => { ose(type, o); const e = g.enemies[g.enemies.length - 1]; if (e?.isBoss) e.__born = B.t; };
+  const oek = g.onEnemyKilled.bind(g);
+  g.onEnemyKilled = (e) => { if (e.isBoss && e.__born != null) B.bosses.push({ type: e.type, sec: Math.round(B.t - e.__born), awakened: !!e.awakened, step: g.quest.step, tower: g.tower?.active ? g.tower.floor : 0, minHp: Math.round(B.bossMin * 100) }); oek(e); };
   const od = g.onPlayerDeath.bind(g);
   g.onPlayerDeath = () => { B.deaths++; B.firstDeathAt[g.quest.step] = (B.firstDeathAt[g.quest.step] || 0) + 1; od(); };
   const near = (x, z) => Math.hypot(g.player.pos.x - x, g.player.pos.z - z);
@@ -119,12 +127,16 @@ function installBot({ diff }) {
     g.records.update(dt); g.dailyGoals.update(dt);
     g.playTime = (g.playTime || 0) + dt;
     B.t += dt; B.stepT += dt;
+    const hf = g.player.hp / g.player.maxHp;
+    if (g.state === 'play') { B.minHp = Math.min(B.minHp, hf); if (g.enemies.some((e) => e.isBoss && !e.dead)) B.bossMin = Math.min(B.bossMin ?? 1, hf); else B.bossMin = 1; }
+    B.hpBefore = g.player.hp;
     B.decideT -= dt; if (B.decideT <= 0) { B.decideT = 0.5; B.decide(); }
     B.equipT -= dt; if (B.equipT <= 0) { B.equipT = 30; try { spend(); g.autoEquip(); } catch { /* 무시 */ } }
     const key = B.phase === 'tower' ? 'T' + (g.tower?.best || 0) : g.quest.step;
     if (key !== B.step) {
       const Q0 = typeof B.step === 'number' ? window.__QUESTS[B.step] : null;
-      B.log.push({ step: B.step, title: Q0 ? Q0.title : `시련탑 ${String(B.step).slice(1)}층`, type: Q0?.type || 'tower', sec: Math.round(B.stepT), at: Math.round(B.t), lv: g.player.level, deaths: B.deaths });
+      B.log.push({ step: B.step, title: Q0 ? Q0.title : `시련탑 ${String(B.step).slice(1)}층`, type: Q0?.type || 'tower', sec: Math.round(B.stepT), at: Math.round(B.t), lv: g.player.level, deaths: B.deaths, minHp: Math.round(B.minHp * 100), lvHeal: Math.round(B.lvHeal * 100) });
+      B.minHp = 1; B.lvHeal = 0;
       B.step = key; B.stepT = 0;
     }
   };
@@ -170,7 +182,7 @@ async function runClass(ctx, cls) {
     if (s.step !== last) { last = s.step; process.stdout.write(`  [${cls}] ${(s.t / 60).toFixed(1)}분 · ${s.phase === 'tower' ? `시련탑 ${s.floor}층` : `${s.step}단계`} · Lv.${s.lv} · 쓰러짐 ${s.deaths} (실제 ${((Date.now() - t0) / 60000).toFixed(1)}분)\n`); }
     if (s.phase === 'done' || s.t > MAX_MIN * 60) break;
   }
-  const r = await g.eval(() => { const B = window.__bot, G = window.game; return { log: B.log, stuck: B.stuck, minutes: +(B.t / 60).toFixed(1), level: G.player.level, deaths: B.deaths, deathsByStep: B.firstDeathAt, kills: G.kills, ended: !!G.quest.ended, towerBest: G.towerBest || 0, step: G.quest.step }; });
+  const r = await g.eval(() => { const B = window.__bot, G = window.game; return { log: B.log, bosses: B.bosses, stuck: B.stuck, minutes: +(B.t / 60).toFixed(1), level: G.player.level, deaths: B.deaths, deathsByStep: B.firstDeathAt, kills: G.kills, ended: !!G.quest.ended, towerBest: G.towerBest || 0, step: G.quest.step }; });
   r.cls = cls; r.errors = g.errors.slice(0, 10);
   await g.close();
   return r;
