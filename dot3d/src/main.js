@@ -503,18 +503,15 @@ class Game {
     if (!F) return;
     const here = () => this.enemies.filter((e) => e.field && !e.dead && (!e.homeRegion || e.homeRegion === R.id)).length;
     if (here() >= F.cap) return;
-    const at = this.world.randomWalkable(p.pos.x, p.pos.z, 13, 22);
-    if (!at || this.world.regionAt(at.x, at.z) !== R) return;
-    // 퀘스트에 필요한 몬스터(모을 물건을 떨어뜨리는 종류, 아직 덜 잡은 종류)는 훨씬 자주 나옴
-    const Q = this.curQuest(), want = new Set();
-    if (Q?.type === 'collect') for (const t of Q.from) want.add(t);
-    if (Q?.type === 'kill') for (const [t, n] of Object.entries(Q.need)) if ((this.quest.prog?.[t] || 0) < n) want.add(t);
-    const B = !Q && this.quest.bounty;
-    if (B) for (const [t, n] of Object.entries(BOUNTIES[B.i].need)) if ((B.prog[t] || 0) < n) want.add(t);
+    // 퀘스트에 필요한 몬스터(모을 물건을 떨어뜨리는 종류, 아직 덜 잡은 종류)는 훨씬 자주, 그리고 가까이 나옴
+    //  (예전엔 여우불처럼 드문 종류가 지역 가장자리에만 보여, 가운데 여우만 잡게 되어 퀘스트가 더뎠음)
+    const qWant = this.questWanted(), want = new Set(qWant);
     for (const t of this.dailyGoals.wanted()) want.add(t);
-    const W = F.types.map(([t, w]) => [t, want.has(t) ? w * 4 + 2 : w]);
+    const W = F.types.map(([t, w]) => [t, qWant.has(t) ? w * 6 + 3 : want.has(t) ? w * 4 + 2 : w]);
     let roll = Math.random() * W.reduce((a, t) => a + t[1], 0), type = W[0][0];
     for (const [t, w] of W) { roll -= w; if (roll <= 0) { type = t; break; } }
+    const at = qWant.has(type) ? this.world.randomWalkable(p.pos.x, p.pos.z, 9, 15) || this.world.randomWalkable(p.pos.x, p.pos.z, 13, 22) : this.world.randomWalkable(p.pos.x, p.pos.z, 13, 22);
+    if (!at || this.world.regionAt(at.x, at.z) !== R) return;
     const n = Math.min(1 + Math.floor(Math.random() * F.pack), F.cap - here());
     const lv = 1 + MAPS[R.id].lvl + Math.floor((p.level - 1) / 3);
     for (let i = 0; i < n; i++) {
@@ -2014,11 +2011,21 @@ class Game {
     return this.steerTo(inp, A.pos.x, A.pos.z, 2, 4000, d > 3.6);
   }
 
-  nearestEnemy(R, aggroOnly = false) {
+  // 지금 퀘스트(현상수배)에 필요한 몬스터 종류: 모을 물건을 떨어뜨리는 것, 아직 덜 잡은 것
+  questWanted() {
+    const Q = this.curQuest(), want = new Set();
+    if (Q?.type === 'collect') for (const t of Q.from) want.add(t);
+    if (Q?.type === 'kill') for (const [t, n] of Object.entries(Q.need)) if ((this.quest.prog?.[t] || 0) < n) want.add(t);
+    const B = !Q && this.quest.bounty;
+    if (B) for (const [t, n] of Object.entries(BOUNTIES[B.i].need)) if ((B.prog[t] || 0) < n) want.add(t);
+    return want;
+  }
+
+  nearestEnemy(R, aggroOnly = false, only = null) {
     const p = this.player.pos;
     let best = null, bd = R;
     for (const e of this.enemies) {
-      if (e.dead || e.spawning || (aggroOnly && e.field && !e.aggro)) continue;
+      if (e.dead || e.spawning || (aggroOnly && e.field && !e.aggro) || (only && !only(e))) continue;
       const d = Math.hypot(e.pos.x - p.x, e.pos.z - p.z);
       if (e.huntSkipT > this.time) continue; // 길이 없어 잠시 포기한 적 (닫힌 문 너머 등)
       if (d < bd && Math.abs(e.pos.y - p.y) < 1.6) { bd = d; best = e; }
@@ -2030,7 +2037,16 @@ class Game {
   autoHuntStep(inp, dt) {
     const p = this.player;
     const range = { sword: 1.6, mage: 6.5, elf: 7.5, lancer: 2.6 }[p.cls];
-    const t = this.validTarget(this.target) && !(this.target.huntSkipT > this.time) && Math.hypot(this.target.pos.x - p.pos.x, this.target.pos.z - p.pos.z) < 24 ? this.target : this.nearestEnemy(24) || (this.waveActive || this.tower?.active ? this.nearestEnemy(90, true) : null); // 밤 싸움·시련탑엔 멀리 남은 적도 찾아감
+    let t = this.validTarget(this.target) && !(this.target.huntSkipT > this.time) && Math.hypot(this.target.pos.x - p.pos.x, this.target.pos.z - p.pos.z) < 24 ? this.target : this.nearestEnemy(24) || (this.waveActive || this.tower?.active ? this.nearestEnemy(90, true) : null); // 밤 싸움·시련탑엔 멀리 남은 적도 찾아감
+    // 들판에선 퀘스트에 필요한 몬스터부터 (조금 멀어도). 바로 곁에서 때리는 적이 있으면 그것부터
+    if (!this.waveActive && !this.tower?.active && !(t && t.isBoss)) {
+      const want = this.questWanted();
+      if (want.size && !(t && want.has(t.type))) {
+        const w = this.nearestEnemy(32, false, (e) => want.has(e.type));
+        const close = this.nearestEnemy(3, true, (e) => !want.has(e.type));
+        if (w && !close) t = w;
+      }
+    }
     if (!t) {
       let dr = null, dd = 14;
       for (const d of this.drops) { const k = Math.hypot(d.g.position.x - p.pos.x, d.g.position.z - p.pos.z); if (k < dd) { dd = k; dr = d; } }

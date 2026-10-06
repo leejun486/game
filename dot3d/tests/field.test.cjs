@@ -45,6 +45,27 @@ module.exports = {
     const left = await g.eval(() => window.game.enemies.filter((e) => e.__wedged && !e.dead).length);
     check(left === 0, `덤불에 끼인 몬스터 ${left}마리가 14초 뒤에도 남아 있음`);
     ctx.log('끼인 몬스터 정리');
+
+    // 자동 사냥은 퀘스트에 필요한 몬스터부터: 여우불 구슬 퀘스트에서 가까운 여우보다 25칸 밖 여우불을 먼저
+    const pick = await g.eval(() => {
+      const G = window.game;
+      for (let i = 0; i < 99; i++) { G.quest.step = i; if (G.curQuest()?.title === '여우불 구슬') break; }
+      G.quest.prog = {}; G.updateGates(true); G.startStep();
+      const R = G.world.regions.find((r) => r.id === 'bamboo');
+      G.teleport(R.spawn[0], R.spawn[2]); G.updateRegion(true);
+      for (const e of G.enemies) e.dispose(); G.enemies = []; G.target = null;
+      const p = G.player.pos, mk = (type, r0, r1) => { for (let k = 0; k < 60; k++) { const w = G.world.randomWalkable(p.x, p.z, r0, r1); if (w) { const e = G.spawnEnemyAt(type, w.x, w.z); e.field = true; e.spawning = false; e.dmg = 0; return e; } } };
+      for (let i = 0; i < 3; i++) mk('fox', 5, 8);
+      const ff = mk('foxfire', 22, 26);
+      G.fieldT = 999; // 이 시험 동안 새 몬스터는 안 나오게
+      G.setAutoHunt(true);
+      const inp = { mx: 0, mz: 0, moveLen: 0, mouseRecent: false, mouseWorld: null };
+      G.autoControl(inp, 1 / 30);
+      return { target: G.target?.type, ff: !!ff };
+    });
+    check(pick.ff, '여우불을 놓지 못함');
+    check(pick.target === 'foxfire', `자동 사냥이 퀘스트 몬스터(여우불) 대신 ${pick.target}을(를) 노림`);
+    ctx.log('자동 사냥이 퀘스트 몬스터(여우불)부터 노림');
     await clean(g);
     await g.close();
   },
