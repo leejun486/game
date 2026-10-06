@@ -2,7 +2,7 @@
 
 조선 궁궐 마당을 배경으로 한 도트 3D 액션 게임입니다. 3D로 그린 장면을 저해상도로 렌더링하고, 외곽선을 찍은 뒤 픽셀 그대로 확대해서 도트 그래픽처럼 보이게 합니다.
 
-> **English:** *Wolhagung: Night Parade of the Dokkaebi* is a 3D action RPG set in a Joseon-era palace. The game is fully playable in English: it follows your browser language, and you can switch any time with the `English / 한국어` button on the title screen or under **Menu → Display → Language**.
+> **English:** *Wolhagung: Night Parade of the Dokkaebi* is a 3D action RPG set in a Joseon-era palace. The game is fully playable in English, Japanese (日本語) and Simplified Chinese (简体中文): it follows your browser language, and you can switch any time with the 🌐 button on the title screen or under **Menu → Display → Language**.
 
 ## 출시 준비
 
@@ -282,7 +282,7 @@ npm run watch      # 개발용 자동 빌드
 
 - **소리:** 전체 · 배경음악 · 효과음 · 환경음 음량, 음악 켜기·끄기
 - **화면:**
-  - 언어 (한국어 / English): 바꾸면 저장 후 새로고침합니다. 처음에는 브라우저 언어를 따릅니다.
+  - 언어 (한국어 / English / 日本語 / 简体中文): 바꾸면 저장 후 새로고침합니다. 처음에는 브라우저 언어를 따릅니다. 선택 화면 오른쪽 아래 🌐 버튼은 누를 때마다 다음 언어로 바뀝니다.
   - 그래픽 모드 (고화질 / 도트)
   - 화질 높음 · 보통 · 낮음: 낮음은 해상도를 줄이고 AO, 계단 현상 제거, 그림자 해상도를 낮춰 저사양 기기에서 부드럽게 돌아갑니다.
   - 화면 흔들림 (보통 · 약하게 · 끔)
@@ -320,7 +320,7 @@ npm run dist:mac                   # dmg (macOS에서 빌드)
 
 ## 글꼴
 
-UI 글꼴 갈무리11(SIL 오픈 폰트 라이선스, `fonts/OFL.md`)을 게임 안에 포함해서 인터넷 없이도 나옵니다. 제목용 Noto Serif KR은 인터넷이 되면 Google Fonts에서 받고, 안 되면 기본 명조체로 대신합니다.
+UI 글꼴 갈무리11(SIL 오픈 폰트 라이선스, `fonts/OFL.md`)을 게임 안에 포함해서 인터넷 없이도 나옵니다. 중국어(간체) 화면은 Fusion Pixel 12px(SIL 오픈 폰트 라이선스, `fonts/FusionPixel-OFL.txt`)에서 쓰는 글자만 뽑아 넣었습니다. 제목용 Noto Serif KR은 인터넷이 되면 Google Fonts에서 받고, 안 되면 기본 명조체로 대신합니다.
 
 ## 자동 저장
 
@@ -420,7 +420,7 @@ UI 글꼴 갈무리11(SIL 오픈 폰트 라이선스, `fonts/OFL.md`)을 게임 
 - 엔딩 뒤에도 그대로 이어서 플레이합니다(시련탑, 회차, 현상수배). 선택 화면의 이어하기 정보에 `달거울 복원`이 붙습니다.
 - 이야기 글은 `src/story.js`에 모여 있습니다(크레딧의 제작자 이름도 여기서 바꿉니다).
 
-## 언어 (한국어 / English)
+## 언어 (한국어 / English / 日本語 / 简体中文)
 
 - 게임 코드는 한국어 원문 그대로 두고, 화면에 나가는 글자를 `src/i18n.js`가 번역합니다.
   - 버튼, 알림, 패널 등 화면(DOM)에 글자가 생기면 자동으로 번역합니다.
@@ -429,7 +429,10 @@ UI 글꼴 갈무리11(SIL 오픈 폰트 라이선스, `fonts/OFL.md`)을 게임 
   - `en_data.js`: 직업, 기술, 각인, 이야기, 지역
   - `en_items.js`: 아이템, 장비, 퀘스트
   - `en_ui.js`: 화면 글자, 그리고 숫자·이름이 끼어드는 문장의 패턴
-- 장비 이름처럼 여러 낱말을 조합한 글은 낱말별로 번역해 이어 붙입니다(예: `푸른 은 가락지` → `Verdant Silver Ring`).
+  - 일본어 `ja_*.js`, 중국어(간체) `zh_*.js`: 같은 구성. 패턴은 `ja_pats.js`·`zh_pats.js`.
+- 일본어·중국어 사전은 손으로 고치지 않고 `tools/i18n/<언어>_<부분>.txt`(영어 사전의 줄 번호마다 `줄|번역1 ‖ 번역2 …`)를 고친 뒤 `node tools/i18n/build_lang.cjs ja items`처럼 다시 만듭니다. 줄마다 항목 수가 영어 사전과 다르면 만들지 않고 알려 줍니다.
+- 글꼴: 한국어·영어·일본어는 갈무리11(일본어 가나·한자 포함). 중국어(간체)는 같은 계열 도트 글꼴인 Fusion Pixel 12px(OFL)에서 번역에 쓰인 글자만 뽑은 `fonts/fusion-zh.woff2`(약 40KB)를 씁니다. 중국어 번역을 고쳐 새 글자가 생기면 `python3 tools/i18n/zh_font.py <npm pack @vp-tw/cjk-web-fonts-fusion-pixel-font를 푼 package 폴더>`로 다시 만듭니다.
+- 장비 이름처럼 여러 낱말을 조합한 글은 낱말별로 번역해 이어 붙입니다(예: `푸른 은 가락지` → `Verdant Silver Ring`, 일본어·중국어는 띄어쓰기 없이 `青い銀の指輪`).
 - 번역을 못 찾은 글은 그대로 한국어로 나오고, 브라우저 콘솔의 `window.__i18nMissing`에 모입니다. 새 글을 넣었다면 여기를 보고 사전에 추가하면 됩니다.
 
 ## 퀘스트

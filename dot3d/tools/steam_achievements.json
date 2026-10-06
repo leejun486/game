@@ -5,7 +5,11 @@
   "ko": "첫걸음",
   "koDesc": "적을 처음 쓰러뜨리기",
   "en": "First Steps",
-  "enDesc": "Defeat your first foe"
+  "enDesc": "Defeat your first foe",
+  "ja": "はじめの一歩",
+  "jaDesc": "はじめて敵を倒す",
+  "zh": "第一步",
+  "zhDesc": "首次击倒敌人"
  },
  {
   "api": "ACH_TUT",
@@ -13,7 +17,11 @@
   "ko": "배움의 길",
   "koDesc": "튜토리얼 마치기",
   "en": "Student",
-  "enDesc": "Finish the tutorial"
+  "enDesc": "Finish the tutorial",
+  "ja": "学びの道",
+  "jaDesc": "チュートリアルを終える",
+  "zh": "求学之路",
+  "zhDesc": "完成教程"
  },
  {
   "api": "ACH_K100",
@@ -21,7 +29,11 @@
   "ko": "도깨비 사냥꾼",
   "koDesc": "적 100 처치",
   "en": "Dokkaebi Hunter",
-  "enDesc": "Defeat 100 foes"
+  "enDesc": "Defeat 100 foes",
+  "ja": "トッケビハンター",
+  "jaDesc": "敵を100体倒す",
+  "zh": "鬼怪猎人",
+  "zhDesc": "击倒100个敌人"
  },
  {
   "api": "ACH_K1000",
@@ -29,7 +41,11 @@
   "ko": "백귀야행을 끝낸 자",
   "koDesc": "적 1000 처치",
   "en": "End of the Night Parade",
-  "enDesc": "Defeat 1000 foes"
+  "enDesc": "Defeat 1000 foes",
+  "ja": "百鬼夜行を終わらせた者",
+  "jaDesc": "敵を1000体倒す",
+  "zh": "终结百鬼夜行者",
+  "zhDesc": "击倒1000个敌人"
  },
  {
   "api": "ACH_B_BOSS",
@@ -37,7 +53,11 @@
   "ko": "대왕의 방망이",
   "koDesc": "도깨비 대왕 두억시니 물리치기",
   "en": "The King's Club",
-  "enDesc": "Defeat Dokkaebi King Dueoksini"
+  "enDesc": "Defeat Dokkaebi King Dueoksini",
+  "ja": "大王の金棒",
+  "jaDesc": "トッケビ大王トゥオクシニを倒す",
+  "zh": "大王的狼牙棒",
+  "zhDesc": "击败鬼怪大王豆亿神"
  },
  {
   "api": "ACH_B_GUMIHO",
@@ -45,7 +65,11 @@
   "ko": "여우 사냥",
   "koDesc": "천년 구미호 물리치기",
   "en": "Fox Hunt",
-  "enDesc": "Defeat the Thousand-Year Gumiho"
+  "enDesc": "Defeat the Thousand-Year Gumiho",
+  "ja": "狐狩り",
+  "jaDesc": "千年九尾狐を倒す",
+  "zh": "猎狐",
+  "zhDesc": "击败千年九尾狐"
  },
  {
   "api": "ACH_B_REAPER",
@@ -53,7 +77,11 @@
   "ko": "명부를 찢다",
   "koDesc": "저승사자 물리치기",
   "en": "Torn Ledger",
-  "enDesc": "Defeat the Grim Reaper"
+  "enDesc": "Defeat the Grim Reaper",
+  "ja": "名簿を破る",
+  "jaDesc": "死神を倒す",
+  "zh": "撕碎名簿",
+  "zhDesc": "击败勾魂使者"
  },
  {
   "api": "ACH_B_IMUGI",
@@ -61,7 +89,11 @@
   "ko": "승천을 막다",
   "koDesc": "천년 이무기 물리치기",
   "en": "No Ascension",
-  "enDesc": "Defeat the Thousand-Year Imugi"
+  "enDesc": "Defeat the Thousand-Year Imugi",
+  "ja": "昇天を阻む",
+  "jaDesc": "千年イムギを倒す",
+  "zh": "阻止升天",
+  "zhDesc": "击败千年螭龙"
  },
  {
   "api": "ACH_B_BULGASARI",
@@ -69,7 +101,11 @@
   "ko": "쇠를 녹이다",
   "koDesc": "쇠먹는 불가사리 물리치기",
   "en": "Molten Iron",
-  "enDesc": "Defeat the Iron-Eating Bulgasari"
+  "enDesc": "Defeat the Iron-Eating Bulgasari",
+  "ja": "鉄を溶かす",
+  "jaDesc": "鉄喰いプルガサリを倒す",
+  "zh": "熔铁",
+  "zhDesc": "击败食铁不可杀"
  },
  {
   "api": "ACH_B_BAEKHO",
@@ -77,7 +113,11 @@
   "ko": "산군을 꺾다",
   "koDesc": "산군 백호 물리치기",
   "en": "Tiger Tamer",
-  "enDesc": "Defeat the White Tiger"
+  "enDesc": "Defeat the White Tiger",
+  "ja": "山の主を討つ",
+  "jaDesc": "山の主・白虎を倒す",
+  "zh": "降服山君",
+  "zhDesc": "击败山君白虎"
  },
  {
   "api": "ACH_B_DRAGON",
@@ -85,7 +125,11 @@
   "ko": "용궁의 평화",
   "koDesc": "동해 용왕 물리치기",
   "en": "Peace Beneath the Waves",
-  "enDesc": "Defeat the Dragon King of the East Sea"
+  "enDesc": "Defeat the Dragon King of the East Sea",
+  "ja": "竜宮の平和",
+  "jaDesc": "東海竜王を倒す",
+  "zh": "龙宫的和平",
+  "zhDesc": "击败东海龙王"
  },
  {
   "api": "ACH_B_CENTIPEDE",
@@ -93,7 +137,11 @@
   "ko": "맑은 냇물",
   "koDesc": "천년 왕지네 물리치기",
   "en": "Clear Waters",
-  "enDesc": "Defeat the Thousand-Year Centipede"
+  "enDesc": "Defeat the Thousand-Year Centipede",
+  "ja": "澄んだ小川",
+  "jaDesc": "千年大ムカデを倒す",
+  "zh": "清澈溪水",
+  "zhDesc": "击败千年蜈蚣"
  },
  {
   "api": "ACH_B_FROSTGIANT",
@@ -101,7 +149,11 @@
   "ko": "봄을 부르다",
   "koDesc": "서리 거인 동장군 물리치기",
   "en": "Calling Spring",
-  "enDesc": "Defeat General Winter"
+  "enDesc": "Defeat General Winter",
+  "ja": "春を呼ぶ",
+  "jaDesc": "霜の巨人・冬将軍を倒す",
+  "zh": "唤来春天",
+  "zhDesc": "击败霜之巨人冬将军"
  },
  {
   "api": "ACH_B_YEOMRA",
@@ -109,7 +161,11 @@
   "ko": "저승의 판결",
   "koDesc": "염라대왕 물리치기",
   "en": "Final Verdict",
-  "enDesc": "Defeat King Yeomra"
+  "enDesc": "Defeat King Yeomra",
+  "ja": "あの世の判決",
+  "jaDesc": "閻魔大王を倒す",
+  "zh": "阴间的判决",
+  "zhDesc": "击败阎罗大王"
  },
  {
   "api": "ACH_MAIN",
@@ -117,7 +173,11 @@
   "ko": "평안해진 땅",
   "koDesc": "메인 퀘스트 모두 마치기",
   "en": "Peace Restored",
-  "enDesc": "Finish the main quest"
+  "enDesc": "Finish the main quest",
+  "ja": "平穏になった地",
+  "jaDesc": "メインクエストをすべて終える",
+  "zh": "太平之地",
+  "zhDesc": "完成全部主线任务"
  },
  {
   "api": "ACH_ENDING",
@@ -125,7 +185,11 @@
   "ko": "달거울 복원",
   "koDesc": "엔딩 보기",
   "en": "Moon Mirror Restored",
-  "enDesc": "See the ending"
+  "enDesc": "See the ending",
+  "ja": "月の鏡の復元",
+  "jaDesc": "エンディングを見る",
+  "zh": "月之镜复原",
+  "zhDesc": "观看结局"
  },
  {
   "api": "ACH_ROUND2",
@@ -133,7 +197,11 @@
   "ko": "다시 찾아온 밤",
   "koDesc": "두 번째 회차 시작",
   "en": "Another Night",
-  "enDesc": "Start round 2"
+  "enDesc": "Start round 2",
+  "ja": "再び訪れた夜",
+  "jaDesc": "2周目を始める",
+  "zh": "再度来临的夜晚",
+  "zhDesc": "开始第二周目"
  },
  {
   "api": "ACH_ROUND5",
@@ -141,7 +209,11 @@
   "ko": "끝나지 않는 야행",
   "koDesc": "다섯 번째 회차 시작",
   "en": "Endless Parade",
-  "enDesc": "Start round 5"
+  "enDesc": "Start round 5",
+  "ja": "終わらぬ夜行",
+  "jaDesc": "5周目を始める",
+  "zh": "永不结束的夜行",
+  "zhDesc": "开始第五周目"
  },
  {
   "api": "ACH_T5",
@@ -149,7 +221,11 @@
   "ko": "탑의 문턱",
   "koDesc": "시련탑 5층 돌파",
   "en": "Tower Threshold",
-  "enDesc": "Clear tower floor 5"
+  "enDesc": "Clear tower floor 5",
+  "ja": "塔の入り口",
+  "jaDesc": "試練の塔5階を突破",
+  "zh": "塔之门槛",
+  "zhDesc": "突破试炼塔第5层"
  },
  {
   "api": "ACH_T10",
@@ -157,7 +233,11 @@
   "ko": "염라의 방",
   "koDesc": "시련탑 10층 돌파",
   "en": "Yeomra's Hall",
-  "enDesc": "Clear tower floor 10"
+  "enDesc": "Clear tower floor 10",
+  "ja": "閻魔の間",
+  "jaDesc": "試練の塔10階を突破",
+  "zh": "阎罗之厅",
+  "zhDesc": "突破试炼塔第10层"
  },
  {
   "api": "ACH_T20",
@@ -165,7 +245,11 @@
   "ko": "저승 깊은 곳",
   "koDesc": "시련탑 20층 돌파",
   "en": "Deep Underworld",
-  "enDesc": "Clear tower floor 20"
+  "enDesc": "Clear tower floor 20",
+  "ja": "あの世の深淵",
+  "jaDesc": "試練の塔20階を突破",
+  "zh": "阴间深处",
+  "zhDesc": "突破试炼塔第20层"
  },
  {
   "api": "ACH_T30",
@@ -173,7 +257,11 @@
   "ko": "끝없는 탑",
   "koDesc": "시련탑 30층 돌파",
   "en": "Endless Tower",
-  "enDesc": "Clear tower floor 30"
+  "enDesc": "Clear tower floor 30",
+  "ja": "果てなき塔",
+  "jaDesc": "試練の塔30階を突破",
+  "zh": "无尽之塔",
+  "zhDesc": "突破试炼塔第30层"
  },
  {
   "api": "ACH_LV10",
@@ -181,7 +269,11 @@
   "ko": "숙련",
   "koDesc": "한 직업 Lv.10",
   "en": "Skilled",
-  "enDesc": "Reach Lv.10 with a class"
+  "enDesc": "Reach Lv.10 with a class",
+  "ja": "熟練",
+  "jaDesc": "ひとつの職業でLv.10",
+  "zh": "熟练",
+  "zhDesc": "任一职业达到Lv.10"
  },
  {
   "api": "ACH_LV20",
@@ -189,7 +281,11 @@
   "ko": "고수",
   "koDesc": "한 직업 Lv.20",
   "en": "Expert",
-  "enDesc": "Reach Lv.20 with a class"
+  "enDesc": "Reach Lv.20 with a class",
+  "ja": "達人",
+  "jaDesc": "ひとつの職業でLv.20",
+  "zh": "高手",
+  "zhDesc": "任一职业达到Lv.20"
  },
  {
   "api": "ACH_LV30",
@@ -197,7 +293,11 @@
   "ko": "달인",
   "koDesc": "한 직업 Lv.30",
   "en": "Master",
-  "enDesc": "Reach Lv.30 with a class"
+  "enDesc": "Reach Lv.30 with a class",
+  "ja": "名人",
+  "jaDesc": "ひとつの職業でLv.30",
+  "zh": "大师",
+  "zhDesc": "任一职业达到Lv.30"
  },
  {
   "api": "ACH_ALL4",
@@ -205,7 +305,11 @@
   "ko": "네 갈래의 길",
   "koDesc": "네 직업 모두 Lv.10",
   "en": "Four Paths",
-  "enDesc": "Reach Lv.10 with all four classes"
+  "enDesc": "Reach Lv.10 with all four classes",
+  "ja": "四つの道",
+  "jaDesc": "四職業すべてLv.10",
+  "zh": "四条道路",
+  "zhDesc": "四个职业全部达到Lv.10"
  },
  {
   "api": "ACH_C50",
@@ -213,7 +317,11 @@
   "ko": "흐르는 칼끝",
   "koDesc": "50 연속 타격",
   "en": "Flowing Blade",
-  "enDesc": "50-hit combo"
+  "enDesc": "50-hit combo",
+  "ja": "流れる切っ先",
+  "jaDesc": "50連続打撃",
+  "zh": "流动的刀锋",
+  "zhDesc": "50连击"
  },
  {
   "api": "ACH_C150",
@@ -221,7 +329,11 @@
   "ko": "멈추지 않는 손",
   "koDesc": "150 연속 타격",
   "en": "Relentless",
-  "enDesc": "150-hit combo"
+  "enDesc": "150-hit combo",
+  "ja": "止まらぬ手",
+  "jaDesc": "150連続打撃",
+  "zh": "停不下的手",
+  "zhDesc": "150连击"
  },
  {
   "api": "ACH_PD1",
@@ -229,7 +341,11 @@
   "ko": "종이 한 장 차이",
   "koDesc": "완벽한 회피 성공",
   "en": "By a Hair",
-  "enDesc": "Land a perfect dodge"
+  "enDesc": "Land a perfect dodge",
+  "ja": "紙一重",
+  "jaDesc": "完全回避に成功",
+  "zh": "一纸之差",
+  "zhDesc": "完美闪避成功"
  },
  {
   "api": "ACH_PD50",
@@ -237,7 +353,11 @@
   "ko": "바람 같은 몸놀림",
   "koDesc": "완벽한 회피 50번",
   "en": "Like the Wind",
-  "enDesc": "50 perfect dodges"
+  "enDesc": "50 perfect dodges",
+  "ja": "風のような身のこなし",
+  "jaDesc": "完全回避50回",
+  "zh": "身轻如风",
+  "zhDesc": "完美闪避50次"
  },
  {
   "api": "ACH_HIT500",
@@ -245,7 +365,11 @@
   "ko": "일격필살",
   "koDesc": "한 방에 500 피해",
   "en": "One Strike",
-  "enDesc": "Deal 500 damage in one hit"
+  "enDesc": "Deal 500 damage in one hit",
+  "ja": "一撃必殺",
+  "jaDesc": "一撃で500ダメージ",
+  "zh": "一击必杀",
+  "zhDesc": "单次造成500伤害"
  },
  {
   "api": "ACH_LEGEND",
@@ -253,7 +377,11 @@
   "ko": "전설을 손에",
   "koDesc": "전설 등급 방어구·장신구 줍기",
   "en": "Legend in Hand",
-  "enDesc": "Find legendary gear"
+  "enDesc": "Find legendary gear",
+  "ja": "伝説を手に",
+  "jaDesc": "伝説級の防具・装身具を拾う",
+  "zh": "传说在手",
+  "zhDesc": "捡到传说级防具・饰品"
  },
  {
   "api": "ACH_BOSSW",
@@ -261,7 +389,11 @@
   "ko": "보스의 유물",
   "koDesc": "보스 무기 얻기",
   "en": "Boss Relic",
-  "enDesc": "Obtain a boss weapon"
+  "enDesc": "Obtain a boss weapon",
+  "ja": "ボスの遺物",
+  "jaDesc": "ボス武器を手に入れる",
+  "zh": "首领的遗物",
+  "zhDesc": "获得首领武器"
  },
  {
   "api": "ACH_SET4",
@@ -269,7 +401,11 @@
   "ko": "한 벌 차림",
   "koDesc": "세트 장비 네 부위 모두 착용",
   "en": "Full Set",
-  "enDesc": "Wear all four pieces of a set"
+  "enDesc": "Wear all four pieces of a set",
+  "ja": "ひと揃いの装い",
+  "jaDesc": "セット装備の四部位をすべて装備",
+  "zh": "全套装扮",
+  "zhDesc": "穿齐套装的全部四个部位"
  },
  {
   "api": "ACH_AWAKEN",
@@ -277,7 +413,11 @@
   "ko": "각성",
   "koDesc": "기술 하나를 Ⅴ단계까지 수련",
   "en": "Awakening",
-  "enDesc": "Train a skill to rank V"
+  "enDesc": "Train a skill to rank V",
+  "ja": "覚醒",
+  "jaDesc": "技をひとつⅤ段階まで修練",
+  "zh": "觉醒",
+  "zhDesc": "将一个技能修炼到Ⅴ阶段"
  },
  {
   "api": "ACH_GEAR100",
@@ -285,7 +425,11 @@
   "ko": "보따리 장수",
   "koDesc": "방어구·장신구 100개 줍기",
   "en": "Packrat",
-  "enDesc": "Pick up 100 pieces of gear"
+  "enDesc": "Pick up 100 pieces of gear",
+  "ja": "行商人",
+  "jaDesc": "防具・装身具を100個拾う",
+  "zh": "行商",
+  "zhDesc": "捡到100件防具・饰品"
  },
  {
   "api": "ACH_BOUNTY10",
@@ -293,7 +437,11 @@
   "ko": "현상금 사냥꾼",
   "koDesc": "현상수배 10번 마치기",
   "en": "Bounty Hunter",
-  "enDesc": "Complete 10 bounties"
+  "enDesc": "Complete 10 bounties",
+  "ja": "賞金稼ぎ",
+  "jaDesc": "手配書を10回こなす",
+  "zh": "赏金猎人",
+  "zhDesc": "完成10次悬赏"
  },
  {
   "api": "ACH_FALL10",
@@ -301,7 +449,11 @@
   "ko": "칠전팔기",
   "koDesc": "10번 쓰러지고도 다시 일어서기",
   "en": "Never Give Up",
-  "enDesc": "Fall 10 times and get back up"
+  "enDesc": "Fall 10 times and get back up",
+  "ja": "七転び八起き",
+  "jaDesc": "10回倒れても立ち上がる",
+  "zh": "百折不挠",
+  "zhDesc": "倒下10次仍重新站起"
  },
  {
   "api": "ACH_HARD1",
@@ -309,7 +461,11 @@
   "ko": "험한 밤길",
   "koDesc": "어려움 난이도에서 보스 물리치기",
   "en": "Rough Night Road",
-  "enDesc": "Defeat a boss on Hard"
+  "enDesc": "Defeat a boss on Hard",
+  "ja": "険しい夜道",
+  "jaDesc": "難易度「難しい」でボスを倒す",
+  "zh": "险峻夜路",
+  "zhDesc": "在困难难度下击败首领"
  },
  {
   "api": "ACH_HARD10",
@@ -317,7 +473,11 @@
   "ko": "백귀를 꺾은 자",
   "koDesc": "어려움 난이도에서 보스 열을 모두 물리치기",
   "en": "Breaker of a Hundred Demons",
-  "enDesc": "Defeat all ten bosses on Hard"
+  "enDesc": "Defeat all ten bosses on Hard",
+  "ja": "百鬼を打ち破りし者",
+  "jaDesc": "難易度「難しい」でボス十体をすべて倒す",
+  "zh": "击破百鬼者",
+  "zhDesc": "在困难难度下击败全部十个首领"
  },
  {
   "api": "ACH_HARDRUN",
@@ -325,7 +485,11 @@
   "ko": "물러서지 않는 길",
   "koDesc": "난이도를 한 번도 낮추지 않고 어려움으로 메인 퀘스트 마치기",
   "en": "No Step Back",
-  "enDesc": "Finish the main quest on Hard without ever lowering the difficulty"
+  "enDesc": "Finish the main quest on Hard without ever lowering the difficulty",
+  "ja": "退かぬ道",
+  "jaDesc": "一度も難易度を下げずに「難しい」でメインクエストを終える",
+  "zh": "绝不退让之路",
+  "zhDesc": "不曾降低难度,以困难难度完成主线任务"
  },
  {
   "api": "ACH_DAILY7",
@@ -333,7 +497,11 @@
   "ko": "하루하루",
   "koDesc": "오늘의 목표를 모두 마친 날 7일",
   "en": "Day by Day",
-  "enDesc": "Finish all daily goals on 7 days"
+  "enDesc": "Finish all daily goals on 7 days",
+  "ja": "一日一日",
+  "jaDesc": "今日の目標をすべて達成した日が7日",
+  "zh": "日复一日",
+  "zhDesc": "完成全部每日目标的天数达到7天"
  },
  {
   "api": "ACH_CODEX",
@@ -341,6 +509,10 @@
   "ko": "요괴 도감",
   "koDesc": "몬스터 도감 완성",
   "en": "Spirit Codex",
-  "enDesc": "Complete the monster codex"
+  "enDesc": "Complete the monster codex",
+  "ja": "妖怪図鑑",
+  "jaDesc": "モンスター図鑑を完成させる",
+  "zh": "妖怪图鉴",
+  "zhDesc": "完成怪物图鉴"
  }
 ]

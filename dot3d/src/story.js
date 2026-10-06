@@ -37,7 +37,7 @@ export const ENDING = [
 export const CREDITS = [
   ['제작', 'leejun486'],
   ['3D 엔진', 'Three.js (MIT)'],
-  ['글꼴', '갈무리11 (OFL) · Noto Serif KR (OFL)'],
+  ['글꼴', '갈무리11 · Fusion Pixel · Noto Serif KR (OFL)'],
   ['음악 · 효과음', '국악 음계로 직접 합성'],
   ['함께 만든 도구', 'Claude Code'],
 ];

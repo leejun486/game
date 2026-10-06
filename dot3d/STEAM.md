@@ -17,7 +17,7 @@
 - 스팀이 없거나 초기화에 실패하면 그냥 실행 (웹판·itch.io판과 같은 코드)
 
 ## 3. 업적 등록
-- 표: [`STEAM_ACHIEVEMENTS.md`](STEAM_ACHIEVEMENTS.md) (39개, API 이름 · 한국어 · 영어)
+- 표: [`STEAM_ACHIEVEMENTS.md`](STEAM_ACHIEVEMENTS.md) (43개, API 이름 · 한국어 · 영어 · 일본어 · 중국어 간체)
 - 아이콘: `marketing/achievements/` (64×64, 달성 / `_locked` 미달성)
 - 업적을 고치면 다시 만들기: `python3 tools/steam_achievements.py && node tools/steam_icons.cjs`
 

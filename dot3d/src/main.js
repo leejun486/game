@@ -19,7 +19,7 @@ import { expNeed, SKILL_LEVEL } from './entities.js';
 import { MAPS, BOSS_TYPES, BOSS_NAME, WIN_LINE, GRADE } from './maps.js';
 import { PROLOGUE, SHARD_LINES, SHARD_MAX, ENDING, CREDITS, fillStory } from './story.js';
 import { clamp, lerp, rand, angleDiff, damp } from './util.js';
-import { initLang, watchDom, tr, LANG } from './i18n.js';
+import { initLang, watchDom, tr, LANG, LANGS } from './i18n.js';
 import { DIFFS, DIFF_ORDER, diffOf } from './difficulty.js';
 import { Daily } from './daily.js';
 import { rigOptions } from './looks.js';
@@ -360,8 +360,9 @@ class Game {
     btn('btn-gfx', () => this.toggleGfx());
     document.querySelector('#title .credit').textContent = `3D 액션 · Three.js · v${VERSION}${DEMO ? ' · 체험판' : ''}`;
     if (DEMO) document.querySelector('#title .logo-big').insertAdjacentHTML('beforeend', '<span class="demo-badge">체험판</span>');
-    btn('btn-lang', () => this.setLang(LANG === 'ko' ? 'en' : 'ko'));
-    document.getElementById('btn-lang').textContent = LANG === 'ko' ? 'English' : '한국어';
+    // 선택 화면의 언어 버튼: 누를 때마다 다음 언어로
+    btn('btn-lang', () => { const i = LANGS.findIndex(([k]) => k === LANG); this.setLang(LANGS[(i + 1) % LANGS.length][0]); });
+    document.getElementById('btn-lang').textContent = '🌐 ' + LANGS.find(([k]) => k === LANG)[1];
     document.getElementById('btn-gfx').textContent = `그래픽: ${GFX.hd ? '고화질' : '도트'} (G)`;
     document.getElementById('confirm').addEventListener('mousedown', (e) => e.stopPropagation());
     this.selectClass(this.selectedCls);
@@ -1459,7 +1460,7 @@ class Game {
     } else if (tab === 'screen') {
       const seg = (key, opts, cur) => `<div class="pz-seg">${opts.map(([v, n]) => `<button data-k="${key}" data-val="${v}" class="${String(cur) === String(v) ? 'on' : ''}">${n}</button>`).join('')}</div>`;
       el.innerHTML = `<h3>화면</h3>
-        <div class="pz-row"><label>언어</label>${seg('lang', [['ko', '한국어'], ['en', 'English']], LANG)}</div>
+        <div class="pz-row"><label>언어</label>${seg('lang', LANGS, LANG)}</div>
         <div class="pz-row"><label>그래픽 모드</label>${seg('gfx', [['hd', '고화질'], ['pixel', '도트']], GFX.hd ? 'hd' : 'pixel')}</div>
         <div class="pz-row"><label>난이도</label>${seg('diff', DIFF_ORDER.map((k) => [k, DIFFS[k].name]), this.difficulty)}</div>
         <div class="pz-note" style="margin-top:-4px">${DIFF_NOTE[this.difficulty]}</div>
@@ -1518,7 +1519,7 @@ class Game {
         const d = new Date(), pad = (n) => String(n).padStart(2, '0');
         const a = document.createElement('a');
         a.href = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
-        a.download = `${LANG === 'en' ? 'wolhagung-save' : '월하궁-저장'}-${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}.json`;
+        a.download = `${LANG !== 'ko' ? 'wolhagung-save' : '월하궁-저장'}-${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}.json`;
         document.body.appendChild(a); a.click(); a.remove();
         setTimeout(() => URL.revokeObjectURL(a.href), 2000);
         msg('저장 파일을 내려받았어요.');

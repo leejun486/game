@@ -1,4 +1,4 @@
-// 언어: 한국어(원문) / 영어
+// 언어: 한국어(원문) / 영어 / 일본어 / 중국어(간체)
 // 게임 코드는 한국어 그대로 두고, 화면에 나가는 글자를 여기서 번역함.
 //  - tr(글): 사전 → 패턴(숫자·이름이 끼어든 문장) → 나눠서 번역 → 띄어쓰기 단위 조합 순으로 찾음
 //  - watchDom(): 화면(DOM)에 글자가 생기거나 바뀌면 자동으로 번역
@@ -6,6 +6,22 @@ import { loadSettings } from './settings.js';
 import EN_DATA from './lang/en_data.js';
 import EN_ITEMS from './lang/en_items.js';
 import { dict as EN_UI, pats as EN_PATS } from './lang/en_ui.js';
+import JA_DATA from './lang/ja_data.js';
+import JA_ITEMS from './lang/ja_items.js';
+import JA_UI from './lang/ja_ui.js';
+import JA_PATS from './lang/ja_pats.js';
+import ZH_DATA from './lang/zh_data.js';
+import ZH_ITEMS from './lang/zh_items.js';
+import ZH_UI from './lang/zh_ui.js';
+import ZH_PATS from './lang/zh_pats.js';
+
+// 고를 수 있는 언어 (이름은 그 언어로)
+export const LANGS = [['ko', '한국어'], ['en', 'English'], ['ja', '日本語'], ['zh', '简体中文']];
+const PACKS = {
+  en: [[EN_DATA, EN_ITEMS, EN_UI], EN_PATS],
+  ja: [[JA_DATA, JA_ITEMS, JA_UI], JA_PATS],
+  zh: [[ZH_DATA, ZH_ITEMS, ZH_UI], ZH_PATS],
+};
 
 const HANGUL = /[가-힣]/;
 const norm = (s) => s.replace(/\s+/g, ' ').trim();
@@ -20,27 +36,29 @@ let quiet = false; // 통째로 번역해 보는 중엔 못 찾아도 기록하�
 export function initLang() {
   const s = loadSettings();
   const nav = (typeof navigator !== 'undefined' && navigator.language) || 'ko';
-  LANG = s.lang === 'en' || s.lang === 'ko' ? s.lang : nav.toLowerCase().startsWith('ko') ? 'ko' : 'en';
-  if (LANG === 'en') build();
-  if (typeof document !== 'undefined') document.documentElement.lang = LANG;
+  const n = nav.toLowerCase();
+  LANG = LANGS.some(([k]) => k === s.lang) ? s.lang : n.startsWith('ko') ? 'ko' : n.startsWith('ja') ? 'ja' : n.startsWith('zh') ? 'zh' : 'en';
+  if (LANG !== 'ko') build();
+  if (typeof document !== 'undefined') { document.documentElement.lang = LANG === 'zh' ? 'zh-CN' : LANG; document.documentElement.dataset.lang = LANG; }
   return LANG;
 }
 
 function build() {
   dict = new Map();
   const add = (k, v) => { if (!dict.has(k)) dict.set(k, v); };
-  for (const D of [EN_DATA, EN_ITEMS, EN_UI]) {
+  const [dicts, P] = PACKS[LANG];
+  for (const D of dicts) {
     for (const [k0, v] of Object.entries(D)) {
       const k = norm(k0);
       dict.set(k, v);
       // 태그를 뺀 모양 (퀘스트 설명을 글자로만 보여 줄 때)
       if (k.includes('<')) add(norm(strip(k)), strip(v));
       // "이름: 대사"는 대사만으로도 (대화창은 이름을 따로 보여 줌)
-      const m = k.match(/^([^:<]{1,8}):\s*([\s\S]+)$/), n = v.match(/^([^:]{1,24}):\s*([\s\S]+)$/);
+      const m = k.match(/^([^:<]{1,8}):\s*([\s\S]+)$/), n = v.match(/^([^::]{1,24})[::]\s*([\s\S]+)$/);
       if (m && n) add(m[2], n[2]);
     }
   }
-  pats = EN_PATS;
+  pats = P;
 }
 
 export function tr(s) {
@@ -110,7 +128,7 @@ function segment(s) {
       if (!best[j] || best[j].length > best[i].length + 1) best[j] = [...best[i], v];
     }
   }
-  return best[n] ? best[n].join(' ') : null;
+  return best[n] ? best[n].join(LANG === 'ja' || LANG === 'zh' ? '' : ' ') : null;
 }
 
 // ---------- 화면 자동 번역 ----------

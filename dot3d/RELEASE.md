@@ -71,7 +71,7 @@
 - **엔드게임:** 층마다 강해지는 저승 시련탑, 회차, 현상수배, 업적 39개와 도감이 있습니다.
 - **국악 배경음악:** 지역마다 장단과 가락이 다른 배경음악이 흐릅니다.
 - **지도와 퀘스트 일지:** 작은 지도와 모든 지역을 잇는 큰 지도, 지나온 임무를 볼 수 있습니다.
-- **조작:** 키보드·마우스, 게임패드, 터치를 지원하고 키를 바꿀 수 있습니다. 한국어와 영어를 지원합니다.
+- **조작:** 키보드·마우스, 게임패드, 터치를 지원하고 키를 바꿀 수 있습니다. 한국어, 영어, 일본어, 중국어(간체)를 지원합니다.
 
 ### English
 
@@ -89,7 +89,7 @@ Every hundred years, the palace's Moon Mirror shone upon the border and kept the
 - **Endgame:** an endless tower, new rounds, bounties, 39 achievements and a codex.
 - **Korean traditional music** with its own rhythm in every region.
 - **Minimap, world map and quest log.**
-- **Keyboard & mouse, gamepad and touch**, rebindable keys, Korean and English.
+- **Keyboard & mouse, gamepad and touch**, rebindable keys. Korean, English, Japanese and Simplified Chinese.
 
 ### 태그 / Tags
 Action RPG, Hack and Slash, Fantasy, Mythology, Korean, Folklore, 3D, Stylized, Singleplayer, Controller
@@ -107,7 +107,7 @@ Action RPG, Hack and Slash, Fantasy, Mythology, Korean, Folklore, 3D, Stylized, 
 ## 5. 출시 전 체크리스트
 
 - [ ] `src/version.js`, `package.json`, `desktop/package.json` 버전을 맞추고 `CHANGELOG.md` 갱신
-- [ ] `npm run build` 후 새로 시작해서 튜토리얼, 첫 보스, 저장·이어하기까지 해 보기 (한국어·영어 각각)
+- [ ] `npm run build` 후 새로 시작해서 튜토리얼, 첫 보스, 저장·이어하기까지 해 보기 (한국어·영어·일본어·중국어 각각)
 - [ ] 화질 '낮음'으로 저사양 노트북에서 30분 플레이 (멈춤·발열 확인)
 - [ ] 게임패드와 터치(태블릿)로 한 번씩
 - [ ] Windows 빌드를 깨끗한 PC에서 실행하고, 저장 파일 위치(%APPDATA%/Wolhagung) 확인

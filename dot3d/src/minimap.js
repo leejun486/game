@@ -4,6 +4,8 @@
 import { tr } from './i18n.js';
 import { MAPS } from './maps.js';
 import { QUESTS, BOUNTIES } from './quests.js';
+// 캔버스 글꼴: 언어별 글꼴(중국어는 FusionZh)을 따름
+const uiFont = () => (typeof document !== 'undefined' && getComputedStyle(document.documentElement).getPropertyValue('--font').trim()) || 'Galmuri11, monospace';
 
 const PX = 4; // 구운 지도: 1칸(미터)당 픽셀
 
@@ -113,7 +115,7 @@ export class MiniMap {
     const s = Math.min(cw / img.width, ch / img.height);
     this.draw(ctx, R, (cw - img.width * s) / 2, (ch - img.height * s) / 2, s);
     const name = tr(MAPS[R.id].name);
-    ctx.font = '11px Galmuri11, monospace';
+    ctx.font = '11px ' + uiFont();
     ctx.textAlign = 'center'; ctx.textBaseline = 'top';
     ctx.lineWidth = 3; ctx.strokeStyle = '#000'; ctx.strokeText(name, cw / 2, 3);
     ctx.fillStyle = '#ffd76a'; ctx.fillText(name, cw / 2, 3);
@@ -144,7 +146,7 @@ export class MiniMap {
     // 지역 띠
     const regs = G.world.regions.filter((r) => r.id !== 'tower');
     const x0 = cv.width - SW - 10, bw = SW, bh = (cv.height - 20) / regs.length - 6;
-    ctx.font = '12px Galmuri11, monospace';
+    ctx.font = '12px ' + uiFont();
     ctx.textBaseline = 'middle';
     regs.forEach((r, i) => {
       const y = 10 + i * (bh + 6);

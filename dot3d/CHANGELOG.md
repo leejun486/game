@@ -12,6 +12,7 @@
 - **그래픽 2차:** 흙길 가장자리가 잔디와 자연스럽게 섞임(돌 포장은 반듯하게). 지역마다 풀포기·들꽃·자갈·낙엽·갈대·조개·눈덩이를 촘촘히 깔고, 덤불·바위·고사리·산호·그루터기를 무리 지어 배치(길을 막지 않음). 늪 웅덩이에 하늘 반사·물결·물가 거품. 단풍·벚·여름 나무의 잎을 둥글고 풍성한 잎뭉치로. 캐릭터·몬스터에 은은한 테두리 빛(밤엔 달빛). 설원·폐사찰이 하얗게 날아가지 않게 노출 조정. 한쪽에서 풀잎이 까맣게 보이던 문제 수정.
 - **연출:** 보스마다 등장 연출(하늘에서 떨어져 내려찍기 · 땅이나 물을 가르고 솟기 · 기운이 모여 터지기)과 카메라 당김. 지역마다 다른 색감과 먼 곳의 대기(고화질). 창술사 `창기`에 날아가는 빛의 창과 잔상.
 - **난이도:** 쉬움(몬스터 체력 75%·받는 피해 55%) / 보통 / 어려움(체력 135%·받는 피해 145%·경험치 125%·장비 드롭 140%). 선택 화면에서 고르고(패드 Y), 메뉴 → 화면에서 언제든 바꿀 수 있습니다. 저장 파일마다 따로 기억합니다. 어려움 업적 셋(보스 하나, 보스 열 모두, 한 번도 낮추지 않고 메인 퀘스트 완료)이 생겨 업적은 43개입니다(오늘의 목표 포함).
+- **일본어 · 중국어(간체):** 화면 글자, 퀘스트·대화, 이야기, 아이템, 업적까지 모두 번역했습니다. 선택 화면의 🌐 버튼이나 메뉴 → 화면 → 언어에서 고르고, 처음에는 브라우저 언어를 따릅니다. 중국어는 같은 계열의 도트 글꼴(Fusion Pixel, OFL)을 씁니다. 스팀 업적표에도 두 언어를 넣었습니다.
 - **옷 색이 하얗게 보이던 문제:** 고화질에서 옷감 결 노멀맵 때문에 캐릭터 옷(무관복·비단옷·곤룡포 등)이 거의 하얗게 날아가 보이던 문제를 고쳤습니다. 이제 갑옷과 염색 색이 제대로 보입니다.
 - **스토어 이미지 새로:** 네 영웅과 도깨비 대왕이 달밤 궁궐에 선 키 아트(`marketing/keyart/`)를 게임 화면으로 찍고, 모든 캡슐 이미지를 다시 만들었습니다(`tools/key_art.cjs`, `tools/make_capsules.cjs`).
 - **보기 편하게:** 메뉴 → 화면에 글자·메뉴 크기(100/115/130%), 위험 표시 색(적 공격의 바닥 원·경고선을 노랑·하늘색·자홍 한 색으로 — 색약 대응), 화면 번쩍임 줄이기를 넣었습니다.
@@ -49,6 +50,7 @@ Four new regions, a redesigned Wolhagung and a longer adventure.
 - Graphics pass 2: soil paths blend into grass with ragged edges; dense per-region ground details (tufts, flowers, pebbles, leaves, reeds, shells, snow) and clustered props (bushes, rocks, ferns, corals, stumps) that never block movement; swamp pools with reflections, ripples and shore foam; rounded, fuller broadleaf canopies; a soft rim light on characters; tamer snow exposure; grass blades no longer render black from one side.
 - Presentation: boss entrances (fall and slam, rise from ground or water, gather and burst) with a camera pull-in; per-region color grading and distant haze in HD; a flying spirit spear for the Lancer's spear beam.
 - Difficulty: Easy (monster HP 75%, damage taken 55%) / Normal / Hard (HP 135%, damage taken 145%, EXP 125%, gear drops 140%). Pick it on the title screen (pad Y) or change it any time under Menu → Screen; it is stored per save. Three Hard achievements (43 in total with the daily-goal one).
+- Japanese and Simplified Chinese: every screen, quest, dialogue, story line, item and achievement is translated. Pick a language with the 🌐 button on the title screen or under Menu → Display → Language. Chinese uses a matching pixel font (Fusion Pixel, OFL).
 - Fix: in HD, character outfits were washed out to near-white by the cloth normal map; outfit and dye colors now show properly.
 - New key art (the four heroes and the Dokkaebi King in the moonlit palace) and regenerated store capsules.
 - Accessibility: text and menu size (100/115/130%), a single danger-marker color for all enemy ground circles and charge lines (yellow, sky blue or magenta, for color-vision deficiency) and reduced screen flashes.

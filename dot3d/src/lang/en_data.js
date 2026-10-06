@@ -112,7 +112,7 @@ export default {
   '그날 밤, 월하궁의 담장 위로 오랜만에 고요한 달이 떴다.': 'That night, for the first time in ages, a quiet moon rose over the walls of Wolhagung.',
   '도깨비들은 장난을 멈추고, 여우들은 숲으로, 망자들은 저승으로 돌아갔다.': 'The dokkaebi stopped their pranks, the foxes went back to the woods, and the dead returned to the underworld.',
   '하지만 달은 차고 또 기운다. 다음 보름에도 {title} {name}은(는) 이 궁을 지킬 것이다.': 'But the moon waxes and wanes. On the next full moon too, {title} {name} will guard this palace.',
-  '제작': 'Created by', '3D 엔진': '3D engine', '글꼴': 'Fonts', '갈무리11 (OFL) · Noto Serif KR (OFL)': 'Galmuri11 (OFL) · Noto Serif KR (OFL)',
+  '제작': 'Created by', '3D 엔진': '3D engine', '글꼴': 'Fonts', '갈무리11 · Fusion Pixel · Noto Serif KR (OFL)': 'Galmuri11 · Fusion Pixel · Noto Serif KR (OFL)',
   '음악 · 효과음': 'Music · SFX', '국악 음계로 직접 합성': 'Synthesized from Korean traditional scales', '함께 만든 도구': 'Built with',
 
   // 설정의 동작 이름
