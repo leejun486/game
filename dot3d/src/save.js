@@ -9,11 +9,19 @@ export function loadSave() {
     const file = window.dot3dDesktop?.readSave?.();
     if (file) { try { const f = JSON.parse(file); const l = raw ? JSON.parse(raw) : null; if (!l || (f.savedAt || 0) > (l.savedAt || 0)) raw = file; } catch { /* 파일이 깨졌으면 무시 */ } }
     if (!raw) return null;
-    const d = JSON.parse(raw);
-    return d && d.v === 1 ? d : null;
+    const d = parse(raw);
+    if (d) return d;
+    // 저장이 깨졌으면 (쓰다가 꺼짐 등) 예비 기록으로
+    const b = parse(localStorage.getItem(KEY + '-backup'));
+    if (b) console.warn('저장 기록이 깨져서 예비 기록을 불러왔어요');
+    return b;
   } catch {
     return null;
   }
+}
+
+function parse(raw) {
+  try { const d = raw && JSON.parse(raw); return d && d.v === 1 && typeof d.progress === 'object' ? d : null; } catch { return null; }
 }
 
 export function writeSave(data) {

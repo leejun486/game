@@ -10,12 +10,15 @@
     "serve": "python3 -m http.server 8080",
     "audio": "cd tools/audio && python3 tracks.py && python3 sfx.py",
     "dist:web": "npm run build && python3 tools/pack_web.py",
-    "dist:demo": "npm run build:demo && python3 tools/pack_web.py demo"
+    "dist:demo": "npm run build:demo && python3 tools/pack_web.py demo",
+    "test": "npm run build && node tests/run.cjs",
+    "test:only": "node tests/run.cjs"
   },
   "dependencies": {
     "three": "^0.186.1"
   },
   "devDependencies": {
-    "esbuild": "^0.28.2"
+    "esbuild": "^0.28.2",
+    "playwright": "1.56.1"
   }
 }
