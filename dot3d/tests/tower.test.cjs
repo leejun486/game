@@ -11,7 +11,8 @@ module.exports = {
     const floor = async (n) => {
       await g.eval((n) => { const G = window.game; G.spawnQueue.length = 0; for (const e of G.enemies) e.dispose?.(); G.enemies = []; G.tower.cleared = true; G.startTowerFloor(n); }, n);
       await g.step(n % 5 ? 8 : 5, { input: {} });
-      const info = await g.eval(() => { const G = window.game, es = G.enemies.filter((e) => !e.dead); return { rule: G.tower.rule?.key || null, n: es.length, elite: es.filter((e) => e.elite).length, dark: document.getElementById('darkness').className, boss: es.filter((e) => e.isBoss).map((e) => ({ name: e.name, awakened: !!e.awakened })) }; });
+      const info = await g.eval(() => { const G = window.game; G.updateDarkness(); // 어둠은 그리기 루프에서 갱신되므로 직접 한 번
+        const es = G.enemies.filter((e) => !e.dead); return { rule: G.tower.rule?.key || null, n: es.length, elite: es.filter((e) => e.elite).length, dark: document.getElementById('darkness').className, boss: es.filter((e) => e.isBoss).map((e) => ({ name: e.name, awakened: !!e.awakened })) }; });
       for (let k = 0; k < 25 && !(await g.eval(() => window.game.tower.cleared)); k++) {
         await g.eval(() => { const G = window.game; for (const e of G.enemies) if (!e.dead && !e.spawning) G.damageEnemy(e, 9e6, false, 0, 0); });
         await g.step(2, { input: {} });
