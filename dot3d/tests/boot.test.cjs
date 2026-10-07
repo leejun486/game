@@ -22,18 +22,13 @@ module.exports = {
       ctx.log(lang, 'ok', r.serif.join(','));
       await g.close();
     }
-    // 도트 모드(선택 화면의 고화질/도트 단추): 켜지고, 아홉 지역과 시련탑을 그려도 오류가 없는지
-    //  (예전엔 도트 모드에서 용궁 모래 재질에 무늬가 없어 게임이 아예 시작되지 않았음)
+    // 예전에 도트 모드로 저장된 기기도 고화질로 켜져야 함 (도트 모드는 없앰 — 일부 기기에서 시작되지 않았음)
     const g = await openGame(ctx, { lang: 'ko', gfx: 'pixel' });
-    check(await g.eval(() => !!window.game), '도트 모드에서 게임이 시작되지 않음: ' + g.errors.slice(0, 2).join(' / '));
+    const r = await g.eval(() => ({ game: !!window.game, hd: !!window.game?.pixel && document.getElementById('btn-gfx') === null, stored: localStorage.getItem('dot3d-gfx') }));
+    check(r.game && r.hd && !r.stored, `도트 설정이 남은 기기에서 고화질로 켜지지 않음 ${JSON.stringify(r)}`);
     await g.newGame();
-    const regions = await g.eval(() => window.game.world.regions.map((r) => r.id));
-    for (const id of regions) {
-      await g.eval((id) => { const G = window.game, R = G.world.regions.find((r) => r.id === id); G.teleport(R.spawn ? R.spawn[0] : R.center[0], R.spawn ? R.spawn[2] : R.center[1]); G.updateRegion(true); }, id);
-      await g.page.waitForTimeout(400); // 실제로 몇 장 그림
-    }
     await clean(g);
-    ctx.log('도트 모드:', regions.length, '곳 그림');
+    ctx.log('예전 도트 설정 → 고화질로 시작');
     await g.close();
   },
 };

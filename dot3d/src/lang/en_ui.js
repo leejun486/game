@@ -274,6 +274,7 @@ export const dict = {
   '게임을 시작할 수 없습니다.': 'The game could not start.',
   '고화질로 다시 켜기': 'Restart in HD',
   '도트로 다시 켜기': 'Restart in pixel mode',
+  '다시 불러오기': 'Reload',
 };
 
 const RN = '([ⅠⅡⅢⅣⅤ])';

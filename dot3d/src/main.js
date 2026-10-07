@@ -10,7 +10,7 @@ import { loadSave, writeSave, clearSave, exportSave, importSave } from './save.j
 import { loadSettings, saveSettings, ACTIONS, keyOf, bindMap, keyName, DEFAULTS } from './settings.js';
 import { CLASSES, CLASS_ORDER } from './classes.js';
 import { ClassPreview } from './preview.js';
-import { GFX, setGfx } from './gfx.js';
+import { GFX } from './gfx.js';
 import { EVOS, RUNES, branchOf, rankOf, featRank, runeOf, freePoints, rankMul, rankCd, RANK_NAME } from './evolve.js';
 import { QUESTS, BOUNTIES, KILL_NAME } from './quests.js';
 import { makeGear, rollGearTier, gearScore, salvageExp, BAG_MAX, GEAR_SLOTS, slotKind, rarityOf, makeSetPiece, setFor, SETS } from './gear.js';
@@ -363,13 +363,11 @@ class Game {
     document.getElementById('title-diff')?.addEventListener('click', (ev) => { const b = ev.target.closest('[data-diff]'); if (b) { this.audio.unlock(); this.audio.play('talk'); this.setDifficulty(b.dataset.diff); } });
     btn('cf-yes', () => this.newGame(true));
     btn('cf-no', () => this.showConfirm(false));
-    btn('btn-gfx', () => this.toggleGfx());
     document.querySelector('#title .credit').textContent = `3D 액션 · Three.js · v${VERSION}${DEMO ? ' · 체험판' : ''}`;
     if (DEMO) document.querySelector('#title .logo-big').insertAdjacentHTML('beforeend', '<span class="demo-badge">체험판</span>');
     // 선택 화면의 언어 버튼: 누를 때마다 다음 언어로
     btn('btn-lang', () => { const i = LANGS.findIndex(([k]) => k === LANG); this.setLang(LANGS[(i + 1) % LANGS.length][0]); });
     document.getElementById('btn-lang').textContent = '🌐 ' + LANGS.find(([k]) => k === LANG)[1];
-    document.getElementById('btn-gfx').textContent = `그래픽: ${GFX.hd ? '고화질' : '도트'} (G)`;
     document.getElementById('confirm').addEventListener('mousedown', (e) => e.stopPropagation());
     this.selectClass(this.selectedCls);
   }
@@ -1143,7 +1141,6 @@ class Game {
         else if (code === 'Enter') this.newGame(true);
         return;
       }
-      if (code === 'KeyG') { this.toggleGfx(); return; }
       if (code === 'Delete' || code === 'Backspace') {
         if (!this.hasSave) return;
         this.resetProgress();
@@ -1161,7 +1158,6 @@ class Game {
       return;
     }
     this.audio.unlock();
-    if (code === 'KeyG') { this.toggleGfx(); return; }
     if (code === 'KeyM') { const on = this.audio.toggleMusic(); this.ui.toast(on ? '음악 켜짐' : '음악 꺼짐'); this.save(false); return; }
     if (code === 'Equal' || code === 'NumpadAdd') { this.pixel.zoom(1); return; }
     if (code === 'Minus' || code === 'NumpadSubtract') { this.pixel.zoom(-1); return; }
@@ -1487,7 +1483,6 @@ class Game {
       const seg = (key, opts, cur) => `<div class="pz-seg">${opts.map(([v, n]) => `<button data-k="${key}" data-val="${v}" class="${String(cur) === String(v) ? 'on' : ''}">${n}</button>`).join('')}</div>`;
       el.innerHTML = `<h3>화면</h3>
         <div class="pz-row"><label>언어</label>${seg('lang', LANGS, LANG)}</div>
-        <div class="pz-row"><label>그래픽 모드</label>${seg('gfx', [['hd', '고화질'], ['pixel', '도트']], GFX.hd ? 'hd' : 'pixel')}</div>
         <div class="pz-row"><label>난이도</label>${seg('diff', DIFF_ORDER.map((k) => [k, DIFFS[k].name]), this.difficulty)}</div>
         <div class="pz-note" style="margin-top:-4px">${DIFF_NOTE[this.difficulty]}</div>
         <div class="pz-row"><label>화질</label>${seg('quality', [['high', '높음'], ['mid', '보통'], ['low', '낮음']], S.quality)}</div>
@@ -1503,7 +1498,6 @@ class Game {
         <div class="pz-note">화질 '낮음'은 해상도를 줄이고 그늘(AO)·계단 현상 제거·그림자 해상도를 낮춰 저사양 노트북·휴대폰에서 부드럽게 돌아가요. 버벅이면 화질이 저절로 한 단계씩 낮아지고, 직접 고르면 그대로 둡니다. 그래픽 모드는 새로고침해야 바뀝니다.</div>`;
       for (const b of el.querySelectorAll('[data-k]')) b.addEventListener('click', () => {
         const k = b.dataset.k, v = b.dataset.val;
-        if (k === 'gfx') { if ((v === 'hd') !== GFX.hd) { this.save(false); setGfx(v); } return; }
         if (k === 'lang') { if (v !== LANG) this.setLang(v); return; }
         if (k === 'diff') this.setDifficulty(v);
         if (k === 'quality') { this.setSetting((s) => { s.quality = v; s.autoQ = false; }); this.applyQuality(v); }
@@ -1598,12 +1592,6 @@ class Game {
         }
       });
     });
-  }
-
-  toggleGfx() {
-    if (this.state !== 'title') this.save(false);
-    this.ui.toast(`그래픽을 ${GFX.hd ? '도트' : '고화질'}(으)로 바꿉니다…`, 2);
-    setTimeout(() => setGfx(GFX.hd ? 'pixel' : 'hd'), 300);
   }
 
   showConfirm(v) { document.getElementById('confirm').classList.toggle('show', v); }
@@ -4881,10 +4869,9 @@ window.addEventListener('DOMContentLoaded', async () => {
     // 원인을 알 수 있게: 버전·그래픽 모드·오류가 난 곳(함수 이름 몇 개)을 함께 보여 주고, 다른 그래픽 모드로 다시 켤 수 있게
     const where = String(err.stack || '').split('\n').slice(1, 4).map((l) => l.trim().replace(/\(?https?:\/\/[^)]*\/([^/)]+)\)?/, '$1')).join(' ← ');
     const esc = (t) => String(t).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
-    const other = GFX.hd ? 'pixel' : 'hd';
     document.getElementById('title').innerHTML = `<div class="err">게임을 시작할 수 없습니다.<br><small>${esc(err.message)}</small>`
-      + `<br><small class="err-where">v${VERSION} (${BUILD}) · ${GFX.hd ? '고화질' : '도트'} · ${esc(where)}</small>`
-      + `<br><button id="err-gfx" class="tbtn">${other === 'hd' ? '고화질' : '도트'}로 다시 켜기</button></div>`;
-    document.getElementById('err-gfx').addEventListener('click', () => setGfx(other));
+      + `<br><small class="err-where">v${VERSION} (${BUILD}) · ${esc(where)}</small>`
+      + `<br><button id="err-reload" class="tbtn">다시 불러오기</button></div>`;
+    document.getElementById('err-reload').addEventListener('click', () => location.reload());
   }
 });

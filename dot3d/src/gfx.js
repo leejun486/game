@@ -1,9 +1,5 @@
-// 그래픽 설정: 'hd' = 고화질(부드러운 음영·고해상도·후처리), 'pixel' = 도트
-// 바꾸면 페이지를 다시 불러와 적용 (재질·텍스처를 처음부터 다시 만들어야 하므로)
-let mode = 'hd';
-try { mode = localStorage.getItem('dot3d-gfx') === 'pixel' ? 'pixel' : 'hd'; } catch (e) { /* 저장소 없음 */ }
-export const GFX = { hd: mode === 'hd', mode };
-export function setGfx(m) {
-  try { localStorage.setItem('dot3d-gfx', m); } catch (e) { /* 무시 */ }
-  location.reload();
-}
+// 그래픽: 고화질만 씀 (부드러운 음영·고해상도·후처리)
+//  예전엔 도트 모드('pixel')를 고를 수 있었지만, 일부 기기에서 도트 모드로 바꾸면 게임이 시작되지 않아 없앰.
+//  도트 모드용 코드(GFX.hd가 거짓일 때의 갈래)는 아직 남아 있으나 쓰이지 않음. 예전에 저장된 도트 설정은 지움.
+try { if (localStorage.getItem('dot3d-gfx')) localStorage.removeItem('dot3d-gfx'); } catch (e) { /* 저장소 없음 */ }
+export const GFX = { hd: true, mode: 'hd' };
