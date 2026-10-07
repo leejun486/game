@@ -28,6 +28,8 @@ import { ruleFor, awaken } from './towerrules.js';
 import { rigOptions } from './looks.js';
 import { Coach } from './coach.js';
 import { VERSION } from './version.js';
+// 빌드 표시 (index.html이 붙인 ?v=해시) — 오류 화면에서 예전 파일을 쓰고 있는지 알 수 있게
+const BUILD = (typeof document !== 'undefined' && document.currentScript?.src.match(/[?&]v=(\w+)/)?.[1]) || 'dev';
 import { Records, newStats } from './records.js';
 import { drop } from './dispose.js';
 import { MiniMap } from './minimap.js';
@@ -4876,6 +4878,13 @@ window.addEventListener('DOMContentLoaded', async () => {
     window.game = new Game();
   } catch (err) {
     console.error(err);
-    document.getElementById('title').innerHTML = `<div class="err">WebGL을 시작할 수 없습니다.<br><small>${err.message}</small></div>`;
+    // 원인을 알 수 있게: 버전·그래픽 모드·오류가 난 곳(함수 이름 몇 개)을 함께 보여 주고, 다른 그래픽 모드로 다시 켤 수 있게
+    const where = String(err.stack || '').split('\n').slice(1, 4).map((l) => l.trim().replace(/\(?https?:\/\/[^)]*\/([^/)]+)\)?/, '$1')).join(' ← ');
+    const esc = (t) => String(t).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+    const other = GFX.hd ? 'pixel' : 'hd';
+    document.getElementById('title').innerHTML = `<div class="err">게임을 시작할 수 없습니다.<br><small>${esc(err.message)}</small>`
+      + `<br><small class="err-where">v${VERSION} (${BUILD}) · ${GFX.hd ? '고화질' : '도트'} · ${esc(where)}</small>`
+      + `<br><button id="err-gfx" class="tbtn">${other === 'hd' ? '고화질' : '도트'}로 다시 켜기</button></div>`;
+    document.getElementById('err-gfx').addEventListener('click', () => setGfx(other));
   }
 });
