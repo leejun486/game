@@ -4,7 +4,7 @@
   "private": true,
   "description": "월하궁: 도깨비 야행 — 도트 3D 액션 (Three.js)",
   "scripts": {
-    "build": "esbuild src/main.js --bundle --minify --format=iife --target=es2020 --outfile=dist/game.js",
+    "build": "esbuild src/main.js --bundle --minify --format=iife --target=es2020 --outfile=dist/game.js && node tools/stamp.cjs",
     "build:demo": "esbuild src/main.js --bundle --minify --format=iife --target=es2020 --define:__DEMO__=true --outfile=dist-demo/game.js",
     "watch": "esbuild src/main.js --bundle --format=iife --target=es2020 --sourcemap --outfile=dist/game.js --watch",
     "serve": "python3 -m http.server 8080",
