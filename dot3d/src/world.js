@@ -1318,10 +1318,13 @@ function ditherAlpha() {
 //  도트 모드: 격자 디더 무늬 / 고화질: 노이즈로 굽이치는 들쭉날쭉한 경계 (예전 디더는 겹쳐 깨진 것처럼 보였음)
 export function blendStrip(W, baseMat, x0, x1, zSolid, zClear, y = -0.01) {
   const w = x1 - x0, d = Math.abs(zSolid - zClear);
-  const map = baseMat.map.clone();
-  map.needsUpdate = true;
-  map.wrapS = map.wrapT = THREE.RepeatWrapping;
-  map.repeat.set(w / 2, d / 2);
+  // 무늬(map)가 없는 재질도 있음 (도트 모드의 모래처럼 색만 있는 것) — 그땐 색만 씀
+  const map = baseMat.map ? baseMat.map.clone() : null;
+  if (map) {
+    map.needsUpdate = true;
+    map.wrapS = map.wrapT = THREE.RepeatWrapping;
+    map.repeat.set(w / 2, d / 2);
+  }
   let m;
   if (GFX.hd) {
     const geo = new THREE.PlaneGeometry(w, d, 1, 4);
@@ -1334,7 +1337,7 @@ export function blendStrip(W, baseMat, x0, x1, zSolid, zClear, y = -0.01) {
     const alpha = ditherAlpha().clone();
     alpha.needsUpdate = true;
     alpha.repeat.set(w, 1);
-    m = new THREE.Mesh(new THREE.PlaneGeometry(w, d), toon({ map, alphaMap: alpha, alphaTest: 0.5 }));
+    m = new THREE.Mesh(new THREE.PlaneGeometry(w, d), toon({ map, ...(map ? {} : { color: baseMat.color.clone() }), alphaMap: alpha, alphaTest: 0.5 }));
   }
   m.rotation.x = -Math.PI / 2;
   // 판의 위쪽(uv.y=1)이 북쪽(-z): 불투명한 쪽이 남쪽이 아니면 뒤집음

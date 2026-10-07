@@ -27,7 +27,7 @@ class Failure extends Error {}
 const check = (cond, msg) => { if (!cond) throw new Failure(msg); };
 
 // 게임 페이지 하나: 언어·설정을 정하고 타이틀까지 띄움
-async function openGame(ctx, { lang = 'ko', viewport = { width: 960, height: 540 }, settings = {}, blockExternal = true } = {}) {
+async function openGame(ctx, { lang = 'ko', viewport = { width: 960, height: 540 }, settings = {}, blockExternal = true, gfx = null } = {}) {
   const page = await ctx.browser.newPage({ viewport });
   page.setDefaultTimeout(300000);
   const errors = [], external = [];
@@ -39,7 +39,7 @@ async function openGame(ctx, { lang = 'ko', viewport = { width: 960, height: 540
     r.continue();
   });
   await page.goto(ctx.base + '/index.html');
-  await page.evaluate(([l, s]) => { localStorage.clear(); localStorage.setItem('dot3d-settings-v1', JSON.stringify({ lang: l, quality: 'low', tips: false, autoQ: false, ...s })); }, [lang, settings]);
+  await page.evaluate(([l, s, gfx]) => { localStorage.clear(); localStorage.setItem('dot3d-settings-v1', JSON.stringify({ lang: l, quality: 'low', tips: false, autoQ: false, ...s })); if (gfx) localStorage.setItem('dot3d-gfx', gfx); }, [lang, settings, gfx]);
   await page.reload();
   await page.waitForFunction(() => window.game && document.getElementById('btn-new'), null, { timeout: 180000 });
   await page.waitForTimeout(500);
