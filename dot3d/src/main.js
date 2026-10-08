@@ -327,6 +327,13 @@ class Game {
     for (const b of document.querySelectorAll('#touch [data-k]')) {
       b.addEventListener('touchstart', (e) => { e.preventDefault(); if (this.state !== 'title') this.onKey(b.dataset.k); }, { passive: false });
     }
+    // 공격 단추는 누르고 있으면 계속 벰 (휴대폰에서 한 번 벨 때마다 두드리지 않아도 되게)
+    const atk = document.querySelector('#touch [data-k="atk"]');
+    let hold = null;
+    const stopHold = () => { clearInterval(hold); hold = null; atk.classList.remove('held'); };
+    atk.addEventListener('touchstart', () => { stopHold(); atk.classList.add('held'); hold = setInterval(() => { if (this.state === 'play' && !this.paused && !this.ui.inDialog) this.onKey('atk'); }, 180); }, { passive: true });
+    atk.addEventListener('touchend', stopHold);
+    atk.addEventListener('touchcancel', stopHold);
   }
 
   readInput() {

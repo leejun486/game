@@ -707,3 +707,17 @@ body.pad:not(.touch) #help-pad { display: flex; }
 #pause { max-height: calc(90vh / var(--ui, 1)); }
 #dialog { width: min(760px, calc(92vw / var(--ui, 1))); }
 .pz-seg .sw { display: inline-block; width: 10px; height: 10px; margin-right: 4px; border: 1px solid #000; vertical-align: -1px; }
+
+/* 휴대폰 (화면이 낮을 때): 일시정지 메뉴가 잘리지 않게 줄이고 스크롤 */
+@media (max-height: 520px) {
+  #pause { max-height: 96vh; }
+  #pause .bag-head { padding-top: 4px; padding-bottom: 4px; }
+  #pause .pz-body { padding: 8px; gap: 10px; }
+  #pause .pz-menu { gap: 4px; width: 150px; overflow-y: auto; min-height: 0; }
+  #pause .pz-menu .tbtn { padding: 6px 10px; font-size: 13px; }
+  #pause .pz-pane { min-height: 0; }
+}
+/* 터치 화면: 알림이 아래쪽 터치 단추에 가리지 않게 (세로 화면은 단추 위로, 긴 글은 줄바꿈) */
+@media (max-width: 600px) {
+  body.touch #toast { bottom: 190px; white-space: normal; width: max-content; max-width: 92vw; text-align: center; }
+}
