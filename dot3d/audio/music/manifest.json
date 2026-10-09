@@ -123,5 +123,45 @@
   "samples": 1389150,
   "rate": 44100,
   "dur": 31.5
+ },
+ "tomb": {
+  "samples": 2095631,
+  "rate": 44100,
+  "dur": 47.52
+ },
+ "amb_tomb": {
+  "samples": 1389150,
+  "rate": 44100,
+  "dur": 31.5
+ },
+ "market": {
+  "samples": 1764000,
+  "rate": 44100,
+  "dur": 40.0
+ },
+ "amb_market": {
+  "samples": 1389150,
+  "rate": 44100,
+  "dur": 31.5
+ },
+ "tidal": {
+  "samples": 2116800,
+  "rate": 44100,
+  "dur": 48.0
+ },
+ "amb_tidal": {
+  "samples": 1389150,
+  "rate": 44100,
+  "dur": 31.5
+ },
+ "sky": {
+  "samples": 1693440,
+  "rate": 44100,
+  "dur": 38.4
+ },
+ "amb_sky": {
+  "samples": 1389150,
+  "rate": 44100,
+  "dur": 31.5
  }
 }

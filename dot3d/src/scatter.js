@@ -197,6 +197,26 @@ const SETS = {
     { kind: 'pebble', d: 0.06, where: 'any', colors: ['#5a5a66', '#70707a'], s: [0.6, 1.4] },
     { kind: 'rock', d: 0.02, where: 'far', cluster: [2, 4], colors: ['#5a5a66', '#6a6a76'], s: [0.7, 1.5] }, { kind: 'bush', d: 0.015, where: 'far', cluster: [1, 3], colors: ['#d6dee9', '#c8d2e0'], s: [0.7, 1.2] },
   ],
+  tomb: [
+    { kind: 'tuft', d: 1.0, where: 'off', edge: 3, colors: ['#8a8a5a', '#7a7a4a', '#9a9468', '#6e7048'], s: [0.8, 1.4], wind: true },
+    { kind: 'flower', d: 0.08, where: 'off', colors: ['#e8e0f0', '#b8a0d8', '#f0f0e8'], s: [0.7, 1.1], wind: true },
+    { kind: 'pebble', d: 0.06, where: 'any', colors: ['#8a867c', '#6a665e'], s: [0.6, 1.3] },
+    { kind: 'rock', d: 0.015, where: 'far', cluster: [1, 3], colors: ['#7a766e', '#8a867c'], s: [0.7, 1.4] },
+  ],
+  market: [
+    { kind: 'tuft', d: 0.6, where: 'off', edge: 2.5, colors: ['#6a8a3a', '#7a9a48', '#5a7a30'], s: [0.8, 1.3], wind: true },
+    { kind: 'pebble', d: 0.1, where: 'any', colors: ['#8a7a64', '#6a5a48'], s: [0.6, 1.3] },
+    { kind: 'bush', d: 0.02, where: 'far', cluster: [1, 3], colors: ['#4a7a34', '#5a8a3a'], s: [0.8, 1.3] },
+  ],
+  tidal: [
+    { kind: 'pebble', d: 0.16, where: 'any', colors: ['#3a3438', '#6a6058', '#d8d0c0'], s: [0.6, 1.3] },
+    { kind: 'tuft', d: 0.25, where: 'off', edge: 1.5, colors: ['#8a9a5a', '#a8a868'], s: [0.6, 1.1], wind: true },
+    { kind: 'rock', d: 0.02, where: 'far', cluster: [2, 4], colors: ['#3a3438', '#4a4648'], s: [0.7, 1.4] },
+  ],
+  sky: [
+    { kind: 'lump', d: 0.25, where: 'off', colors: ['#f4f6fc', '#e8ecf8'], s: [0.7, 1.8] },
+    { kind: 'flower', d: 0.12, where: 'off', colors: ['#ffd0e0', '#fff0a0', '#d0e0ff'], s: [0.7, 1.1], wind: true },
+  ],
   tower: [
     { kind: 'pebble', d: 0.12, where: 'any', colors: ['#d8d0c0', '#4a3a5a', '#6a5a7a'], s: [0.6, 1.3] },
   ],

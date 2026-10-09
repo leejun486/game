@@ -150,6 +150,30 @@ export const SETS = {
     b2: { stats: { def: 0.08 }, text: '받는 피해 -8%' },
     b4: { stats: {}, perks: ['soul', 'execute'], text: '혼 거두기 (처치 시 체력 4% 회복) + 저승 심판 (체력 35% 아래 적에게 피해 +60%)' },
   },
+  tomb: {
+    name: '왕릉의 부장품', from: ['tombsoldier', 'muinseok', 'gungnyeo', 'eodum'], color: '#9a7ad8',
+    pieces: { gloves: '무인석 손목대', legs: '순장 병사의 각반', belt: '옥 노리개 띠', ring: '그믐 구슬 가락지' },
+    b2: { stats: { def: 0.06, hp: 40 }, text: '받는 피해 -6%, 최대 체력 +40' },
+    b4: { stats: { critDmg: 0.25 }, perks: ['shadow'], text: '치명타 피해 +25%, 그림자 베기 (체력 70% 넘는 적에게 피해 +30%)' },
+  },
+  market: {
+    name: '밤장터의 판돈', from: ['imp', 'gambler', 'tanuki', 'dokgak'], color: '#f0c040',
+    pieces: { gloves: '노름꾼 토시', legs: '외다리 각반', belt: '엽전 꿰미 띠', ring: '도깨비 감투 가락지' },
+    b2: { stats: { crit: 0.06, spd: 0.05 }, text: '치명타 확률 +6%, 이동 속도 +5%' },
+    b4: { stats: { atk: 0.12 }, perks: ['jackpot'], text: '공격력 +12%, 대박 (맞힐 때 8% 확률로 피해 3배)' },
+  },
+  tidal: {
+    name: '갯마을 해녀의 물옷', from: ['fiddler', 'fishman', 'mudghost', 'jangsan'], color: '#6ac8e8',
+    pieces: { gloves: '농게 집게 토시', legs: '갯벌 각반', belt: '테왁 끈 띠', ring: '인면어 비늘 가락지' },
+    b2: { stats: { regen: 3, hp: 50 }, text: '초당 체력 회복 +3, 최대 체력 +50' },
+    b4: { stats: { def: 0.08 }, perks: ['whitefur'], text: '받는 피해 -8%, 흰 털옷 (받는 피해 -8%, 느려지지 않음)' },
+  },
+  sky: {
+    name: '선계 천둥 장수의 차림', from: ['thunderkid', 'crane', 'shadowfairy', 'noegong'], color: '#8ac8ff',
+    pieces: { gloves: '천둥 북채 토시', legs: '구름 각반', belt: '학 깃털 띠', ring: '벼락 구슬 가락지' },
+    b2: { stats: { cdr: 0.08, atk: 0.06 }, text: '스킬 재사용 -8%, 공격력 +6%' },
+    b4: { stats: { crit: 0.08 }, perks: ['thunderclap'], text: '치명타 확률 +8%, 천둥 (맞힐 때 15% 확률로 벼락)' },
+  },
   moon: {
     name: '월하 선인의 유품', from: ['boss', 'gumiho', 'reaper'], color: '#bfe8ff',
     pieces: { gloves: '월광 장갑', legs: '선인의 바지', belt: '은하 띠', ring: '달빛 가락지' },

@@ -8,6 +8,7 @@ import { buildBamboo, buildTemple, PAVED } from './worlds2.js';
 import { buildSwamp, buildCanyon, buildTower } from './worlds3.js';
 import { buildFortress, buildSeaPalace } from './worlds4.js';
 import { buildValley, buildSnowfield } from './worlds5.js';
+import { buildTomb, buildMarket, buildTidal, buildSky } from './worlds6.js';
 import { GFX } from './gfx.js';
 import * as HD from './hdtex.js';
 import { scatterDetails } from './scatter.js';
@@ -25,9 +26,13 @@ export const REGIONS = [
   { id: 'fortress', ox: 0, oz: 246.9, flip: false, x0: -19.6, x1: 19.6, z0: 220.4, z1: 270.4, from: 220.8, to: 270, spawn: [14, 0, 224], center: [0, 238] },
   { id: 'sea', ox: 0, oz: 295.1, flip: false, x0: -19.6, x1: 19.6, z0: 269.4, z1: 319.4, from: 270, to: 318.9, spawn: [-14, 0, 272], center: [0, 292] },
   { id: 'valley', ox: 0, oz: 343.3, flip: false, x0: -19.6, x1: 19.6, z0: 317.6, z1: 367.6, from: 318.9, to: 367.4, spawn: [14, 0, 320], center: [6, 337] },
-  { id: 'snowfield', ox: 0, oz: 391.5, flip: false, x0: -19.6, x1: 19.6, z0: 365.8, z1: 415.8, from: 367.4, to: 430, spawn: [-14, 0, 368.5], center: [0, 388] },
+  { id: 'snowfield', ox: 0, oz: 391.5, flip: false, x0: -19.6, x1: 19.6, z0: 365.8, z1: 415.8, from: 367.4, to: 415.6, spawn: [-14, 0, 368.5], center: [0, 388] },
+  { id: 'tomb', ox: 0, oz: 439.7, flip: false, x0: -19.6, x1: 19.6, z0: 414.0, z1: 464.0, from: 415.6, to: 463.8, spawn: [14, 0, 416.6], center: [-7, 436] },
+  { id: 'market', ox: 0, oz: 487.9, flip: false, x0: -19.6, x1: 19.6, z0: 462.2, z1: 512.2, from: 463.8, to: 512.0, spawn: [-14, 0, 464.8], center: [0, 486] },
+  { id: 'tidal', ox: 0, oz: 536.1, flip: false, x0: -19.6, x1: 19.6, z0: 510.4, z1: 560.4, from: 512.0, to: 560.2, spawn: [14, 0, 513], center: [2, 544] },
+  { id: 'sky', ox: 0, oz: 584.3, flip: false, x0: -19.6, x1: 19.6, z0: 558.6, z1: 608.6, from: 560.2, to: 620, spawn: [-14, 0, 561.4], center: [-4, 584] },
   // 시련탑: 다른 지역과 떨어진 허공의 단 (저승 문으로만 오감)
-  { id: 'tower', ox: 0, oz: 462, flip: false, x0: -16.5, x1: 16.5, z0: 445.5, z1: 478.5, from: 430, to: 1e9, spawn: [0, 0, 472], center: [0, 462] },
+  { id: 'tower', ox: 0, oz: 650, flip: false, x0: -16.5, x1: 16.5, z0: 633.5, z1: 666.5, from: 620, to: 1e9, spawn: [0, 0, 660], center: [0, 650] },
 ];
 
 export class World {
@@ -83,6 +88,10 @@ export class World {
     else if (R.id === 'sea') buildSeaPalace(this);
     else if (R.id === 'valley') buildValley(this);
     else if (R.id === 'snowfield') buildSnowfield(this);
+    else if (R.id === 'tomb') buildTomb(this);
+    else if (R.id === 'market') buildMarket(this);
+    else if (R.id === 'tidal') buildTidal(this);
+    else if (R.id === 'sky') buildSky(this);
     else if (R.id === 'tower') buildTower(this);
     const f = (x, z) => (R.flip ? [R.ox - x, R.oz - z] : [R.ox + x, R.oz + z]);
     const box = (r) => {
@@ -173,7 +182,8 @@ export class World {
     if (on?.paved) return 'stone';
     if (R.id === 'temple' || R.id === 'snowfield') return 'snow';
     if (R.id === 'tower') return 'stone';
-    if (R.id === 'sea' || on) return 'sand'; // 흙길·모래는 사각사각
+    if (R.id === 'sky') return 'snow'; // 구름: 사박사박
+    if (R.id === 'sea' || R.id === 'tidal' || on) return 'sand'; // 흙길·모래는 사각사각
     return 'grass';
   }
 

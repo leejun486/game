@@ -116,14 +116,15 @@ export class QuestKinds {
 
   // ---------- 모양 ----------
   makeTrinket(Q) {
-    const col = Q.region === 'sea' ? '#f4f0ff' : '#ffcf40';
+    const ball = Q.region === 'sea' || Q.region === 'tidal';
+    const col = Q.region === 'sea' ? '#f4f0ff' : Q.region === 'tidal' ? '#ff8a3a' : '#ffcf40';
     const glow = Q.region === 'sea' ? '#9ad8ff' : '#ff7a2a';
     const grp = new THREE.Group();
-    const core = Q.region === 'sea'
-      ? new THREE.Mesh(new THREE.SphereGeometry(0.2, 14, 10), toon({ color: new THREE.Color(col), emissive: new THREE.Color(glow), emissiveIntensity: 0.6, roughness: 0.2 }))
+    const core = ball
+      ? new THREE.Mesh(new THREE.SphereGeometry(Q.region === 'tidal' ? 0.28 : 0.2, 14, 10), toon({ color: new THREE.Color(col), emissive: new THREE.Color(glow), emissiveIntensity: 0.6, roughness: 0.2 }))
       : new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.34, 0.03), toon({ color: new THREE.Color('#f2e2b0'), emissive: new THREE.Color(glow), emissiveIntensity: 0.35 }));
     grp.add(core);
-    if (Q.region !== 'sea') { const mark = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.2, 0.035), toon({ color: new THREE.Color('#c8302c') })); grp.add(mark); }
+    if (!ball) { const mark = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.2, 0.035), toon({ color: new THREE.Color('#c8302c') })); grp.add(mark); }
     const halo = new THREE.Mesh(new THREE.SphereGeometry(0.42, 12, 8), new THREE.MeshBasicMaterial({ color: glow, transparent: true, opacity: 0.18, depthWrite: false, blending: THREE.AdditiveBlending }));
     halo.userData.noOutline = true;
     grp.add(halo);
@@ -224,7 +225,7 @@ export class QuestKinds {
       let nd = Infinity;
       for (const o of this.objs) nd = Math.min(nd, Math.hypot(o.x - p.pos.x, o.z - p.pos.z));
       this.chimeT = (this.chimeT || 0) - dt;
-      if (nd < 13 && this.chimeT <= 0) { g.audio.play(Q.region === 'sea' ? 'coin' : 'talk'); this.chimeT = 0.5 + (nd / 13) * 1.6; }
+      if (nd < 13 && this.chimeT <= 0) { g.audio.play(Q.region === 'sea' || Q.region === 'tidal' ? 'coin' : 'talk'); this.chimeT = 0.5 + (nd / 13) * 1.6; }
     } else if (Q.type === 'chase') {
       if (!this.thief || this.thief.removed || (!this.thief.dead && !g.enemies.includes(this.thief))) { if (g.world.regionAt(p.pos.x, p.pos.z).id === Q.region && !g.waveActive) this.spawnThief(Q); }
       else if (!this.thief.dead && Math.random() < dt * 8) { const e = this.thief; g.fx.add.emit({ x: e.pos.x + (Math.random() - 0.5) * 0.6, y: e.y + 0.4 + Math.random(), z: e.pos.z + (Math.random() - 0.5) * 0.6, vy: 1, life: 0.6, size: 3, endSize: 1, color: '#fff0a0', color2: '#ffb000' }); }

@@ -38,11 +38,27 @@ export const MONSTERS = [
   { type: 'icedok', name: '얼음 도깨비', region: '백설 고원', desc: '얼어붙은 도깨비. 몽둥이에 맞으면 몸이 얼어 느려진다.' },
   { type: 'icewisp', name: '서리 도깨비불', region: '백설 고원', desc: '차가운 푸른 불덩이. 얼음 구슬을 쏜다.' },
   { type: 'frostgiant', name: '서리 거인 동장군', region: '백설 고원', desc: '겨울을 몰고 오는 얼음 거인. 뛰어올라 내려찍고, 고드름을 쏟아붓는다.', boss: true },
+  { type: 'tombsoldier', name: '망령 병사', region: '왕릉 고분', desc: '함께 묻힌 옛 병사의 넋. 녹슨 창을 길게 찔러 온다.' },
+  { type: 'muinseok', name: '무인석', region: '왕릉 고분', desc: '능을 지키던 돌 장수가 깨어났다. 돌칼로 땅을 내려찍고, 칼이 잘 안 먹힌다.' },
+  { type: 'gungnyeo', name: '원귀 궁녀', region: '왕릉 고분', desc: '빼앗긴 노리개를 찾아 떠도는 궁녀의 넋. 사라졌다 나타나며 넋불을 던진다.' },
+  { type: 'eodum', name: '어둑시니', region: '왕릉 고분', desc: '볼수록 커지는 어둠. 어둠 속으로 녹아들었다가 등 뒤에서 나타나고, 다칠수록 부풀어 오른다.', boss: true },
+  { type: 'imp', name: '장난꾸러기 도깨비', region: '도깨비 밤장터', desc: '작고 날랜 초록 도깨비. 장난감 탈을 쓰고 순식간에 덮친다.' },
+  { type: 'gambler', name: '노름꾼 도깨비', region: '도깨비 밤장터', desc: '패랭이를 쓴 노름꾼. 엽전 세 닢을 부채꼴로 던진다.' },
+  { type: 'tanuki', name: '둔갑 너구리', region: '도깨비 밤장터', desc: '머리에 나뭇잎을 얹은 너구리. 맞으면 펑 하고 사라졌다가 엉뚱한 곳에서 나타난다.' },
+  { type: 'dokgak', name: '외다리 독각귀', region: '도깨비 밤장터', desc: '밤장터를 연 외다리 도깨비. 껑충 뛰어 내려찍고, 금덩이를 쏟고, 방망이를 휘돌린다.', boss: true },
+  { type: 'fiddler', name: '농게', region: '남해 갯벌 마을', desc: '한쪽 집게만 엄청 큰 갯벌 게. 등딱지가 단단해 칼이 덜 먹힌다.' },
+  { type: 'fishman', name: '인면어', region: '남해 갯벌 마을', desc: '사람 얼굴을 한 물고기. 물웅덩이에서 빨라지고 발목을 붙잡는다.' },
+  { type: 'mudghost', name: '갯귀신', region: '남해 갯벌 마을', desc: '갯벌에 빠져 죽은 넋. 진흙 덩이를 던져 몸을 무겁게 만든다.' },
+  { type: 'jangsan', name: '장산범', region: '남해 갯벌 마을', desc: '흰 털이 땅까지 끌리는 산짐승. 사람 목소리를 흉내 내 홀리고, 세 번 연달아 덮친다.', boss: true },
+  { type: 'thunderkid', name: '천둥 동자', region: '천상 선계', desc: '등에 작은 북 고리를 멘 아이 신장. 번개 구슬을 던진다.' },
+  { type: 'crane', name: '학 요괴', region: '천상 선계', desc: '붉은 정수리의 흰 학. 하늘에서 깃털 화살을 세 발씩 부채꼴로 쏜다.' },
+  { type: 'shadowfairy', name: '선녀 그림자', region: '천상 선계', desc: '하늘에서 쫓겨난 선녀의 그림자. 날래게 덮치고, 맞으면 사라졌다 다른 곳에서 나타난다.' },
+  { type: 'noegong', name: '천둥 장수 뇌공', region: '천상 선계', desc: '하늘 북을 치는 천둥 장수. 벼락을 연달아 내리고, 북 고리로 번개를 흩뿌린다.', boss: true },
   { type: 'yeomra', name: '염라대왕', region: '저승 시련탑', desc: '저승을 다스리는 왕. 판관들을 불러 다섯 번 판결을 내린다.', boss: true },
 ];
 
 const bossK = (S, t) => S.bosses?.[t] || 0;
-const BOSS10 = ['boss', 'gumiho', 'reaper', 'imugi', 'bulgasari', 'baekho', 'dragon', 'centipede', 'frostgiant', 'yeomra'];
+const BOSS10 = ['boss', 'gumiho', 'reaper', 'imugi', 'bulgasari', 'baekho', 'dragon', 'centipede', 'frostgiant', 'eodum', 'dokgak', 'jangsan', 'noegong', 'yeomra'];
 const hardK = (S) => BOSS10.filter((t) => S.hardBosses?.[t]).length;
 const maxLv = (g) => Math.max(...CLASS_ORDER.map((c) => g.progressOf(c).level || 1), g.player.level);
 
@@ -64,6 +80,10 @@ export const ACHIEVEMENTS = [
   { id: 'b_dragon', name: '용궁의 평화', desc: '동해 용왕 물리치기', test: (g, S) => bossK(S, 'dragon') > 0 },
   { id: 'b_centipede', name: '맑은 냇물', desc: '천년 왕지네 물리치기', test: (g, S) => bossK(S, 'centipede') > 0 },
   { id: 'b_frostgiant', name: '봄을 부르다', desc: '서리 거인 동장군 물리치기', test: (g, S) => bossK(S, 'frostgiant') > 0 },
+  { id: 'b_eodum', name: '어둠을 걷다', desc: '어둑시니 물리치기', test: (g, S) => bossK(S, 'eodum') > 0 },
+  { id: 'b_dokgak', name: '판을 엎다', desc: '외다리 독각귀 물리치기', test: (g, S) => bossK(S, 'dokgak') > 0 },
+  { id: 'b_jangsan', name: '대답하지 않은 밤', desc: '장산범 물리치기', test: (g, S) => bossK(S, 'jangsan') > 0 },
+  { id: 'b_noegong', name: '하늘이 맑아지다', desc: '천둥 장수 뇌공 물리치기', test: (g, S) => bossK(S, 'noegong') > 0 },
   { id: 'b_yeomra', name: '저승의 판결', desc: '염라대왕 물리치기', test: (g, S) => bossK(S, 'yeomra') > 0 },
   { id: 'main', name: '평안해진 땅', desc: '메인 퀘스트 모두 마치기', test: (g) => g.quest.step > 0 && !g.curQuest() },
   { id: 'ending', name: '달거울 복원', desc: '엔딩 보기', test: (g) => !!g.quest.ended },
@@ -92,7 +112,7 @@ export const ACHIEVEMENTS = [
   { id: 'bounty10', name: '현상금 사냥꾼', desc: '현상수배 10번 마치기', prog: (g, S) => [S.bounties || 0, 10] },
   { id: 'fall10', name: '칠전팔기', desc: '10번 쓰러지고도 다시 일어서기', prog: (g, S) => [S.deaths || 0, 10] },
   { id: 'hard1', name: '험한 밤길', desc: '어려움 난이도에서 보스 물리치기', test: (g, S) => hardK(S) > 0 },
-  { id: 'hard10', name: '백귀를 꺾은 자', desc: '어려움 난이도에서 보스 열을 모두 물리치기', prog: (g, S) => [hardK(S), BOSS10.length] },
+  { id: 'hard10', name: '백귀를 꺾은 자', desc: '어려움 난이도에서 모든 보스 물리치기', prog: (g, S) => [hardK(S), BOSS10.length] },
   { id: 'hardrun', name: '물러서지 않는 길', desc: '난이도를 한 번도 낮추지 않고 어려움으로 메인 퀘스트 마치기', test: (g) => !!g.flags.hardRun && g.difficulty === 'hard' && g.quest.step > 0 && !g.curQuest() },
   { id: 'daily7', name: '하루하루', desc: '오늘의 목표를 모두 마친 날 7일', prog: (g, S) => [S.daily || 0, 7] },
   { id: 'codex', name: '요괴 도감', desc: '몬스터 도감 완성', prog: (g, S) => [MONSTERS.filter((m) => S.killsBy?.[m.type]).length, MONSTERS.length] },

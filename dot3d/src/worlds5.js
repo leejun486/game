@@ -69,7 +69,7 @@ function ribbon(W, curve, width, y, mat, n = 90) {
 }
 
 // 잎 색만 바꾼 나무 (소나무 꼴)
-function leafyTree(W, x, z, s, seed, l1, l2, collide = true, snowy = false) {
+export function leafyTree(W, x, z, s, seed, l1, l2, collide = true, snowy = false) {
   const M = W.M, keep = [M.leaf, M.leaf2];
   M.leaf = l1; M.leaf2 = l2;
   W.pine(x, 0, z, s, seed, collide, snowy, !snowy);
@@ -77,7 +77,7 @@ function leafyTree(W, x, z, s, seed, l1, l2, collide = true, snowy = false) {
 }
 
 // 초가집: 흙벽, 둥근 볏짚 지붕 (snow: 지붕에 눈)
-function thatchHut(W, x, z, ry, snow = false) {
+export function thatchHut(W, x, z, ry, snow = false) {
   const M = W.M, B = W.batch;
   B.add(boxGeo(4.2, 2.0, 2.8, 2), M.mudWall, mat4(x, 1.0, z, ry));
   B.add(boxGeo(4.4, 0.25, 3.0, 2), M.wood2, mat4(x, 0.12, z, ry));
@@ -401,9 +401,29 @@ export function buildSnowfield(W) {
     const x = side < 2 ? (side ? 1 : -1) * (20.5 + Rb() * 4) : (Rb() - 0.5) * 46;
     const z = side >= 2 ? (side === 2 ? -27.5 - Rb() * 2 : 23.5 + Rb() * 2.5) : (Rb() - 0.5) * 50;
     if (side === 2 && Math.abs(x + 14) < 5) continue;
+    if (side === 3 && Math.abs(x - 14) < 5) continue;
     W.pine(x, 0, z, 1.1 + Rb() * 0.5, 2400 + i, false, true);
   }
   cairn(W, 4, -2, 1, 81); cairn(W, -2, -16, 0.9, 82);
+
+  // 남동쪽 고갯길 (왕릉 고분으로): 얼음 벽이 막고 있다가 퀘스트로 녹음
+  W.blockRects.push({ x0: -20, x1: 11.8, z0: 22.6, z1: 23.6 }, { x0: 16.2, x1: 20, z0: 22.6, z1: 23.6 });
+  pathStrip(W, M.trodden, [[2, 9], [8, 15], [12, 20], [14, 26]], 1.6, 0.006);
+  const iceWall = new THREE.Group();
+  const Ri = mulberry32(2501);
+  for (let i = 0; i < 9; i++) {
+    const h = 1.2 + Ri() * 1.4;
+    const c = new THREE.Mesh(new THREE.ConeGeometry(0.35 + Ri() * 0.25, h, 5), M.iceCrystal);
+    c.position.set(12 + Ri() * 4, h / 2, 22.6 + Ri() * 1.0);
+    c.rotation.set((Ri() - 0.5) * 0.4, Ri() * 3, (Ri() - 0.5) * 0.4);
+    iceWall.add(c);
+  }
+  for (let i = 0; i < 4; i++) iceWall.add(at(new THREE.Mesh(new THREE.SphereGeometry(0.9, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), M.snowCap), 12.4 + i * 1.1, 0, 23.1));
+  W.root.add(iceWall);
+  W.addGate('tomb', { x0: 11.8, x1: 16.2, z0: 22.6, z1: 23.6 }, (k) => {
+    iceWall.position.y = -k * 2.6;
+    iceWall.visible = k < 0.99;
+  });
 
   B.build(W.root);
   for (const m of W.foliage.build(W.root)) animateMesh(m, ANIM.foliage);

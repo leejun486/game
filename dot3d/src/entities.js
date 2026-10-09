@@ -4,6 +4,7 @@ import { disposeTree, drop } from './dispose.js';
 import { Rig, makeDokkaebi, makeGuard, makeLady, makeMage, makeFox, makeJiangshi, makeGhost, makeReaper, makeWaterGhost, makeToad, makeImugi, makeStoneGolem, makeBulgasari, makeYeomra, makeDragon, makeCentipede, makeFrostGiant } from './character.js';
 import { decorateDokkaebiKing, decorateReaper, decorateYeomra } from './bossdeco.js';
 import { makeCrow, makeCrab, makeJelly, makeTurtle, makeBee, makeMantis, makeBeast } from './rigs2.js';
+import { makeTombSoldier, makeCourtGhost, makeMuinseok, makeEodum, makeImp, makeGambler, makeTanuki, makeDokgak, makeFiddler, makeFishman, makeMudGhost, makeJangsan, makeThunderKid, makeCrane, makeShadowFairy, makeNoegong } from './rigs3.js';
 import { CLASSES } from './classes.js';
 import { rigOptions } from './looks.js';
 import { sumStats, setBonuses } from './gear.js';
@@ -353,6 +354,7 @@ export class Player {
   slowFor(t, msg) {
     if (this.dead) return;
     if (this.perks?.has('carapace')) t *= 0.5;
+    if (this.perks?.has('whitefur')) return; // 장산범 털옷: 느려지지 않음
     if (!(this.slowT > 0.3) && msg) this.game.ui.toast(msg, 1.2);
     this.slowT = Math.max(this.slowT || 0, t);
   }
@@ -374,7 +376,7 @@ export class Player {
       g.fx.number(this.pos.clone().add(new THREE.Vector3(0, 1.9, 0)), '비늘 막기!', 'alert');
       return false;
     }
-    dmg = Math.max(1, Math.round(dmg * diffOf(this.game).dmg * (1 - (this.def || 0)) * (this.perks?.has('ironhide') ? 0.88 : 1) * (this.perks?.has('tigerhide') ? 0.92 : 1) * (this.perks?.has('carapace') ? 0.9 : 1) * (this.perks?.has('winterheart') ? 0.94 : 1) * (this.guardT > 0 ? 0.6 : 1) * (this.game.tower?.active && this.game.tower.rule?.key === 'glass' ? 1.6 : 1)));
+    dmg = Math.max(1, Math.round(dmg * diffOf(this.game).dmg * (1 - (this.def || 0)) * (this.perks?.has('ironhide') ? 0.88 : 1) * (this.perks?.has('tigerhide') ? 0.92 : 1) * (this.perks?.has('carapace') ? 0.9 : 1) * (this.perks?.has('winterheart') ? 0.94 : 1) * (this.perks?.has('dusk') ? 0.92 : 1) * (this.perks?.has('fortune') ? 0.92 : 1) * (this.perks?.has('whitefur') ? 0.92 : 1) * (this.perks?.has('skyrobe') ? 0.9 : 1) * (this.guardT > 0 ? 0.6 : 1) * (this.game.tower?.active && this.game.tower.rule?.key === 'glass' ? 1.6 : 1)));
     this.hp -= dmg;
     // 동장군 옷: 맞으면 20% 확률로 주변 적을 얼림
     if (this.perks?.has('winterheart') && Math.random() < 0.2) {
@@ -383,6 +385,8 @@ export class Player {
       for (const e of g0.enemies) if (!e.dead && !e.isBoss && Math.hypot(e.pos.x - this.pos.x, e.pos.z - this.pos.z) < 3) e.freeze(1.2);
     }
     this.invuln = 0.7;
+    // 어스름 옷: 가끔 어둠에 녹아 잠깐 무적
+    if (this.perks?.has('dusk') && Math.random() < 0.25) { this.invuln = 1.5; this.game.fx.smoke(this.pos.x, this.pos.y + 0.8, this.pos.z, 10); }
     this.blinkT = 0.7;
     this.hurtT = 0.3;
     this.lastCombat = this.game.time;
@@ -471,7 +475,7 @@ export class Player {
         const slow = this.attack ? (this.attack.kind === 5 ? 0.7 : this.attack.skill ? (this.cls === 'sword' || this.cls === 'lancer' ? 0.1 : 0.25) : this.cls === 'sword' || this.cls === 'lancer' ? 0.22 : 0.45) : 1;
         // 얕은 물·붙잡힘·독: 걸음이 느려짐
         const wet = g.world.wet.length && g.world.inWater(this.pos.x, this.pos.z);
-        const sp = 4.6 * slow * (this.perks?.has('swift') ? 1.15 : 1) * (this.perks?.has('tigerhide') ? 1.1 : 1) * (1 + (this.gear?.spd || 0)) * (wet ? 0.62 : 1) * (this.slowT > 0 ? 0.55 : 1) * (this.galeT > 0 ? 1.4 : 1);
+        const sp = 4.6 * slow * (this.perks?.has('swift') ? 1.15 : 1) * (this.perks?.has('tigerhide') ? 1.1 : 1) * (this.perks?.has('skyrobe') ? 1.08 : 1) * (1 + (this.gear?.spd || 0)) * (wet ? 0.62 : 1) * (this.slowT > 0 ? 0.55 : 1) * (this.galeT > 0 ? 1.4 : 1);
         if (wet && input.moveLen > 0.1 && Math.random() < dt * 14) g.fx.add.emit({ x: this.pos.x + rand(-0.3, 0.3), y: this.pos.y + 0.08, z: this.pos.z + rand(-0.3, 0.3), vx: rand(-1, 1), vy: rand(1, 2.2), vz: rand(-1, 1), g: 10, life: 0.35, size: 2, color: '#d8fff4', color2: '#4a9a9a' });
         if (input.moveLen > 0.1) {
           mv = 1;
@@ -596,6 +600,10 @@ const PAL = {
   sea: { core: '#d0f0ff', hi: '#ffffff', idle: '#9ad8ff', shell: '#2a6aff', trail: '#8ac8ff', trail2: '#1a3aaa', orb: '#c8e8ff', eye: 0x061a3a, fire: ['#a8e0ff', '#2a5aff'] },
   summer: { core: '#f0ffc0', hi: '#ffffff', idle: '#d8f07a', shell: '#6ab02a', trail: '#c8f06a', trail2: '#3a7a1a', orb: '#e8ffa0', eye: 0x1a2a00, fire: ['#e0ff8a', '#4a9a1a'] },
   ice: { core: '#f0fbff', hi: '#ffffff', idle: '#bfeaff', shell: '#6ac8ff', trail: '#d8f4ff', trail2: '#3a8ad8', orb: '#e8f8ff', eye: 0x0a2a4a, fire: ['#e8f8ff', '#4aa8ff'] },
+  tomb: { core: '#ece4ff', hi: '#ffffff', idle: '#c8b8f0', shell: '#6a4ac8', trail: '#b8a0ff', trail2: '#2a1a6a', orb: '#e0d8ff', eye: 0x0a0618, fire: ['#d0c0ff', '#3a1a8a'] },
+  market: { core: '#fff0d0', hi: '#ffffff', idle: '#ffd08a', shell: '#e04a2a', trail: '#ffb060', trail2: '#8a1a3a', orb: '#ffe0a0', eye: 0x2a0a00, fire: ['#ffd070', '#c8302c'] },
+  tidal: { core: '#fff4e0', hi: '#ffffff', idle: '#d8c8a8', shell: '#8a6a4a', trail: '#c8b090', trail2: '#3a2a1a', orb: '#e8dcc0', eye: 0x1a1008, fire: ['#f0e0c0', '#6a4a2a'] },
+  sky: { core: '#f0fbff', hi: '#ffffff', idle: '#c8e8ff', shell: '#4a8aff', trail: '#bfe0ff', trail2: '#2a4aaa', orb: '#e8f6ff', eye: 0x0a1a3a, fire: ['#e8f8ff', '#4a8aff'] },
   water: { core: '#c8fff0', hi: '#ffffff', idle: '#9af0d8', shell: '#2a9a8a', trail: '#8ae8d0', trail2: '#1a5a6a', orb: '#b8ffd8', eye: 0x062a20, fire: ['#a8ffe0', '#1a7a8a'] },
 };
 
@@ -641,6 +649,26 @@ const TYPES = {
   icedok: { hp: 330, speed: 3.0, dmg: 30, range: 1.7, windup: 0.5, recover: 0.6, radius: 0.55, exp: 62, ai: 'melee', frost: true, make: () => makeDokkaebi('ice'), pal: PAL.ice },
   icewisp: { hp: 140, speed: 2.2, dmg: 24, range: 7, windup: 0.55, recover: 1.4, radius: 0.38, exp: 56, ai: 'wisp', poison: true, pal: PAL.ice },
   frostgiant: { hp: 6000, speed: 2.4, dmg: 45, range: 3.3, windup: 0.9, recover: 0.85, radius: 1.4, exp: 2200, ai: 'boss', boss: 'frost', leap: true, make: makeFrostGiant, pal: PAL.ice, name: '서리 거인 동장군', summon: ['wolf', 'icedok'] },
+  // 왕릉 고분: 망령 병사(창), 무인석(돌칼 내려찍기, 단단함), 원귀 궁녀(사라졌다 나타나며 넋불), 어둑시니(볼수록 커지는 어둠)
+  tombsoldier: { hp: 300, speed: 3.4, dmg: 30, range: 1.9, windup: 0.42, recover: 0.55, radius: 0.5, exp: 66, ai: 'melee', make: makeTombSoldier, pal: PAL.tomb },
+  muinseok: { hp: 560, speed: 1.7, dmg: 38, range: 2.1, windup: 0.9, recover: 1.0, radius: 0.72, exp: 82, ai: 'melee', armor: 0.5, slam: 2.3, make: makeMuinseok, pal: PAL.tomb },
+  gungnyeo: { hp: 170, speed: 2.0, dmg: 26, range: 7, windup: 0.55, recover: 1.4, radius: 0.42, exp: 62, ai: 'wisp', teleport: true, make: makeCourtGhost, pal: PAL.tomb },
+  eodum: { hp: 6800, speed: 2.5, dmg: 47, range: 3.2, windup: 0.8, recover: 0.8, radius: 1.3, exp: 2500, ai: 'boss', boss: 'eodum', make: makeEodum, pal: PAL.tomb, name: '어둑시니', summon: ['tombsoldier', 'gungnyeo'] },
+  // 도깨비 밤장터: 장난꾸러기 도깨비(날래게 덮침), 노름꾼 도깨비(엽전 세 닢을 부채꼴로), 둔갑 너구리(맞으면 연기 속으로 사라졌다 나타남), 독각귀(외다리로 뛰어다님)
+  imp: { hp: 290, speed: 4.6, dmg: 30, range: 1.6, windup: 0.36, recover: 0.5, radius: 0.45, exp: 68, ai: 'melee', lunge: true, make: makeImp, pal: PAL.market },
+  gambler: { hp: 230, speed: 2.3, dmg: 28, range: 7.5, windup: 0.5, recover: 1.4, radius: 0.5, exp: 70, ai: 'wisp', volley: 3, make: makeGambler, pal: PAL.market },
+  tanuki: { hp: 380, speed: 3.6, dmg: 33, range: 1.7, windup: 0.45, recover: 0.6, radius: 0.55, exp: 74, ai: 'melee', blink: true, make: makeTanuki, pal: PAL.market },
+  dokgak: { hp: 7600, speed: 2.7, dmg: 50, range: 3.0, windup: 0.7, recover: 0.75, radius: 1.25, exp: 2900, ai: 'boss', boss: 'dokgak', leap: true, make: makeDokgak, pal: PAL.market, name: '외다리 독각귀', summon: ['imp', 'gambler'] },
+  // 남해 갯벌 마을: 농게(큰 집게, 단단함), 인면어(물웅덩이에서 빨라지고 붙잡음), 갯귀신(진흙 덩이 — 맞으면 느려짐), 장산범(목소리로 홀림)
+  fiddler: { hp: 420, speed: 2.9, dmg: 34, range: 1.8, windup: 0.5, recover: 0.6, radius: 0.6, exp: 78, ai: 'melee', armor: 0.35, make: makeFiddler, pal: PAL.tidal },
+  fishman: { hp: 330, speed: 3.2, dmg: 33, range: 1.6, windup: 0.42, recover: 0.55, radius: 0.48, exp: 74, ai: 'melee', aquatic: true, grab: true, grabLine: '인면어에게 붙잡혔다!', make: makeFishman, pal: PAL.water },
+  mudghost: { hp: 210, speed: 2.0, dmg: 30, range: 7, windup: 0.55, recover: 1.4, radius: 0.42, exp: 72, ai: 'wisp', poison: true, make: makeMudGhost, pal: PAL.tidal },
+  jangsan: { hp: 8500, speed: 3.1, dmg: 54, range: 2.9, windup: 0.65, recover: 0.7, radius: 1.25, exp: 3300, ai: 'boss', boss: 'jangsan', leap: true, make: makeJangsan, pal: PAL.tidal, name: '장산범', summon: ['fishman', 'mudghost'] },
+  // 천상 선계: 천둥 동자(번개 구슬), 학 요괴(깃털 셋), 선녀 그림자(덮치고, 맞으면 사라졌다 나타남), 뇌공(벼락을 내리는 천둥 장수)
+  thunderkid: { hp: 260, speed: 2.4, dmg: 34, range: 7.5, windup: 0.5, recover: 1.3, radius: 0.42, exp: 80, ai: 'wisp', make: makeThunderKid, pal: PAL.sky },
+  crane: { hp: 240, speed: 2.8, dmg: 32, range: 8, windup: 0.5, recover: 1.4, radius: 0.45, exp: 80, ai: 'wisp', volley: 3, make: makeCrane, pal: PAL.sky },
+  shadowfairy: { hp: 380, speed: 3.8, dmg: 37, range: 1.7, windup: 0.4, recover: 0.55, radius: 0.45, exp: 84, ai: 'melee', lunge: true, blink: true, make: makeShadowFairy, pal: PAL.ghost },
+  noegong: { hp: 9800, speed: 2.7, dmg: 58, range: 3.2, windup: 0.75, recover: 0.75, radius: 1.35, exp: 3800, ai: 'boss', boss: 'noegong', leap: true, make: makeNoegong, pal: PAL.sky, name: '천둥 장수 뇌공', summon: ['thunderkid', 'shadowfairy'] },
   // 시련탑 10층마다: 염라대왕
   yeomra: { hp: 4200, speed: 2.5, dmg: 36, range: 3.2, windup: 0.8, recover: 0.8, radius: 1.2, exp: 1500, ai: 'boss', boss: 'yeomra', make: () => decorateYeomra(makeYeomra()), pal: PAL.hell, name: '염라대왕', summon: ['jiangshi', 'ghost'] },
   reaper: { hp: 1500, speed: 2.7, dmg: 26, range: 2.8, windup: 0.7, recover: 0.8, radius: 1.0, exp: 450, ai: 'boss', boss: 'reaper', make: () => decorateReaper(makeReaper()), pal: PAL.ghost, name: '저승사자', summon: ['ghost', 'jiangshi'] },
@@ -968,7 +996,7 @@ export class Enemy {
           const hx = this.pos.x + fx * 0.9, hz = this.pos.z + fz * 0.9;
           g.fx.dust(hx, this.pos.y, hz, 5);
           if (Math.hypot(p.pos.x - hx, p.pos.z - hz) < 1.05 + p.radius && Math.abs(p.pos.y - this.pos.y) < 1) {
-            if (p.damage(this.dmg, this.pos)) { if (T.grab) p.slowFor(1.6, '물귀신에게 붙잡혔다!'); if (T.burn) p.burnFor(3); if (T.frost) p.slowFor(1.4, '몸이 얼어붙는다!'); }
+            if (p.damage(this.dmg, this.pos)) { if (T.grab) p.slowFor(1.6, T.grabLine || '물귀신에게 붙잡혔다!'); if (T.burn) p.burnFor(3); if (T.frost) p.slowFor(1.4, '몸이 얼어붙는다!'); }
           }
         }
       }
@@ -997,6 +1025,31 @@ export class Enemy {
           else { for (let k = -4; k <= 4; k++) g.spawnOrb(this, k * 0.16, { slow: 1.2 }); if (this.phase >= 2) g.geysers(this); }
           if (this.phase === 3) g.orbRing(this, 16, 0.1);
         }
+        else if (T.boss === 'noegong') {
+          // 뇌공: 연달아 떨어지는 벼락 / 북 고리를 두드려 사방으로 번개 구슬
+          if (this.castKind === 'verdict') g.verdict(this, this.phase >= 2 ? 5 : 3);
+          else { g.orbRing(this, 12 + this.phase * 2, 0.15); for (let k = -2; k <= 2; k++) g.spawnOrb(this, k * 0.2); }
+          if (this.phase === 3) g.after(0.7, () => { if (!this.dead) g.orbRing(this, 16, 0); });
+        }
+        else if (T.boss === 'jangsan') {
+          // 장산범: 사람 목소리로 홀림 (가까우면 느려짐) + 털 바늘 고리
+          const p0 = g.player;
+          if (Math.hypot(p0.pos.x - this.pos.x, p0.pos.z - this.pos.z) < 9) p0.slowFor(1.4, '장산범의 목소리에 홀렸다!');
+          g.orbRing(this, 10 + this.phase * 3, this.phase * 0.1);
+          if (this.phase >= 2) for (let k = -2; k <= 2; k++) g.spawnOrb(this, k * 0.22);
+        }
+        else if (T.boss === 'dokgak') {
+          // 독각귀: 엽전 부채 / 금방망이 금덩이 비 (2단계부터 둘 다)
+          for (let k = -3; k <= 3; k++) g.spawnOrb(this, k * 0.18);
+          if (this.phase >= 2) g.goldRain(this);
+          if (this.phase === 3) g.orbRing(this, 14, 0.2);
+        }
+        else if (T.boss === 'eodum') {
+          // 어둑시니: 어둠의 물결 / 넋불 고리 (단계가 오를수록 더 넓게)
+          if (this.castKind === 'ring') g.orbRing(this, 10 + this.phase * 3, this.phase * 0.12);
+          else { g.spawnDarkWaves(this); if (this.phase >= 2) g.markChase(this); }
+          if (this.phase === 3) g.after(0.6, () => { if (!this.dead) g.spawnDarkWaves(this); });
+        }
         else if (T.boss === 'yeomra') { if (this.castKind === 'verdict') g.verdict(this, this.phase >= 2 ? 5 : 3); else g.spawnDarkWaves(this); if (this.phase === 3) g.orbRing(this, 20, 0); }
         else { g.spawnDarkWaves(this); if (this.phase >= 2) g.markChase(this); if (this.phase === 3) g.after(0.5, () => { if (!this.dead) g.spawnDarkWaves(this); }); }
         this.state = 'recover'; this.st = 0;
@@ -1015,7 +1068,7 @@ export class Enemy {
       if (this.st >= 0.55 || !moved) {
         this.state = 'recover'; this.st = 0; g.fx.dust(this.pos.x, this.pos.y, this.pos.z, 12); g.shake(0.3);
         // 불가사리 3단계: 세 번 연달아 들이받음
-        if ((T.boss === 'bulgasari' || T.boss === 'baekho' || T.boss === 'centipede') && this.phase === 3) {
+        if ((T.boss === 'bulgasari' || T.boss === 'baekho' || T.boss === 'centipede' || T.boss === 'jangsan') && this.phase === 3) {
           this.chargeLeft = (this.chargeLeft ?? 3) - 1;
           if (this.chargeLeft > 0) {
             this.state = 'chargePrep'; this.st = 0.25;
@@ -1146,7 +1199,7 @@ export class Enemy {
     }
     this.yaw = toYaw;
     // 이무기 3단계: 꼬리 휘두르기 (주위 큰 원)
-    if ((T.boss === 'imugi' || T.boss === 'dragon' || T.boss === 'centipede') && this.phase === 3 && dist < 5 && Math.random() < 0.45) {
+    if ((T.boss === 'imugi' || T.boss === 'dragon' || T.boss === 'centipede' || T.boss === 'dokgak') && this.phase >= (T.boss === 'dokgak' ? 2 : 3) && dist < 5 && Math.random() < 0.45) {
       this.state = 'spin'; this.st = 0;
       this.tele = g.fx.ring(new THREE.Vector3(this.pos.x, this.y, this.pos.z), 5, g.fx.warn('#2affd0'), 1, 1);
       g.audio.play('charge');
@@ -1218,6 +1271,33 @@ export class Enemy {
       // 물속으로 잠겼다가 플레이어 발밑에서 솟구침 / 물줄기 부채
       if (Math.random() < (dist > 3.5 ? 0.55 : 0.35)) { this.state = 'dive'; this.st = 0; g.audio.play('dash'); }
       else { this.state = 'cast'; this.st = 0; g.audio.play('charge'); }
+      return true;
+    }
+    if (T.boss === 'noegong') {
+      // 뇌공: 벼락 / 북 고리 (뛰어내려 찍기는 leap으로 따로)
+      this.state = 'cast'; this.st = 0; this.castKind = Math.random() < 0.55 ? 'verdict' : 'ring'; g.audio.play('thunder');
+      return true;
+    }
+    if (T.boss === 'jangsan') {
+      // 장산범: 흰 털을 휘날리며 돌진(3단계는 세 번) / 사람 목소리 흉내
+      if (dist > 4 && Math.random() < 0.45) {
+        this.state = 'chargePrep'; this.st = 0;
+        const from = new THREE.Vector3(this.pos.x, this.y + 0.1, this.pos.z);
+        g.fx.streak(from, from.clone().add(new THREE.Vector3(Math.sin(toYaw) * 9, 0, Math.cos(toYaw) * 9)), g.fx.warn('#ffb07a'), 0.7, 1.8);
+        g.audio.play('howl');
+      } else { this.state = 'cast'; this.st = 0; g.audio.play('wail'); }
+      return true;
+    }
+    if (T.boss === 'dokgak') {
+      // 외다리 뜀뛰기는 leap으로 따로 / 엽전 부채·금덩이 비 / (2단계부터 가까우면) 방망이 휘돌리기
+      this.state = 'cast'; this.st = 0; g.audio.play('laugh');
+      return true;
+    }
+    if (T.boss === 'eodum') {
+      // 어둠 속으로 녹아들었다가 등 뒤에서 / 어둠의 물결 / 넋불 고리
+      const r = Math.random();
+      if (dist > 3 && r < 0.35) { this.state = 'vanish'; this.st = 0; this.reappeared = false; g.fx.smoke(this.pos.x, this.y + 0.6, this.pos.z, 26); g.audio.play('wail'); }
+      else { this.state = 'cast'; this.st = 0; this.castKind = r < 0.68 ? 'waves' : 'ring'; g.audio.play('charge'); }
       return true;
     }
     if (T.boss === 'reaper') {
@@ -1555,6 +1635,10 @@ export class NPC {
       : kind === 'envoy' ? makeLady({ robe: '#3a8aa8', sleeve: '#3a8aa8', cuff: '#f0c040', skirt: '#1e4a7a', pants: '#1e4a7a', hair: '#1a2a3a' })
       : kind === 'hunter' ? new Rig({ type: 'guard', scale: 1.1, skin: '#c89070', robe: '#6a5a3a', sleeve: '#6a5a3a', cuff: '#3a2a1a', belt: '#c8302c', collar: '#3a2a1a', pants: '#4a4030', hair: '#1a1410', weapon: 'spear' })
       : kind === 'ginseng' ? makeMage({ robe: '#8a7a6a', sleeve: '#8a7a6a', cuff: '#4a3a2a', belt: '#4a3a2a', pants: '#5a4a3a', hair: '#f0ece4' })
+      : kind === 'fairy' ? makeLady({ robe: '#f4f0ff', sleeve: '#f4f0ff', cuff: '#9a7ad8', skirt: '#c8b8f0', pants: '#c8b8f0', hair: '#1a1420', deco: ['ribbon', 'flowerPin'], decoA: '#ffe0f0', decoB: '#ffd040', decoGlow: '#6a4aa8' })
+      : kind === 'haenyeo' ? makeLady({ robe: '#f0f0ea', sleeve: '#f0f0ea', cuff: '#2a2a30', skirt: '#2a2a30', pants: '#2a2a30', hair: '#1a1410' })
+      : kind === 'peddler' ? new Rig({ type: 'guard', scale: 1.1, skin: '#d8a880', robe: '#c8b890', sleeve: '#c8b890', cuff: '#5a4a3a', belt: '#5a4a3a', collar: '#e8e0cc', pants: '#8a7a5a', hair: '#2a2018', weapon: 'club' })
+      : kind === 'keeper' ? makeMage({ robe: '#4a5a6a', sleeve: '#4a5a6a', cuff: '#2a2a3a', belt: '#8a2a2a', pants: '#2a3038', hair: '#b8b4ac' })
       : kind === 'herb' ? makeLady({ robe: '#c8b890', sleeve: '#c8b890', cuff: '#5a7a3a', skirt: '#6a5a3a', pants: '#6a5a3a', hair: '#3a2a20' })
       : kind === 'hermit' ? makeMage({ robe: '#c8c8c0', sleeve: '#c8c8c0', cuff: '#4a4a5a', belt: '#4a4a5a', pants: '#5a5a62', hair: '#e8e8e8' })
       : makeLady();

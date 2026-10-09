@@ -4,7 +4,7 @@
 스팀웍스 → 앱 관리 → 통계 및 업적 → 업적에서 **API 이름**을 그대로 쓰고, 언어마다 이름과 설명을 넣습니다.
 아이콘: `marketing/achievements/<API 이름>.png` (달성), `<API 이름>_locked.png` (미달성). 모두 64×64.
 
-업적 45개
+업적 49개
 
 | API 이름 | 이름 | 설명 | Name | Description | 名前 (日本語) | 説明 | 名称 (简体中文) | 说明 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -21,6 +21,10 @@
 | `ACH_B_DRAGON` | 용궁의 평화 | 동해 용왕 물리치기 | Peace Beneath the Waves | Defeat the Dragon King of the East Sea | 竜宮の平和 | 東海竜王を倒す | 龙宫的和平 | 击败东海龙王 |
 | `ACH_B_CENTIPEDE` | 맑은 냇물 | 천년 왕지네 물리치기 | Clear Waters | Defeat the Thousand-Year Centipede | 澄んだ小川 | 千年大ムカデを倒す | 清澈溪水 | 击败千年蜈蚣 |
 | `ACH_B_FROSTGIANT` | 봄을 부르다 | 서리 거인 동장군 물리치기 | Calling Spring | Defeat General Winter | 春を呼ぶ | 霜の巨人・冬将軍を倒す | 唤来春天 | 击败霜之巨人冬将军 |
+| `ACH_B_EODUM` | 어둠을 걷다 | 어둑시니 물리치기 | Lifting the Dark | Defeat Eoduksini | 闇を払う | オドゥクシニを倒す | 驱散黑暗 | 击败幽暗鬼 |
+| `ACH_B_DOKGAK` | 판을 엎다 | 외다리 독각귀 물리치기 | Flip the Table | Defeat the One-Legged Dokgakgwi | 勝負をひっくり返す | 一本足の独脚鬼を倒す | 掀翻赌局 | 击败独脚鬼 |
+| `ACH_B_JANGSAN` | 대답하지 않은 밤 | 장산범 물리치기 | The Night I Didn't Answer | Defeat the Jangsanbeom | 答えなかった夜 | チャンサンボムを倒す | 没有应声的夜 | 击败长山虎 |
+| `ACH_B_NOEGONG` | 하늘이 맑아지다 | 천둥 장수 뇌공 물리치기 | Clear Skies | Defeat Noegong, General of Thunder | 空が晴れる | 雷の将・雷公を倒す | 天朗气清 | 击败雷将雷公 |
 | `ACH_B_YEOMRA` | 저승의 판결 | 염라대왕 물리치기 | Final Verdict | Defeat King Yeomra | あの世の判決 | 閻魔大王を倒す | 阴间的判决 | 击败阎罗大王 |
 | `ACH_MAIN` | 평안해진 땅 | 메인 퀘스트 모두 마치기 | Peace Restored | Finish the main quest | 平穏になった地 | メインクエストをすべて終える | 太平之地 | 完成全部主线任务 |
 | `ACH_ENDING` | 달거울 복원 | 엔딩 보기 | Moon Mirror Restored | See the ending | 月の鏡の復元 | エンディングを見る | 月之镜复原 | 观看结局 |
@@ -49,7 +53,7 @@
 | `ACH_BOUNTY10` | 현상금 사냥꾼 | 현상수배 10번 마치기 | Bounty Hunter | Complete 10 bounties | 賞金稼ぎ | 手配書を10回こなす | 赏金猎人 | 完成10次悬赏 |
 | `ACH_FALL10` | 칠전팔기 | 10번 쓰러지고도 다시 일어서기 | Never Give Up | Fall 10 times and get back up | 七転び八起き | 10回倒れても立ち上がる | 百折不挠 | 倒下10次仍重新站起 |
 | `ACH_HARD1` | 험한 밤길 | 어려움 난이도에서 보스 물리치기 | Rough Night Road | Defeat a boss on Hard | 険しい夜道 | 難易度「難しい」でボスを倒す | 险峻夜路 | 在困难难度下击败首领 |
-| `ACH_HARD10` | 백귀를 꺾은 자 | 어려움 난이도에서 보스 열을 모두 물리치기 | Breaker of a Hundred Demons | Defeat all ten bosses on Hard | 百鬼を打ち破りし者 | 難易度「難しい」でボス十体をすべて倒す | 击破百鬼者 | 在困难难度下击败全部十个首领 |
+| `ACH_HARD10` | 백귀를 꺾은 자 | 어려움 난이도에서 모든 보스 물리치기 | Breaker of a Hundred Demons | Defeat every boss on Hard | 百鬼を打ち破りし者 | 難易度「難しい」ですべてのボスを倒す | 击破百鬼者 | 在困难难度下击败所有首领 |
 | `ACH_HARDRUN` | 물러서지 않는 길 | 난이도를 한 번도 낮추지 않고 어려움으로 메인 퀘스트 마치기 | No Step Back | Finish the main quest on Hard without ever lowering the difficulty | 退かぬ道 | 一度も難易度を下げずに「難しい」でメインクエストを終える | 绝不退让之路 | 不曾降低难度,以困难难度完成主线任务 |
 | `ACH_DAILY7` | 하루하루 | 오늘의 목표를 모두 마친 날 7일 | Day by Day | Finish all daily goals on 7 days | 一日一日 | 今日の目標をすべて達成した日が7日 | 日复一日 | 完成全部每日目标的天数达到7天 |
 | `ACH_CODEX` | 요괴 도감 | 몬스터 도감 완성 | Spirit Codex | Complete the monster codex | 妖怪図鑑 | モンスター図鑑を完成させる | 妖怪图鉴 | 完成怪物图鉴 |

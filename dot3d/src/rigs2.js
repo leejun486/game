@@ -12,7 +12,7 @@ function mesh(geo, mat, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0) {
   return m;
 }
 
-class BaseRig {
+export class BaseRig {
   constructor() {
     this.mats = [];
     this.root = new THREE.Group();
@@ -443,6 +443,8 @@ const BEASTS = {
   boar: { s: 1.5, fur: '#5a3e2a', belly: '#7a5a3a', dark: '#2a1a10', eye: '#ff4a2a', eyeE: '#6a0a00', tusks: true, bristle: true, ears: 'small', tail: 0.35, muzzle: 1.25, bulk: 1.25, legs: 0.85 },
   gumiho: { s: 2.9, fur: '#f6f0e4', belly: '#ffffff', dark: '#3a3040', eye: '#ff4a6a', eyeE: '#8a0a2a', ears: 'pointy', tail: 1.6, tails: 9, tip: '#7fd8ff', muzzle: 1.25, legs: 1.05, ruff: true, wisps: 3, glow: true, mark: '#c8302c' },
   clone: { s: 1.7, fur: '#f6f0e4', belly: '#ffffff', dark: '#3a3040', eye: '#ff4a6a', eyeE: '#8a0a2a', ears: 'pointy', tail: 1.4, tails: 9, tip: '#7fd8ff', muzzle: 1.25, legs: 1.05, ruff: true, ghost: true },
+  tanuki: { s: 1.25, fur: '#8a6a4a', belly: '#e0d0b0', dark: '#2a1e16', eye: '#ffd040', eyeE: '#5a3a00', ears: 'round', tail: 1.25, muzzle: 0.8, bulk: 1.3, legs: 0.75 },
+  jangsan: { s: 3.1, fur: '#ece8e0', belly: '#ffffff', dark: '#3a3438', eye: '#ff7a4a', eyeE: '#8a1a00', ears: 'pointy', tail: 1.5, muzzle: 1.05, legs: 1.1, ruff: true, glow: true },
   wolf: { s: 1.4, fur: '#b8bec8', belly: '#eef0f4', dark: '#3a3e48', eye: '#8ad8ff', eyeE: '#1a5aaa', ruff: true, ears: 'pointy', tail: 1.1, muzzle: 1.1, legs: 1.1 },
 };
 

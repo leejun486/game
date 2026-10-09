@@ -6,7 +6,7 @@ export const DEMO = typeof __DEMO__ !== 'undefined' && !!__DEMO__;
 // 스토어 페이지 (출시 전에 실제 주소로 바꿀 것)
 export const STORE_URL = 'https://store.steampowered.com/';
 // 체험판에서 열리지 않는 문 (뒷문 너머부터)
-export const DEMO_LOCKED_GATES = new Set(['swamp', 'canyon', 'fortress', 'sea', 'valley', 'snowfield']);
+export const DEMO_LOCKED_GATES = new Set(['swamp', 'canyon', 'fortress', 'sea', 'valley', 'snowfield', 'tomb', 'market', 'tidal', 'sky']);
 // 체험판 마지막을 알리는 가짜 임무 (퀘스트 창에 표시)
 export const DEMO_QUEST = { title: '체험판은 여기까지', type: 'demo', desc: '정식판에서는 <b>물안개 늪</b>부터 여섯 지역과 보스 일곱이 더 기다려요. 이 세 지역은 계속 돌아다닐 수 있어요' };
 export const DEMO_END_LINES = [

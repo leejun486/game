@@ -1,6 +1,6 @@
 // 저장 · 불러오기
 //  1) 여러 가지를 바꿔 저장 → 새로고침해서 이어하기 → 다시 저장한 기록이 처음과 같은지
-//  2) 예전 버전(퀘스트 46단계 시절, qv 3) 기록이 새 단계 번호로 옮겨지는지
+//  2) 예전 버전(퀘스트 46단계 시절 qv 3, 55단계 시절 qv 4) 기록이 새 단계 번호로 옮겨지는지
 //  3) 찾기 퀘스트 도중 저장한 진행이 이어지는지
 //  4) 저장이 깨졌을 때 예비 기록으로 이어지는지
 const { openGame, check, clean } = require('./harness.cjs');
@@ -42,11 +42,11 @@ module.exports = {
     ctx.log('왕복 같음');
 
     // 2) 옛 기록 옮기기: [옛 단계, 옮겨진 뒤 퀘스트 이름]
-    for (const [old, want] of [[20, '불가사리의 풀무'], [19, '검은 쇳조각'], [12, '늪의 사공'], [2, '남문이 열리다'], [46, null]]) {
-      await g.eval(([k, old]) => { const d = JSON.parse(localStorage.getItem(k)); d.quest.step = old; d.quest.qv = 3; d.quest.prog = {}; localStorage.setItem(k, JSON.stringify(d)); window.game.noSave = true; }, [KEY, old]);
+    for (const [old, qv, want] of [[20, 3, '불가사리의 풀무'], [19, 3, '검은 쇳조각'], [12, 3, '늪의 사공'], [2, 3, '남문이 열리다'], [46, 3, '고분 가는 길'], [54, 4, '고분 가는 길'], [55, 4, '고분 가는 길'], [53, 4, '얼음 북']]) {
+      await g.eval(([k, old, qv]) => { const d = JSON.parse(localStorage.getItem(k)); d.quest.step = old; d.quest.qv = qv; d.quest.prog = {}; localStorage.setItem(k, JSON.stringify(d)); window.game.noSave = true; }, [KEY, old, qv]);
       await cont();
       const r = await g.eval(() => [window.game.curQuest()?.title || null, window.game.quest.qv]);
-      check(r[0] === want && r[1] >= 4, `옛 기록 ${old}단계 → ${r[0]} (qv ${r[1]}), ${want}이어야 함`);
+      check(r[0] === want && r[1] >= 5, `옛 기록 ${old}단계(qv ${qv}) → ${r[0]} (qv ${r[1]}), ${want}이어야 함`);
     }
     ctx.log('옛 기록 옮기기 확인');
 

@@ -5,6 +5,7 @@
 //  mirror    : 엔딩 직전, 열 조각이 주인공 둘레를 돌다 하나의 달로 모임
 import * as THREE from 'three';
 import { Cutscene } from './cutscene.js';
+import { SHARD_MAX } from './story.js';
 
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
 const rand = (a, b) => a + Math.random() * (b - a);
@@ -86,15 +87,15 @@ const SCENES = {
       { cam: 'player', k: 0.72, speed: 2 },
       { do: () => {
         const mat = new THREE.MeshBasicMaterial({ color: '#fff4d0', transparent: true, opacity: 0.95, side: THREE.DoubleSide });
-        for (let i = 0; i < 10; i++) {
+        for (let i = 0; i < SHARD_MAX; i++) {
           const m = new THREE.Mesh(new THREE.CircleGeometry(0.22, 3 + (i % 3)), mat.clone());
           m.userData.noOutline = true; m.renderOrder = 30;
-          m.userData.a = (i / 10) * Math.PI * 2; m.userData.h = rand(0.4, 1.6);
+          m.userData.a = (i / SHARD_MAX) * Math.PI * 2; m.userData.h = rand(0.4, 1.6);
           g.scene.add(m); S.push(m);
         }
         g.audio.play('levelup');
       } },
-      // 열 조각이 주인공 둘레를 돌며 떠오름
+      // 모든 조각이 주인공 둘레를 돌며 떠오름
       { dur: 2.6, anim: (g2, k, dt) => {
         S.forEach((m, i) => {
           m.userData.a += dt * (1.2 + k * 3);

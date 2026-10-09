@@ -44,7 +44,7 @@ module.exports = {
 
     // 2) 새 방식 퀘스트
     const fresh = steps.filter((s) => s[4]);
-    check(fresh.length === 9, `새 방식 퀘스트가 ${fresh.length}개 (9개여야 함)`);
+    check(fresh.length === 13, `새 방식 퀘스트가 ${fresh.length}개 (13개여야 함)`);
     for (const [i, type, region, title] of fresh) {
       await g.eval(([i, region]) => {
         const G = window.game; G.qk.clear(); G.quest.step = i; G.quest.prog = {}; G.updateGates(true);

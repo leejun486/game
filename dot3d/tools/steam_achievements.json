@@ -156,6 +156,54 @@
   "zhDesc": "击败霜之巨人冬将军"
  },
  {
+  "api": "ACH_B_EODUM",
+  "id": "b_eodum",
+  "ko": "어둠을 걷다",
+  "koDesc": "어둑시니 물리치기",
+  "en": "Lifting the Dark",
+  "enDesc": "Defeat Eoduksini",
+  "ja": "闇を払う",
+  "jaDesc": "オドゥクシニを倒す",
+  "zh": "驱散黑暗",
+  "zhDesc": "击败幽暗鬼"
+ },
+ {
+  "api": "ACH_B_DOKGAK",
+  "id": "b_dokgak",
+  "ko": "판을 엎다",
+  "koDesc": "외다리 독각귀 물리치기",
+  "en": "Flip the Table",
+  "enDesc": "Defeat the One-Legged Dokgakgwi",
+  "ja": "勝負をひっくり返す",
+  "jaDesc": "一本足の独脚鬼を倒す",
+  "zh": "掀翻赌局",
+  "zhDesc": "击败独脚鬼"
+ },
+ {
+  "api": "ACH_B_JANGSAN",
+  "id": "b_jangsan",
+  "ko": "대답하지 않은 밤",
+  "koDesc": "장산범 물리치기",
+  "en": "The Night I Didn't Answer",
+  "enDesc": "Defeat the Jangsanbeom",
+  "ja": "答えなかった夜",
+  "jaDesc": "チャンサンボムを倒す",
+  "zh": "没有应声的夜",
+  "zhDesc": "击败长山虎"
+ },
+ {
+  "api": "ACH_B_NOEGONG",
+  "id": "b_noegong",
+  "ko": "하늘이 맑아지다",
+  "koDesc": "천둥 장수 뇌공 물리치기",
+  "en": "Clear Skies",
+  "enDesc": "Defeat Noegong, General of Thunder",
+  "ja": "空が晴れる",
+  "jaDesc": "雷の将・雷公を倒す",
+  "zh": "天朗气清",
+  "zhDesc": "击败雷将雷公"
+ },
+ {
   "api": "ACH_B_YEOMRA",
   "id": "b_yeomra",
   "ko": "저승의 판결",
@@ -495,13 +543,13 @@
   "api": "ACH_HARD10",
   "id": "hard10",
   "ko": "백귀를 꺾은 자",
-  "koDesc": "어려움 난이도에서 보스 열을 모두 물리치기",
+  "koDesc": "어려움 난이도에서 모든 보스 물리치기",
   "en": "Breaker of a Hundred Demons",
-  "enDesc": "Defeat all ten bosses on Hard",
+  "enDesc": "Defeat every boss on Hard",
   "ja": "百鬼を打ち破りし者",
-  "jaDesc": "難易度「難しい」でボス十体をすべて倒す",
+  "jaDesc": "難易度「難しい」ですべてのボスを倒す",
   "zh": "击破百鬼者",
-  "zhDesc": "在困难难度下击败全部十个首领"
+  "zhDesc": "在困难难度下击败所有首领"
  },
  {
   "api": "ACH_HARDRUN",

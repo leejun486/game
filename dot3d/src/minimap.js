@@ -165,7 +165,7 @@ export class MiniMap {
 
   // 그 지역 문이 열렸는지 (궁궐은 늘, 나머지는 들어가는 길이 열린 뒤)
   regionOpen(id) {
-    const G = this.game, gates = { bamboo: 'south', temple: 'temple', swamp: 'swamp', canyon: 'canyon', fortress: 'fortress', sea: 'sea', valley: 'valley', snowfield: 'snowfield' };
+    const G = this.game, gates = { bamboo: 'south', temple: 'temple', swamp: 'swamp', canyon: 'canyon', fortress: 'fortress', sea: 'sea', valley: 'valley', snowfield: 'snowfield', tomb: 'tomb', market: 'market', tidal: 'tidal', sky: 'sky' };
     if (id === 'palace') return true;
     const g = G.world.gates[gates[id]];
     return !g || g.open || !!G.cleared[id];

@@ -43,7 +43,7 @@ const V = (x, y, z) => new THREE.Vector3(x, y, z);
 function _noTower(g) { return g.tower?.active ? { mapId: 'canyon' } : {}; }
 
 // 보스 등장 연출의 별칭 / 단계 전환 대사
-const BOSS_EPITHET = { boss: '도깨비들의 왕', gumiho: '천 년을 산 여우', reaper: '명부를 든 저승의 사자', imugi: '용이 되지 못한 뱀', bulgasari: '쇠를 먹고 자라는 괴물', baekho: '산을 다스리는 범의 왕', dragon: '동해를 다스리는 용', centipede: '천 년 묵은 독의 왕', frostgiant: '겨울을 몰고 오는 장수', yeomra: '저승을 다스리는 왕' };
+const BOSS_EPITHET = { boss: '도깨비들의 왕', gumiho: '천 년을 산 여우', reaper: '명부를 든 저승의 사자', imugi: '용이 되지 못한 뱀', bulgasari: '쇠를 먹고 자라는 괴물', baekho: '산을 다스리는 범의 왕', dragon: '동해를 다스리는 용', centipede: '천 년 묵은 독의 왕', frostgiant: '겨울을 몰고 오는 장수', noegong: '하늘의 북을 치는 천둥 장수', jangsan: '사람 목소리를 흉내 내는 흰 짐승', dokgak: '밤장터를 연 외다리 도깨비', eodum: '볼수록 커지는 어둠', yeomra: '저승을 다스리는 왕' };
 const DIFF_NOTE = {
   easy: '몬스터 체력 75% · 받는 피해 절반쯤 — 이야기와 탐험을 편하게',
   normal: '처음 하는 분께 알맞은 기본 난이도 — 남쪽 지역일수록 우두머리가 세짐',
@@ -59,6 +59,10 @@ const BOSS_PHASE_LINE = {
   dragon: ['바다가 끓어오르며 물기둥이 솟는다', '"감히 용궁을!" — 몸을 휘감아 휘두른다'],
   centipede: ['독액이 사방으로 흩뿌려진다', '세 번 연달아 돌진하고 꼬리를 휘두른다!'],
   frostgiant: ['눈보라와 함께 얼음 구슬이 사방으로', '"겨울은 끝나지 않는다!" — 고드름이 두 번 쏟아진다'],
+  noegong: ['"하늘이 노했다!" — 벼락이 다섯 번 내리친다', '북 고리가 사방으로 번개를 흩뿌린다!'],
+  jangsan: ['"순덕아… 문 좀 열어라…" — 목소리가 사방에서 울린다', '흰 털을 휘날리며 세 번 연달아 덮쳐 온다!'],
+  dokgak: ['"한 판 더! 이번엔 네 넋을 걸어라!" — 금덩이가 쏟아진다', '외다리로 땅을 구르며 방망이를 휘돌린다!'],
+  eodum: ['"나를 보았구나…" — 어둠이 부풀어 오른다', '무덤 사이가 온통 어둠에 잠긴다…'],
   yeomra: ['"판관들아, 나와라" — 판결이 다섯 번 내려친다', '지옥의 불이 사방으로 터져 나간다'],
 };
 
@@ -118,7 +122,7 @@ class Game {
     this.cleared = {};
     this.regionBanner = {};
     // 퀘스트 진행: step = QUESTS 순번, prog = 이 단계 진행도, lit = 밝힌 석등, bounty = 현상수배
-    this.quest = { step: 0, prog: {}, lit: [], bounty: null, shards: [], prologue: false, ended: false, qv: 4 };
+    this.quest = { step: 0, prog: {}, lit: [], bounty: null, shards: [], prologue: false, ended: false, qv: 5 };
     this.flames = [];
     this.fieldT = 0;
     this.themeCur = this.cloneTheme(MAPS.palace.theme);
@@ -452,6 +456,26 @@ class Game {
         '심봤다! …아니, 사람이로군. 이 눈 속에서 산삼 찾다 보면 별걸 다 보오.',
         '눈늑대는 떼로 덮치고, 얼음 도깨비에게 맞으면 몸이 얼어붙소. 서리 도깨비불의 구슬도 마찬가지요.',
         '고원 한가운데 얼음 북을 울리면 동장군이 나온다는구려.',
+      ]),
+      new NPC(this, 'keeper', 10.2, 419.6, 2.6, '능참봉', [
+        '해 떨어지기 전에 돌아가시오. 밤의 능은 산 사람이 있을 곳이 못 되오.',
+        '망령 병사는 창을 길게 찌르고, 무인석은 돌칼로 땅을 내려찍소. 무인석은 칼이 잘 안 먹히니 기술로 몰아치시오.',
+        '원귀 궁녀는 사라졌다 나타나며 넋불을 던지오. 혼유석 앞 향로에 향을 피우면 어둑시니가 나온다오.',
+      ]),
+      new NPC(this, 'peddler', -10.6, 466.2, 2.5, '보부상 덕배', [
+        '쉿, 도깨비들 귀가 밝소. 밤장터에선 사람인 티를 내면 안 되오.',
+        '장난꾸러기는 날래게 덮치고, 노름꾼은 엽전을 부채꼴로 던지오. 너구리는 맞으면 펑 사라졌다 엉뚱한 데서 나타나니 놀라지 마시오.',
+        '장터 한가운데 난장 북을 울리면 외다리 독각귀가 판을 받으러 나온다오.',
+      ]),
+      new NPC(this, 'haenyeo', 10.4, 515.2, 2.6, '해녀 순덕', [
+        '갯벌은 발이 푹푹 빠져요. 물웅덩이에선 걸음이 느려지고, 인면어는 오히려 빨라지니 조심하세요.',
+        '농게는 큰 집게가 단단해서 칼이 덜 먹혀요. 갯귀신이 던지는 진흙에 맞으면 몸이 무거워지고요.',
+        '당산나무 아래 징을 치면 장산범이 내려온대요… 목소리에 대답하면 안 돼요.',
+      ]),
+      new NPC(this, 'fairy', -10.4, 563, 2.6, '선녀 연화', [
+        '선계에선 구름이 길을 막아요. 옥돌 길을 따라 다니세요.',
+        '천둥 동자는 번개 구슬을, 학 요괴는 깃털을 부채꼴로 쏴요. 선녀 그림자는 맞으면 사라졌다 엉뚱한 데서 나타나고요.',
+        '구름 제단의 천둥 북을 울리면 뇌공님이 내려오세요… 벼락이 떨어질 자리는 붉게 빛나요.',
       ]),
       new NPC(this, 'ferry', -12.5, 135.5, 2.4, '사공 영감', [
         '이 늪은 물이 얕아도 발이 푹푹 빠지오. 나무 다리를 따라 다니시오.',
@@ -1053,12 +1077,19 @@ class Game {
     // 청류 계곡·백설 고원이 생기기 전(1.1) 기록: 용궁 다음(귀환·완료)이었으면 `샘물길`부터
     if (this.quest.qv === 2 && this.quest.step >= 33) { this.quest.step = 33; this.quest.prog = {}; }
     // 지역마다 새 방식 퀘스트(added: 4)가 끼어들기 전 기록: 같은 퀘스트를 가리키게 단계 번호를 옮김 (그 사이 새 퀘스트는 건너뜀)
+    //  (그때의 목록 = 1.2의 네 지역(v5)이 없는 목록)
+    const v4 = QUESTS.filter((q) => !q.v5);
     if ((this.quest.qv || 0) < 4) {
-      const old = QUESTS.filter((q) => !q.added);
+      const old = v4.filter((q) => !q.added);
       const s0 = this.quest.step;
-      this.quest.step = s0 >= old.length ? QUESTS.length : QUESTS.indexOf(old[s0]);
+      this.quest.step = s0 >= old.length ? v4.length : v4.indexOf(old[s0]);
     }
-    this.quest.qv = 4;
+    // 고원 너머 네 지역(1.2)이 생기기 전 기록: 귀환·완료였으면 새 지역의 첫 단계(고분 가는 길)부터
+    if ((this.quest.qv || 0) < 5) {
+      const first = QUESTS.findIndex((q) => q.v5);
+      if (this.quest.step >= first) { this.quest.step = first; this.quest.prog = {}; }
+    }
+    this.quest.qv = 5;
     // 이야기가 생기기 전 기록: 이미 평정한 지역의 조각은 가진 것으로, 프롤로그는 건너뜀
     if (!d.quest?.shards) this.quest.shards = Object.keys(this.cleared).filter((k) => SHARD_LINES[k]);
     if (this.quest.step > 0 || this.round > 0) this.quest.prologue = true;
@@ -1244,7 +1275,7 @@ class Game {
     this.kills = 0; this.round = 0; this.stage = 0; this.bestCombo = 0; this.playTime = 0; this.flags = {}; this.stats = newStats(); this.daily = null;
     this.progress = {}; this.inv = new Set(['sw0', 'mg0', 'bw0', 'sp0', 'ot0']); this.gear = [];
     this.cleared = {};
-    this.quest = { step: 0, prog: {}, lit: [], bounty: null, shards: [], prologue: false, ended: false, qv: 4 };
+    this.quest = { step: 0, prog: {}, lit: [], bounty: null, shards: [], prologue: false, ended: false, qv: 5 };
     for (const f of this.flames) this.scene.remove(f);
     this.flames = [];
     this.qk.clear();
@@ -2205,6 +2236,10 @@ class Game {
       sea: ['bell', '금줄이 걷혔다! 산성 남서쪽 바위 사이 물길로 내려가면 용궁이다'],
       valley: ['bell', '대합이 입을 열었다! 용궁 남동쪽 샘물길로 올라가면 청류 계곡이다'],
       snowfield: ['slam', '넝쿨 바위가 치워졌다! 계곡 남서쪽 고원 길로 가면 백설 고원이다'],
+      tomb: ['bell', '얼음 벽이 녹았다! 고원 남동쪽 고갯길로 내려가면 왕릉 고분이다'],
+      market: ['slam', '무너진 돌담이 치워졌다! 고분 남서쪽 고개를 넘으면 도깨비 밤장터다'],
+      tidal: ['slam', '궤짝이 치워졌다! 장터 남동쪽 갯바람 길로 가면 남해 갯벌 마을이다'],
+      sky: ['bell', '바다 위로 무지개 다리가 놓였다! 갯벌 남서쪽 무지개를 건너면 천상 선계다'],
     };
     QUESTS.forEach((q, i) => {
       if (!q.gateAfter) return;
@@ -2392,7 +2427,7 @@ class Game {
     this.seenBoss = this.seenBoss || {};
     const first = !this.seenBoss[e.type];
     this.seenBoss[e.type] = true;
-    const kind = { boss: 'drop', baekho: 'drop', frostgiant: 'drop', imugi: 'rise', dragon: 'rise', centipede: 'rise', bulgasari: 'rise' }[e.type] || 'burst';
+    const kind = { boss: 'drop', baekho: 'drop', frostgiant: 'drop', dokgak: 'drop', noegong: 'drop', imugi: 'rise', dragon: 'rise', centipede: 'rise', bulgasari: 'rise' }[e.type] || 'burst';
     e.entrance = { kind, dur: kind === 'drop' ? 1.25 : 1.35, water: e.type === 'imugi' || e.type === 'dragon' };
     const dur = (first ? 2.8 : 1.7) + 1.1;
     this.cine = { e, t: 0, dur };
@@ -2446,6 +2481,8 @@ class Game {
     }
     if (e.type === 'yeomra' && n === 2) for (let i = 0; i < 2; i++) this.spawnQueue.push({ type: i ? 'ghost' : 'jiangshi', elite: true, at: this.time + 1 + i * 0.4 });
     if (e.type === 'reaper' && n === 3) this.ui.toast('사방이 어두워진다… 저승사자의 영역이다', 2.4);
+    // 어둑시니: 단계마다 몸이 부풀고, 2단계부터 어둠이 내림 (장명등을 밝혀 둔 덕에 조금 옅음)
+    if (e.type === 'eodum') { e.sizeMul *= 1.14; if (n === 2) this.ui.toast('어둑시니가 부풀어 오른다! 오래 바라볼수록 커진다', 2.4); }
   }
 
   // 화면 어둠 (저승사자 3단계) / 붉은 테 (염라대왕 3단계): 플레이어 주변만 밝게
@@ -2453,12 +2490,14 @@ class Game {
     const el = this.darkEl || (this.darkEl = document.getElementById('darkness'));
     let mode = null;
     for (const e of this.enemies) if (!e.dead && e.phase === 3) { if (e.type === 'reaper') mode = 'dark'; else if (e.type === 'yeomra' && !mode) mode = 'red'; }
+    for (const e of this.enemies) if (!e.dead && e.type === 'eodum' && e.phase >= 2 && !mode) mode = 'dim';
     if (this.tower?.active && !this.tower.cleared && this.tower.rule?.key === 'dark' && !this.cut) mode = 'dark';
     if (!mode || this.state === 'title') { if (el.className) el.className = ''; return; }
     const sp = this.pixel.project(V(this.player.pos.x, this.player.y + 0.8, this.player.pos.z));
-    const c = mode === 'dark' ? 'rgba(4, 2, 10, 0.88)' : 'rgba(80, 0, 10, 0.55)';
+    const c = mode === 'dark' ? 'rgba(4, 2, 10, 0.88)' : mode === 'dim' ? 'rgba(8, 4, 20, 0.8)' : 'rgba(80, 0, 10, 0.55)';
+    const r0 = { dark: 150, dim: 200, red: 260 }[mode], r1 = { dark: 330, dim: 420, red: 560 }[mode];
     el.className = 'on';
-    el.style.background = `radial-gradient(circle at ${sp.x.toFixed(0)}px ${sp.y.toFixed(0)}px, transparent ${mode === 'dark' ? 150 : 260}px, ${c} ${mode === 'dark' ? 330 : 560}px)`;
+    el.style.background = `radial-gradient(circle at ${sp.x.toFixed(0)}px ${sp.y.toFixed(0)}px, transparent ${r0}px, ${c} ${r1}px)`;
   }
 
   // 위험 지대: 예고 원을 보여 준 뒤 터짐 (여러 보스가 함께 씀)
@@ -2604,10 +2643,10 @@ class Game {
       return out;
     }
     if (n % 5 === 0) {
-      const bosses = ['boss', 'gumiho', 'reaper', 'imugi', 'bulgasari', 'baekho', 'dragon', 'centipede', 'frostgiant'];
+      const bosses = ['boss', 'gumiho', 'reaper', 'imugi', 'bulgasari', 'baekho', 'dragon', 'centipede', 'frostgiant', 'eodum', 'dokgak', 'jangsan', 'noegong'];
       const b = bosses[(n / 5 - 1) % bosses.length];
       out.push({ type: b });
-      const adds = { boss: ['red', 'blue'], gumiho: ['fox', 'foxfire'], reaper: ['ghost', 'jiangshi'], imugi: ['waterghost', 'toad'], bulgasari: ['firedok', 'stonegolem'], baekho: ['tiger', 'bandit'], dragon: ['crab', 'jelly'], centipede: ['mantis', 'bee'], frostgiant: ['wolf', 'icedok'] }[b];
+      const adds = { boss: ['red', 'blue'], gumiho: ['fox', 'foxfire'], reaper: ['ghost', 'jiangshi'], imugi: ['waterghost', 'toad'], bulgasari: ['firedok', 'stonegolem'], baekho: ['tiger', 'bandit'], dragon: ['crab', 'jelly'], centipede: ['mantis', 'bee'], frostgiant: ['wolf', 'icedok'], eodum: ['tombsoldier', 'gungnyeo'], dokgak: ['imp', 'gambler'], jangsan: ['fishman', 'mudghost'], noegong: ['thunderkid', 'shadowfairy'] }[b];
       for (let i = 0; i < 3; i++) out.push({ type: adds[i % 2] });
       return out;
     }
@@ -2636,7 +2675,7 @@ class Game {
     if (T.rule) {
       this.ui.banner(`${n}층 · ${T.rule.name}`, `${T.rule.desc} — 보상이 더 좋다`, 3, 'night-banner');
       this.audio.play('gong');
-    } else this.ui.banner(`${n}층`, boss ? `${n >= 20 ? '각성 ' : ''}${{ boss: '도깨비 대왕', gumiho: '천년 구미호', reaper: '저승사자', imugi: '천년 이무기', bulgasari: '불가사리', baekho: '산군 백호', dragon: '동해 용왕', centipede: '천년 왕지네', frostgiant: '동장군', yeomra: '염라대왕' }[list[0].type]} 출현!` : `적 ${list.length}마리${list.some((q) => q.elite) ? ' · 정예 포함' : ''}`, 2.4, boss ? 'boss-banner' : '');
+    } else this.ui.banner(`${n}층`, boss ? `${n >= 20 ? '각성 ' : ''}${{ boss: '도깨비 대왕', gumiho: '천년 구미호', reaper: '저승사자', imugi: '천년 이무기', bulgasari: '불가사리', baekho: '산군 백호', dragon: '동해 용왕', centipede: '천년 왕지네', frostgiant: '동장군', eodum: '어둑시니', dokgak: '독각귀', jangsan: '장산범', noegong: '뇌공', yeomra: '염라대왕' }[list[0].type]} 출현!` : `적 ${list.length}마리${list.some((q) => q.elite) ? ' · 정예 포함' : ''}`, 2.4, boss ? 'boss-banner' : '');
     if (!T.rule) this.audio.play(boss ? 'gong' : 'wave');
     let delay = 1.0;
     for (const q of list) {
@@ -2873,6 +2912,9 @@ class Game {
     if (perks?.has('verdict') && (e.isBoss || e.elite)) mul *= 1.3;
     if (perks?.has('hunter') && !e.isBoss && !e.elite) mul *= 1.25;
     if (perks?.has('frostbite') && e.frozenT > 0) mul *= 1.35;
+    if (perks?.has('shadow') && e.hp > e.maxHp * 0.7) mul *= 1.3;
+    const jackpot = perks?.has('jackpot') && Math.random() < 0.08;
+    if (jackpot) { mul *= 3; this.fx.number(e.center().clone().add(V(0, 1.4, 0)), '대박!', 'alert'); this.fx.coins(e.pos.x, e.y + 1, e.pos.z, 8); }
     const exec = perks?.has('execute') && e.hp < e.maxHp * 0.35;
     if (exec) mul *= 1.6;
     // 장비 옵션: 치명타 확률·치명타 피해
@@ -3505,6 +3547,89 @@ class Game {
           const crit = Math.random() < 0.2;
           this.damageEnemy(o, Math.round(rand(46, 56) * (crit ? 1.8 : 1)), crit, 4, 0.4);
           if (!o.dead && !o.isBoss) o.freeze(1.6);
+        }
+      });
+    } else if (pl.ult === 'skythunder') {
+      // 하늘 북: 몸 둘레 북 여덟을 차례로 두드려 가까운 적에게 벼락 여덟 번
+      const c = feet();
+      this.audio.play('drum');
+      this.ui.flash('#e8f4ff', 0.3);
+      for (let i = 0; i < 8; i++) this.after(i * 0.14, () => {
+        if (pl.dead) return;
+        const near = this.enemiesIn(feet(), 9).filter((o) => !o.dead);
+        const t = near.length ? near[Math.floor(Math.random() * near.length)] : null;
+        const at = t ? V(t.pos.x, t.y, t.pos.z) : V(c.x + rand(-4, 4), c.y, c.z + rand(-4, 4));
+        this.fx.bolt(at, 1.6);
+        this.fx.ring(at, 2, '#bfe0ff', 0.35);
+        this.audio.play('thunder');
+        this.shake(0.25);
+        for (const o of this.enemiesIn(at, 2)) {
+          const crit = Math.random() < 0.2;
+          this.damageEnemy(o, Math.round(rand(52, 62) * (crit ? 1.8 : 1)), crit, 3, 0.5);
+        }
+      });
+    } else if (pl.ult === 'echo') {
+      // 메아리: 사람 목소리가 세 겹으로 퍼지며 닿은 적을 굳힘
+      this.audio.play('wail');
+      this.ui.flash('#fff0e0', 0.25);
+      for (let i = 0; i < 3; i++) this.after(i * 0.28, () => {
+        if (pl.dead) return;
+        const c = feet(), R = 3 + i * 2;
+        this.fx.ring(c, R, '#fff0e0', 0.5);
+        this.fx.ring(c, R * 0.92, '#ffb07a', 0.35);
+        this.shake(0.2 + i * 0.1);
+        for (const o of this.enemiesIn(c, R)) {
+          const crit = Math.random() < 0.2;
+          this.damageEnemy(o, Math.round(rand(56, 66) * (crit ? 1.8 : 1)), crit, 3, o.isBoss ? 0.3 : 1.0);
+        }
+      });
+    } else if (pl.ult === 'goldstorm') {
+      // 금 나와라 뚝딱: 가까운 적 여덟 머리 위로 금덩이가 차례로 떨어짐 (기절)
+      const c = feet();
+      const marks = this.enemies.filter((e) => !e.dead && !e.spawning && Math.hypot(e.pos.x - c.x, e.pos.z - c.z) < 10)
+        .sort((a, b) => Math.hypot(a.pos.x - c.x, a.pos.z - c.z) - Math.hypot(b.pos.x - c.x, b.pos.z - c.z)).slice(0, 8);
+      this.audio.play('laugh');
+      this.ui.flash('#ffe080', 0.25);
+      if (!marks.length) this.fx.coins(c.x, c.y + 1, c.z, 20);
+      marks.forEach((e, i) => {
+        this.fx.circle(V(e.pos.x, e.y, e.pos.z), 1.2, '#ffd040', 0.35 + i * 0.12, 3);
+        this.after(0.35 + i * 0.12, () => {
+          if (e.dead) return;
+          this.fx.coins(e.pos.x, e.y + 0.6, e.pos.z, 12);
+          this.fx.colorFire(e.pos.x, e.y + 0.3, e.pos.z, 18, 0.5, '#fff0a0', '#ffa000');
+          this.fx.ring(V(e.pos.x, e.y, e.pos.z), 1.4, '#ffe080', 0.3);
+          this.audio.play('coin');
+          this.shake(0.15);
+          const crit = Math.random() < 0.2;
+          this.damageEnemy(e, Math.round(rand(80, 95) * (crit ? 1.8 : 1)), crit, 3, 0.7);
+        });
+      });
+    } else if (pl.ult === 'eclipse') {
+      // 어둠 삼키기: 앞쪽에 검은 소용돌이 → 주위 적을 끌어당긴 뒤 터뜨림 (기절)
+      const f = feet(), c = V(f.x + Math.sin(pl.yaw) * 3, f.y, f.z + Math.cos(pl.yaw) * 3);
+      this.audio.play('wail');
+      this.ui.flash('#1a0a2a', 0.35);
+      this.fx.circle(c, 3.6, '#9a5aff', 0.9, -3);
+      for (let t = 0; t < 6; t++) this.after(t * 0.13, () => {
+        for (const o of this.enemiesIn(c, 9)) {
+          if (o.isBoss) continue;
+          const dx = c.x - o.pos.x, dz = c.z - o.pos.z, d = Math.hypot(dx, dz) || 1;
+          o.vel.x += (dx / d) * 6; o.vel.z += (dz / d) * 6;
+        }
+        for (let k = 0; k < 14; k++) {
+          const a = Math.random() * Math.PI * 2, r = rand(1, 4);
+          this.fx.add.emit({ x: c.x + Math.cos(a) * r, y: c.y + rand(0.2, 1.6), z: c.z + Math.sin(a) * r, vx: -Math.cos(a) * r * 2, vy: 0.4, vz: -Math.sin(a) * r * 2, life: 0.45, size: rand(2, 4), color: '#c8a0ff', color2: '#1a0a2a' });
+        }
+      });
+      this.after(0.85, () => {
+        this.audio.play('impact');
+        this.shake(0.6);
+        this.ui.flash('#e0c8ff', 0.35);
+        for (let r = 0; r < 3; r++) this.fx.ring(c, 1.5 + r * 1.2, r ? '#9a5aff' : '#ffffff', 0.4 + r * 0.1);
+        this.fx.colorFire(c.x, c.y + 0.5, c.z, 40, 1, '#e0c8ff', '#3a1a6a');
+        for (const o of this.enemiesIn(c, 3.6)) {
+          const crit = Math.random() < 0.25;
+          this.damageEnemy(o, Math.round(rand(110, 130) * (crit ? 1.8 : 1)), crit, 5, 1.2);
         }
       });
     } else if (pl.ult === 'judgment') {
@@ -4290,6 +4415,30 @@ class Game {
   // 보스 장비 고유 효과 (맞힌 순간)
   weaponPerks(e, c, base, dmg, exec) {
     const pl = this.player;
+    // 뇌공 무기: 천둥 — 가끔 맞은 적 머리 위로 벼락 (둘레 피해)
+    if (pl.perks.has('thunderclap') && !this.inQuake && Math.random() < 0.15) {
+      this.inQuake = true;
+      const at = V(e.pos.x, e.y, e.pos.z);
+      this.fx.bolt(at, 1.2);
+      this.fx.ring(at, 2.2, '#bfe0ff', 0.3);
+      this.audio.play('thunder');
+      for (const o of this.enemiesIn(at, 2.2)) if (!o.dead) this.damageEnemy(o, Math.max(5, Math.round(base * 0.8)), false, 2, 0.4);
+      this.inQuake = false;
+    }
+    // 장산범 무기: 흉내 소리 — 가끔 주변 적이 1초 동안 굳음
+    if (pl.perks.has('mimic') && Math.random() < 0.12) {
+      this.fx.ring(V(e.pos.x, e.y, e.pos.z), 3.5, '#ffe0c0', 0.35);
+      for (const o of this.enemiesIn(e.pos, 3.5)) if (!o.isBoss && !o.dead) { o.hurtT = Math.max(o.hurtT, 1.0); if (o.state === 'windup') { o.state = 'chase'; o.clearTele(); } }
+    }
+    // 둔갑 너구리: 맞으면 가끔 펑 연기 속으로 사라졌다가 플레이어 옆에서 나타남
+    if (e.T.blink && !e.dead && !e.blinkCd && Math.random() < 0.2) {
+      e.blinkCd = true;
+      this.after(1.5, () => { e.blinkCd = false; });
+      this.fx.smoke(e.pos.x, e.y + 0.5, e.pos.z, 16);
+      const a = Math.random() * Math.PI * 2;
+      const at = this.world.randomWalkable(pl.pos.x + Math.sin(a) * 3, pl.pos.z + Math.cos(a) * 3, 0, 1.5);
+      if (at) { e.pos.set(at.x, at.y || 0, at.z); e.y = at.y || 0; this.fx.smoke(at.x, (at.y || 0) + 0.5, at.z, 12); this.audio.play('blink'); }
+    }
     if (exec) {
       this.fx.colorFire(c.x, c.y, c.z, 10, 0.3, '#e0c8ff', '#6a2aff');
       if (Math.random() < 0.3) this.fx.cross(c, '#c890ff', 2.2, 0.3);
@@ -4372,7 +4521,7 @@ class Game {
       if (!bd.some((id) => item(id).kind === 'weapon')) this.after(1.2, () => this.ui.toast('보스 무기는 나오지 않았어요… 다시 도전해 보세요', 2.4));
     }
     // 방어구·장신구: 일반 몬스터는 가끔, 보스는 두세 개 (등급이 높게)
-    const gm = diffOf(this).gear;
+    const gm = diffOf(this).gear * (this.player.perks?.has('fortune') ? 1.3 : 1);
     const gearN = e.isBoss ? 1 + (Math.random() < 0.5 * gm ? 1 : 0) : Math.random() < (e.field ? 0.08 : 0.06) * gm ? 1 : 0;
     for (let i = 0; i < gearN; i++) {
       const strong = e.isBoss ? 0.6 : e.T.hp > 60 ? 0.12 : 0;
@@ -4780,7 +4929,7 @@ class Game {
     const night = this.night > 0.5;
     const region = id === 'palace' ? (night ? 'night' : 'palace') : id === 'tower' ? (this.tower?.active && !this.tower.cleared ? 'battle' : 'tower') : id;
     const music = boss ? 'boss' : this.waveActive || this.combatHeat > 0 ? 'battle' : region;
-    const amb = id === 'palace' ? (night ? 'amb_night' : 'amb_day') : id === 'bamboo' ? (night ? 'amb_night' : 'amb_bamboo') : id === 'swamp' ? 'amb_swamp' : id === 'canyon' ? 'amb_canyon' : id === 'fortress' ? 'amb_fortress' : id === 'sea' ? 'amb_sea' : id === 'valley' ? 'amb_valley' : id === 'snowfield' ? 'amb_snowfield' : id === 'tower' ? 'amb_tower' : 'amb_temple';
+    const amb = id === 'palace' ? (night ? 'amb_night' : 'amb_day') : id === 'bamboo' ? (night ? 'amb_night' : 'amb_bamboo') : id === 'swamp' ? 'amb_swamp' : id === 'canyon' ? 'amb_canyon' : id === 'fortress' ? 'amb_fortress' : id === 'sea' ? 'amb_sea' : id === 'valley' ? 'amb_valley' : id === 'snowfield' ? 'amb_snowfield' : id === 'tomb' ? 'amb_tomb' : id === 'market' ? 'amb_market' : id === 'tidal' ? 'amb_tidal' : id === 'sky' ? 'amb_sky' : id === 'tower' ? 'amb_tower' : 'amb_temple';
     this.audio.setScene(music, amb);
   }
 

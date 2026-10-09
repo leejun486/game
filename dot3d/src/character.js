@@ -1563,11 +1563,14 @@ export function makeDokkaebi(variant = 'blue') {
     fire: { skin: '#3a2a2a', hair: '#ff7a1a', horns: 2, scale: 1.2, horn: '#ffb040' },
     bandit: { skin: '#6a7a3a', hair: '#1a1410', horns: 1, scale: 1.22, horn: '#d8c8a0' },
     ice: { skin: '#9ccce8', hair: '#f4fbff', horns: 2, scale: 1.25, horn: '#e0f6ff' },
+    imp: { skin: '#8ac84a', hair: '#f0a020', horns: 1, scale: 1.02, horn: '#ffe080' },
+    gambler: { skin: '#7a4a9a', hair: '#1a1420', horns: 2, scale: 1.2, horn: '#e0c040' },
+    dokgak: { skin: '#3a6a8a', hair: '#e8e0d0', horns: 1, scale: 2.5, horn: '#f0c040' },
   }[variant];
   return new Rig({
     type: 'dokkaebi', skin: V.skin, hair: V.hair, horns: V.horns, horn: V.horn, scale: V.scale,
     pants: V.skin, sleeve: V.skin, legLen: 0.3, torsoH: 0.42, headR: 0.32, neck: 0.3, shoulder: 0.27, limb: 1.35, wide: 1.3,
-    weapon: variant === 'boss' ? 'goldclub' : 'club', eye: '#1b1416',
+    weapon: variant === 'boss' || variant === 'dokgak' ? 'goldclub' : 'club', eye: '#1b1416',
   });
 }
 
@@ -1897,12 +1900,13 @@ export class StoneRig {
   constructor(variant = 'stone') {
     this.mats = [];
     const mat = (o) => { const m = toon(o); this.mats.push(m); return m; };
-    const frost = variant === 'frost';
-    const stone = mat({ color: C(frost ? '#cfe8f6' : '#8a827a') }), dark = mat({ color: C(frost ? '#7aa8c8' : '#5a544e') }), hat = mat({ color: C(frost ? '#e8f6ff' : '#2a2624') });
-    const glow = frost ? toon({ color: C('#bff4ff'), emissive: C('#2a9aff'), emissiveIntensity: 1.8 }) : toon({ color: C('#ffb060'), emissive: C('#ff5a00'), emissiveIntensity: 1.6 });
+    const frost = variant === 'frost', muin = variant === 'muin';
+    const stone = mat({ color: C(frost ? '#cfe8f6' : muin ? '#a8a49a' : '#8a827a') }), dark = mat({ color: C(frost ? '#7aa8c8' : muin ? '#6e6a62' : '#5a544e') }), hat = mat({ color: C(frost ? '#e8f6ff' : muin ? '#5a5650' : '#2a2624') });
+    const glow = frost ? toon({ color: C('#bff4ff'), emissive: C('#2a9aff'), emissiveIntensity: 1.8 }) : muin ? toon({ color: C('#e0d0ff'), emissive: C('#7a4aff'), emissiveIntensity: 1.7 }) : toon({ color: C('#ffb060'), emissive: C('#ff5a00'), emissiveIntensity: 1.6 });
+    this.stoneMat = stone; this.darkMat = dark; this.hatMat = hat;
     this.root = new THREE.Group();
     this.body = new THREE.Group();
-    this.body.scale.setScalar(frost ? 2.9 : 1.35);
+    this.body.scale.setScalar(frost ? 2.9 : muin ? 1.5 : 1.35);
     this.frost = frost;
     this.root.add(this.body);
     this.torso = new THREE.Group();
