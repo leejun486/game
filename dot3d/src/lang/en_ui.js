@@ -577,6 +577,20 @@ export const dict = {
   '덕배': 'Deokbae',
   '순덕': 'Sundeok',
   '연화': 'Yeonhwa',
+  'Esc · 메뉴 단추로 닫기': 'Esc or the Menu button to close',
+  '몸과 짐': 'Self & Pack',
+  '여정': 'Journey',
+  '도움': 'Helpers',
+  '설정': 'Settings',
+  '일지': 'Journal',
+  '업적': 'Achievements',
+  '조작': 'Controls',
+  '낮으로': 'To Day',
+  '밤으로': 'To Night',
+  '음악 끄기': 'Music Off',
+  '음악 켜기': 'Music On',
+  '자동 사냥 끄기': 'Stop Auto-Hunt',
+  '층': 'F',
 };
 
 const RN = '([ⅠⅡⅢⅣⅤ])';

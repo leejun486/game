@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>월하궁: 도깨비 야행</title>
-<link rel="stylesheet" href="style.css?v=33b931cd1f">
+<link rel="stylesheet" href="style.css?v=385b89c10b">
 <link rel="icon" type="image/png" href="favicon.png">
 <link rel="apple-touch-icon" href="icon.png">
 </head>
@@ -57,7 +57,7 @@
 
     <div id="help">
       <span><b>WASD</b> 이동</span><span><b>J</b>/<b>클릭</b> <i class="lbl-atk">베기</i></span><span><b>Space</b> <i class="lbl-dash">회피</i></span><span><b>K</b>/<b>우클릭</b> <i class="lbl-skill">검기</i></span><span><b>L</b>/<b>Q</b> <i class="lbl-skill2">일섬</i></span><span><b>I</b>/<b>R</b> <i class="lbl-skill3">회오리</i></span><span class="ult hidden"><b>U</b> 고유 기술</span>
-      <span><b>E</b> 대화·북</span><span><b>Tab</b> 타겟 변경</span><span><b>B</b> 가방</span><span><b>V</b> 지도</span><span><b>N</b> 낮/밤</span><span><b>휠</b> 확대</span><span><b>O</b> 외곽선</span><span><b>M</b> 음악</span><span><b>Esc</b> 일시정지·설정</span>
+      <span><b>E</b> 대화·북</span><span><b>Tab</b> 타겟 변경</span><span><b>B</b> 가방</span><span><b>V</b> 지도</span><span><b>N</b> 낮/밤</span><span><b>휠</b> 확대</span><span><b>O</b> 외곽선</span><span><b>M</b> 음악</span><span><b>Esc</b> 메뉴</span>
     </div>
     <div id="help-pad">
       <span><i class="gp gp-n">L</i> 이동</span><span><i class="gp gp-a">A</i> <i class="lbl-atk">베기</i></span><span><i class="gp gp-b">B</i> <i class="lbl-dash">회피</i></span><span><i class="gp gp-x">X</i> <i class="lbl-skill">검기</i></span><span><i class="gp gp-y">Y</i> <i class="lbl-skill2">일섬</i></span><span><i class="gp gp-n">RB</i> <i class="lbl-skill3">회오리</i></span><span class="ult hidden"><i class="gp gp-n">RT</i> 고유 기술</span>
@@ -102,6 +102,14 @@
   <div id="skills" class="panel">
     <div class="bag-head">기술 수련 <small>T / Esc 닫기 · 갈래를 눌러 고르기 (언제든 바꿀 수 있어요)</small><button id="skills-close">✕</button></div>
     <div id="skills-body"></div>
+  </div>
+
+  <div id="hub">
+    <div class="hub-rod"></div>
+    <div class="hub-head"><canvas id="hub-mirror" width="56" height="56"></canvas><div id="hub-who"></div><button id="hub-close" title="Esc">✕</button></div>
+    <div id="hub-body"></div>
+    <div class="hub-foot">Esc · 메뉴 단추로 닫기</div>
+    <div class="hub-rod"></div>
   </div>
 
   <div id="pause" class="panel">
@@ -179,6 +187,6 @@
     </div>
   </div>
 </div>
-<script src="dist/game.js?v=ea6cc36425"></script>
+<script src="dist/game.js?v=1d76db9be3"></script>
 </body>
 </html>

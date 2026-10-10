@@ -702,7 +702,7 @@ body.pad:not(.touch) #help-pad { display: flex; }
 #prompt .gp { margin-right: 4px; }
 
 /* 접근성: 글자·메뉴 크기 (설정 → 화면 → 보기 편하게). 화면 전체가 아니라 글자 판들만 키움 */
-#hud > *, #bag, #skills, #pause, #dialog, #toast, #coach, #ach-pop, #banner, .wm-box, #gameover > * { zoom: var(--ui, 1); }
+#hud > *, #bag, #skills, #pause, #hub, #dialog, #toast, #coach, #ach-pop, #banner, .wm-box, #gameover > * { zoom: var(--ui, 1); }
 #bag, #skills { max-height: calc(88vh / var(--ui, 1)); }
 #pause { max-height: calc(90vh / var(--ui, 1)); }
 #dialog { width: min(760px, calc(92vw / var(--ui, 1))); }
@@ -721,3 +721,40 @@ body.pad:not(.touch) #help-pad { display: flex; }
 @media (max-width: 600px) {
   body.touch #toast { bottom: 190px; white-space: normal; width: max-content; max-width: 92vw; text-align: center; }
 }
+
+/* ===== 두루마리 메뉴 (게임 중 Esc) =====
+   오른쪽에서 펼쳐지는 먹빛 두루마리: 위아래 나무 축, 왼쪽 단청 띠, 칸마다 도트 그림과 붉은 낙관(단축키) */
+#hub { position: absolute; top: 10px; right: 10px; bottom: 10px; width: min(372px, 94vw); display: flex; flex-direction: column; z-index: 38; pointer-events: auto;
+  background: linear-gradient(180deg, #1d1726 0%, #15111c 100%); color: #e8dcc0;
+  border-left: 8px solid transparent; border-image: repeating-linear-gradient(180deg, #2f6f6a 0 14px, #c8302c 14px 20px, #e0b040 20px 24px, #3a8a5a 24px 34px, #1d1726 34px 38px) 8;
+  box-shadow: 0 0 0 100vmax rgba(4, 3, 8, 0.35), -6px 6px 0 rgba(0, 0, 0, 0.45);
+  transform: translateX(110%); transition: transform 0.22s ease-out; visibility: hidden; }
+#hub.show { transform: none; visibility: visible; }
+#hub .hub-rod { height: 12px; flex: none; margin: 0 -6px; border-radius: 6px; background: linear-gradient(180deg, #8a5a32, #4a2e1a); box-shadow: inset 0 2px 0 rgba(255, 220, 160, 0.25); position: relative; }
+#hub .hub-rod::before, #hub .hub-rod::after { content: ''; position: absolute; top: -3px; width: 10px; height: 18px; border-radius: 3px; background: #e2b85a; box-shadow: inset 0 -3px 0 #8a6a2a; }
+#hub .hub-rod::before { left: -4px; } #hub .hub-rod::after { right: -4px; }
+#hub .hub-head { display: flex; align-items: center; gap: 12px; padding: 12px 14px 10px; border-bottom: 1px dashed #4a3e58; }
+#hub-mirror { width: 56px; height: 56px; flex: none; filter: drop-shadow(0 0 6px rgba(240, 210, 130, 0.45)); }
+#hub-who { flex: 1; font-size: 14px; line-height: 1.5; }
+#hub-who b { color: var(--paper); font-weight: normal; }
+#hub-who span { color: var(--gold); margin-left: 4px; }
+#hub-who small { color: #a89e8a; font-size: 11px; }
+#hub-close { background: none; border: 1px solid #4a3e58; color: #c8bca0; width: 30px; height: 30px; cursor: pointer; font: inherit; }
+#hub-close:hover { color: var(--gold); border-color: var(--gold); }
+#hub-body { flex: 1; overflow-y: auto; padding: 4px 12px 8px; }
+#hub section { margin-top: 10px; }
+#hub h4 { display: flex; align-items: center; gap: 8px; font-weight: normal; font-size: 12px; color: var(--gold); letter-spacing: 2px; margin-bottom: 7px; }
+#hub h4 i { flex: 1; height: 1px; background: linear-gradient(90deg, transparent, #6a5a3a, transparent); }
+#hub h4 i:first-child { flex: none; width: 8px; height: 8px; background: #c8302c; transform: rotate(45deg); box-shadow: 0 0 0 2px #1d1726, 0 0 0 3px #e2b85a; }
+#hub .hub-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; }
+.hub-tile { position: relative; aspect-ratio: 1 / 1.05; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; cursor: pointer; font: inherit;
+  background: radial-gradient(circle at 50% 35%, #2e2640 0%, #1a1522 75%); border: 1px solid #3a3048; color: #e8dcc0; padding: 4px 2px; transition: transform 0.08s, border-color 0.08s; }
+.hub-tile canvas { width: 36px; height: 36px; image-rendering: pixelated; }
+.hub-tile em { font-style: normal; font-size: 11px; line-height: 1.15; text-align: center; word-break: keep-all; }
+.hub-tile small { font-size: 10px; color: var(--gold); }
+.hub-tile:hover, .hub-tile.pad-focus { border-color: var(--gold); transform: translateY(-2px); background: radial-gradient(circle at 50% 35%, #3e3254 0%, #1f1a2a 75%); }
+.hub-tile.on { border-color: #3a8a5a; box-shadow: inset 0 0 0 1px #3a8a5a, 0 0 8px rgba(90, 200, 130, 0.35); }
+.hub-tile .seal { position: absolute; right: 3px; top: 3px; min-width: 15px; height: 15px; padding: 0 2px; font-size: 10px; line-height: 15px; color: #fff4e8; background: #b8281e; border-radius: 2px; box-shadow: inset 0 0 0 1px #ff8a6a; transform: rotate(-4deg); }
+.hub-tile .dot { position: absolute; top: 4px; left: 4px; width: 8px; height: 8px; border-radius: 50%; background: #ff4a3a; box-shadow: 0 0 6px #ff4a3a; }
+#hub .hub-foot { font-size: 10px; color: #7a7088; text-align: center; padding: 6px 0 8px; }
+@media (max-height: 520px) { #hub .hub-head { padding: 6px 10px; } #hub-mirror { width: 40px; height: 40px; } .hub-tile { aspect-ratio: auto; padding: 5px 2px; } .hub-tile canvas { width: 24px; height: 24px; } #hub section { margin-top: 6px; } }

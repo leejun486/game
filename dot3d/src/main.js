@@ -34,6 +34,7 @@ import { Records, newStats } from './records.js';
 import { drop } from './dispose.js';
 import { MiniMap } from './minimap.js';
 import { padGlyph } from './glyph.js';
+import { Hub } from './hub.js';
 import { DEMO, DEMO_LOCKED_GATES, DEMO_QUEST, DEMO_END_LINES } from './edition.js';
 import { spearHit, lancerSkill1, lancerSkill2, lancerSkill3, updateLancer, clearLancer } from './lancer.js';
 
@@ -274,6 +275,7 @@ class Game {
     }
     document.getElementById('bag-btn').addEventListener('click', () => { if (this.state === 'play') this.toggleBag(); });
     this.minimap = new MiniMap(this);
+    this.hub = new Hub(this);
     document.getElementById('bag-close').addEventListener('click', () => this.toggleBag(false));
     document.querySelectorAll('.bag-tabs button').forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); this.ui.tab(b.dataset.tab); }));
     document.getElementById('auto-equip').addEventListener('click', (e) => { e.stopPropagation(); this.autoEquip(); });
@@ -1206,7 +1208,14 @@ class Game {
       return;
     }
     if (this.pauseOpen) {
-      if (code === 'Escape' || code === 'KeyP' || code === 'pause') this.togglePause(false);
+      if (code === 'Escape' || code === 'KeyP' || code === 'pause') { const back = this.pzFromHub; this.togglePause(false); if (back) this.hub.toggle(true); }
+      return;
+    }
+    if (this.hub?.open) {
+      if (['Escape', 'pause', 'KeyP', 'menu'].includes(code)) this.hub.toggle(false);
+      else if (code === 'KeyB' || code === 'bag') { this.hub.toggle(false); this.toggleBag(true); }
+      else if (code === 'KeyT' || code === 'skills') { this.hub.toggle(false); this.toggleSkills(true); }
+      else if (code === 'KeyV' || code === 'map') { this.hub.toggle(false); this.minimap.toggle(true); }
       return;
     }
     if (this.paused) {
@@ -1246,7 +1255,8 @@ class Game {
       case 'KeyT': case 'skills': this.toggleSkills(); break;
       case 'KeyY': case 'records': this.togglePause(true); this.pausePane('records'); break;
       case 'KeyF': case 'auto': this.toggleAutoMove(); break;
-      case 'Escape': case 'KeyP': case 'pause': this.togglePause(true); break;
+      case 'Escape': case 'menu': this.hub.toggle(true); break;
+      case 'KeyP': case 'pause': this.togglePause(true); break;
       case 'KeyH': case 'hunt': this.setAutoHunt(!this.autoHunt); break;
       case 'KeyG': this.godMode = !this.godMode; this.ui.toast(this.godMode ? '무적 (디버그)' : '무적 해제'); break;
     }
@@ -1335,6 +1345,7 @@ class Game {
   // 지금 게임패드로 조작할 창
   padMenu() {
     if (this.pauseOpen) return document.getElementById('pause');
+    if (this.hub?.open) return document.getElementById('hub');
     if (document.getElementById('confirm').classList.contains('show')) return document.getElementById('confirm');
     if (this.ui.bagOpen) return document.getElementById('bag');
     if (this.ui.skillsOpen) return document.getElementById('skills');
@@ -1405,7 +1416,7 @@ class Game {
           this.audio.play('talk');
         }
       }
-      else if (i === 1 || i === 9) { if (this.pauseOpen) this.togglePause(false); else if (menu.id === 'confirm') this.showConfirm(false); else this.onKey('Escape'); }
+      else if (i === 1 || i === 9) { if (this.pauseOpen) this.onKey('Escape'); else if (this.hub.open) this.hub.toggle(false); else if (menu.id === 'confirm') this.showConfirm(false); else this.onKey('Escape'); }
       else if (i === 8 && menu.id === 'bag') this.toggleBag(false);
       this.padFocus = cur;
       this.padIdx = els.indexOf(cur);
@@ -1430,7 +1441,7 @@ class Game {
       return;
     }
     if (this.state === 'dead') { if (i === 0 || i === 9) this.onKey('act'); return; }
-    const MAP = { 0: 'atk', 1: 'dash', 2: 'skill', 3: 'skill2', 5: 'skill3', 7: 'ult', 4: 'act', 6: 'Tab', 8: 'bag', 9: 'pause', 12: 'auto', 13: 'hunt', 14: 'skills', 15: 'map' };
+    const MAP = { 0: 'atk', 1: 'dash', 2: 'skill', 3: 'skill2', 5: 'skill3', 7: 'ult', 4: 'act', 6: 'Tab', 8: 'bag', 12: 'auto', 13: 'hunt', 14: 'skills', 15: 'map', 9: 'menu' };
     const act = MAP[i];
     if (act) this.onKey(act);
   }
@@ -1493,6 +1504,8 @@ class Game {
   togglePause(open = !this.pauseOpen) {
     if (open && this.state === 'play') { if (this.ui.bagOpen) this.toggleBag(false); if (this.ui.skillsOpen) this.toggleSkills(false); if (this.mapOpen) this.minimap.toggle(false); if (this.autoMove) this.stopAutoMove(); }
     this.pauseOpen = open;
+    if (!open) setTimeout(() => { this.pzFromHub = false; }, 0);
+    if (open && this.hub?.open) { this.hub.open = false; this.hub.el.classList.remove('show'); }
     this.rebind = null;
     if (this.state === 'play') this.paused = open;
     document.getElementById('pause').classList.toggle('show', open);
@@ -1611,7 +1624,7 @@ class Game {
       else if (p === 'title') { this.save(false); location.reload(); }
       else this.pausePane(p);
     });
-    document.getElementById('menu-btn').addEventListener('click', () => { if (this.state === 'play' && !this.player.dead) this.togglePause(true); });
+    document.getElementById('menu-btn').addEventListener('click', () => { if (this.state === 'play' && !this.player.dead) this.hub.toggle(!this.hub.open); });
     document.getElementById('btn-settings').addEventListener('click', (e) => { e.stopPropagation(); this.audio.unlock(); this.togglePause(true); });
     document.getElementById('save-file').addEventListener('change', (e) => {
       const f = e.target.files[0];
