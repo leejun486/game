@@ -574,6 +574,9 @@ export const dict = {
   '어둑시니가 흩어진 자리에, 어둠을 머금은 거울 조각이 떨어져 있었다.': 'Where Eoduksini scattered, a mirror shard steeped in darkness lay on the ground.',
   '어둠은 사람이 두려워하는 만큼 자랐다. 조각은 그 두려움을 비추고 있었던 것이다.': 'The darkness grew as much as people feared it. The shard had been reflecting that fear.',
   '열네 조각이 모이자, 달거울이 보름달처럼 차올랐다.': 'When all fourteen shards came together, the Moon Mirror waxed full like the moon.',
+  '덕배': 'Deokbae',
+  '순덕': 'Sundeok',
+  '연화': 'Yeonhwa',
 };
 
 const RN = '([ⅠⅡⅢⅣⅤ])';

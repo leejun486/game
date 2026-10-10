@@ -1,19 +1,19 @@
 // 메인 퀘스트
 //  1) 모든 단계: 시작할 수 있고, 목표가 있고, 그 목표까지 길이 이어져 있음 (자동 이동이 "길이 막혀 있어요"로 멈추지 않음)
-//  2) 새 방식 퀘스트 아홉(추격·찾기·순서·호위·버티기)을 실제로 끝까지 풀어 봄
+//  2) 새 방식 퀘스트 열셋(추격·찾기·순서·호위·버티기)을 실제로 끝까지 풀어 봄
 //  영어 화면으로 돌려서 퀘스트 글의 번역 빠짐도 함께 잡음
 const { openGame, check, clean } = require('./harness.cjs');
 
 module.exports = {
-  name: '메인 퀘스트 (전 단계 길찾기 · 새 방식 아홉 개)',
+  name: '메인 퀘스트 (전 단계 길찾기 · 새 방식 열세 개)',
   async run(ctx) {
     const g = await openGame(ctx, { lang: 'en' });
     await g.newGame();
     await g.eval(() => { const G = window.game; G.player.level = 20; G.player.recalc?.(true);
-      G.cleared = { palace: 1, bamboo: 1, temple: 1, swamp: 1, canyon: 1, fortress: 1, sea: 1, valley: 1, snowfield: 1 }; });
+      G.cleared = { palace: 1, bamboo: 1, temple: 1, swamp: 1, canyon: 1, fortress: 1, sea: 1, valley: 1, snowfield: 1, tomb: 1, market: 1, tidal: 1, sky: 1 }; });
 
     // 1) 전 단계 길찾기
-    const steps = await g.eval(() => { const G = window.game, out = []; for (let i = 0; i < 99; i++) { G.quest.step = i; const Q = G.curQuest(); if (!Q) break; out.push([i, Q.type, Q.region || null, Q.title, !!Q.added]); } return out; });
+    const steps = await g.eval(() => { const G = window.game, out = []; for (let i = 0; i < 99; i++) { G.quest.step = i; const Q = G.curQuest(); if (!Q) break; out.push([i, Q.type, Q.region || null, Q.title, ['chase', 'search', 'order', 'escort', 'hold'].includes(Q.type)]); } return out; });
     check(steps.length >= 50, `퀘스트 단계가 ${steps.length}개뿐`);
     const blocked = [];
     for (const [i, type, region, title] of steps) {
