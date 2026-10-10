@@ -39,7 +39,7 @@ const outfile = path.join(tmp, 'cov.mjs');
 await build({ stdin: { contents: entry, resolveDir: root, loader: 'js' }, bundle: true, format: 'esm', platform: 'node', outfile, logLevel: 'error' });
 const { run } = await import(pathToFileURL(outfile).href);
 // 소스 코드의 한국어 문자열 ('…' 안, 템플릿 없이 통째로 화면에 나가는 것들: 대사·알림·이름)
-const SRC = ['main.js', 'entities.js', 'questkinds.js', 'looks.js', 'scenes.js', 'world.js', 'worlds6.js'];
+const SRC = ['main.js', 'entities.js', 'questkinds.js', 'looks.js', 'scenes.js', 'world.js', 'worlds6.js', 'ui.js', 'enhance.js', 'codex.js', 'hub.js'];
 const lits = [];
 for (const f of SRC) {
   const t = fs.readFileSync(path.join(root, 'src', f), 'utf8').split('\n').filter((l) => !/^\s*\/\//.test(l)).join('\n');

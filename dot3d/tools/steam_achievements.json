@@ -492,6 +492,42 @@
   "zhDesc": "将一个技能修炼到Ⅴ阶段"
  },
  {
+  "api": "ACH_ENH10",
+  "id": "enh10",
+  "ko": "혼을 담은 쇠",
+  "koDesc": "장비 하나를 +10까지 강화",
+  "en": "Steel with a Soul",
+  "enDesc": "Enhance a piece of gear to +10",
+  "ja": "魂を宿した鉄",
+  "jaDesc": "装備ひとつを+10まで強化",
+  "zh": "注魂之铁",
+  "zhDesc": "将一件装备强化至+10"
+ },
+ {
+  "api": "ACH_ENH15",
+  "id": "enh15",
+  "ko": "전설의 대장장이",
+  "koDesc": "장비 하나를 +15까지 강화",
+  "en": "Legendary Smith",
+  "enDesc": "Enhance a piece of gear to +15",
+  "ja": "伝説の鍛冶師",
+  "jaDesc": "装備ひとつを+15まで強化",
+  "zh": "传说铁匠",
+  "zhDesc": "将一件装备强化至+15"
+ },
+ {
+  "api": "ACH_CODEX20",
+  "id": "codex20",
+  "ko": "빼곡한 도감",
+  "koDesc": "장신구 도감 20칸 채우기",
+  "en": "A Packed Codex",
+  "enDesc": "Fill 20 accessory codex slots",
+  "ja": "ぎっしり図鑑",
+  "jaDesc": "装身具図鑑を20枠埋める",
+  "zh": "满满的图鉴",
+  "zhDesc": "填满20格饰品图鉴"
+ },
+ {
   "api": "ACH_GEAR100",
   "id": "gear100",
   "ko": "보따리 장수",

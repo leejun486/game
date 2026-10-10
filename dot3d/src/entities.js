@@ -9,6 +9,8 @@ import { CLASSES } from './classes.js';
 import { rigOptions } from './looks.js';
 import { sumStats, setBonuses } from './gear.js';
 import { item, WEAPONS, perksOf, ULTS } from './items.js';
+import { weaponBonus, outfitHp, outfitDef } from './enhance.js';
+import { CAPS } from './gear.js';
 
 // 스킬 해금 레벨
 export const SKILL_LEVEL = { 2: 3, 3: 5 };
@@ -92,9 +94,15 @@ export class Player {
     const ratio = this.maxHp ? this.hp / this.maxHp : 1;
     // 방어구·장신구 옵션 합계
     const gs = (this.gear = sumStats(this.game.equippedGear(this.cls)));
-    this.maxHp = Math.round(this.cfg.hp + (this.level - 1) * 12 + (o?.hp || 0) + (gs.hp || 0));
-    this.atkMul = (1 + (this.level - 1) * 0.08) * (1 + (w?.atk || 0)) * (1 + (gs.atk || 0));
-    this.def = Math.min(0.7, 1 - (1 - (o?.def || 0)) * (1 - (gs.def || 0)));
+    // 도감 효과 (모든 직업 공통)
+    const cx = this.game.codex?.stats() || {};
+    for (const [k, v] of Object.entries(cx)) gs[k] = (gs[k] || 0) + v;
+    for (const [k, c] of Object.entries(CAPS)) if (gs[k] > c) gs[k] = c;
+    // 무기·갑옷 강화 단계
+    const ew = w ? this.game.enh?.[w.id] || 0 : 0, eo = o ? this.game.enh?.[o.id] || 0 : 0;
+    this.maxHp = Math.round(this.cfg.hp + (this.level - 1) * 12 + (o?.hp || 0) + outfitHp(eo) + (gs.hp || 0));
+    this.atkMul = (1 + (this.level - 1) * 0.08) * (1 + (w?.atk || 0) + weaponBonus(ew)) * (1 + (gs.atk || 0));
+    this.def = Math.min(0.7, 1 - (1 - (o?.def || 0) - outfitDef(eo)) * (1 - (gs.def || 0)));
     this.perks = perksOf(pr.weapon, pr.outfit);
     // 보스 무기 고유 기술
     this.ult = w?.ult || null;

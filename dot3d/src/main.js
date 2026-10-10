@@ -35,6 +35,8 @@ import { drop } from './dispose.js';
 import { MiniMap } from './minimap.js';
 import { padGlyph } from './glyph.js';
 import { Hub } from './hub.js';
+import { Codex, monStars, renderCodex } from './codex.js';
+import { rollMats, MATS, MAT_ORDER } from './enhance.js';
 import { DEMO, DEMO_LOCKED_GATES, DEMO_QUEST, DEMO_END_LINES } from './edition.js';
 import { spearHit, lancerSkill1, lancerSkill2, lancerSkill3, updateLancer, clearLancer } from './lancer.js';
 
@@ -110,6 +112,9 @@ class Game {
     // 직업별 레벨·경험치·착용 장비, 공용 가방
     this.progress = {};
     this.inv = new Set(['sw0', 'mg0', 'bw0', 'sp0', 'ot0']);
+    this.enh = {};     // 무기·갑옷 강화 단계 {아이템 id: +n}
+    this.mats = {};    // 강화 재료 (주문서·혼석) 개수
+    this.codexReg = {}; // 장신구 도감에 등록한 칸
     this.gear = [];    // 방어구·장신구 (무작위 옵션이 붙은 낱개). 착용 여부는 직업별 progress.eq
     this.drops = [];
     this.target = null;
@@ -145,6 +150,7 @@ class Game {
     this.coach = new Coach(this);
     this.stats = newStats(); // 누적 기록 (업적·도감)
     this.records = new Records(this);
+    this.codex = new Codex(this);
     this.daily = null;  // 오늘의 목표 { day, goals, bonus }
     this.dailyGoals = new Daily(this);
     this.qk = new QuestKinds(this); // 추격·찾기·순서·호위·버티기 퀘스트
@@ -722,6 +728,7 @@ class Game {
       this.ui.toast(`이미 가진 ${it.name} → 경험치 +${15 + it.tier * 15}`, 2.2);
     } else {
       this.inv.add(id);
+      this.codex.dirty(); p.recalc();
       if (it.perk) {
         this.ui.banner(it.name, it.ult ? `보스 무기 획득! 고유 기술 「${ULTS[it.ult].name}」 — B 키로 착용 후 U` : `보스 전용 장비 획득! — B 키로 착용`, 3.2, 'win-banner');
         this.audio.play('levelup');
@@ -768,6 +775,20 @@ class Game {
   equippedGear(cls) { const eq = this.eqOf(cls); return GEAR_SLOTS.map((s) => this.gearByUid(eq[s])).filter(Boolean); }
 
   isEquipped(g, cls = this.player.cls) { return Object.values(this.eqOf(cls)).includes(g.uid); }
+
+  isEquippedAny(g) { return CLASS_ORDER.some((c) => this.isEquipped(g, c)); }
+
+  // 강화 재료 얻기 (주문서·혼석): 머리 위 글자 + 큰 것은 알림
+  gainMats(m, at) {
+    const keys = Object.keys(m);
+    if (!keys.length) return;
+    for (const k of keys) this.mats[k] = (this.mats[k] || 0) + m[k];
+    const txt = keys.map((k) => `${MATS[k].name}${m[k] > 1 ? ' ×' + m[k] : ''}`).join(' · ');
+    if (at) this.fx.number(V(at.x, (at.y || 0) + 3, at.z), txt, 'alert');
+    if (m.soul || m.bless) this.ui.toast(`얻음: ${txt}`, 2.4); else this.ui.toast(`얻음: ${txt}`, 1.4);
+    this.audio.play('coin');
+    this.ui.refreshBag();
+  }
 
   // 반지는 빈 칸부터, 둘 다 차 있으면 점수가 낮은 쪽
   worseRingSlot() {
@@ -1065,6 +1086,10 @@ class Game {
     if (Array.isArray(d.inv)) for (const id of d.inv) if (item(id)) this.inv.add(id);
     for (const list of Object.values(WEAPONS)) this.inv.add(list[0].id); // 새로 생긴 직업의 기본 무기
     if (Array.isArray(d.gear)) this.gear = d.gear.filter((g) => g && g.uid && g.stats);
+    this.enh = { ...(d.enh || {}) };
+    this.mats = { ...(d.mats || {}) };
+    this.codexReg = { ...(d.codexReg || {}) };
+    this.codex.dirty();
     this.towerBest = d.towerBest | 0;
     if (d.cleared) this.cleared = { ...d.cleared };
     else if (d.round > 0) this.cleared = { palace: true };
@@ -1149,6 +1174,9 @@ class Game {
       daily: this.daily,
       version: VERSION,
       stats: this.stats,
+      enh: this.enh,
+      mats: this.mats,
+      codexReg: this.codexReg,
       inv: [...this.inv],
       gear: this.gear,
       music: this.audio.musicOn,
@@ -1283,7 +1311,7 @@ class Game {
   resetProgress() {
     clearSave();
     this.kills = 0; this.round = 0; this.stage = 0; this.bestCombo = 0; this.playTime = 0; this.flags = {}; this.stats = newStats(); this.daily = null;
-    this.progress = {}; this.inv = new Set(['sw0', 'mg0', 'bw0', 'sp0', 'ot0']); this.gear = [];
+    this.progress = {}; this.inv = new Set(['sw0', 'mg0', 'bw0', 'sp0', 'ot0']); this.gear = []; this.enh = {}; this.mats = {}; this.codexReg = {}; this.codex.dirty();
     this.cleared = {};
     this.quest = { step: 0, prog: {}, lit: [], bounty: null, shards: [], prologue: false, ended: false, qv: 5 };
     for (const f of this.flames) this.scene.remove(f);
@@ -1565,6 +1593,8 @@ class Game {
       this.dailyGoals.render(el);
     } else if (tab === 'records') {
       this.records.render(el);
+    } else if (tab === 'codex') {
+      renderCodex(this, el, this.codex.sub || 'mon');
     } else if (tab === 'keys') {
       el.innerHTML = `<h3>조작 · 키 바꾸기</h3>${ACTIONS.map(([a, n]) => `<div class="pz-row"><label>${n}</label><button class="pz-key${this.rebind === a ? ' wait' : ''}" data-a="${a}">${this.rebind === a ? '키를 누르세요…' : keyName(keyOf(S, a))}</button></div>`).join('')}
         <div class="pz-row"><button class="pz-btn" id="pz-keyreset">기본 키로 되돌리기</button></div>
@@ -2304,6 +2334,7 @@ class Game {
       this.ui.dialog(n.name, ['수고하셨소! 약속한 현상금이오.', '또 수배가 붙으면 알려 드리리다.'], () => {
         this.quest.bounty = null;
         this.giveReward({ exp: 150 + this.round * 30, item: rollDrop('boss', this.round, this.player.cls) });
+        this.gainMats({ [['scrollW', 'scrollA', 'scrollG'][Math.floor(Math.random() * 3)]]: 2 });
         this.ui.banner('현상수배 완료', BOUNTIES[B.i].title, 2.2, 'win-banner');
         this.records.bounty();
         this.updateQuest(); this.save(false);
@@ -4521,7 +4552,15 @@ class Game {
 
   onEnemyKilled(e) {
     this.kills++;
+    const st0 = monStars(this.stats.killsBy?.[e.type]);
     this.records.kill(e);
+    // 도감: 별이 오르면 능력치가 함께 오름
+    if (e.type !== 'foxclone' && monStars(this.stats.killsBy?.[e.type]) > st0) {
+      this.codex.dirty(); this.player.recalc();
+      const n = monStars(this.stats.killsBy[e.type]);
+      this.ui.toast(`도감 ${'★'.repeat(n)} ${e.T.name || KILL_NAME[e.type] || e.type} — 능력치가 올랐어요`, 2.2);
+    }
+    if (e.type !== 'foxclone') this.gainMats(rollMats(e, this.round, this.difficulty === 'hard'), e.pos);
     const exp = Math.round(e.T.exp * diffOf(this).exp * (1 + this.round * 0.25) * (e.elite ? 3 : 1) * (this.tower?.active ? 1 + this.tower.floor * 0.06 : 1));
     this.player.addExp(exp);
     this.fx.number(V(e.pos.x, e.y + (e.isBoss ? 4 : 2.2), e.pos.z), `+${exp} EXP`, 'exp');

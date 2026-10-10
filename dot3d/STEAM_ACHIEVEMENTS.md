@@ -4,7 +4,7 @@
 스팀웍스 → 앱 관리 → 통계 및 업적 → 업적에서 **API 이름**을 그대로 쓰고, 언어마다 이름과 설명을 넣습니다.
 아이콘: `marketing/achievements/<API 이름>.png` (달성), `<API 이름>_locked.png` (미달성). 모두 64×64.
 
-업적 49개
+업적 52개
 
 | API 이름 | 이름 | 설명 | Name | Description | 名前 (日本語) | 説明 | 名称 (简体中文) | 说明 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -49,6 +49,9 @@
 | `ACH_BOSSW` | 보스의 유물 | 보스 무기 얻기 | Boss Relic | Obtain a boss weapon | ボスの遺物 | ボス武器を手に入れる | 首领的遗物 | 获得首领武器 |
 | `ACH_SET4` | 한 벌 차림 | 세트 장비 네 부위 모두 착용 | Full Set | Wear all four pieces of a set | ひと揃いの装い | セット装備の四部位をすべて装備 | 全套装扮 | 穿齐套装的全部四个部位 |
 | `ACH_AWAKEN` | 각성 | 기술 하나를 Ⅴ단계까지 수련 | Awakening | Train a skill to rank V | 覚醒 | 技をひとつⅤ段階まで修練 | 觉醒 | 将一个技能修炼到Ⅴ阶段 |
+| `ACH_ENH10` | 혼을 담은 쇠 | 장비 하나를 +10까지 강화 | Steel with a Soul | Enhance a piece of gear to +10 | 魂を宿した鉄 | 装備ひとつを+10まで強化 | 注魂之铁 | 将一件装备强化至+10 |
+| `ACH_ENH15` | 전설의 대장장이 | 장비 하나를 +15까지 강화 | Legendary Smith | Enhance a piece of gear to +15 | 伝説の鍛冶師 | 装備ひとつを+15まで強化 | 传说铁匠 | 将一件装备强化至+15 |
+| `ACH_CODEX20` | 빼곡한 도감 | 장신구 도감 20칸 채우기 | A Packed Codex | Fill 20 accessory codex slots | ぎっしり図鑑 | 装身具図鑑を20枠埋める | 满满的图鉴 | 填满20格饰品图鉴 |
 | `ACH_GEAR100` | 보따리 장수 | 방어구·장신구 100개 줍기 | Packrat | Pick up 100 pieces of gear | 行商人 | 防具・装身具を100個拾う | 行商 | 捡到100件防具・饰品 |
 | `ACH_BOUNTY10` | 현상금 사냥꾼 | 현상수배 10번 마치기 | Bounty Hunter | Complete 10 bounties | 賞金稼ぎ | 手配書を10回こなす | 赏金猎人 | 完成10次悬赏 |
 | `ACH_FALL10` | 칠전팔기 | 10번 쓰러지고도 다시 일어서기 | Never Give Up | Fall 10 times and get back up | 七転び八起き | 10回倒れても立ち上がる | 百折不挠 | 倒下10次仍重新站起 |

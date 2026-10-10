@@ -6,6 +6,7 @@ import { ACHIEVEMENTS } from './records.js';
 import { EVOS, RUNES, branchOf, rankOf, runeOf, freePoints, RANK_NAME, MAX_RANK } from './evolve.js';
 import { drawGearIcon, gearLines, gearScore, SLOT_NAME, STATS, BAG_MAX, salvageExp, GEAR_SLOTS, rarityOf, SETS, setBonuses } from './gear.js';
 import { expNeed, SKILL_LEVEL } from './entities.js';
+import { MATS, MAT_ORDER, ENH_MAX, rateOf, soulCost, dropsOnFail, weaponBonus, outfitHp, outfitDef, gearMul, targetInfo, tryEnhance, enhName } from './enhance.js';
 
 // HTML HUD: 체력, 스킬, 임무, 배너, 대화창, 보스 체력, 적 체력바, 상호작용 표시
 export class UI {
@@ -192,7 +193,7 @@ export class UI {
     cv.width = cv.height = 16;
     drawItemIcon(cv, id);
     const txt = document.createElement('div');
-    txt.innerHTML = `<span style="color:${RARITY[it.tier].color}">${it.name}</span><small>${RARITY[it.tier].name} · ${itemDesc(it, !cls.includes('locked-it'))}</small>`;
+    txt.innerHTML = `<span style="color:${RARITY[it.tier].color}">${enhName(it.name, this.game.enh?.[id] || 0)}</span><small>${RARITY[it.tier].name} · ${itemDesc(it, !cls.includes('locked-it'))}</small>`;
     row.append(cv, txt);
     if (onClick) row.addEventListener('click', (e) => { e.stopPropagation(); onClick(); });
     return row;
@@ -226,11 +227,11 @@ export class UI {
     };
     for (const [slot, id] of [['무기', pr.weapon], ['갑옷', pr.outfit]]) {
       const it = item(id);
-      slotRow(slot, (cv) => drawItemIcon(cv, id), it?.name, RARITY[it?.tier ?? 0].color, () => { this.tab('main'); });
+      slotRow(slot, (cv) => drawItemIcon(cv, id), it && enhName(it.name, g.enh[id] || 0), RARITY[it?.tier ?? 0].color, () => { this.tab('main'); });
     }
     for (const slot of GEAR_SLOTS) {
       const it = g.gearInSlot(slot);
-      slotRow(SLOT_NAME[slot], it ? (cv) => drawGearIcon(cv, it) : null, it?.name, it ? rarityOf(it).color : '', it ? () => { this.pick = it.uid; this.pickSlot = slot; this.tab('gear'); this.refreshBag(); } : null, it && this.pick === it.uid);
+      slotRow(SLOT_NAME[slot], it ? (cv) => drawGearIcon(cv, it) : null, it && enhName(it.name, it.enh || 0), it ? rarityOf(it).color : '', it ? () => { this.pick = it.uid; this.pickSlot = slot; this.tab('gear'); this.refreshBag(); } : null, it && this.pick === it.uid);
     }
     // 켜진 세트 효과
     const sb = setBonuses(g.equippedGear(p.cls));
@@ -254,7 +255,7 @@ export class UI {
       const cur = g.gearInSlot(it.kind === 'ring' ? g.worseRingSlot() : it.kind);
       const better = !worn && gearScore(it) > gearScore(cur);
       const txt = document.createElement('div');
-      txt.innerHTML = `<span style="color:${rarityOf(it).color}">${it.name}</span><small>${it.set ? SETS[it.set].name : rarityOf(it).name} ${SLOT_NAME[it.kind]}${other ? ' · 다른 직업 착용' : ''}</small>`;
+      txt.innerHTML = `<span style="color:${rarityOf(it).color}">${enhName(it.name, it.enh || 0)}</span><small>${it.set ? SETS[it.set].name : rarityOf(it).name} ${SLOT_NAME[it.kind]}${other ? ' · 다른 직업 착용' : ''}</small>`;
       row.append(cv, txt);
       if (better) row.insertAdjacentHTML('beforeend', '<span class="better">▲</span>');
       row.addEventListener('click', (e) => { e.stopPropagation(); this.pick = it.uid; this.pickSlot = null; this.refreshBag(); });
@@ -276,6 +277,74 @@ export class UI {
       ol.append(this.itemRow(o.id, pr.outfit === o.id ? 'on' : '', () => g.equipItem(o.id)));
     }
     this.renderLook();
+    if (!document.getElementById('tab-enh').classList.contains('hidden')) this.renderEnh();
+  }
+
+  // 강화 탭: 재료 개수, 강화할 장비 목록, 고른 장비의 확률·재료·효과
+  renderEnh(msg = '') {
+    const g = this.game, p = g.player, pr = g.progressOf(p.cls), M = g.mats;
+    const el = document.getElementById('tab-enh');
+    const icon = (k) => `<i class="mat-ic" style="background:linear-gradient(180deg, ${MATS[k].icon[0]} 0 62%, ${MATS[k].icon[1]} 62%)"></i>`;
+    const mats = MAT_ORDER.map((k) => `<span class="mat" title="${MATS[k].name}">${icon(k)}<em style="color:${MATS[k].color}">${MATS[k].name}</em><b>${M[k] || 0}</b></span>`).join('');
+    // 고를 수 있는 것: 착용 중인 것 먼저
+    const rows = [];
+    const add = (t, name, color, sub, draw) => rows.push({ t, name, color, sub, draw });
+    if (pr.weapon) { const it = item(pr.weapon); add({ kind: 'weapon', id: it.id }, it.name, RARITY[it.tier].color, '착용 무기', (cv) => drawItemIcon(cv, it.id)); }
+    if (pr.outfit) { const it = item(pr.outfit); add({ kind: 'outfit', id: it.id }, it.name, RARITY[it.tier].color, '착용 갑옷', (cv) => drawItemIcon(cv, it.id)); }
+    for (const slot of GEAR_SLOTS) { const it = g.gearInSlot(slot); if (it) add({ kind: 'gear', uid: it.uid }, it.name, rarityOf(it).color, `착용 ${SLOT_NAME[slot]}`, (cv) => drawGearIcon(cv, it)); }
+    for (const w of WEAPONS[p.cls]) if (g.inv.has(w.id) && w.id !== pr.weapon && (w.tier || g.enh[w.id])) add({ kind: 'weapon', id: w.id }, w.name, RARITY[w.tier].color, '무기', (cv) => drawItemIcon(cv, w.id));
+    for (const o of OUTFITS) if (g.inv.has(o.id) && o.id !== pr.outfit && (o.tier || g.enh[o.id])) add({ kind: 'outfit', id: o.id }, o.name, RARITY[o.tier].color, '갑옷', (cv) => drawItemIcon(cv, o.id));
+    for (const it of [...g.gear].filter((x) => !g.isEquipped(x)).sort((a, b) => (b.enh || 0) - (a.enh || 0) || b.tier - a.tier)) add({ kind: 'gear', uid: it.uid }, it.name, rarityOf(it).color, SLOT_NAME[it.kind], (cv) => drawGearIcon(cv, it));
+    const key = (t) => t.kind + ':' + (t.id || t.uid);
+    if (!this.enhPick || !targetInfo(g, this.enhPick)) this.enhPick = rows[0]?.t || null;
+    const T = this.enhPick, info = T && targetInfo(g, T);
+    let detail = '<div class="pz-note">강화할 장비를 고르세요.</div>';
+    if (info) {
+      const lv = info.lv, nx = Math.min(ENH_MAX, lv + 1);
+      const eff = (L) => T.kind === 'weapon' ? `무기 공격력 +${Math.round(weaponBonus(L) * 100)}%` : T.kind === 'outfit' ? `최대 체력 +${outfitHp(L)} · 받는 피해 -${(outfitDef(L) * 100).toFixed(1)}%` : `모든 옵션 ×${gearMul(L).toFixed(2)}`;
+      const soul = soulCost(lv), maxed = lv >= ENH_MAX;
+      const can = !maxed && (M[info.mat] || 0) >= 1 && (M.soul || 0) >= soul;
+      detail = `<div class="enh-box${this.enhFx ? ' ' + this.enhFx : ''}">
+        <div class="enh-name" style="color:${rows.find((r) => key(r.t) === key(T))?.color || '#fff'}">${enhName(info.name, lv)}${maxed ? '' : ` <span class="arrow">→</span> <b>+${nx}</b>`}</div>
+        <div class="enh-eff"><span>${tr('지금')}: ${lv ? eff(lv) : '강화 안 함'}</span>${maxed ? '' : `<span class="up">${tr('성공하면')}: ${eff(nx)}</span>`}</div>
+        ${maxed ? '<div class="pz-note">최고 단계예요 (+15)</div>' : `
+        <div class="enh-rate">성공 확률 <b>${Math.round(rateOf(lv) * 100)}%</b>${dropsOnFail(lv) ? ' · 실패하면 한 단계 떨어짐' : ' · 실패해도 그대로'}</div>
+        <div class="enh-cost">${icon(info.mat)} ${MATS[info.mat].name} 1 <small>(${M[info.mat] || 0})</small>${soul ? ` · ${icon('soul')} ${MATS.soul.name} ${soul} <small>(${M.soul || 0})</small>` : ''}</div>
+        ${dropsOnFail(lv) ? `<label class="enh-bless"><input type="checkbox" id="enh-bless" ${this.enhBless && M.bless ? 'checked' : ''} ${M.bless ? '' : 'disabled'}> ${icon('bless')} ${MATS.bless.name} 함께 쓰기 (실패해도 안 떨어짐) <small>(${M.bless || 0})</small></label>` : ''}
+        <button id="enh-go" ${can ? '' : 'disabled'}>강화하기</button>`}
+        <div class="enh-msg">${msg}</div>
+        ${lv >= 9 && !maxed ? '<div class="pz-note">+10부터는 보스만 떨어뜨리는 요괴 혼석이 더 들어가요.</div>' : ''}
+      </div>`;
+    }
+    el.innerHTML = `<div class="mats">${mats}</div>${detail}<div class="bag-sec">강화할 장비</div><div class="grid enh-list"></div>
+      <div class="pz-note">주문서는 몬스터가 가끔, 보스·현상수배·오늘의 목표 보상으로 얻어요. +1~3은 반드시 성공하고, +6부터는 실패하면 한 단계 떨어져요(장비는 사라지지 않아요).</div>`;
+    const list = el.querySelector('.enh-list');
+    for (const r of rows) {
+      const lv = targetInfo(g, r.t)?.lv || 0;
+      const row = document.createElement('div');
+      row.className = 'it' + (key(r.t) === key(T || {}) ? ' pick' : '');
+      const cv = document.createElement('canvas'); cv.width = cv.height = 16; r.draw(cv);
+      const txt = document.createElement('div');
+      txt.innerHTML = `<span style="color:${r.color}">${enhName(r.name, lv)}</span><small>${r.sub}</small>`;
+      row.append(cv, txt);
+      row.addEventListener('click', (e) => { e.stopPropagation(); this.enhPick = r.t; this.enhFx = ''; this.renderEnh(); });
+      list.append(row);
+    }
+    el.querySelector('#enh-bless')?.addEventListener('change', (e) => { this.enhBless = e.target.checked; });
+    el.querySelector('#enh-go')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const r = tryEnhance(g, T, !!this.enhBless);
+      if (r.ok === null) { g.audio.play('denied'); this.renderEnh(r.msg); return; }
+      p.recalc();
+      g.records?.check?.();
+      if (r.ok) { g.audio.play(r.lv >= 10 ? 'levelup' : 'coin'); g.ui.flash(r.lv >= 10 ? '#ffd76a' : '#ffffff', 0.15); this.enhFx = 'ok'; }
+      else { g.audio.play('denied'); this.enhFx = 'fail'; }
+      const m = r.ok ? `성공! +${r.lv}` : r.lv < r.from ? `실패… +${r.lv}로 떨어졌어요` : r.blessed && r.from >= 6 ? '실패… 축복 덕에 그대로예요' : '실패… 그대로예요';
+      g.save(false);
+      this.refreshBag();
+      this.renderEnh(m);
+      setTimeout(() => { this.enhFx = ''; }, 50);
+    });
   }
 
   // 외형 탭: 겉모습만 바꿈 (능력치는 입은 장비 그대로)
@@ -317,6 +386,8 @@ export class UI {
     document.getElementById('tab-gear').classList.toggle('hidden', name !== 'gear');
     document.getElementById('tab-main').classList.toggle('hidden', name !== 'main');
     document.getElementById('tab-look').classList.toggle('hidden', name !== 'look');
+    document.getElementById('tab-enh').classList.toggle('hidden', name !== 'enh');
+    if (name === 'enh') this.renderEnh();
     document.getElementById('gear-detail').classList.toggle('hidden', name !== 'gear');
   }
 

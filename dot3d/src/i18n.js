@@ -153,7 +153,10 @@ function trText(node) {
 function trAttrs(el) {
   for (const a of ['title', 'placeholder', 'aria-label']) {
     const v = el.getAttribute?.(a);
-    if (v && HANGUL.test(v)) el.setAttribute(a, tr(v));
+    if (!v || !HANGUL.test(v)) continue;
+    // 번역이 없으면 그대로 둠 (같은 값을 다시 넣으면 감시가 또 불려 끝없이 돎)
+    const t = tr(v);
+    if (t !== v) el.setAttribute(a, t);
   }
 }
 

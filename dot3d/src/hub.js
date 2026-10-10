@@ -24,6 +24,7 @@ const ICONS = {
   keys: ['............', '............', 'KKKKKKKKKKKK', 'KWWKWWKWWKWK', 'KWWKWWKWWKWK', 'KKKKKKKKKKKK', 'KWKWWKWWKWWK', 'KWKWWKWWKWWK', 'KKKKKKKKKKKK', 'KWWWWWWWWWWK', 'KKKKKKKKKKKK', '............'],
   data: ['............', '.KKKKKKKKKK.', 'KPPPPPPPPPPK', '.KPKKKKKPPK.', '.KPPPPPPPPK.', '.KPKKKKPPPK.', '.KPPPPPPRRK.', '.KPKKKPPRRK.', '.KPPPPPPPPK.', 'KPPPPPPPPPPK', '.KKKKKKKKKK.', '............'],
   title: ['.....RR.....', '...RRRRRR...', '.RRRRRRRRRR.', 'KKKKKKKKKKKK', '..R......R..', '..R.KKKK.R..', '..R.KWWK.R..', '..R.KWWK.R..', '..R.KWWK.R..', '..R.KWWK.R..', 'KKKKKKKKKKKK', '............'],
+  enh: ['.........YY.', '........YWY.', '.......YWY..', '......YWY...', '.....YWY....', '..K.YWY.....', '..KKWY......', '...KK.......', '..KRKK......', '.KRK.KK.....', 'KRK.........', 'KK..........'],
   tower: ['.....DD.....', '....DDDD....', '..DDDDDDDD..', '....KYYK....', '...DDDDDD...', '.DDDDDDDDDD.', '...KYYYYK...', '..DDDDDDDD..', 'DDDDDDDDDDDD', '..KYYKKYYK..', '..KYYKKYYK..', 'KKKKKKKKKKKK'],
 };
 
@@ -52,13 +53,14 @@ export class Hub {
       ['몸과 짐', [
         ['bag', '가방', 'B', 'bag', close(() => g.toggleBag(true)), !document.getElementById('bag-dot').classList.contains('hidden')],
         ['skills', '기술 수련', 'T', 'skills', close(() => g.toggleSkills(true)), !document.getElementById('evo-dot').classList.contains('hidden')],
+        ['enh', '강화', '', 'enh', close(() => { g.toggleBag(true); g.ui.tab('enh'); })],
         ['look', '외형', '', 'look', close(() => { g.toggleBag(true); g.ui.tab('look'); g.ui.renderLook?.(); })],
       ]],
       ['여정', [
         ['map', '지도 · 일지', 'V', 'map', close(() => g.minimap.toggle(true))],
         ['daily', '오늘의 목표', '', 'daily', pane('daily'), false, false, dk],
         ['ach', '업적', 'Y', 'ach', pane('records', 'ach')],
-        ['codex', '요괴 도감', '', 'codex', pane('records', 'mon')],
+        ['codex', '도감', '', 'codex', pane('codex')],
       ]],
       ['도움', [
         ['hunt', g.autoHunt ? '자동 사냥 끄기' : '자동 사냥', 'H', 'hunt', close(() => g.setAutoHunt(!g.autoHunt)), false, g.autoHunt],

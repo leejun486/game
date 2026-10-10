@@ -758,3 +758,48 @@ body.pad:not(.touch) #help-pad { display: flex; }
 .hub-tile .dot { position: absolute; top: 4px; left: 4px; width: 8px; height: 8px; border-radius: 50%; background: #ff4a3a; box-shadow: 0 0 6px #ff4a3a; }
 #hub .hub-foot { font-size: 10px; color: #7a7088; text-align: center; padding: 6px 0 8px; }
 @media (max-height: 520px) { #hub .hub-head { padding: 6px 10px; } #hub-mirror { width: 40px; height: 40px; } .hub-tile { aspect-ratio: auto; padding: 5px 2px; } .hub-tile canvas { width: 24px; height: 24px; } #hub section { margin-top: 6px; } }
+
+/* ===== 강화 탭 ===== */
+#tab-enh .mats { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+#tab-enh .mat { display: inline-flex; align-items: center; gap: 5px; padding: 3px 7px; background: #1e1828; border: 1px solid #3a3048; font-size: 11px; }
+#tab-enh .mat em { font-style: normal; }
+#tab-enh .mat b { color: #fff4e0; font-weight: normal; }
+.mat-ic { display: inline-block; width: 10px; height: 13px; border: 1px solid #1a1420; box-shadow: 1px 1px 0 rgba(0, 0, 0, 0.4); vertical-align: -2px; }
+.enh-box { background: linear-gradient(180deg, #241c30, #1a1522); border: 1px solid #4a3e58; padding: 10px 12px; margin-bottom: 8px; position: relative; }
+.enh-box.ok { animation: enh-ok 0.6s ease-out; }
+.enh-box.fail { animation: enh-fail 0.45s ease-out; }
+@keyframes enh-ok { 0% { box-shadow: 0 0 0 0 rgba(255, 215, 106, 0.9), inset 0 0 30px rgba(255, 230, 150, 0.6); } 100% { box-shadow: 0 0 0 14px rgba(255, 215, 106, 0), inset 0 0 0 rgba(0, 0, 0, 0); } }
+@keyframes enh-fail { 0%, 100% { transform: none; } 20% { transform: translateX(-5px); } 40% { transform: translateX(5px); } 60% { transform: translateX(-3px); } 80% { transform: translateX(3px); } }
+.enh-name { font-size: 16px; margin-bottom: 6px; }
+.enh-name .arrow { color: #a89e8a; } .enh-name b { color: #ffd76a; font-weight: normal; }
+.enh-eff { display: flex; flex-direction: column; gap: 2px; font-size: 12px; color: #c8bca0; margin-bottom: 6px; }
+.enh-eff .up { color: #8aff9a; }
+.enh-rate, .enh-cost { font-size: 12px; margin-bottom: 4px; }
+.enh-rate b { color: #ffd76a; font-weight: normal; }
+.enh-cost small, .enh-bless small { color: #a89e8a; }
+.enh-bless { display: block; font-size: 12px; margin: 4px 0 8px; cursor: pointer; }
+#enh-go { font: inherit; padding: 7px 18px; background: #8a2a20; color: #fff4e0; border: 1px solid #e2b85a; cursor: pointer; }
+#enh-go:disabled { opacity: 0.4; cursor: default; }
+#enh-go:not(:disabled):hover { background: #a8382a; }
+.enh-msg { min-height: 16px; margin-top: 6px; color: #ffd76a; font-size: 13px; }
+.enh-box.fail .enh-msg { color: #ff8a7a; }
+
+/* ===== 도감 ===== */
+.cx-sum { background: #1e1828; border: 1px solid #4a3e58; padding: 8px 10px; margin-bottom: 8px; font-size: 12px; line-height: 1.6; }
+.cx-sum b { color: var(--gold); font-weight: normal; }
+.cx-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; }
+.cx-card { background: #1a1522; border: 1px solid #3a3048; padding: 6px 8px; font-size: 11px; line-height: 1.45; }
+.cx-card.on { border-color: #6a5a3a; }
+.cx-card b { display: block; font-size: 12px; color: #f3ead6; font-weight: normal; }
+.cx-card .stars { color: #ffd040; letter-spacing: 1px; }
+.cx-card .stars i { color: #4a4058; font-style: normal; }
+.cx-card small { color: #a89e8a; }
+.cx-card .eff { color: #8aff9a; }
+.cx-card.lock { opacity: 0.55; }
+.cx-region { margin: 10px 0 5px; font-size: 12px; color: var(--gold); display: flex; justify-content: space-between; }
+.cx-region .done { color: #8aff9a; }
+.cx-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; margin-bottom: 5px; align-items: stretch; }
+.cx-row > span { font-size: 12px; color: var(--gold); display: flex; align-items: center; }
+.cx-slot { font-size: 10px; text-align: center; padding: 5px 2px; background: #1a1522; border: 1px solid #3a3048; line-height: 1.35; }
+.cx-slot.on { border-color: #3a8a5a; background: #18241e; }
+.cx-slot button { font: inherit; font-size: 10px; margin-top: 3px; padding: 2px 6px; background: #8a2a20; color: #fff4e0; border: 1px solid #e2b85a; cursor: pointer; }

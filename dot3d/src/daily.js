@@ -100,6 +100,7 @@ export class Daily {
     if (!D.bonus && D.goals.length && D.goals.every((q) => q.done)) {
       D.bonus = true; changed = true;
       g.stats.daily = (g.stats.daily || 0) + 1;
+      g.after(2.6, () => g.gainMats({ bless: 1, scrollW: 1, scrollA: 1, scrollG: 1 }));
       const lv = Math.max(1, g.player.level) + g.round;
       const gear = makeGear(lv, Math.max(2, rollGearTier(0.6, g.round + 1)));
       g.after(2.4, () => { g.ui.banner('오늘의 목표 모두 달성!', '희귀 장비 보상', 2.4, 'win-banner'); g.pickupGear(gear); });

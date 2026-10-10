@@ -1,5 +1,6 @@
 // 방어구·장신구: 장갑, 각반, 허리띠, 반지(두 개). 주울 때마다 등급과 옵션이 무작위로 붙음
 import { RARITY, PERKS } from './items.js';
+import { gearMul } from './enhance.js';
 
 export const GEAR_SLOTS = ['gloves', 'legs', 'belt', 'ring1', 'ring2'];
 export const SLOT_NAME = { weapon: '무기', outfit: '갑옷', gloves: '장갑', legs: '각반', belt: '허리띠', ring1: '반지', ring2: '반지', ring: '반지' };
@@ -80,7 +81,7 @@ export const gearColor = (g) => (g.set ? SETS[g.set].color : BASES[g.kind][g.tie
 // 장착한 장비 옵션 합계 (한계 적용)
 export function sumStats(list) {
   const t = {};
-  for (const g of list) if (g) for (const [k, v] of Object.entries(g.stats)) t[k] = (t[k] || 0) + v;
+  for (const g of list) if (g) { const m = gearMul(g.enh || 0); for (const [k, v] of Object.entries(g.stats)) t[k] = (t[k] || 0) + (k === 'hp' ? Math.round(v * m) : v * m); }
   for (const [k, v] of Object.entries(setBonuses(list).stats)) t[k] = (t[k] || 0) + v;
   for (const [k, c] of Object.entries(CAPS)) if (t[k] > c) t[k] = c;
   return t;
