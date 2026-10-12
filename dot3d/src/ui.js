@@ -244,7 +244,10 @@ export class UI {
     document.getElementById('gear-count').textContent = `${free.length}/${BAG_MAX}`;
     const gl = document.getElementById('bag-gear');
     gl.innerHTML = '';
-    const list = [...g.gear].sort((a, b) => (g.isEquipped(b) - g.isEquipped(a)) || (!!b.set - !!a.set) || b.tier - a.tier || gearScore(b) - gearScore(a));
+    // 정렬·거르기 (착용한 것은 늘 위)
+    const order = { tier: (a, b) => (!!b.set - !!a.set) || b.tier - a.tier || gearScore(b) - gearScore(a), score: (a, b) => gearScore(b) - gearScore(a), kind: (a, b) => a.kind.localeCompare(b.kind) || b.tier - a.tier, lv: (a, b) => b.lv - a.lv || b.tier - a.tier, new: (a, b) => g.gear.indexOf(b) - g.gear.indexOf(a) }[this.gearSort || 'tier'];
+    const F = this.gearFilter || '';
+    const list = [...g.gear].filter((x) => !F || (F === 'set' ? x.set : x.kind === F && !x.set) || g.isEquipped(x)).sort((a, b) => (g.isEquipped(b) - g.isEquipped(a)) || order(a, b));
     for (const it of list) {
       const row = document.createElement('div');
       const worn = g.isEquipped(it);
@@ -255,7 +258,7 @@ export class UI {
       const cur = g.gearInSlot(it.kind === 'ring' ? g.worseRingSlot() : it.kind);
       const better = !worn && gearScore(it) > gearScore(cur);
       const txt = document.createElement('div');
-      txt.innerHTML = `<span style="color:${rarityOf(it).color}">${enhName(it.name, it.enh || 0)}</span><small>${it.set ? SETS[it.set].name : rarityOf(it).name} ${SLOT_NAME[it.kind]}${other ? ' · 다른 직업 착용' : ''}</small>`;
+      txt.innerHTML = `<span style="color:${rarityOf(it).color}">${it.lock ? '🔒 ' : ''}${enhName(it.name, it.enh || 0)}</span><small>${it.set ? SETS[it.set].name : rarityOf(it).name} ${SLOT_NAME[it.kind]}${other ? ' · 다른 직업 착용' : ''}</small>`;
       row.append(cv, txt);
       if (better) row.insertAdjacentHTML('beforeend', '<span class="better">▲</span>');
       row.addEventListener('click', (e) => { e.stopPropagation(); this.pick = it.uid; this.pickSlot = null; this.refreshBag(); });
@@ -311,7 +314,8 @@ export class UI {
         <div class="enh-rate">성공 확률 <b>${Math.round(rateOf(lv) * 100)}%</b>${dropsOnFail(lv) ? ' · 실패하면 한 단계 떨어짐' : ' · 실패해도 그대로'}</div>
         <div class="enh-cost">${icon(info.mat)} ${MATS[info.mat].name} 1 <small>(${M[info.mat] || 0})</small>${soul ? ` · ${icon('soul')} ${MATS.soul.name} ${soul} <small>(${M.soul || 0})</small>` : ''}</div>
         ${dropsOnFail(lv) ? `<label class="enh-bless"><input type="checkbox" id="enh-bless" ${this.enhBless && M.bless ? 'checked' : ''} ${M.bless ? '' : 'disabled'}> ${icon('bless')} ${MATS.bless.name} 함께 쓰기 (실패해도 안 떨어짐) <small>(${M.bless || 0})</small></label>` : ''}
-        <button id="enh-go" ${can ? '' : 'disabled'}>강화하기</button>`}
+        <button id="enh-go" ${can ? '' : 'disabled'}>강화하기</button>
+        <div class="enh-auto"><label>목표 <select id="enh-target">${Array.from({ length: ENH_MAX - lv }, (_, i) => lv + 1 + i).map((n) => `<option value="${n}" ${n === (this.enhTarget > lv ? this.enhTarget : Math.min(ENH_MAX, Math.max(lv + 1, 10))) ? 'selected' : ''}>+${n}</option>`).join('')}</select></label><button id="enh-auto" ${can ? '' : 'disabled'}>목표까지 자동 강화</button></div>`}
         <div class="enh-msg">${msg}</div>
         ${lv >= 9 && !maxed ? '<div class="pz-note">+10부터는 보스만 떨어뜨리는 요괴 혼석이 더 들어가요.</div>' : ''}
       </div>`;
@@ -331,6 +335,28 @@ export class UI {
       list.append(row);
     }
     el.querySelector('#enh-bless')?.addEventListener('change', (e) => { this.enhBless = e.target.checked; });
+    el.querySelector('#enh-target')?.addEventListener('change', (e) => { this.enhTarget = +e.target.value; });
+    el.querySelector('#enh-auto')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const goal = +el.querySelector('#enh-target').value;
+      this.enhTarget = goal;
+      let tries = 0, ok = 0, fail = 0, last = null;
+      while (tries < 300) {
+        const cur = targetInfo(g, T)?.lv ?? 0;
+        if (cur >= goal) break;
+        const r = tryEnhance(g, T, !!this.enhBless);
+        if (r.ok === null) { last = r.msg; break; }
+        tries++; if (r.ok) ok++; else fail++;
+      }
+      p.recalc(); g.records?.check?.(); g.save(false);
+      const now = targetInfo(g, T)?.lv ?? 0;
+      const reached = now >= goal;
+      g.audio.play(reached ? 'levelup' : tries ? 'coin' : 'denied');
+      if (reached) g.ui.flash('#ffd76a', 0.15);
+      this.enhFx = reached ? 'ok' : tries ? '' : 'fail';
+      this.refreshBag();
+      this.renderEnh(tries ? `${tries}번 시도 · 성공 ${ok} · 실패 ${fail} → 지금 +${now}${reached ? ' · 목표 달성!' : last ? ` · 멈춤: ${last}` : ''}` : last || '');
+    });
     el.querySelector('#enh-go')?.addEventListener('click', (e) => {
       e.stopPropagation();
       const r = tryEnhance(g, T, !!this.enhBless);
@@ -421,7 +447,7 @@ export class UI {
     }
     el.innerHTML = `<div class="gd"><div class="gd-top"><canvas width="16" height="16"></canvas><div><div class="gd-name" style="color:${rarityOf(it).color}">${it.name}</div><small>${it.set ? '세트' : rarityOf(it).name} ${SLOT_NAME[it.kind]} · 아이템 레벨 ${it.lv}${worn ? ' · 착용 중' : ''}</small></div></div>` + setInfo +
       `<div class="cmp"><div>${lines(it)}</div>${cur ? `<div><small>지금 낀 ${cur.name}과 비교</small><br>${cmp || '<small>차이 없음</small>'}</div>` : ''}</div>` +
-      `<div class="btns">${worn ? '<button data-a="off" class="sub">벗기</button>' : `<button data-a="on">${cur ? '바꿔 끼기' : '착용'}</button>`}${worn ? '' : `<button data-a="salvage" class="sub">분해 (경험치 +${salvageExp(it)})</button>`}</div></div>`;
+      `<div class="btns">${worn ? '<button data-a="off" class="sub">벗기</button>' : `<button data-a="on">${cur ? '바꿔 끼기' : '착용'}</button>`}<button data-a="lock" class="sub">${it.lock ? '잠금 풀기' : '잠그기'}</button>${worn || it.lock ? '' : `<button data-a="salvage" class="sub">분해 (경험치 +${salvageExp(it)})</button>`}</div></div>`;
     drawGearIcon(el.querySelector('canvas'), it);
     el.querySelectorAll('button').forEach((b) => b.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -429,6 +455,7 @@ export class UI {
       if (a === 'on') g.equipGear(it.uid, it.kind === 'ring' ? slot : null);
       else if (a === 'off') { g.unequipGear(slot); }
       else if (a === 'salvage') { this.pick = null; g.salvageGear([it.uid]); }
+      else if (a === 'lock') { it.lock = !it.lock; g.save(false); this.refreshBag(); }
     }));
   }
 
@@ -446,7 +473,15 @@ export class UI {
     el.classList.add('show');
   }
 
+  // 알림: 하나가 떠 있는 동안 새 것이 오면 줄을 세웠다가 차례로 (같은 글은 한 번만, 밀리면 짧게)
   toast(text, dur = 2.2) {
+    const Q = (this.toastQ ||= []);
+    if (this.toastT > 0.3 && this.el.toast.textContent !== text) {
+      if (!Q.some((q) => q.text === text)) Q.push({ text, dur });
+      if (Q.length > 4) Q.splice(0, Q.length - 4);
+      this.toastT = Math.min(this.toastT, 1.2);
+      return;
+    }
     this.el.toast.textContent = text;
     this.el.toast.classList.add('show');
     this.toastT = dur;
@@ -538,7 +573,13 @@ export class UI {
 
     // 배너, 토스트
     if (this.bannerT > 0) { this.bannerT -= dt; if (this.bannerT <= 0) el.banner.classList.remove('show'); }
-    if (this.toastT > 0) { this.toastT -= dt; if (this.toastT <= 0) el.toast.classList.remove('show'); }
+    if (this.toastT > 0) {
+      this.toastT -= dt;
+      if (this.toastT <= 0) {
+        const n = this.toastQ?.shift();
+        if (n) { el.toast.textContent = n.text; this.toastT = this.toastQ.length ? Math.min(n.dur, 1.6) : n.dur; } else el.toast.classList.remove('show');
+      }
+    }
 
     // 연속 베기
     if (g.hitCombo >= 2 && g.time - g.lastHitTime < 2) {

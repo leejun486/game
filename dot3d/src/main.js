@@ -40,6 +40,7 @@ import { rollMats, MATS, MAT_ORDER } from './enhance.js';
 import { DEMO, DEMO_LOCKED_GATES, DEMO_QUEST, DEMO_END_LINES } from './edition.js';
 import { Shop, coinsFor, salvageCoins, salvageDust, renderShop } from './shop.js';
 import { Pet } from './pet.js';
+import { Requests } from './requests.js';
 import { challengeClear, finishRush, challengeQuest, renderChallenge } from './challenge.js';
 import { spearHit, lancerSkill1, lancerSkill2, lancerSkill3, updateLancer, clearLancer } from './lancer.js';
 
@@ -157,6 +158,7 @@ class Game {
     this.codex = new Codex(this);
     this.shop = new Shop(this);
     this.pet = new Pet(this);
+    this.requests = new Requests(this);
     this.daily = null;  // 오늘의 목표 { day, goals, bonus }
     this.dailyGoals = new Daily(this);
     this.qk = new QuestKinds(this); // 추격·찾기·순서·호위·버티기 퀘스트
@@ -294,6 +296,12 @@ class Game {
     document.getElementById('salvage-low').addEventListener('click', (e) => {
       e.stopPropagation();
       this.salvageGear(this.gear.filter((g) => g.tier <= 1).map((g) => g.uid));
+    });
+    document.getElementById('gear-sort').addEventListener('change', (e) => { this.ui.gearSort = e.target.value; this.ui.refreshBag(); });
+    for (const b of document.querySelectorAll('#gear-filter [data-f]')) b.addEventListener('click', (e) => {
+      e.stopPropagation(); this.ui.gearFilter = b.dataset.f;
+      for (const x of document.querySelectorAll('#gear-filter [data-f]')) x.classList.toggle('on', x === b);
+      this.ui.refreshBag();
     });
     document.getElementById('evo-btn').addEventListener('click', () => { if (this.state === 'play') this.toggleSkills(); });
     document.getElementById('hunt-btn').addEventListener('click', () => { if (this.state === 'play') this.setAutoHunt(!this.autoHunt); });
@@ -1926,6 +1934,7 @@ class Game {
         return;
       }
       if (n.kind === 'guard' && !Q) { this.bountyTalk(n); return; }
+      if (n.kind !== 'guard' && this.requests.talk(n)) return;
       let lines = n.lines;
       if (n.kind === 'guard') lines = this.guardLines();
       else if (Q) lines = [...n.lines.slice(0, 2), `(지금 할 일: ${Q.title} — ${Q.desc.replace(/<[^>]+>/g, '')})`];
@@ -1966,7 +1975,7 @@ class Game {
   updateQuest() {
     const ui = this.ui, M = this.map;
     const dl = document.getElementById('daily-line');
-    if (dl) { const h = this.dailyGoals.line(); if (dl.dataset.h !== h) { dl.dataset.h = h; dl.innerHTML = h; } }
+    if (dl) { const h = this.dailyGoals.line() + this.requests.line(); if (dl.dataset.h !== h) { dl.dataset.h = h; dl.innerHTML = h; } }
     if (this.tower?.mode) { ui.setQuest(...challengeQuest(this)); return; }
     if (this.tower?.active) {
       const T = this.tower;
@@ -2417,6 +2426,20 @@ class Game {
       this.scene.add(sp);
       this.markers.push(sp);
     }
+    // 부탁이 있는 NPC: 푸른 느낌표
+    const cv2 = document.createElement('canvas'); cv2.width = 8; cv2.height = 16;
+    const g2 = cv2.getContext('2d');
+    g2.fillStyle = '#081420'; g2.fillRect(2, 0, 4, 11); g2.fillRect(2, 12, 4, 4);
+    g2.fillStyle = '#6ad8ff'; g2.fillRect(3, 1, 2, 9); g2.fillRect(3, 13, 2, 2);
+    const tex2 = new THREE.CanvasTexture(cv2);
+    tex2.magFilter = tex2.minFilter = THREE.NearestFilter;
+    tex2.colorSpace = THREE.SRGBColorSpace;
+    this.reqMarkers = [];
+    for (let i = 0; i < 4; i++) {
+      const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex2, transparent: true, depthWrite: false }));
+      sp.scale.set(0.42, 0.84, 1); sp.userData.noOutline = true; sp.renderOrder = 40; sp.visible = false;
+      this.scene.add(sp); this.reqMarkers.push(sp);
+    }
     // 바닥 화살표 (도트 꺾쇠 모양)
     const shape = new THREE.Shape();
     shape.moveTo(0, 0.55); shape.lineTo(0.42, 0); shape.lineTo(0.2, 0); shape.lineTo(0.2, -0.45); shape.lineTo(-0.2, -0.45); shape.lineTo(-0.2, 0); shape.lineTo(-0.42, 0); shape.closePath();
@@ -2466,6 +2489,12 @@ class Game {
       m.position.y += Math.abs(Math.sin(this.time * 3)) * 0.25;
     }
     for (; mi < this.markers.length; mi++) this.markers[mi].visible = false;
+    const RN = this.state === 'play' ? this.requests.markNpcs() : [];
+    this.reqMarkers.forEach((m, i) => {
+      const n = RN[i];
+      m.visible = !!n && Math.hypot(n.pos.x - p.x, n.pos.z - p.z) < 40;
+      if (m.visible) { m.position.copy(n.pos); m.position.y += 2.5 + Math.abs(Math.sin(this.time * 3 + 1)) * 0.25; }
+    });
     // 가장 가까운 목표가 멀면 화살표
     let best = null, bd = Infinity;
     for (const t of T) {
@@ -4625,6 +4654,7 @@ class Game {
     }
     if (this.target === e) this.target = null;
     this.questOnKill(e);
+    this.requests.onKill(e);
     this.updateQuest();
     if (e.isBoss) this.startKillCam(e);
   }

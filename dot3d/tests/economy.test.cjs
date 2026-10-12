@@ -107,6 +107,56 @@ module.exports = {
     check(rush.best === 3 && !rush.tower, `연속 도전 이상 ${JSON.stringify(rush)}`);
     ctx.log(`연속 도전 3/3 완주 · 기록 ${rush.best}`);
 
+    // 편의: 목표까지 자동 강화, 잠근 장비는 도감 등록·분해에서 빠짐, 알림 줄 세우기
+    const qol = await g.eval(() => {
+      const G = window.game, p = G.player, out = {};
+      G.mats.scrollW = 60; G.mats.soul = 0;
+      G.toggleBag(true); G.ui.tab('enh');
+      G.ui.enhPick = { kind: 'weapon', id: G.progressOf(p.cls).weapon }; G.ui.renderEnh();
+      const sel = document.getElementById('enh-target'); sel.value = '5'; sel.dispatchEvent(new Event('change'));
+      document.getElementById('enh-auto').click();
+      out.lv = G.enh[G.progressOf(p.cls).weapon] || 0; out.msg = document.querySelector('.enh-msg').textContent;
+      G.toggleBag(false);
+      const lk = G.testGear('belt', 4); G.pickupGear(lk); lk.lock = true;
+      G.codexReg = {}; G.codex.dirty();
+      out.regLocked = G.codex.register('belt4');
+      G.salvageGear([lk.uid]); out.lockKept = !!G.gearByUid(lk.uid);
+      G.ui.toastT = 0; G.ui.toastQ = [];
+      G.ui.toast('하나', 2); G.ui.toast('둘', 2); G.ui.toast('셋', 2);
+      out.q = G.ui.toastQ.map((x) => x.text); out.shown = document.getElementById('toast').textContent;
+      return out;
+    });
+    const shown2 = await g.eval(() => { const G = window.game; G.ui.update(2.5); return document.getElementById('toast').textContent; });
+    check(qol.lv >= 5 && !qol.regLocked && qol.lockKept && qol.shown === '하나' && qol.q.join() === '둘,셋' && shown2 !== '하나', `편의 기능 이상 ${JSON.stringify(qol)} ${shown2}`);
+    ctx.log(`자동 강화 → +${qol.lv} (${qol.msg}) · 잠금 · 알림 줄 세우기`);
+
+    // 부탁: 보스를 물리친 지역 NPC가 부탁을 꺼냄 → 처치 → 돌아가 보상
+    const rq = await g.eval(() => {
+      const G = window.game, out = {};
+      const lady = G.npcs.find((n) => n.kind === 'lady');
+      out.marks0 = G.requests.markNpcs().map((n) => n.kind);
+      G.player.pos.set(lady.pos.x + 1, lady.pos.y, lady.pos.z); G.player.y = lady.pos.y;
+      G.nearInteract = { kind: 'npc', npc: lady }; G.interact();
+      return out;
+    });
+    await g.step(1);
+    const rq2 = await g.eval(() => {
+      const G = window.game, out = { cur: G.ext.req?.cur };
+      // 꼬마 도깨비를 잡으면 가끔 구슬
+      const rnd = Math.random; Math.random = () => 0.01;
+      for (let i = 0; i < 5; i++) { const e = G.spawnEnemyAt('blue', G.player.pos.x + 4, G.player.pos.z); e.dead = true; G.requests.onKill(e); }
+      Math.random = rnd;
+      out.met = G.requests.met(); out.line = document.getElementById('daily-line').textContent;
+      const c0 = G.ext.coins;
+      G.nearInteract = { kind: 'npc', npc: G.npcs.find((n) => n.kind === 'lady') }; G.interact();
+      out.c0 = c0;
+      return out;
+    });
+    await g.step(1);
+    const rq3 = await g.eval(() => { const G = window.game; return { done: G.ext.req.done, coins: G.ext.coins, next: G.requests.offerOf('lady')?.id }; });
+    check(rq.marks0.includes('lady') && rq2.cur === 'lady1' && rq2.met && rq3.done.includes('lady1') && rq3.coins > rq2.c0 && rq3.next === 'lady2', `부탁 이상 ${JSON.stringify([rq, rq2, rq3])}`);
+    ctx.log(`부탁: 받기 · 모으기 · 보상 (엽전 +${rq3.coins - rq2.c0}) · 다음 부탁`);
+
     // 저장했다 불러와도 그대로
     const saved = await g.eval(() => { const G = window.game; G.save(false); return { coins: G.ext.coins, pet: G.ext.pet, rush: G.ext.rushBest }; });
     await g.page.reload();

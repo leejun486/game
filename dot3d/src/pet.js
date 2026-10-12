@@ -62,6 +62,7 @@ export class Pet {
     const P = PETS[this.game.ext?.pet];
     return P && petOwned(this.game, this.game.ext.pet) ? P.stats : {};
   }
+  ownedCount() { return PET_ORDER.filter((id) => petOwned(this.game, id)).length; }
   coinMul() { const P = PETS[this.game.ext?.pet]; return P?.coins ? 1 + P.coins : 1; }
 
   set(id) {

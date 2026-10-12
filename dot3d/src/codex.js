@@ -61,7 +61,7 @@ export class Codex {
   // 등록할 수 있는 장비 (착용하지 않은 것 중 가장 안 좋은 것부터)
   candidate(key) {
     const g = this.game;
-    const free = g.gear.filter((x) => !g.isEquippedAny(x));
+    const free = g.gear.filter((x) => !x.lock && !g.isEquippedAny(x));
     if (key.startsWith('set_')) return free.filter((x) => x.set === key.slice(4)).sort((a, b) => (a.enh || 0) - (b.enh || 0))[0] || null;
     const kind = key.replace(/\d$/, ''), tier = +key.slice(-1);
     return free.filter((x) => !x.set && x.kind === kind && x.tier === tier).sort((a, b) => (a.enh || 0) - (b.enh || 0) || a.lv - b.lv)[0] || null;
@@ -111,7 +111,8 @@ export function renderCodex(game, el, sub = 'mon') {
     for (const o of OUTFITS) if (o.tier) body += g.inv.has(o.id) ? `<div class="cx-card on"><b>${o.name}</b><span class="eff">${fmtStat('hp', 3 * o.tier)}</span></div>` : `<div class="cx-card lock"><b>???</b><small>${fmtStat('hp', 3 * o.tier)}</small></div>`;
     body += '</div>';
   } else {
-    body += '<div class="pz-note" style="margin-top:0">끼지 않은 방어구·장신구를 하나 바쳐 칸을 채워요 (바친 장비는 사라져요). 한 줄 다섯 칸을 모두 채우면 줄 효과가 더 붙어요.</div>';
+    const can = [...CODEX_KINDS.flatMap((k) => [0, 1, 2, 3, 4].map((t) => gearKey(k, t))), ...Object.keys(SETS).map((id) => 'set_' + id)].filter((k) => !C.reg[k] && C.candidate(k));
+    body += `<div class="pz-note" style="margin-top:0">끼지 않은 방어구·장신구를 하나 바쳐 칸을 채워요 (바친 장비는 사라져요, 잠근 것은 빼고). 한 줄 다섯 칸을 모두 채우면 줄 효과가 더 붙어요.</div>${can.length ? `<button class="pz-btn main" data-regall style="margin-bottom:8px">등록할 수 있는 ${can.length}칸 모두 등록</button>` : ''}`;
     const TIER = ['일반', '고급', '희귀', '영웅', '전설'];
     for (const kind of CODEX_KINDS) {
       const full = [0, 1, 2, 3, 4].every((t) => C.reg[gearKey(kind, t)]);
@@ -132,6 +133,12 @@ export function renderCodex(game, el, sub = 'mon') {
   el.innerHTML = `<h3>도감</h3><div class="cx-sum"><b>도감 효과 합계</b> (모든 직업): ${fmtStats(tot) || '아직 없음'}</div>
     <div class="pz-seg" style="margin-bottom:8px">${tabs.map(([k, n]) => `<button data-cx="${k}" class="${k === sub ? 'on' : ''}">${n}</button>`).join('')}</div>${body}`;
   for (const b of el.querySelectorAll('[data-cx]')) b.addEventListener('click', () => renderCodex(g, el, b.dataset.cx));
+  el.querySelector('[data-regall]')?.addEventListener('click', () => {
+    let n = 0;
+    for (const k of [...CODEX_KINDS.flatMap((kd) => [0, 1, 2, 3, 4].map((t) => gearKey(kd, t))), ...Object.keys(SETS).map((id) => 'set_' + id)]) if (!C.reg[k] && C.register(k)) n++;
+    if (n) { g.audio.play('levelup'); g.ui.toast(`도감 ${n}칸 등록! 능력치가 올랐어요`, 2); }
+    renderCodex(g, el, sub);
+  });
   for (const b of el.querySelectorAll('[data-reg]')) b.addEventListener('click', () => {
     if (C.register(b.dataset.reg)) { g.audio.play('levelup'); g.ui.toast('도감 등록! 능력치가 올랐어요', 1.8); }
     renderCodex(g, el, sub);

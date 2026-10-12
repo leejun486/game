@@ -366,6 +366,11 @@ body.touch #gameover .s b::after { content: ' / 화면 탭'; }
 .gear-tools { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
 .gear-tools button { padding: 4px 8px; font-family: var(--font); font-size: 11px; cursor: pointer; background: #2a2230; color: #e8dcc0; border: 2px solid #4a3e2a; }
 .gear-tools small { color: #8a7e6a; font-size: 10px; }
+.gear-sort { flex-wrap: wrap; gap: 6px; }
+.gear-sort select { font-family: var(--font); font-size: 11px; padding: 3px 4px; background: #2a2230; color: #e8dcc0; border: 2px solid #4a3e2a; }
+.gear-sort .pz-seg button { padding: 3px 6px; font-size: 11px; }
+#banner-sub { display: inline-block; padding: 2px 12px; background: rgba(16, 12, 24, 0.78); }
+#banner-sub:empty { display: none; }
 .it .better { color: #7aff8a; margin-left: auto; font-size: 11px; }
 .it.worn { border-color: #6a5a3a; }
 .it.worn::after { content: '착용'; font-size: 10px; color: #c8a868; margin-left: auto; }
@@ -419,6 +424,8 @@ body.touch #gameover .s b::after { content: ' / 화면 탭'; }
 #daily-line { font-size: 11px; color: #ffe08a; cursor: pointer; margin-top: 2px; }
 #daily-line:empty { display: none; }
 #daily-line b { color: #fff6e2; font-weight: normal; }
+.req-l { display: block; color: #9ad8ff; }
+.req-l b { color: #e8f8ff; }
 .dl-list { display: flex; flex-direction: column; gap: 10px; margin: 6px 0 12px; }
 .dl-row { display: grid; grid-template-columns: 1fr 160px 52px; gap: 10px; align-items: center; font-size: 14px; color: #e8dcc0; }
 .dl-row.done .dl-t { color: #9ee08a; }
@@ -780,6 +787,10 @@ body.pad:not(.touch) #help-pad { display: flex; }
 .enh-bless { display: block; font-size: 12px; margin: 4px 0 8px; cursor: pointer; }
 #enh-go { font: inherit; padding: 7px 18px; background: #8a2a20; color: #fff4e0; border: 1px solid #e2b85a; cursor: pointer; }
 #enh-go:disabled { opacity: 0.4; cursor: default; }
+.enh-auto { display: flex; gap: 8px; align-items: center; margin-top: 8px; font-size: 12px; flex-wrap: wrap; }
+.enh-auto select { font-family: var(--font); font-size: 12px; background: #2a2230; color: #e8dcc0; border: 1px solid #6a5a3a; padding: 2px 4px; }
+#enh-auto { font: inherit; font-size: 12px; padding: 5px 12px; background: #2a2230; color: #ffd76a; border: 1px solid #e2b85a; cursor: pointer; }
+#enh-auto:disabled { opacity: 0.4; cursor: default; }
 #enh-go:not(:disabled):hover { background: #a8382a; }
 .enh-msg { min-height: 16px; margin-top: 6px; color: #ffd76a; font-size: 13px; }
 .enh-box.fail .enh-msg { color: #ff8a7a; }
