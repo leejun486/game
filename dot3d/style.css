@@ -948,3 +948,5 @@ body.touch #coach.tut.show #coach-skip { pointer-events: auto; }
 #fps.ok { color: #ffd76a; }
 #fps.bad { color: #ff7a6a; }
 body.shot #fps { display: none; }
+/* 앱(안드로이드·iOS): 파일 내려받기가 안 되니 저장 파일 내보내기 대신 옮기기 코드를 씀 */
+body.native #pz-export { display: none; }

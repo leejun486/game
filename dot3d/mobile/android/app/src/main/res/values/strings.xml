@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">월하궁</string>
+    <string name="title_activity_main">월하궁</string>
+    <string name="package_name">kr.wolhagung.game</string>
+    <string name="custom_url_scheme">kr.wolhagung.game</string>
+</resources>

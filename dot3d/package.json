@@ -12,7 +12,9 @@
     "dist:web": "npm run build && python3 tools/pack_web.py",
     "dist:demo": "npm run build:demo && python3 tools/pack_web.py demo",
     "test": "npm run build && node tests/run.cjs",
-    "test:only": "node tests/run.cjs"
+    "test:only": "node tests/run.cjs",
+    "app:sync": "npm run build && cd mobile && npm run sync",
+    "app:icons": "python3 tools/app_icons.py"
   },
   "dependencies": {
     "three": "^0.186.1"

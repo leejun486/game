@@ -26,6 +26,10 @@
 6. Cover image에 `marketing/capsules/itch_cover_630x500.png`, Screenshots에 `marketing/screenshots/*.jpg`를 넣습니다.
 7. 소개문은 아래 4장을 붙여 넣습니다. Genre: Action, Tags: action, rpg, hack-and-slash, korean, folklore, 3d, pixel-art.
 
+## 2-1. 앱 (구글 플레이 · 앱스토어)
+
+휴대폰 앱 출시는 **`APP.md`** 를 따릅니다 (빌드, 서명, Play Console 등록, 콘텐츠 등급·데이터 보안, 소개문).
+
 ## 3. Steam
 
 1. Steamworks 가입 후 **Steam Direct** 앱 등록비($100, 한 게임당)를 냅니다. 세금·은행 정보 입력이 끝나야 다음 단계가 열립니다.

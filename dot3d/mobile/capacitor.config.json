@@ -1,0 +1,17 @@
+{
+  "appId": "kr.wolhagung.game",
+  "appName": "월하궁",
+  "webDir": "www",
+  "android": {
+    "backgroundColor": "#100c18",
+    "allowMixedContent": false,
+    "webContentsDebuggingEnabled": false
+  },
+  "ios": {
+    "backgroundColor": "#100c18",
+    "contentInset": "never"
+  },
+  "plugins": {
+    "SplashScreen": { "launchShowDuration": 0 }
+  }
+}

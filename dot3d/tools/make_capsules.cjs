@@ -17,6 +17,7 @@ const CAPS = [
   ['library_hero_3840x1240', 3840, 1240, 'wide.jpg', '50% 50%', 'none', 0],
   ['library_logo_1280x720', 1280, 720, null, '', 'logo', 0.36],
   ['itch_cover_630x500', 630, 500, 'land.jpg', '66% 40%', 'bottom', 0.15],
+  ['play_feature_1024x500', 1024, 500, 'land.jpg', '50% 52%', 'left', 0.23], // 구글 플레이 그래픽 이미지
 ];
 (async () => {
   const b = await chromium.launch();

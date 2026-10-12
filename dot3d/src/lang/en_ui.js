@@ -867,6 +867,7 @@ export const dict = {
   '최고 기록': 'Best',
   '그만두려면 남쪽 홍살문으로': 'Leave by the south gate to quit',
   '보스 연속 도전 · ': 'Boss Rush · ',
+  '한 번 더 누르면 게임을 꺼요': 'Press again to quit',
 };
 
 const RN = '([ⅠⅡⅢⅣⅤ])';

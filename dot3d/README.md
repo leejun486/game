@@ -65,6 +65,7 @@ npm run build:demo && npm run test:only -- demo   # 체험판 빌드 확인
 | `economy` | 엽전(처치·분해), 장터 사기와 하루 한도, 공방(옵션 다시 굴리기·등급 올리기), 수호령 능력치·함께 공격, 보스 다시 싸우기·연속 도전 보상과 기록, 목표까지 자동 강화, 잠금, 알림 줄 세우기, 부탁 받기·모으기·보상, 저장 뒤 그대로 |
 | `pwa` | 설치형 웹판: 매니페스트, 오프라인 저장(sw.js)이 켜지고 인터넷을 끊어도 다시 열리는지, 기기 옮기기 코드로 기록이 그대로 옮겨지는지, 기기 점검 결과 |
 | `demo` | 체험판 빌드(`dist-demo`): 체험판 표시, 늪 앞에서 끝 임무, 새 기능 창이 열리는지 (`npm run build:demo` 먼저) |
+| `native` | 앱(가짜 Capacitor): 뒤로 가기 단추(선택 화면 두 번 눌러 끄기, 메뉴·가방·대화), 앱을 내리면 저장하고 멈춤, 앱에서 저장 파일 내보내기 숨김 |
 | `save` | 저장 → 이어하기 → 다시 저장이 같은지, 옛 기록(46단계 시절) 옮기기, 찾기 퀘스트 도중 이어하기, 깨진 저장일 때 예비 기록 |
 
 **자동 완주** (`npm test`와 따로, 직업마다 실제 2분쯤):
@@ -453,6 +454,17 @@ npm run dist:mac                   # dmg (macOS에서 빌드)
   - macOS: `~/Library/Application Support/Wolhagung/save.json`
   - Linux: `~/.config/Wolhagung/save.json`
 - **Steam 출시 전 할 일:** Steamworks SDK 연동(업적·클라우드 저장, steamworks.js 등), 코드 서명, 아이콘을 넣어야 합니다.
+
+## 앱 (안드로이드 · iOS)
+
+웹판을 Capacitor로 감싼 앱 프로젝트가 `mobile/`에 있습니다(앱 ID `kr.wolhagung.game`). 상태 표시줄 없는 전체 화면, 화면 꺼짐 없음, 휴대폰 뒤로 가기 단추(대화 넘기기 → 창 닫기 → 메뉴, 선택 화면에서는 두 번 눌러 끄기), 앱을 내리면 저장하고 멈춤. 빌드·서명·구글 플레이/앱스토어 등록 순서와 스토어 소개문은 **`APP.md`**, 개인정보처리방침 초안은 `PRIVACY.md`.
+
+```bash
+npm run app:sync                 # 웹판 빌드 → mobile/www → 안드로이드·iOS 프로젝트에 복사
+cd mobile && npm run android     # 안드로이드 스튜디오 열기 (npm run apk: 시험용 APK, npm run bundle: 출시용 AAB)
+```
+
+스토어 그림: 그래픽 이미지 `marketing/capsules/play_feature_1024x500.png`, 휴대폰 세로 스크린샷 `marketing/play/phone_*.png`(`node tools/phone_shots.cjs`), 아이콘·시작 화면은 `tools/app_icons.py`.
 
 ## 설치형 웹판 (휴대폰 홈 화면)
 

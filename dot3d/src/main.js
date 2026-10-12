@@ -42,6 +42,7 @@ import { Shop, coinsFor, salvageCoins, salvageDust, renderShop } from './shop.js
 import { Pet } from './pet.js';
 import { Requests } from './requests.js';
 import { DevStats, renderDevice } from './device.js';
+import { setupNative, isNativeApp } from './native.js';
 import { challengeClear, finishRush, challengeQuest, renderChallenge } from './challenge.js';
 import { V, DIFF_NOTE, DEMO_END } from './game/shared.js';
 import { SkillsPart } from './game/skills.js';
@@ -313,6 +314,7 @@ class Game {
     document.getElementById('skills-close').addEventListener('click', () => this.toggleSkills(false));
     stage.addEventListener('wheel', (e) => { this.pixel.zoom(e.deltaY > 0 ? -1 : 1); this.saveT = Math.min(this.saveT, 2); }, { passive: true });
     this.setupTouch();
+    setupNative(this); // 앱(Capacitor)일 때만: 뒤로 가기 단추·앱 내리기
   }
 
   setupTouch() {
@@ -2583,8 +2585,8 @@ window.addEventListener('DOMContentLoaded', async () => {
   watchDom();
   // 깃발·제목에 쓰는 명조체를 먼저 불러 둠 (캔버스에 그릴 때 글꼴이 없으면 다른 글꼴로 그려짐). 오래 걸리면 기다리지 않음
   try { await Promise.race([document.fonts.load('900 92px WolhaSerif', '령용무월하궁'), new Promise((r) => setTimeout(r, 1500))]); } catch { /* 글꼴 없이 진행 */ }
-  // 홈 화면에 설치한 웹판: 한 번 받은 파일로 오프라인에서도 실행 (sw.js). 자동 테스트에서는 ?sw=1일 때만
-  if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol) && (!navigator.webdriver || /[?&]sw=1/.test(location.search))) {
+  // 홈 화면에 설치한 웹판: 한 번 받은 파일로 오프라인에서도 실행 (sw.js). 자동 테스트에서는 ?sw=1일 때만, 앱(파일이 이미 기기 안)에서는 안 씀
+  if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol) && !isNativeApp() && (!navigator.webdriver || /[?&]sw=1/.test(location.search))) {
     try { navigator.serviceWorker.register('sw.js').catch(() => {}); } catch { /* 막힌 곳(앱 안의 미리보기 등)에서는 그냥 진행 */ }
   }
   try {
