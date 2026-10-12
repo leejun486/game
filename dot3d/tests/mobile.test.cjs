@@ -59,5 +59,25 @@ module.exports = {
     check(!P.errors.length, '페이지 오류: ' + P.errors.slice(0, 3).join(' / '));
     ctx.log('세로: 알림이 단추 위에 보임');
     await P.c.close();
+
+    // 세로 휴대폰·태블릿: 화면 요소끼리 겹치지 않음 (지도·메뉴 단추·임무 창·안내 창·기술 단추)
+    for (const [w, h] of [[390, 844], [820, 1180]]) {
+      const Q = await phone(ctx, w, h);
+      await Q.p.evaluate(() => { const G = window.game; G.coach.show('따라 해 보기', '피하기 버튼을 눌러 보세요. 피하는 순간에는 맞지 않아요', 1, true); G.coach.el.classList.add('tut'); G.ui.toast('도감 ★ 도깨비불 — 능력치가 올랐어요', 5); });
+      await Q.p.waitForTimeout(500);
+      const sels = ['#status', '#quest', '#minimap', '#bag-btn', '#evo-btn', '#hunt-btn', '#menu-btn', '#coach', '#toast', '#touch .btns'];
+      const R = {};
+      for (const s of sels) R[s] = await rect(Q.p, s);
+      for (const s of sels) check(R[s] && R[s].l >= -1 && R[s].r <= w + 1 && R[s].t >= -1 && R[s].b <= h + 1, `세로 ${w}×${h}: ${s}가 화면 밖 (${JSON.stringify(R[s])})`);
+      const hit = (a, b) => a.l < b.r - 1 && b.l < a.r - 1 && a.t < b.b - 1 && b.t < a.b - 1;
+      const bad = [];
+      for (let i = 0; i < sels.length; i++) for (let j = i + 1; j < sels.length; j++) if (hit(R[sels[i]], R[sels[j]])) bad.push(`${sels[i]}↔${sels[j]}`);
+      check(!bad.length, `세로 ${w}×${h}: 겹침 ${bad.join(', ')}`);
+      // 안내 창 위를 끌어도 이동이 막히지 않음
+      check(await Q.p.evaluate(() => getComputedStyle(document.getElementById('coach')).pointerEvents) === 'none', `세로 ${w}×${h}: 안내 창이 터치를 가로챔`);
+      check(!Q.errors.length, '페이지 오류: ' + Q.errors.slice(0, 3).join(' / '));
+      ctx.log(`세로 ${w}×${h}: ${sels.length}개 요소 겹침 없음`);
+      await Q.c.close();
+    }
   },
 };

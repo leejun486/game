@@ -803,3 +803,47 @@ body.pad:not(.touch) #help-pad { display: flex; }
 .cx-slot { font-size: 10px; text-align: center; padding: 5px 2px; background: #1a1522; border: 1px solid #3a3048; line-height: 1.35; }
 .cx-slot.on { border-color: #3a8a5a; background: #18241e; }
 .cx-slot button { font: inherit; font-size: 10px; margin-top: 3px; padding: 2px 6px; background: #8a2a20; color: #fff4e0; border: 1px solid #e2b85a; cursor: pointer; }
+
+/* ---------- 터치 세로 화면: 위쪽은 상태·임무 | 지도·단추, 아래쪽은 안내 | 기술 단추 ---------- */
+body.touch #bag-btn span, body.touch #evo-btn span, body.touch #hunt-btn span, body.touch #menu-btn span, body.touch #quest-go span, body.touch #minimap .mm-key { display: none; }
+#touch button.locked > span { position: relative; top: -7px; opacity: 0.6; }
+#touch button.locked .cdt { font-size: 11px; align-items: flex-end; padding-bottom: 9px; color: #ffd76a; text-shadow: 1px 1px 0 #000; }
+body.touch #coach.tut.show { pointer-events: none; }
+body.touch #coach.tut.show #coach-skip { pointer-events: auto; }
+@media (orientation: portrait) {
+  body.touch #logo { display: none; }
+  body.touch #minimap { left: auto; right: 8px; top: 8px; bottom: auto; }
+  body.touch #minimap canvas { width: 84px; height: 104px; }
+  body.touch #bag-btn, body.touch #evo-btn, body.touch #hunt-btn, body.touch #menu-btn { left: auto; right: 8px; min-width: 92px; padding: 7px 10px; font-size: 12px; text-align: center; }
+  body.touch #bag-btn { top: 130px; }
+  body.touch #evo-btn { top: 166px; }
+  body.touch #hunt-btn { top: 202px; }
+  body.touch #menu-btn { top: 238px; }
+  body.touch #quest { left: 8px; right: auto; top: 66px; width: min(250px, calc(100vw - 124px)); }
+  body.touch #boss { top: 280px; width: calc(100vw - 32px); }
+  body.touch #combo { top: 52%; }
+  body.touch #touch .btns { right: 12px; bottom: 16px; }
+  body.touch #coach { bottom: 214px; width: calc(100vw - 24px); }
+  body.touch #toast { bottom: 214px; max-width: calc(100vw - 24px); white-space: normal; text-align: center; }
+  body.touch #app:has(#coach.show) #toast { bottom: 330px; }
+  body.touch #savemark { right: 12px; bottom: 214px; }
+}
+/* 태블릿 세로: 여유가 있으니 크게, 안내 창은 기술 단추 왼쪽에 나란히 */
+@media (orientation: portrait) and (min-width: 601px) {
+  body.touch #minimap { right: 16px; top: 16px; }
+  body.touch #minimap canvas { width: 112px; height: 139px; }
+  body.touch #bag-btn, body.touch #evo-btn, body.touch #hunt-btn, body.touch #menu-btn { right: 16px; min-width: 124px; padding: 9px 12px; font-size: 14px; }
+  body.touch #bag-btn { top: 176px; }
+  body.touch #evo-btn { top: 220px; }
+  body.touch #hunt-btn { top: 264px; }
+  body.touch #menu-btn { top: 308px; }
+  body.touch #quest { left: 16px; top: 112px; width: min(320px, calc(100vw - 180px)); }
+  body.touch #boss { top: 360px; width: min(560px, calc(100vw - 48px)); }
+  body.touch #touch .btns { right: 20px; bottom: 28px; grid-template-columns: 72px 72px 72px; gap: 12px; }
+  body.touch #touch button { width: 72px; height: 72px; font-size: 13px; }
+  body.touch #touch .btns button.ult { top: -84px; }
+  body.touch #coach { left: 16px; right: 272px; bottom: 28px; width: auto; transform: translateY(8px); }
+  body.touch #coach.show { transform: none; }
+  body.touch #toast, body.touch #app:has(#coach.show) #toast { bottom: 280px; }
+  body.touch #savemark { right: 20px; bottom: 280px; }
+}
