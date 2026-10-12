@@ -174,28 +174,28 @@ export function dungeonLoot(g, e) {
   if (id === 'scroll') {
     const m = {};
     const give = (k, n = 1) => { m[k] = (m[k] || 0) + n; add(k, n); };
-    if (e.isBoss) { for (let i = 0; i < 3 + (r() < 0.5 ? 1 : 0); i++) give(scroll()); if (r() < 0.4) give('bless'); if (r() < 0.3) give('soul'); }
-    else if (e.elite) { if (r() < 0.4) give(scroll()); if (r() < 0.04) give('bless'); }
-    else { if (r() < 0.05) give(scroll()); if (r() < 0.002) give('bless'); }
+    if (e.isBoss) { for (let i = 0; i < 2 + (r() < 0.3 ? 1 : 0); i++) give(scroll()); if (r() < 0.25) give('bless'); if (r() < 0.2) give('soul'); }
+    else if (e.elite) { if (r() < 0.15) give(scroll()); if (r() < 0.01) give('bless'); }
+    else { if (r() < 0.02) give(scroll()); if (r() < 0.0005) give('bless'); }
     g.gainMats(m, e.pos);
   } else if (id === 'gear') {
     const drops = [];
     if (e.isBoss) {
-      for (let i = 0; i < 3; i++) drops.push(makeGear(lv, rollGearTier(0.8, g.round)));
-      if (r() < 0.5) { const sets = Object.keys(SETS); drops.push(makeSetPiece(sets[Math.floor(r() * sets.length)], lv)); }
-      if (r() < 0.35) { const it = rollDrop('boss', g.round, g.player.cls); if (it) drops.push(it); }
-    } else if (e.elite) { if (r() < 0.3) drops.push(makeGear(lv, rollGearTier(0.5, g.round))); }
+      for (let i = 0; i < 2; i++) drops.push(makeGear(lv, rollGearTier(0.8, g.round)));
+      if (r() < 0.3) { const sets = Object.keys(SETS); drops.push(makeSetPiece(sets[Math.floor(r() * sets.length)], lv)); }
+      if (r() < 0.2) { const it = rollDrop('boss', g.round, g.player.cls); if (it) drops.push(it); }
+    } else if (e.elite) { if (r() < 0.12) drops.push(makeGear(lv, rollGearTier(0.5, g.round))); }
     else {
-      if (r() < 0.03) drops.push(makeGear(lv, rollGearTier(0.25, g.round)));
-      if (r() < 0.01) { const it = rollDrop(e.type, g.round, g.player.cls); if (it) drops.push(it); }
+      if (r() < 0.012) drops.push(makeGear(lv, rollGearTier(0.25, g.round)));
+      if (r() < 0.004) { const it = rollDrop(e.type, g.round, g.player.cls); if (it) drops.push(it); }
     }
     for (const d of drops) { g.spawnDrop(e.pos, d); add(typeof d === 'object' ? 'gearN' : 'itemN'); }
   } else {
     const m = {};
     const give = (k, n = 1) => { m[k] = (m[k] || 0) + n; add(k, n); };
-    if (e.isBoss) { give('stoneR', 3); give('stoneC', 2); if (r() < 0.25) give('stoneM'); }
-    else if (e.elite) { if (r() < 0.5) give('stoneR'); if (r() < 0.15) give('stoneC'); if (r() < 0.02) give('stoneM'); }
-    else { if (r() < 0.06) give('stoneR'); if (r() < 0.015) give('stoneC'); if (r() < 0.003) give('stoneM'); }
+    if (e.isBoss) { give('stoneR', 2); give('stoneC', 1); if (r() < 0.15) give('stoneM'); }
+    else if (e.elite) { if (r() < 0.12) give('stoneR'); if (r() < 0.05) give('stoneC'); if (r() < 0.006) give('stoneM'); }
+    else { if (r() < 0.015) give('stoneR'); if (r() < 0.005) give('stoneC'); if (r() < 0.001) give('stoneM'); }
     g.gainMats(m, e.pos);
   }
 }

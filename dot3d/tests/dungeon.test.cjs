@@ -52,8 +52,8 @@ module.exports = {
     // 던전마다 그 보상만
     const L = (id) => R[id].loot;
     check(Object.keys(L('scroll')).some((k) => k.startsWith('scroll')) && !Object.keys(L('scroll')).some((k) => k.startsWith('stone') || k === 'gearN'), `서고 보상 이상 ${JSON.stringify(L('scroll'))}`);
-    check((L('gear').gearN || 0) >= 3 && !Object.keys(L('gear')).some((k) => k.startsWith('scroll') || k.startsWith('stone')), `곳간 보상 이상 ${JSON.stringify(L('gear'))}`);
-    check((L('stone').stoneR || 0) >= 3 && (L('stone').stoneC || 0) >= 2 && !Object.keys(L('stone')).some((k) => k.startsWith('scroll') || k === 'gearN'), `광맥 보상 이상 ${JSON.stringify(L('stone'))}`);
+    check((L('gear').gearN || 0) >= 2 && !Object.keys(L('gear')).some((k) => k.startsWith('scroll') || k.startsWith('stone')), `곳간 보상 이상 ${JSON.stringify(L('gear'))}`);
+    check((L('stone').stoneR || 0) >= 2 && (L('stone').stoneC || 0) >= 1 && !Object.keys(L('stone')).some((k) => k.startsWith('scroll') || k === 'gearN'), `광맥 보상 이상 ${JSON.stringify(L('stone'))}`);
     ctx.log(`서고 ${JSON.stringify(L('scroll'))} · 곳간 ${JSON.stringify(L('gear'))} · 광맥 ${JSON.stringify(L('stone'))}`);
 
     // 던전에서 쓰러지면 쫓겨나지 않고 1분을 내고 다시 일어남
