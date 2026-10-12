@@ -98,7 +98,7 @@ export function renderRefine(g, el, msg = '') {
       <div class="enh-msg">${msg}</div>
     </div>
     <div class="bag-sec">세공할 무기</div><div class="grid ref-list">${owned.map((w) => `<div class="row ref-w${w.id === ui.refPick ? ' on' : ''}" data-w="${w.id}"><span style="color:${RARITY[w.tier].color}">${w.name}</span><small>${linesOf(g, w.id).length ? linesOf(g, w.id).map((l) => STATS[l.k].name).join(' · ') : '세공 없음'}</small></div>`).join('')}</div>
-    <div class="pz-note">세공석은 <b>달빛 광맥</b>(메뉴 → 시간 던전)에서 나와요. 거친 세공석은 두 줄, 맑은 세공석은 세 줄을 새로 새기고(있던 줄은 사라져요), 달빛 세공석은 고른 한 줄만 더 좋은 값으로 다시 새겨요. 옵션은 끼고 있는 무기의 것만 붙고, 무기를 바꿔도 새긴 줄은 그 무기에 남아요.</div>`;
+    <div class="pz-note">세공석은 시간 던전의 달빛 광맥에서 나와요. 거친 세공석은 두 줄을 새로 새기고 맑은 세공석은 세 줄을 새로 새겨요 (있던 줄은 사라져요). 달빛 세공석은 고른 한 줄만 더 좋은 값으로 다시 새겨요. 옵션은 끼고 있는 무기의 것만 붙고 무기를 바꿔도 새긴 줄은 그 무기에 남아요.</div>`;
   for (const b of el.querySelectorAll('[data-w]')) b.addEventListener('click', (e) => { e.stopPropagation(); ui.refPick = b.dataset.w; ui.refLine = -1; renderRefine(g, el); });
   for (const b of el.querySelectorAll('[data-line]')) b.addEventListener('click', (e) => { e.stopPropagation(); ui.refLine = ui.refLine === +b.dataset.line ? -1 : +b.dataset.line; renderRefine(g, el); });
   for (const b of el.querySelectorAll('[data-stone]')) b.addEventListener('click', (e) => {

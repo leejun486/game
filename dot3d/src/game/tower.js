@@ -7,7 +7,7 @@ import { ruleFor } from '../towerrules.js';
 import { challengeClear, finishRush } from '../challenge.js';
 import { V } from './shared.js';
 
-import { updateDungeon, DUNGEONS, lootLine } from '../dungeon.js';
+import { updateDungeon, DUNGEONS, lootLine, removeDungeonProps } from '../dungeon.js';
 export class TowerPart {
   // ---------- 저승 시련탑 (엔드게임) ----------
   // 층마다 섞인 적 무리, 5층마다 지역 보스, 10층마다 염라대왕. 5층 단위로 이어서 도전
@@ -146,6 +146,7 @@ export class TowerPart {
     const T = this.tower;
     if (!T) return;
     if (T.mode === 'rush' && !T.rushDone) finishRush(this, false);
+    if (T.mode === 'dungeon') removeDungeonProps(this);
     T.active = false;
     for (const e of this.enemies) e.dispose();
     this.enemies = [];

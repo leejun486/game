@@ -588,6 +588,30 @@
   "zhDesc": "在连战中击败全部13名首领"
  },
  {
+  "api": "ACH_DG60",
+  "id": "dg60",
+  "ko": "던전 단골",
+  "koDesc": "시간 던전에서 모두 60분 보내기",
+  "en": "Dungeon Regular",
+  "enDesc": "Spend 60 minutes in time dungeons",
+  "ja": "ダンジョンの常連",
+  "jaDesc": "時間ダンジョンで合計60分過ごす",
+  "zh": "地下城常客",
+  "zhDesc": "在限时地下城累计停留60分钟"
+ },
+ {
+  "api": "ACH_REFINE10",
+  "id": "refine10",
+  "ko": "명장의 손길",
+  "koDesc": "무기 세공 10번",
+  "en": "Master's Touch",
+  "enDesc": "Refine weapons 10 times",
+  "ja": "名匠の手",
+  "jaDesc": "武器細工を10回",
+  "zh": "名匠之手",
+  "zhDesc": "镶刻武器10次"
+ },
+ {
   "api": "ACH_REQ10",
   "id": "req10",
   "ko": "마을의 해결사",

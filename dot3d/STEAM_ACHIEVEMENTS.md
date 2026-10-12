@@ -4,7 +4,7 @@
 스팀웍스 → 앱 관리 → 통계 및 업적 → 업적에서 **API 이름**을 그대로 쓰고, 언어마다 이름과 설명을 넣습니다.
 아이콘: `marketing/achievements/<API 이름>.png` (달성), `<API 이름>_locked.png` (미달성). 모두 64×64.
 
-업적 58개
+업적 60개
 
 | API 이름 | 이름 | 설명 | Name | Description | 名前 (日本語) | 説明 | 名称 (简体中文) | 说明 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -57,6 +57,8 @@
 | `ACH_PET3` | 수호령 친구 | 수호령 셋 데려오기 | Spirit Friends | Get three companions | 守護霊の友 | 守護霊を3体連れてくる | 守护灵之友 | 获得三个守护灵 |
 | `ACH_REMATCH10` | 다시 한 판 | 보스 다시 싸우기 10번 | One More Round | Rematch bosses 10 times | もう一戦 | ボス再戦を10回 | 再来一局 | 首领再战10次 |
 | `ACH_RUSHALL` | 보스 연속 완주 | 연속 도전에서 보스 열셋 모두 넘기 | Boss Rush Champion | Beat all 13 bosses in Boss Rush | ボス連続完走 | 連続挑戦でボス13体すべてを越える | 首领连战全胜 | 在连战中击败全部13名首领 |
+| `ACH_DG60` | 던전 단골 | 시간 던전에서 모두 60분 보내기 | Dungeon Regular | Spend 60 minutes in time dungeons | ダンジョンの常連 | 時間ダンジョンで合計60分過ごす | 地下城常客 | 在限时地下城累计停留60分钟 |
+| `ACH_REFINE10` | 명장의 손길 | 무기 세공 10번 | Master's Touch | Refine weapons 10 times | 名匠の手 | 武器細工を10回 | 名匠之手 | 镶刻武器10次 |
 | `ACH_REQ10` | 마을의 해결사 | 부탁 열 가지 들어주기 | Village Troubleshooter | Complete 10 requests | 村の何でも屋 | 頼みごとを10件こなす | 村中能手 | 完成10个委托 |
 | `ACH_GEAR100` | 보따리 장수 | 방어구·장신구 100개 줍기 | Packrat | Pick up 100 pieces of gear | 行商人 | 防具・装身具を100個拾う | 行商 | 捡到100件防具・饰品 |
 | `ACH_BOUNTY10` | 현상금 사냥꾼 | 현상수배 10번 마치기 | Bounty Hunter | Complete 10 bounties | 賞金稼ぎ | 手配書を10回こなす | 赏金猎人 | 完成10次悬赏 |
