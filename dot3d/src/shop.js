@@ -18,6 +18,7 @@ export const GOODS = [
   { id: 'bless', price: 1200, give: { bless: 1 } },
   { id: 'soul', price: 2000, give: { soul: 1 }, limit: 1 },
   { id: 'dust2soul', name: '혼석 바꾸기 (도깨비 가루 30)', dust: 30, price: 0, give: { soul: 1 }, limit: 1 },
+  { id: 'dust2stone', name: '거친 세공석 바꾸기 (도깨비 가루 10)', dust: 10, price: 0, give: { stoneR: 1 } },
   { id: 'box', name: '장신구 꾸러미', price: 400, box: true, desc: '무작위 방어구·장신구 하나 (레벨에 맞게)' },
 ];
 
@@ -127,8 +128,8 @@ export function renderShop(game, el, sub = game.shop.sub || 'buy', msg = '') {
       const name = G.name || MATS[G.id]?.name;
       const left = S.left(G);
       const can = left > 0 && S.coins >= G.price && (!G.dust || (M.dust || 0) >= G.dust);
-      const ic = G.box ? '<i class="mat-ic box-ic"></i>' : matIcon(G.id === 'dust2soul' ? 'soul' : G.id);
-      return `<div class="shop-row${can ? '' : ' off'}">${ic}<div class="sr-t"><b>${name}</b><small>${G.desc || (G.id === 'dust2soul' ? `${MATS.dust.name} ${G.dust}개 → ${MATS.soul.name} 1개` : '')}${G.limit ? ` · ${left === Infinity ? '' : `오늘 남은 수 ${left}`}` : ''}</small></div>
+      const ic = G.box ? '<i class="mat-ic box-ic"></i>' : matIcon(G.id === 'dust2soul' ? 'soul' : G.id === 'dust2stone' ? 'stoneR' : G.id);
+      return `<div class="shop-row${can ? '' : ' off'}">${ic}<div class="sr-t"><b>${name}</b><small>${G.desc || (G.dust ? `${MATS.dust.name} ${G.dust}개 → ${MATS[Object.keys(G.give)[0]].name} 1개` : '')}${G.limit ? ` · ${left === Infinity ? '' : `오늘 남은 수 ${left}`}` : ''}</small></div>
         <div class="sr-p">${G.price ? `${coinIcon()}${G.price}` : `${matIcon('dust')}${G.dust}`}</div><button data-buy="${G.id}" ${can ? '' : 'disabled'}>사기</button></div>`;
     }).join('') + '</div><div class="pz-note">엽전은 몬스터·보스·임무·현상수배·오늘의 목표, 그리고 방어구·장신구를 분해해서 얻어요. 혼석은 하루에 하나씩만 살 수 있어요 — 보스 도전에서 더 많이 얻을 수 있어요.</div>';
   } else if (sub === 'craft') {

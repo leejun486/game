@@ -919,6 +919,7 @@ export const dict = {
   '시간 던전이 열렸어요! 메뉴 → 「시간 던전」 — 던전마다 하루 60분, 잠든 서고는 강화 주문서, 도깨비 곳간은 장비, 달빛 광맥은 무기 세공석이 쏟아져요': 'Time dungeons are open! Menu → Time Dungeons — 60 minutes a day each: the Sleeping Archive showers enhancement scrolls, the Dokkaebi Storehouse gear, the Moonlight Vein refining stones',
   '세공석을 얻었어요! 가방 → 「세공」에서 무기에 옵션을 새겨요. 거친 세공석은 두 줄, 맑은 세공석은 세 줄, 달빛 세공석은 고른 한 줄만 더 좋게 다시 새겨요': 'You got a refining stone! Bag → Refine carves options onto weapons. Rough carves two lines, Clear three, and Moonlight recarves one chosen line for a better value',
   '세공': 'Refining',
+  '거친 세공석 바꾸기 (도깨비 가루 10)': 'Rough Refining Stone trade (10 Dokkaebi Dust)',
 };
 
 const RN = '([ⅠⅡⅢⅣⅤ])';
