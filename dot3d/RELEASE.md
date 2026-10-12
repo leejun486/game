@@ -43,7 +43,7 @@
      | Library logo 1280×720 | library_logo_1280x720.png (투명 배경) |
 
    - 스크린샷: 1920×1080 다섯 장 이상이 필요합니다. `marketing/screenshots/`에 열 장이 있습니다.
-   - 트레일러: `marketing/trailer/wolhagung-trailer.mp4` (1280×720, 약 50초, 국악 배경음악). 다시 만드는 방법은 `marketing/trailer/README.md`.
+   - 트레일러: `marketing/trailer/wolhagung-trailer.mp4` (1280×720, 약 1분, 국악 배경음악 — 새 네 지역 보스까지). 다시 만드는 방법은 `marketing/trailer/README.md`.
 3. 빌드 올리기: SteamPipe(ContentBuilder/SteamCMD)로 `desktop/release/win-unpacked/` 폴더를 Windows 디포에 올립니다. 실행 파일은 `Wolhagung.exe`입니다.
 4. Steam Cloud: Auto-Cloud에 저장 경로를 등록합니다. 경로는 `%APPDATA%/Wolhagung/save.json`이고, Steamworks 설정의 Root는 WinAppDataRoaming, 하위 경로는 `Wolhagung`입니다.
 5. 업적: 데스크톱판이 steamworks.js로 스팀 업적을 함께 엽니다. 등록표와 아이콘, 앱 번호 설정은 [`STEAM.md`](STEAM.md)를 보세요.

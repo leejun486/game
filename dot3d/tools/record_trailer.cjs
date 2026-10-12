@@ -89,7 +89,7 @@ const KEYS = { sword: 'Digit1', mage: 'Digit2', elf: 'Digit3', lancer: 'Digit4' 
     await page.reload(); await page.waitForTimeout(4000);
     await page.evaluate(() => { window.__rafs = []; window.__t = performance.now(); window.requestAnimationFrame = (f) => { window.__rafs.push(f); return 1; }; });
     // 첫 장면: 선택 화면 대신 로고만 크게
-    await page.addStyleTag({ content: '#select,#title .title-btns,#title .press,#title-save,#title .credit,#title .hint,#title .corner,#title button{visibility:hidden!important} #title .logo-big{transform:scale(1.25)}' });
+    await page.addStyleTag({ content: '#select,#title .title-btns,#title .press,#title-save,#title .credit,#title .hint,#title .corner,#title button,#title-diff,#title .lang-btn{visibility:hidden!important} #title .logo-big{transform:translateY(70px) scale(1.25)}' });
     for (const [name, frames] of [['a_title', 90], ['l_end', 120]]) {
       if (process.env.SEG && !process.env.SEG.split(',').includes(name)) continue;
       const dir = OUT + name; fs.rmSync(dir, { recursive: true, force: true }); fs.mkdirSync(dir, { recursive: true });
