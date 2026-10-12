@@ -67,10 +67,22 @@ export class Audio {
     const p = fetch(BASE + path + '.' + this.ext)
       .then((r) => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); })
       .then((ab) => new Promise((res, rej) => this.ctx.decodeAudioData(ab, res, rej)))
-      .then((buf) => { this.buffers.set(key, buf); return buf; })
+      .then((buf) => { this.buffers.set(key, buf); if (key.startsWith('music/')) this.trimMusic(key); return buf; })
       .catch((e) => { this.buffers.delete(key); throw e; });
     this.buffers.set(key, p);
     return p;
+  }
+
+  // 배경음악·환경음은 풀어 두면 곡마다 수십 MB → 지금 쓰는 것과 최근 것 몇 개만 남기고 비움 (다시 가면 다시 받음)
+  trimMusic(just) {
+    const max = this.ctx && this.ctx.sampleRate <= 32000 ? 4 : 8;
+    (this.musicUse ||= new Map()).set(just, performance.now());
+    for (const L of Object.values(this.layers)) if (L?.name) this.musicUse.set('music/' + L.name, performance.now());
+    const loaded = [...this.buffers.keys()].filter((k) => k.startsWith('music/') && !(this.buffers.get(k) instanceof Promise));
+    if (loaded.length <= max) return;
+    const inUse = new Set(Object.values(this.layers).filter(Boolean).map((L) => 'music/' + L.name));
+    const old = loaded.filter((k) => !inUse.has(k) && k !== just).sort((a, b) => (this.musicUse.get(a) || 0) - (this.musicUse.get(b) || 0));
+    for (const k of old.slice(0, loaded.length - max)) { this.buffers.delete(k); this.musicUse.delete(k); }
   }
 
   ready(path) {
@@ -162,7 +174,11 @@ export class Audio {
     if (this.ctx) { if (this.ctx.state === 'suspended') this.ctx.resume(); return; }
     const AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return;
-    const ctx = (this.ctx = new AC());
+    // 휴대폰: 소리를 32kHz로 풀어 메모리를 줄임 (곡 하나에 수십 MB라서). 안 되는 브라우저는 기본값
+    const touch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    let ctx;
+    try { ctx = new AC(touch ? { sampleRate: 32000 } : undefined); } catch { ctx = new AC(); }
+    this.ctx = ctx;
     this.master = ctx.createGain();
     this.master.gain.value = this.vol.master;
     this.master.connect(ctx.destination);
