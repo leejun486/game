@@ -6,7 +6,7 @@ import { Audio } from './audio.js';
 import { UI } from './ui.js';
 import { Player, Enemy, NPC, Bird } from './entities.js';
 import { shared, addRim } from './materials.js';
-import { loadSave, writeSave, clearSave, exportSave, importSave } from './save.js';
+import { loadSave, writeSave, clearSave, exportSave, importSave, makeTransferCode, readTransferCode } from './save.js';
 import { loadSettings, saveSettings, ACTIONS, keyOf, bindMap, keyName, DEFAULTS } from './settings.js';
 import { CLASSES, CLASS_ORDER } from './classes.js';
 import { ClassPreview } from './preview.js';
@@ -41,6 +41,7 @@ import { DEMO, DEMO_LOCKED_GATES, DEMO_QUEST, DEMO_END_LINES } from './edition.j
 import { Shop, coinsFor, salvageCoins, salvageDust, renderShop } from './shop.js';
 import { Pet } from './pet.js';
 import { Requests } from './requests.js';
+import { DevStats, renderDevice } from './device.js';
 import { challengeClear, finishRush, challengeQuest, renderChallenge } from './challenge.js';
 import { spearHit, lancerSkill1, lancerSkill2, lancerSkill3, updateLancer, clearLancer } from './lancer.js';
 
@@ -159,6 +160,7 @@ class Game {
     this.shop = new Shop(this);
     this.pet = new Pet(this);
     this.requests = new Requests(this);
+    this.dev = new DevStats(this);
     this.daily = null;  // 오늘의 목표 { day, goals, bonus }
     this.dailyGoals = new Daily(this);
     this.qk = new QuestKinds(this); // 추격·찾기·순서·호위·버티기 퀘스트
@@ -1610,6 +1612,7 @@ class Game {
         if (k === 'outline') { this.pixel.compMat.uniforms.outline.value = +v; this.save(false); }
         this.pausePane('screen');
       });
+      renderDevice(this, el);
     } else if (tab === 'daily') {
       this.dailyGoals.render(el);
     } else if (tab === 'records') {
@@ -1636,6 +1639,11 @@ class Game {
         <div class="pz-row"><button class="pz-btn main" id="pz-export" ${has ? '' : 'disabled'}>저장 파일 내보내기 (.json)</button></div>
         <div class="pz-row"><button class="pz-btn" id="pz-import">저장 파일 불러오기</button></div>
         <div class="pz-row"><button class="pz-btn" id="pz-backup">5분 전 예비 기록으로 되돌리기</button></div>
+        <h3 style="margin-top:14px">기기 옮기기 코드</h3>
+        <div class="pz-note" style="margin-top:0">파일 없이 옮길 때: 이 기기에서 코드를 만들어 복사하고, 메모·메신저로 다른 기기에 보낸 뒤 붙여 넣으세요. 코드에는 진행 기록만 들어 있어요.</div>
+        <div class="pz-row"><button class="pz-btn" id="pz-code" ${has ? '' : 'disabled'}>코드 만들기 · 복사</button><button class="pz-btn" id="pz-paste">코드 붙여 넣어 불러오기</button></div>
+        <textarea id="pz-codebox" class="pz-code hidden" rows="4" spellcheck="false" placeholder="WH1:… 코드를 여기에 붙여 넣으세요"></textarea>
+        <div class="pz-row hidden" id="pz-coderow"><button class="pz-btn main" id="pz-codego">이 코드로 불러오기</button></div>
         <div class="pz-note" id="pz-msg"></div>`;
       const msg = (t) => { el.querySelector('#pz-msg').textContent = t; };
       el.querySelector('#pz-export').addEventListener('click', () => {
@@ -1651,6 +1659,25 @@ class Game {
         msg('저장 파일을 내려받았어요.');
       });
       el.querySelector('#pz-import').addEventListener('click', () => document.getElementById('save-file').click());
+      const box = el.querySelector('#pz-codebox');
+      el.querySelector('#pz-code').addEventListener('click', async () => {
+        if (this.state === 'play') this.save(false);
+        const code = await makeTransferCode();
+        if (!code) return msg('아직 저장된 기록이 없어요');
+        box.classList.remove('hidden'); box.readOnly = true; box.value = code; box.select();
+        el.querySelector('#pz-coderow').classList.add('hidden');
+        let ok = false;
+        try { await navigator.clipboard.writeText(code); ok = true; } catch { try { ok = document.execCommand('copy'); } catch { /* 직접 복사 */ } }
+        msg(ok ? `코드를 복사했어요 (${code.length}자). 다른 기기의 「코드 붙여 넣어 불러오기」에 넣으세요.` : '코드를 길게 눌러 모두 선택한 뒤 복사하세요.');
+      });
+      el.querySelector('#pz-paste').addEventListener('click', () => {
+        box.classList.remove('hidden'); box.readOnly = false; box.value = ''; box.focus();
+        el.querySelector('#pz-coderow').classList.remove('hidden');
+        msg('코드를 붙여 넣고 「이 코드로 불러오기」를 누르세요. 지금 기록은 예비 기록으로 남아요.');
+      });
+      el.querySelector('#pz-codego').addEventListener('click', async () => {
+        try { await readTransferCode(box.value); this.noSave = true; msg('불러왔어요. 다시 시작합니다…'); setTimeout(() => location.reload(), 900); } catch (e) { msg(e.message || '코드를 읽을 수 없어요'); }
+      });
       el.querySelector('#pz-backup').addEventListener('click', () => {
         let b = null;
         try { b = localStorage.getItem('dot3d-palace-save-v1-backup'); } catch { /* 무시 */ }
@@ -5055,6 +5082,7 @@ class Game {
     this.records.update(dt);
     this.dailyGoals.update(dt);
     this.autoQuality((now - this.last0) / 1000 || 0);
+    this.dev.tick((now - this.last0) / 1000 || 0);
     this.last0 = now;
 
     // 히트스톱: 월드 시간 멈춤
@@ -5127,6 +5155,10 @@ window.addEventListener('DOMContentLoaded', async () => {
   watchDom();
   // 깃발·제목에 쓰는 명조체를 먼저 불러 둠 (캔버스에 그릴 때 글꼴이 없으면 다른 글꼴로 그려짐). 오래 걸리면 기다리지 않음
   try { await Promise.race([document.fonts.load('900 92px WolhaSerif', '령용무월하궁'), new Promise((r) => setTimeout(r, 1500))]); } catch { /* 글꼴 없이 진행 */ }
+  // 홈 화면에 설치한 웹판: 한 번 받은 파일로 오프라인에서도 실행 (sw.js). 자동 테스트에서는 ?sw=1일 때만
+  if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol) && (!navigator.webdriver || /[?&]sw=1/.test(location.search))) {
+    try { navigator.serviceWorker.register('sw.js').catch(() => {}); } catch { /* 막힌 곳(앱 안의 미리보기 등)에서는 그냥 진행 */ }
+  }
   try {
     window.game = new Game();
   } catch (err) {

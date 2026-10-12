@@ -1,0 +1,16 @@
+{
+  "name": "월하궁: 도깨비 야행",
+  "short_name": "월하궁",
+  "description": "달빛 아래 궁궐에서 도깨비를 물리치는 도트 3D 액션",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "any",
+  "background_color": "#100c18",
+  "theme_color": "#100c18",
+  "lang": "ko",
+  "icons": [
+    { "src": "icon.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

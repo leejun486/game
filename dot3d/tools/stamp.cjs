@@ -11,4 +11,7 @@ for (const f of ['dist/game.js', 'style.css']) {
   html = html.replace(re, `$1${f}?v=${hash(f)}$1`);
 }
 fs.writeFileSync(p, html);
+// 오프라인 저장 이름도 새 버전마다 바꿈 (sw.js)
+const swp = path.join(root, 'sw.js');
+if (fs.existsSync(swp)) fs.writeFileSync(swp, fs.readFileSync(swp, 'utf8').replace(/wolhagung-[0-9a-f]+'/, `wolhagung-${hash('dist/game.js').slice(0, 5)}${hash('style.css').slice(0, 5)}'`));
 console.log('stamped', hash('dist/game.js'), hash('style.css'));

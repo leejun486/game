@@ -62,3 +62,29 @@ export function clearSave() {
     /* 무시 */
   }
 }
+
+// 기기 옮기기 코드: 저장 기록을 줄여(deflate) 글자로 바꾼 것. 다른 기기에서 붙여 넣으면 그대로 이어 함
+//  서버 없이 복사·붙여넣기(메신저·메모)로 옮김. 앞머리 WH1: 로 알아봄
+const b64u = (bytes) => { let s = ''; for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode(...bytes.subarray(i, i + 0x8000)); return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); };
+const unb64u = (t) => { const s = atob(t.replace(/-/g, '+').replace(/_/g, '/')); const b = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) b[i] = s.charCodeAt(i); return b; };
+async function pipe(bytes, stream) { return new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(stream)).arrayBuffer()); }
+
+export async function makeTransferCode() {
+  const json = exportSave();
+  if (!json) return null;
+  const raw = new TextEncoder().encode(json);
+  if (typeof CompressionStream === 'undefined') return 'WH0:' + b64u(raw);
+  return 'WH1:' + b64u(await pipe(raw, new CompressionStream('deflate-raw')));
+}
+
+export async function readTransferCode(code) {
+  const t = String(code || '').replace(/\s+/g, '');
+  const m = /^WH([01]):([A-Za-z0-9_-]+)$/.exec(t);
+  if (!m) throw new Error('코드가 올바르지 않아요 (WH1: 로 시작해야 해요)');
+  let bytes = unb64u(m[2]);
+  if (m[1] === '1') {
+    if (typeof DecompressionStream === 'undefined') throw new Error('이 브라우저는 코드를 풀 수 없어요 — 저장 파일로 옮겨 주세요');
+    bytes = await pipe(bytes, new DecompressionStream('deflate-raw'));
+  }
+  importSave(new TextDecoder().decode(bytes));
+}
