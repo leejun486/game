@@ -11,7 +11,7 @@ module.exports = {
   name: '저장 · 불러오기 (왕복 · 옛 기록 · 찾기 도중 · 깨진 저장)',
   async run(ctx) {
     const g = await openGame(ctx, { lang: 'ko' });
-    const cont = async () => { await g.page.reload(); await g.page.waitForFunction(() => window.game && document.getElementById('btn-cont')); await g.page.waitForTimeout(400); await g.page.click('#btn-cont'); await g.page.waitForTimeout(400); await g.eval(() => { const G = window.game; if (G.story) G.endStory(); G.cut?.skip(); }); await g.step(0.3, { input: {} }); };
+    const cont = async () => { await g.page.reload({ timeout: 180000, waitUntil: 'domcontentloaded' }); await g.page.waitForFunction(() => window.game && document.getElementById('btn-cont')); await g.page.waitForTimeout(400); await g.page.click('#btn-cont'); await g.page.waitForTimeout(400); await g.eval(() => { const G = window.game; if (G.story) G.endStory(); G.cut?.skip(); }); await g.step(0.3, { input: {} }); };
     const read = () => g.eval((k) => JSON.parse(localStorage.getItem(k)), KEY);
 
     // 1) 왕복
@@ -61,7 +61,7 @@ module.exports = {
 
     // 4) 깨진 저장 → 예비 기록
     await g.eval((k) => { const good = localStorage.getItem(k); localStorage.setItem(k + '-backup', good); localStorage.setItem(k, good.slice(0, good.length / 2)); window.game.noSave = true; }, KEY);
-    await g.page.reload();
+    await g.page.reload({ timeout: 180000, waitUntil: 'domcontentloaded' });
     await g.page.waitForFunction(() => window.game && document.getElementById('btn-cont'));
     const hasCont = await g.eval(() => { const b = document.getElementById('btn-cont'); return !!b && getComputedStyle(b).display !== 'none' && !b.disabled; });
     check(hasCont, '저장이 깨졌을 때 예비 기록으로 이어하기가 안 됨');

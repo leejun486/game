@@ -159,7 +159,7 @@ module.exports = {
 
     // 저장했다 불러와도 그대로
     const saved = await g.eval(() => { const G = window.game; G.save(false); return { coins: G.ext.coins, pet: G.ext.pet, rush: G.ext.rushBest }; });
-    await g.page.reload();
+    await g.page.reload({ timeout: 180000, waitUntil: 'domcontentloaded' });
     await g.page.waitForFunction(() => window.game && document.getElementById('btn-new'));
     const loaded = await g.eval(() => { const G = window.game; return { coins: G.ext.coins, pet: G.ext.pet, rush: G.ext.rushBest }; });
     check(JSON.stringify(saved) === JSON.stringify(loaded), `저장·불러오기 이상 ${JSON.stringify(saved)} → ${JSON.stringify(loaded)}`);

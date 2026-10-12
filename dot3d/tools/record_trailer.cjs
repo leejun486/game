@@ -54,7 +54,7 @@ const KEYS = { sword: 'Digit1', mage: 'Digit2', elf: 'Digit3', lancer: 'Digit4' 
     await page.evaluate(() => {
       window.__rafs = []; window.__t = performance.now();
       window.requestAnimationFrame = (f) => { window.__rafs.push(f); return 1; };
-      const g = game; g.coach.finish(true); g.godMode = true;
+      const g = game; g.cut?.skip(); g.coach.finish(true); g.godMode = true; // 첫 연출 장면이 카메라를 붙잡지 않게
       for (const k of Object.keys(g.world.gates)) g.world.setGate(k, true, true);
       const p = g.player; p.level = 30; p.maxHp = 2000; p.hp = 2000;
       g.setAutoHunt(true);

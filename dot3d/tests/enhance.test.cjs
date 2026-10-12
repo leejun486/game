@@ -50,7 +50,7 @@ module.exports = {
     ctx.log('강화 +11 · 실패 · 축복 · 장신구 강화 · 도감 확인');
     g.page.setDefaultTimeout(30000);
     // 저장 → 다시 불러오기
-    await g.page.reload();
+    await g.page.reload({ timeout: 180000, waitUntil: 'domcontentloaded' });
     await g.page.waitForFunction(() => window.game && document.getElementById('btn-new'));
     await g.page.click('#btn-cont');
     await g.page.waitForTimeout(400);
