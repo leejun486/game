@@ -1067,5 +1067,6 @@ export const pats = [
   [/^무기·갑옷 (\d+)$/, 'Weapons & outfits $1'],
   [/^(.+)이 없어요 \(달빛 광맥에서 나와요\)$/, 'No $1 (drops in the Moonlight Vein)'],
   [/^(.+) — 오늘의 60분을 다 썼어요$/, '$1 — today\'s 60 minutes are used up'],
+  [/^쓰러졌다… 시간 1분을 내고 다시 일어났어요 \(남은 시간 (\d+):(\d+)\)$/, 'You fell… one minute was spent to get back up (time left $1:$2)'],
   [/^(.+) (\d+)$/, '$1 $2'],
 ];

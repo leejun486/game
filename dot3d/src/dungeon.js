@@ -1,4 +1,4 @@
-// 시간 던전: 하루에 던전마다 60분 (수호자를 잡으면 체력 40%, 25마리마다 15% 회복). 안에 있는 동안만 시간이 줄고(메뉴·가방을 연 동안은 멈춤), 날이 바뀌면 다시 60분
+// 시간 던전: 하루에 던전마다 60분 (수호자를 잡으면 체력 40%, 20마리마다 20% 회복). 안에 있는 동안만 시간이 줄고(메뉴·가방을 연 동안은 멈춤), 날이 바뀌면 다시 60분
 //  - 잠든 서고: 저승 명부를 지키던 혼령의 서고. 강화 주문서가 쏟아짐 (저승사자를 물리치면 열림)
 //  - 도깨비 곳간: 도깨비들이 모아 둔 보물 곳간. 방어구·장신구·무기·갑옷이 나옴 (도깨비 대왕을 물리치면 열림)
 //  - 달빛 광맥: 달빛이 굳은 돌이 박힌 광맥. 무기 세공석이 나옴 (불가사리를 물리치면 열림)
@@ -27,12 +27,12 @@ export const DUNGEONS = {
   stone: {
     name: '달빛 광맥', sub: '달빛이 굳어 박힌 돌의 굴', unlock: 'bulgasari', unlockName: '불가사리', lockMsg: '불가사리를 물리치면 열려요',
     loot: '거친 세공석 · 맑은 세공석 · 달빛 세공석',
-    pool: ['stonegolem', 'icedok', 'muinseok', 'firedok', 'crab', 'icewisp'], guard: 'bulgasari', theme: 'snowfield', color: '#bfe8ff',
+    pool: ['stonegolem', 'icedok', 'tombsoldier', 'crab', 'icewisp', 'mantis'], guard: 'bulgasari', theme: 'snowfield', color: '#bfe8ff',
   },
 };
 export const DG_ORDER = ['scroll', 'gear', 'stone'];
 const GUARD_EVERY = 240; // 수호자 간격 (초)
-const KEEP = 9;          // 늘 이만큼은 살아 있게
+const KEEP = 5;          // 늘 이만큼은 살아 있게
 
 export function dgState(g) {
   const E = (g.ext.dg ||= { day: null, used: {}, total: 0 });
@@ -52,7 +52,8 @@ export function startDungeon(g, id) {
   if (dgLeft(g, id) <= 0) return '오늘 시간을 다 썼어요 (내일 다시 60분)';
   const p = g.player;
   g.towerReturn = p.pos.clone();
-  g.tower = { active: true, mode: 'dungeon', dg: id, floor: Math.max(3, Math.round(p.level * 0.75)), best: 0, cleared: false, lastT: g.time, kills: 0, loot: {}, guardAt: g.time + GUARD_EVERY, spawnAt: g.time + 2 };
+  // 적 레벨 = 1 + floor + (내 레벨-1)/3 (spawnEnemy) → 내 레벨보다 4쯤 낮게 (오래 싸우는 곳이라)
+  g.tower = { active: true, mode: 'dungeon', dg: id, floor: Math.max(1, p.level - 5 - Math.floor((p.level - 1) / 3)), best: 0, cleared: false, lastT: g.time, kills: 0, loot: {}, guardAt: g.time + GUARD_EVERY, spawnAt: g.time + 2 };
   g.teleport(0, g.towerZ() + 8);
   addDungeonProps(g, id);
   g.audio.play('portal');
@@ -132,7 +133,7 @@ export function updateDungeon(g) {
   if (g.time > T.spawnAt && alive < KEEP) {
     T.spawnAt = g.time + 0.5;
     const n = Math.min(3, KEEP - alive);
-    for (let i = 0; i < n; i++) g.spawnQueue.push({ type: D.pool[Math.floor(Math.random() * D.pool.length)], elite: Math.random() < 0.15, at: g.time + 0.3 + i * 0.35 });
+    for (let i = 0; i < n; i++) g.spawnQueue.push({ type: D.pool[Math.floor(Math.random() * D.pool.length)], elite: Math.random() < 0.08, at: g.time + 0.3 + i * 0.35 });
   }
   if (g.time > T.guardAt) {
     T.guardAt = g.time + GUARD_EVERY;
@@ -143,12 +144,29 @@ export function updateDungeon(g) {
   if (Math.floor(E.used[T.dg]) % 5 === 0) g.updateQuest();
 }
 
+// 던전에서 쓰러지면: 밖으로 내보내지 않고 1분을 깎은 뒤 마당 가운데서 다시 일어남 (적은 정리하고 새로)
+export const DEATH_COST = 60;
+export function dungeonRevive(g) {
+  const T = g.tower, E = dgState(g);
+  E.used[T.dg] = (E.used[T.dg] || 0) + DEATH_COST;
+  g.stats.dgDeaths = (g.stats.dgDeaths || 0) + 1;
+  for (const e of g.enemies) e.dispose();
+  g.enemies = []; g.spawnQueue = [];
+  g.ui.setBoss(null);
+  g.teleport(0, g.towerZ() + 8);
+  T.spawnAt = g.time + 3; T.lastT = g.time;
+  T.guardAt = Math.max(T.guardAt, g.time + 30);
+  g.ui.toast(`쓰러졌다… 시간 1분을 내고 다시 일어났어요 (남은 시간 ${mmss(dgLeft(g, T.dg))})`, 3);
+  g.updateQuest();
+  if (dgLeft(g, T.dg) <= 0) { T.ending = true; g.after(1.5, () => { if (g.tower?.mode === 'dungeon') g.leaveTower(); }); }
+}
+
 // 처치 보상 (던전에서는 보통의 주문서·장비 떨어짐 대신 이것)
 export function dungeonLoot(g, e) {
   const T = g.tower, id = T.dg, lv = Math.max(1, e.lvl || 1) + g.round;
   T.kills++;
-  // 한 시간 내내 싸우니 숨 돌릴 틈: 수호자를 잡으면 40%, 25마리마다 15% 회복
-  const pl = g.player, heal = e.isBoss ? 0.4 : T.kills % 25 === 0 ? 0.15 : 0;
+  // 한 시간 내내 싸우니 숨 돌릴 틈: 수호자를 잡으면 40%, 20마리마다 20% 회복
+  const pl = g.player, heal = e.isBoss ? 0.4 : T.kills % 20 === 0 ? 0.2 : 0;
   if (heal && !pl.dead) { const h = Math.min(pl.maxHp - pl.hp, Math.round(pl.maxHp * heal)); if (h > 0) { pl.hp += h; g.fx.number(pl.pos.clone().add(new pl.pos.constructor(0, 2.2, 0)), `+${h}`, 'heal'); } }
   const add = (k, n = 1) => { T.loot[k] = (T.loot[k] || 0) + n; };
   const r = Math.random;
@@ -156,9 +174,9 @@ export function dungeonLoot(g, e) {
   if (id === 'scroll') {
     const m = {};
     const give = (k, n = 1) => { m[k] = (m[k] || 0) + n; add(k, n); };
-    if (e.isBoss) { for (let i = 0; i < 4 + (r() < 0.5 ? 1 : 0); i++) give(scroll()); if (r() < 0.5) give('bless'); if (r() < 0.3) give('soul'); }
-    else if (e.elite) { give(scroll()); if (r() < 0.5) give(scroll()); if (r() < 0.08) give('bless'); }
-    else { if (r() < 0.16) give(scroll()); if (r() < 0.005) give('bless'); }
+    if (e.isBoss) { for (let i = 0; i < 3 + (r() < 0.5 ? 1 : 0); i++) give(scroll()); if (r() < 0.4) give('bless'); if (r() < 0.3) give('soul'); }
+    else if (e.elite) { if (r() < 0.4) give(scroll()); if (r() < 0.04) give('bless'); }
+    else { if (r() < 0.05) give(scroll()); if (r() < 0.002) give('bless'); }
     g.gainMats(m, e.pos);
   } else if (id === 'gear') {
     const drops = [];
@@ -166,9 +184,9 @@ export function dungeonLoot(g, e) {
       for (let i = 0; i < 3; i++) drops.push(makeGear(lv, rollGearTier(0.8, g.round)));
       if (r() < 0.5) { const sets = Object.keys(SETS); drops.push(makeSetPiece(sets[Math.floor(r() * sets.length)], lv)); }
       if (r() < 0.35) { const it = rollDrop('boss', g.round, g.player.cls); if (it) drops.push(it); }
-    } else if (e.elite) drops.push(makeGear(lv, rollGearTier(0.5, g.round)));
+    } else if (e.elite) { if (r() < 0.3) drops.push(makeGear(lv, rollGearTier(0.5, g.round))); }
     else {
-      if (r() < 0.15) drops.push(makeGear(lv, rollGearTier(0.25, g.round)));
+      if (r() < 0.03) drops.push(makeGear(lv, rollGearTier(0.25, g.round)));
       if (r() < 0.01) { const it = rollDrop(e.type, g.round, g.player.cls); if (it) drops.push(it); }
     }
     for (const d of drops) { g.spawnDrop(e.pos, d); add(typeof d === 'object' ? 'gearN' : 'itemN'); }
@@ -176,8 +194,8 @@ export function dungeonLoot(g, e) {
     const m = {};
     const give = (k, n = 1) => { m[k] = (m[k] || 0) + n; add(k, n); };
     if (e.isBoss) { give('stoneR', 3); give('stoneC', 2); if (r() < 0.25) give('stoneM'); }
-    else if (e.elite) { give('stoneR'); if (r() < 0.3) give('stoneC'); if (r() < 0.03) give('stoneM'); }
-    else { if (r() < 0.12) give('stoneR'); if (r() < 0.03) give('stoneC'); if (r() < 0.004) give('stoneM'); }
+    else if (e.elite) { if (r() < 0.5) give('stoneR'); if (r() < 0.15) give('stoneC'); if (r() < 0.02) give('stoneM'); }
+    else { if (r() < 0.06) give('stoneR'); if (r() < 0.015) give('stoneC'); if (r() < 0.003) give('stoneM'); }
     g.gainMats(m, e.pos);
   }
 }

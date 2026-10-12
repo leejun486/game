@@ -56,6 +56,19 @@ module.exports = {
     check((L('stone').stoneR || 0) >= 3 && (L('stone').stoneC || 0) >= 2 && !Object.keys(L('stone')).some((k) => k.startsWith('scroll') || k === 'gearN'), `광맥 보상 이상 ${JSON.stringify(L('stone'))}`);
     ctx.log(`서고 ${JSON.stringify(L('scroll'))} · 곳간 ${JSON.stringify(L('gear'))} · 광맥 ${JSON.stringify(L('stone'))}`);
 
+    // 던전에서 쓰러지면 쫓겨나지 않고 1분을 내고 다시 일어남
+    const rv = await g.eval(() => {
+      const G = window.game;
+      G.togglePause(true); G.pausePane('dungeon'); document.querySelector('#pz-pane [data-dg="gear"]').click();
+      const u0 = G.ext.dg.used.gear || 0;
+      G.godMode = false; G.player.damage(999999, G.player.pos); G.onPlayerDeath?.();
+      G.retry();
+      const out = { inside: G.tower?.mode === 'dungeon', cost: Math.round((G.ext.dg.used.gear || 0) - u0), hp: G.player.hp === G.player.maxHp };
+      G.godMode = true; G.leaveTower();
+      return out;
+    });
+    check(rv.inside && rv.cost >= 60 && rv.hp, `던전에서 다시 일어나기 이상 ${JSON.stringify(rv)}`);
+
     // 60분을 다 쓰면 밖으로, 다시 못 들어감
     const lim = await g.eval(() => {
       const G = window.game;

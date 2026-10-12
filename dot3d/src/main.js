@@ -43,7 +43,7 @@ import { Pet } from './pet.js';
 import { Requests } from './requests.js';
 import { DevStats, renderDevice } from './device.js';
 import { setupNative, isNativeApp } from './native.js';
-import { DUNGEONS, dungeonLoot, dungeonQuest } from './dungeon.js';
+import { DUNGEONS, dungeonLoot, dungeonQuest, dungeonRevive } from './dungeon.js';
 import { challengeClear, finishRush, challengeQuest, renderChallenge } from './challenge.js';
 import { V, DIFF_NOTE, DEMO_END } from './game/shared.js';
 import { SkillsPart } from './game/skills.js';
@@ -1801,7 +1801,8 @@ class Game {
     this.earlyEase(e);
     const TR = this.tower?.active ? this.tower : null;
     if (opt.weak) e.maxHp = e.hp = Math.max(1, Math.round(e.maxHp * 0.6));
-    if (opt.guard) e.maxHp = e.hp = Math.max(1, Math.round(e.maxHp * 0.6)); // 시간 던전의 수호자는 보스보다 약하게
+    // 시간 던전: 한 시간 내내 싸우는 곳이라 적이 약함 (피해 35%, 체력 75%, 수호자는 보스 체력의 60%)
+    if (TR?.mode === 'dungeon') { e.dmg = Math.max(1, Math.round(e.dmg * 0.35)); e.maxHp = e.hp = Math.max(1, Math.round(e.maxHp * (opt.guard ? 0.6 : 0.75))); }
     if (TR?.rule?.key === 'swift') e.T = { ...e.T, speed: e.T.speed * 1.35 };
     // 각성 보스: 탑 20층부터의 보스 층, 또는 이미 평정한 지역을 다시 울려 부른 보스
     //  (회차(round)는 지역을 평정할 때마다 오르므로 첫 판에도 금방 커짐 — 그래서 '다시 싸우는 지역'으로 정함)
@@ -2248,6 +2249,7 @@ class Game {
     this.clearSkillFx();
     this.ui.setBoss(null);
     this.waveClearing = false;
+    if (this.tower?.mode === 'dungeon') { dungeonRevive(this); return; } // 시간 던전: 쫓겨나지 않고 1분을 내고 그 자리에서
     if (this.tower?.active) { this.leaveTower(true); return; }
     if (this.waveActive) {
       this.wave = Math.max(0, this.wave - 1);
@@ -2475,6 +2477,7 @@ class Game {
   // 테스트·디버그용: 장비 하나 만들기
   // 키 아트·스토어 그림용: 다른 직업의 캐릭터 모델 (입은 장비·외형 그대로)
   heroRig(cls) { const r = CLASSES[cls].make(rigOptions(this, cls)); addRim(r.root); return r; }
+  testItem(id) { return item(id); }
   testGear(kind, tier, lv = 5, set = null) { return set ? makeSetPiece(set, lv, kind) : makeGear(lv, tier, kind); }
 
   spawnEnemyAt(type, x, z) {
