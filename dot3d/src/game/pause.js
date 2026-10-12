@@ -100,7 +100,7 @@ export class PausePart {
         <div class="pz-row"><button class="pz-btn" id="pz-import">저장 파일 불러오기</button></div>
         <div class="pz-row"><button class="pz-btn" id="pz-backup">5분 전 예비 기록으로 되돌리기</button></div>
         <h3 style="margin-top:14px">기기 옮기기 코드</h3>
-        <div class="pz-note" style="margin-top:0">파일 없이 옮길 때: 이 기기에서 코드를 만들어 복사하고, 메모·메신저로 다른 기기에 보낸 뒤 붙여 넣으세요. 코드에는 진행 기록만 들어 있어요.</div>
+        <div class="pz-note" style="margin-top:0">파일 없이 옮길 때: 이 기기에서 코드를 만들어 복사하고 메모·메신저로 다른 기기에 보낸 뒤 붙여 넣으세요. 코드에는 진행 기록만 들어 있어요.</div>
         <div class="pz-row"><button class="pz-btn" id="pz-code" ${has ? '' : 'disabled'}>코드 만들기 · 복사</button><button class="pz-btn" id="pz-paste">코드 붙여 넣어 불러오기</button></div>
         <textarea id="pz-codebox" class="pz-code hidden" rows="4" spellcheck="false" placeholder="WH1:… 코드를 여기에 붙여 넣으세요"></textarea>
         <div class="pz-row hidden" id="pz-coderow"><button class="pz-btn main" id="pz-codego">이 코드로 불러오기</button></div>

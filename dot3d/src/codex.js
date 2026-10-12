@@ -112,7 +112,7 @@ export function renderCodex(game, el, sub = 'mon') {
     body += '</div>';
   } else {
     const can = [...CODEX_KINDS.flatMap((k) => [0, 1, 2, 3, 4].map((t) => gearKey(k, t))), ...Object.keys(SETS).map((id) => 'set_' + id)].filter((k) => !C.reg[k] && C.candidate(k));
-    body += `<div class="pz-note" style="margin-top:0">끼지 않은 방어구·장신구를 하나 바쳐 칸을 채워요 (바친 장비는 사라져요, 잠근 것은 빼고). 한 줄 다섯 칸을 모두 채우면 줄 효과가 더 붙어요.</div>${can.length ? `<button class="pz-btn main" data-regall style="margin-bottom:8px">등록할 수 있는 ${can.length}칸 모두 등록</button>` : ''}`;
+    body += `<div class="pz-note" style="margin-top:0">끼지 않은 방어구·장신구를 하나 바쳐 칸을 채워요 (바친 장비는 사라지고 잠근 것은 빠져요). 한 줄 다섯 칸을 모두 채우면 줄 효과가 더 붙어요.</div>${can.length ? `<button class="pz-btn main" data-regall style="margin-bottom:8px">등록할 수 있는 ${can.length}칸 모두 등록</button>` : ''}`;
     const TIER = ['일반', '고급', '희귀', '영웅', '전설'];
     for (const kind of CODEX_KINDS) {
       const full = [0, 1, 2, 3, 4].every((t) => C.reg[gearKey(kind, t)]);

@@ -528,6 +528,78 @@
   "zhDesc": "填满20格饰品图鉴"
  },
  {
+  "api": "ACH_COINS",
+  "id": "coins",
+  "ko": "큰손",
+  "koDesc": "엽전 10000냥 모으기 (누적)",
+  "en": "Big Spender",
+  "enDesc": "Earn 10,000 coins (total)",
+  "ja": "大金持ち",
+  "jaDesc": "銭を累計10000枚集める",
+  "zh": "大财主",
+  "zhDesc": "累计获得10000铜钱"
+ },
+ {
+  "api": "ACH_CRAFT",
+  "id": "craft",
+  "ko": "공방 단골",
+  "koDesc": "공방에서 장비 다섯 번 만들기",
+  "en": "Workshop Regular",
+  "enDesc": "Craft gear five times at the Workshop",
+  "ja": "工房の常連",
+  "jaDesc": "工房で装備を5回作る",
+  "zh": "工坊常客",
+  "zhDesc": "在工坊打造装备五次"
+ },
+ {
+  "api": "ACH_PET3",
+  "id": "pet3",
+  "ko": "수호령 친구",
+  "koDesc": "수호령 셋 데려오기",
+  "en": "Spirit Friends",
+  "enDesc": "Get three companions",
+  "ja": "守護霊の友",
+  "jaDesc": "守護霊を3体連れてくる",
+  "zh": "守护灵之友",
+  "zhDesc": "获得三个守护灵"
+ },
+ {
+  "api": "ACH_REMATCH10",
+  "id": "rematch10",
+  "ko": "다시 한 판",
+  "koDesc": "보스 다시 싸우기 10번",
+  "en": "One More Round",
+  "enDesc": "Rematch bosses 10 times",
+  "ja": "もう一戦",
+  "jaDesc": "ボス再戦を10回",
+  "zh": "再来一局",
+  "zhDesc": "首领再战10次"
+ },
+ {
+  "api": "ACH_RUSHALL",
+  "id": "rushAll",
+  "ko": "보스 연속 완주",
+  "koDesc": "연속 도전에서 보스 열셋 모두 넘기",
+  "en": "Boss Rush Champion",
+  "enDesc": "Beat all 13 bosses in Boss Rush",
+  "ja": "ボス連続完走",
+  "jaDesc": "連続挑戦でボス13体すべてを越える",
+  "zh": "首领连战全胜",
+  "zhDesc": "在连战中击败全部13名首领"
+ },
+ {
+  "api": "ACH_REQ10",
+  "id": "req10",
+  "ko": "마을의 해결사",
+  "koDesc": "부탁 열 가지 들어주기",
+  "en": "Village Troubleshooter",
+  "enDesc": "Complete 10 requests",
+  "ja": "村の何でも屋",
+  "jaDesc": "頼みごとを10件こなす",
+  "zh": "村中能手",
+  "zhDesc": "完成10个委托"
+ },
+ {
   "api": "ACH_GEAR100",
   "id": "gear100",
   "ko": "보따리 장수",

@@ -81,7 +81,7 @@ export function renderDevice(g, el) {
     <div class="pz-row"><label>성능 표시</label><div class="pz-seg"><button data-fps="1" class="${g.settings.fps ? 'on' : ''}">보이기</button><button data-fps="0" class="${g.settings.fps ? '' : 'on'}">숨기기</button></div></div>
     <div class="pz-row"><button class="pz-btn" id="dev-report">점검 결과 보기 · 복사</button></div>
     <textarea id="dev-box" class="pz-code hidden" rows="9" readonly spellcheck="false"></textarea>
-    <div class="pz-note" id="dev-msg">휴대폰에서 버벅이거나 화면이 잘리면, 잠시 놀아 본 뒤 「점검 결과」를 복사해 보내 주세요. 기기·화면·그래픽 칩·프레임 기록이 들어 있어요 (개인 정보는 없어요).</div>`;
+    <div class="pz-note" id="dev-msg">휴대폰에서 버벅이거나 화면이 잘리면 잠시 놀아 본 뒤 「점검 결과」를 복사해 보내 주세요. 기기·화면·그래픽 칩·프레임 기록이 들어 있어요 (개인 정보는 없어요).</div>`;
   el.append(box);
   for (const b of box.querySelectorAll('[data-fps]')) b.addEventListener('click', () => { g.setSetting((s) => { s.fps = b.dataset.fps === '1'; }); g.pausePane('screen'); });
   box.querySelector('#dev-report').addEventListener('click', async () => {

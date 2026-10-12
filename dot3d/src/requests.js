@@ -151,6 +151,6 @@ export class Requests {
     const q = this.cur;
     if (!q) return '';
     const n = this.game.npcs.find((x) => x.kind === q.npc);
-    return `<span class="req-l">부탁 · ${q.title}: ${this.met() ? `<b>${n?.name || ''}</b>에게 돌아가기` : this.progText()}</span>`;
+    return `<span class="req-l">부탁 · ${q.title} — ${this.met() ? `${n?.name || ''}에게 돌아가기` : this.progText()}</span>`;
   }
 }

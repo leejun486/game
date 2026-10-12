@@ -83,7 +83,7 @@ export function challengeClear(g) {
     if (T.idx < T.list.length) {
       p.hp = Math.min(p.maxHp, p.hp + Math.round(p.maxHp * 0.3));
       g.fx.number(p.pos.clone().add(new p.pos.constructor(0, 2.2, 0)), '+30%', 'heal');
-      g.ui.banner(`${T.idx} / ${T.list.length} 격파`, '체력 30% 회복 · 다음 보스가 온다', 2.2, 'win-banner');
+      g.ui.banner(`${T.idx}/${T.list.length} 격파`, '체력 30% 회복 · 다음 보스가 온다', 2.2, 'win-banner');
       g.audio.play('victory');
       g.after(3, () => spawnNext(g));
     } else finishRush(g, true);
@@ -121,7 +121,7 @@ export function challengeQuest(g) {
   const T = g.tower;
   const left = g.enemies.filter((e) => !e.dead && !e.field).length + g.spawnQueue.length;
   const b = T.list[Math.min(T.idx, T.list.length - 1)];
-  if (T.mode === 'rush') return [`보스 연속 도전 · ${Math.min(T.idx + 1, T.list.length)}/${T.list.length}`, `<b>${BOSS_NAME[b]}</b> · 남은 적 <b>${left}</b><br>최고 기록 <b>${g.ext.rushBest || 0}</b>마리 · 남쪽 <b>홍살문</b>으로 그만두기`];
+  if (T.mode === 'rush') return [`보스 연속 도전 · ${Math.min(T.idx + 1, T.list.length)}/${T.list.length}`, `<b>${BOSS_NAME[b]}</b> · 남은 적 <b>${left}</b><br>최고 기록 <b>${g.ext.rushBest || 0}</b> · 그만두려면 남쪽 홍살문으로`];
   return [`보스 다시 싸우기`, T.cleared ? '격파! 곧 돌아가요' : `<b>${BOSS_NAME[b]}</b> · 남은 적 <b>${left}</b>`];
 }
 
@@ -130,11 +130,11 @@ export function renderChallenge(g, el, msg = '') {
   const B = beaten(g), left = rematchLeft(g);
   const t = g.ext.rushTime || 0;
   el.innerHTML = `<h3>보스 도전</h3>
-    <div class="cx-sum">오늘 보상 받을 수 있는 다시 싸우기 <b>${left}/${DAILY_REMATCH}</b>번 · 연속 도전 최고 기록 <b>${g.ext.rushBest || 0}</b>마리${t ? ` (${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')})` : ''}</div>
+    <div class="cx-sum">오늘 다시 싸우기 보상 <b>${left}/${DAILY_REMATCH}</b> · 연속 도전 최고 기록 <b>${g.ext.rushBest || 0}${t ? ` (${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')})` : ''}</b></div>
     ${msg ? `<div class="enh-msg shop-msg">${msg}</div>` : ''}
-    <div class="ch-rush"><div><b>연속 도전</b><small>물리친 보스 ${B.length}마리를 차례로. 사이마다 체력 30% 회복, 쓰러지면 끝. 넘은 보스마다 엽전 150 · 셋마다 요괴 혼석</small></div><button class="pz-btn main" data-rush ${B.length >= 3 ? '' : 'disabled'}>도전</button></div>
+    <div class="ch-rush"><div><b>연속 도전</b><small>물리친 보스 ${B.length}마리를 차례로 · 사이마다 체력 30% 회복 · 쓰러지면 끝 · 넘은 보스마다 엽전 150 · 셋마다 요괴 혼석</small></div><button class="pz-btn main" data-rush ${B.length >= 3 ? '' : 'disabled'}>도전</button></div>
     <h4 class="cx-h">다시 싸우기</h4>
-    <div class="pz-note" style="margin-top:0">레벨에 맞춰 강해진 보스와 졸개 둘. 하루 ${DAILY_REMATCH}번까지 요괴 혼석·주문서·엽전을 받아요 (그 뒤로는 장비·경험치만). 보스 무기도 다시 노릴 수 있어요.</div>
+    <div class="pz-note" style="margin-top:0">레벨에 맞춰 강해진 보스와 졸개 둘. 하루 세 번까지 요괴 혼석·주문서·엽전을 받아요 (그 뒤로는 장비·경험치만). 보스 무기도 다시 노릴 수 있어요.</div>
     <div class="cx-grid">${BOSS_ORDER.map((b) => g.stats.killsBy?.[b] ? `<div class="cx-card on"><b>${BOSS_NAME[b]}</b><small>처치 ${g.stats.killsBy[b]}</small><button class="pz-btn" data-re="${b}">싸우기</button></div>` : '<div class="cx-card lock"><b>???</b><small>아직 물리치지 못함</small></div>').join('')}</div>`;
   const go = (err) => { if (err) { g.audio.play('denied'); renderChallenge(g, el, err); } else { g.togglePause(false); } };
   el.querySelector('[data-rush]')?.addEventListener('click', () => go(startChallenge(g, 'rush')));
