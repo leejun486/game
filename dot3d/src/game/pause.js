@@ -11,6 +11,7 @@ import { renderDevice } from '../device.js';
 import { renderChallenge } from '../challenge.js';
 import { DIFF_NOTE } from './shared.js';
 
+import { renderDungeons } from '../dungeon.js';
 export class PausePart {
   togglePause(open = !this.pauseOpen) {
     if (open && this.state === 'play') { if (this.ui.bagOpen) this.toggleBag(false); if (this.ui.skillsOpen) this.toggleSkills(false); if (this.mapOpen) this.minimap.toggle(false); if (this.autoMove) this.stopAutoMove(); }
@@ -81,6 +82,8 @@ export class PausePart {
       renderCodex(this, el, this.codex.sub || 'mon');
     } else if (tab === 'shop') {
       renderShop(this, el);
+    } else if (tab === 'dungeon') {
+      renderDungeons(this, el);
     } else if (tab === 'challenge') {
       renderChallenge(this, el);
     } else if (tab === 'keys') {

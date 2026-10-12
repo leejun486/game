@@ -134,6 +134,7 @@ export class ItemsPart {
     if (!keys.length) return;
     for (const k of keys) this.mats[k] = (this.mats[k] || 0) + m[k];
     if (keys.some((k) => k.startsWith('scroll'))) this.coach.tip('enh', 2);
+    if (keys.some((k) => k.startsWith('stone'))) this.coach.tip('refine', 2);
     const txt = keys.map((k) => `${MATS[k].name}${m[k] > 1 ? ' ×' + m[k] : ''}`).join(' · ');
     if (at) this.fx.number(V(at.x, (at.y || 0) + 3, at.z), txt, 'alert');
     if (m.soul || m.bless) this.ui.toast(`얻음: ${txt}`, 2.4); else this.ui.toast(`얻음: ${txt}`, 1.4);

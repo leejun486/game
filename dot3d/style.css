@@ -950,3 +950,28 @@ body.touch #coach.tut.show #coach-skip { pointer-events: auto; }
 body.shot #fps { display: none; }
 /* 앱(안드로이드·iOS): 파일 내려받기가 안 되니 저장 파일 내보내기 대신 옮기기 코드를 씀 */
 body.native #pz-export { display: none; }
+
+/* ---------- 시간 던전 · 세공 ---------- */
+.dg-list { display: flex; flex-direction: column; gap: 8px; }
+.dg-card { background: #1a1522; border: 1px solid #3a3048; border-left: 4px solid var(--dg, #e2b85a); padding: 8px 10px; display: flex; flex-direction: column; gap: 5px; font-size: 12px; }
+.dg-card.lock { opacity: 0.6; }
+.dg-t b { color: var(--dg, #ffd76a); font-weight: normal; font-size: 15px; margin-right: 8px; }
+.dg-t small { color: #a89e8a; }
+.dg-loot { color: #d8cfb8; }
+.dg-bar { position: relative; height: 16px; background: #120e1a; border: 1px solid #4a3e58; }
+.dg-bar i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--dg, #e2b85a); opacity: 0.45; }
+.dg-bar span { position: relative; display: block; text-align: center; line-height: 14px; font-size: 11px; color: #fff; text-shadow: 1px 1px 0 #000; }
+.dg-card .pz-btn { align-self: flex-start; }
+.dg-card .how { color: #c8a0ff; }
+.ref-lines { display: flex; flex-direction: column; gap: 4px; margin: 6px 0; }
+.ref-line { text-align: left; font-family: var(--font); font-size: 13px; padding: 5px 8px; background: #241e2e; border: 1px solid #4a3e58; color: #c8bea8; cursor: pointer; }
+.ref-line.mid { color: #e8dcc0; }
+.ref-line.hi { color: #ffd76a; border-color: #8a6a2a; }
+.ref-line.over { color: #fff; border-color: #ffd76a; background: linear-gradient(90deg, #3a2a5a, #2a4a5a, #5a3a2a); }
+.ref-line.on { outline: 2px solid #bfe8ff; }
+.ref-btns { display: flex; flex-wrap: wrap; gap: 6px; }
+.ref-btns button { font-family: var(--font); font-size: 12px; padding: 6px 10px; cursor: pointer; background: #2a2230; color: #f3e6c0; border: 1px solid #6a5a3a; }
+.ref-btns button:disabled { opacity: 0.4; cursor: default; }
+.ref-w { cursor: pointer; flex-direction: column; align-items: flex-start !important; gap: 1px; padding: 5px 7px; }
+.ref-w small { color: #a89e8a; font-size: 10px; }
+.ref-w.on { outline: 2px solid var(--gold); }

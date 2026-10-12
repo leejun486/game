@@ -1,4 +1,5 @@
 import { padGlyph, padMode } from './glyph.js';
+import { renderRefine } from './refine.js';
 import { item, itemDesc, drawItemIcon, RARITY, WEAPONS, OUTFITS, ULTS } from './items.js';
 import { tr } from './i18n.js';
 import { DYES, HAIRS, unlocked } from './looks.js';
@@ -281,6 +282,7 @@ export class UI {
     }
     this.renderLook();
     if (!document.getElementById('tab-enh').classList.contains('hidden')) this.renderEnh();
+    if (!document.getElementById('tab-refine').classList.contains('hidden')) renderRefine(this.game, document.getElementById('tab-refine'));
   }
 
   // 강화 탭: 재료 개수, 강화할 장비 목록, 고른 장비의 확률·재료·효과
@@ -413,7 +415,9 @@ export class UI {
     document.getElementById('tab-main').classList.toggle('hidden', name !== 'main');
     document.getElementById('tab-look').classList.toggle('hidden', name !== 'look');
     document.getElementById('tab-enh').classList.toggle('hidden', name !== 'enh');
+    document.getElementById('tab-refine').classList.toggle('hidden', name !== 'refine');
     if (name === 'enh') this.renderEnh();
+    if (name === 'refine') renderRefine(this.game, document.getElementById('tab-refine'));
     document.getElementById('gear-detail').classList.toggle('hidden', name !== 'gear');
   }
 

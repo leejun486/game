@@ -25,6 +25,7 @@ export const STATS = {
   cdr: { name: '스킬 재사용', pre: '지혜로운', fmt: (v) => `-${(v * 100).toFixed(1)}%`, lo: 0.01, hi: 0.022 },
   ls: { name: '흡혈', pre: '피에 굶주린', fmt: (v) => `${(v * 100).toFixed(1)}%`, lo: 0.004, hi: 0.01 },
   exp: { name: '경험치', pre: '배움의', fmt: (v) => `+${Math.round(v * 100)}%`, lo: 0.03, hi: 0.06 },
+  boss: { name: '보스 피해', pre: '사냥꾼의', fmt: (v) => `+${(v * 100).toFixed(1)}%`, lo: 0.04, hi: 0.1 }, // 무기 세공에서만
   regen: { name: '초당 체력 회복', pre: '푸른', fmt: (v) => `+${v.toFixed(1)}`, lo: 0.25, hi: 0.6, lv: true },
 };
 // 합쳐도 넘지 않는 한계

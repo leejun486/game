@@ -27,6 +27,8 @@ const ICONS = {
   enh: ['.........YY.', '........YWY.', '.......YWY..', '......YWY...', '.....YWY....', '..K.YWY.....', '..KKWY......', '...KK.......', '..KRKK......', '.KRK.KK.....', 'KRK.........', 'KK..........'],
   shop: ['....KKKK....', '...KPPPPK...', '....KRRK....', '...KRRRRK...', '..KRRRRRRK..', '.KRRKKKKRRK.', '.KRRKYYKRRK.', '.KRRKYYKRRK.', '.KRRKKKKRRK.', '.KRRRRRRRRK.', '..KRRRRRRK..', '...KKKKKK...'],
   boss: ['.Y........Y.', '.YY......YY.', '..YKKKKKKY..', '..KRRRRRRK..', '.KRRRRRRRRK.', '.KRWWRRWWRK.', '.KRWKRRKWRK.', '.KRRRRRRRRK.', '.KRRWWWWRRK.', '..KRWRRWRK..', '...KRRRRK...', '....KKKK....'],
+  gate: ['............', '..KKKKKKKK..', '.KDDDDDDDDK.', '.KDKKKKKKDK.', '.KDKBBBBKDK.', '.KDKBWWBKDK.', '.KDKBWWBKDK.', '.KDKBBBBKDK.', '.KDKBBBBKDK.', '.KDKBBBBKDK.', 'KKKKKKKKKKKK', '............'],
+  gem: ['............', '....KKKK....', '...KWSSWK...', '..KWSBBSSK..', '.KSSBBBBSSK.', '.KBBBWWBBBK.', '..KBBWWBBK..', '...KBBBBK...', '....KBBK....', '.....KK.....', '............', '............'],
   tower: ['.....DD.....', '....DDDD....', '..DDDDDDDD..', '....KYYK....', '...DDDDDD...', '.DDDDDDDDDD.', '...KYYYYK...', '..DDDDDDDD..', 'DDDDDDDDDDDD', '..KYYKKYYK..', '..KYYKKYYK..', 'KKKKKKKKKKKK'],
 };
 
@@ -56,12 +58,14 @@ export class Hub {
         ['bag', '가방', 'B', 'bag', close(() => g.toggleBag(true)), !document.getElementById('bag-dot').classList.contains('hidden')],
         ['skills', '기술 수련', 'T', 'skills', close(() => g.toggleSkills(true)), !document.getElementById('evo-dot').classList.contains('hidden')],
         ['enh', '강화', '', 'enh', close(() => { g.toggleBag(true); g.ui.tab('enh'); })],
+        ['refine', '세공', '', 'gem', close(() => { g.toggleBag(true); g.ui.tab('refine'); })],
         ['shop', '장터', '', 'shop', pane('shop'), false, false, `${g.ext.coins || 0}`],
         ['look', '외형', '', 'look', close(() => { g.toggleBag(true); g.ui.tab('look'); g.ui.renderLook?.(); })],
       ]],
       ['여정', [
         ['map', '지도 · 일지', 'V', 'map', close(() => g.minimap.toggle(true))],
         ['daily', '오늘의 목표', '', 'daily', pane('daily'), false, false, dk],
+        ['dungeon', '시간 던전', '', 'gate', pane('dungeon')],
         ['challenge', '보스 도전', '', 'boss', pane('challenge')],
         ['ach', '업적', 'Y', 'ach', pane('records', 'ach')],
         ['codex', '도감', '', 'codex', pane('codex')],

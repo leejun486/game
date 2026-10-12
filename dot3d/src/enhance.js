@@ -14,8 +14,12 @@ export const MATS = {
   bless: { name: '축복받은 주문서', color: '#ffd76a', icon: ['#fff4c8', '#e0a020'] },
   soul: { name: '요괴 혼석', color: '#c890ff', icon: ['#e0c8ff', '#6a2aaa'] },
   dust: { name: '도깨비 가루', color: '#7ad8e0', icon: ['#d8f8ff', '#3a8a9a'] }, // 분해하면 나옴 · 공방에서 씀
+  // 세공석 (달빛 광맥) — 무기 옵션 새기기 (refine.js)
+  stoneR: { name: '거친 세공석', color: '#b8b0a0', icon: ['#e8e0d0', '#6a6258'] },
+  stoneC: { name: '맑은 세공석', color: '#8ad8ff', icon: ['#e0f6ff', '#3a7ab8'] },
+  stoneM: { name: '달빛 세공석', color: '#ffe8a0', icon: ['#fffbe8', '#c8a040'] },
 };
-export const MAT_ORDER = ['scrollW', 'scrollA', 'scrollG', 'bless', 'soul', 'dust'];
+export const MAT_ORDER = ['scrollW', 'scrollA', 'scrollG', 'bless', 'soul', 'dust', 'stoneR', 'stoneC', 'stoneM'];
 
 // lv → lv+1 성공 확률
 const RATE = [1, 1, 1, 0.95, 0.9, 0.8, 0.7, 0.6, 0.5, 0.45, 0.4, 0.35, 0.3, 0.25, 0.2];

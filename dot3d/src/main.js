@@ -43,6 +43,7 @@ import { Pet } from './pet.js';
 import { Requests } from './requests.js';
 import { DevStats, renderDevice } from './device.js';
 import { setupNative, isNativeApp } from './native.js';
+import { DUNGEONS, dungeonLoot, dungeonQuest } from './dungeon.js';
 import { challengeClear, finishRush, challengeQuest, renderChallenge } from './challenge.js';
 import { V, DIFF_NOTE, DEMO_END } from './game/shared.js';
 import { SkillsPart } from './game/skills.js';
@@ -427,14 +428,16 @@ class Game {
   }
 
   blendTheme(dt, snap = false) {
-    const tgt = MAPS[this.world.regionAt(this.focus.x, this.focus.z).id].theme;
+    // 시간 던전은 시련탑 마당을 빌려 쓰되 색감은 던전마다 다른 지역의 것
+    const rid = this.tower?.mode === 'dungeon' ? DUNGEONS[this.tower.dg].theme : this.world.regionAt(this.focus.x, this.focus.z).id;
+    const tgt = MAPS[rid].theme;
     const cur = this.themeCur;
     const k = snap ? 1 : 1 - Math.exp(-dt * 1.4);
     for (const key of ['sun', 'sky', 'ground', 'bg']) for (let i = 0; i < 2; i++) cur[key][i].lerp(_e.set(tgt[key][i]), k);
     for (const key of ['sunI', 'hemiI']) for (let i = 0; i < 2; i++) cur[key][i] = lerp(cur[key][i], tgt[key][i], k);
     cur.ambient = tgt.ambient;
     // 지역 색감 (고화질 합성 셰이더)
-    const U = this.pixel.hdMat?.uniforms, G = GRADE[this.world.regionAt(this.focus.x, this.focus.z).id];
+    const U = this.pixel.hdMat?.uniforms, G = GRADE[rid];
     if (U && G) {
       U.gTint.value.x = lerp(U.gTint.value.x, G.tint[0], k); U.gTint.value.y = lerp(U.gTint.value.y, G.tint[1], k); U.gTint.value.z = lerp(U.gTint.value.z, G.tint[2], k);
       U.gSat.value = lerp(U.gSat.value, G.sat, k);
@@ -1600,6 +1603,7 @@ class Game {
     const ui = this.ui, M = this.map;
     const dl = document.getElementById('daily-line');
     if (dl) { const h = this.dailyGoals.line() + this.requests.line(); if (dl.dataset.h !== h) { dl.dataset.h = h; dl.innerHTML = h; } }
+    if (this.tower?.mode === 'dungeon') { ui.setQuest(...dungeonQuest(this)); return; }
     if (this.tower?.mode) { ui.setQuest(...challengeQuest(this)); return; }
     if (this.tower?.active) {
       const T = this.tower;
@@ -1797,12 +1801,13 @@ class Game {
     this.earlyEase(e);
     const TR = this.tower?.active ? this.tower : null;
     if (opt.weak) e.maxHp = e.hp = Math.max(1, Math.round(e.maxHp * 0.6));
+    if (opt.guard) e.maxHp = e.hp = Math.max(1, Math.round(e.maxHp * 0.6)); // 시간 던전의 수호자는 보스보다 약하게
     if (TR?.rule?.key === 'swift') e.T = { ...e.T, speed: e.T.speed * 1.35 };
     // 각성 보스: 탑 20층부터의 보스 층, 또는 이미 평정한 지역을 다시 울려 부른 보스
     //  (회차(round)는 지역을 평정할 때마다 오르므로 첫 판에도 금방 커짐 — 그래서 '다시 싸우는 지역'으로 정함)
     const awake = isBoss && (TR ? !TR.mode && TR.floor >= 20 && TR.floor % 5 === 0 : !!this.cleared[this.mapId]);
     if (awake) awaken(e);
-    if (isBoss) { e.name = TR ? (TR.mode ? `${e.T.name} · 도전` : `${e.T.name} · ${TR.floor}층`) : this.round > 0 ? `${e.T.name} +${this.round}` : e.T.name; if (awake) e.name = '각성 ' + e.name; this.ui.setBoss(e); this.shake(0.5); this.bossIntro(e); }
+    if (isBoss) { e.name = TR ? (TR.mode === 'dungeon' ? `${e.T.name} · 수호자` : TR.mode ? `${e.T.name} · 도전` : `${e.T.name} · ${TR.floor}층`) : this.round > 0 ? `${e.T.name} +${this.round}` : e.T.name; if (awake) e.name = '각성 ' + e.name; this.ui.setBoss(e); this.shake(0.5); this.bossIntro(e); }
     this.enemies.push(e);
   }
 
@@ -1883,6 +1888,7 @@ class Game {
     if (this.counterT > this.time) { this.counterT = 0; if (!crit) { crit = true; mul *= 1.8; } mul *= 1.4; this.fx.number(e.center().clone().add(V(0, 1.2, 0)), '반격!', 'alert'); }
     if (!crit && G.crit && Math.random() < G.crit) { crit = true; mul *= 1.8; }
     if (crit && G.critDmg) mul *= 1 + G.critDmg;
+    if (e.isBoss && G.boss) mul *= 1 + G.boss; // 무기 세공: 보스 피해
     if (this.tower?.active && this.tower.rule?.key === 'glass') mul *= 1.6;
     dmg = Math.max(1, Math.round(dmg * mul));
     // 돌장승 같은 단단한 적: 얼어 있지 않으면 피해가 줄고 쇳소리
@@ -2062,23 +2068,26 @@ class Game {
       this.ui.toast(`도감 ${'★'.repeat(n)} ${e.T.name || KILL_NAME[e.type] || e.type} — 능력치가 올랐어요`, 2.2);
       this.coach.tip('codex', 3);
       if (e.isBoss) this.coach.tip('challenge', 9);
+      if (e.type === 'boss') this.coach.tip('dungeon', 16);
     }
-    if (e.type !== 'foxclone') this.gainMats(rollMats(e, this.round, this.difficulty === 'hard'), e.pos);
+    const inDg = this.tower?.mode === 'dungeon';
+    if (inDg) dungeonLoot(this, e); // 시간 던전: 그 던전의 보상만
+    else if (e.type !== 'foxclone') this.gainMats(rollMats(e, this.round, this.difficulty === 'hard'), e.pos);
     if (e.type !== 'foxclone') this.shop.gain(Math.round(coinsFor(e, this.round) * this.pet.coinMul()), V(e.pos.x, e.y + (e.isBoss ? 3.4 : 1.6), e.pos.z));
     const exp = Math.round(e.T.exp * diffOf(this).exp * (1 + this.round * 0.25) * (e.elite ? 3 : 1) * (this.tower?.active ? 1 + this.tower.floor * 0.06 : 1));
     this.player.addExp(exp);
     this.fx.number(V(e.pos.x, e.y + (e.isBoss ? 4 : 2.2), e.pos.z), `+${exp} EXP`, 'exp');
-    const drop = rollDrop(e.type, this.round, this.player.cls);
+    const drop = inDg ? null : rollDrop(e.type, this.round, this.player.cls);
     if (drop) this.spawnDrop(e.pos, drop);
     // 보스는 확률로 전용 장비(고유 기술 무기·옷)를 떨어뜨림
-    if (e.isBoss) {
+    if (e.isBoss && !inDg) {
       const bd = bossDrop(e.type, this.player.cls, this.inv, this.round);
       for (const id of bd) this.spawnDrop(e.pos, id);
       if (!bd.some((id) => item(id).kind === 'weapon')) this.after(1.2, () => this.ui.toast('보스 무기는 나오지 않았어요… 다시 도전해 보세요', 2.4));
     }
     // 방어구·장신구: 일반 몬스터는 가끔, 보스는 두세 개 (등급이 높게)
     const gm = diffOf(this).gear * (this.player.perks?.has('fortune') ? 1.3 : 1);
-    const gearN = e.isBoss ? 1 + (Math.random() < 0.5 * gm ? 1 : 0) : Math.random() < (e.field ? 0.08 : 0.06) * gm ? 1 : 0;
+    const gearN = inDg ? 0 : e.isBoss ? 1 + (Math.random() < 0.5 * gm ? 1 : 0) : Math.random() < (e.field ? 0.08 : 0.06) * gm ? 1 : 0;
     for (let i = 0; i < gearN; i++) {
       const strong = e.isBoss ? 0.6 : e.T.hp > 60 ? 0.12 : 0;
       const lv = Math.max(1, e.lvl || 1) + this.round;

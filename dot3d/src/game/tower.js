@@ -7,6 +7,7 @@ import { ruleFor } from '../towerrules.js';
 import { challengeClear, finishRush } from '../challenge.js';
 import { V } from './shared.js';
 
+import { updateDungeon, DUNGEONS, lootLine } from '../dungeon.js';
 export class TowerPart {
   // ---------- 저승 시련탑 (엔드게임) ----------
   // 층마다 섞인 적 무리, 5층마다 지역 보스, 10층마다 염라대왕. 5층 단위로 이어서 도전
@@ -100,6 +101,7 @@ export class TowerPart {
 
   updateTower() {
     const T = this.tower;
+    if (T?.active && T.mode === 'dungeon') { updateDungeon(this); return; }
     if (!T?.active || T.cleared || this.player.dead) return;
     if (T.mode) { if (!this.spawnQueue.length && !this.enemies.some((e) => !e.dead)) challengeClear(this); return; }
     // 불바다: 몇 초마다 내 주변에 불기둥
@@ -154,7 +156,8 @@ export class TowerPart {
     const r = this.towerReturn || V(-9.3, 0, 214);
     this.teleport(r.x, r.z);
     this.player.hp = this.player.maxHp;
-    if (T.mode) this.ui.banner('보스 도전', died ? '쓰러졌다… 다시 도전해 보자' : '돌아왔다', 2.4, '');
+    if (T.mode === 'dungeon') this.ui.banner(DUNGEONS[T.dg].name, `처치 ${T.kills} · 얻은 것: ${lootLine(T)}`, 3.4, '');
+    else if (T.mode) this.ui.banner('보스 도전', died ? '쓰러졌다… 다시 도전해 보자' : '돌아왔다', 2.4, '');
     else this.ui.banner('저승 시련탑', died ? `${T.floor}층에서 쓰러졌다… 최고 기록 ${T.best}층` : `최고 기록 ${T.best}층`, 3, '');
     this.tower = null;
     this.updateQuest();
