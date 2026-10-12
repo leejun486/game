@@ -27,7 +27,7 @@ class Failure extends Error {}
 const check = (cond, msg) => { if (!cond) throw new Failure(msg); };
 
 // 게임 페이지 하나: 언어·설정을 정하고 타이틀까지 띄움
-async function openGame(ctx, { lang = 'ko', viewport = { width: 960, height: 540 }, settings = {}, blockExternal = true, gfx = null } = {}) {
+async function openGame(ctx, { lang = 'ko', viewport = { width: 960, height: 540 }, settings = {}, blockExternal = true, gfx = null, script = null } = {}) {
   const page = await ctx.browser.newPage({ viewport });
   page.setDefaultTimeout(300000);
   const errors = [], external = [];
@@ -36,6 +36,7 @@ async function openGame(ctx, { lang = 'ko', viewport = { width: 960, height: 540
   await page.route('**/*', (r) => {
     const u = r.request().url();
     if (!u.startsWith(ctx.base)) { external.push(u); return blockExternal ? r.abort() : r.continue(); }
+    if (script && /\/dist\/game\.js/.test(u)) return r.fulfill({ body: fs.readFileSync(script), contentType: 'text/javascript' }); // 다른 빌드(체험판)로 바꿔 열기
     r.continue();
   });
   await page.goto(ctx.base + '/index.html');

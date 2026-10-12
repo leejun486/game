@@ -2,6 +2,7 @@
 // 사용: 게임 폴더에서 python3 -m http.server 8765 를 켜 두고
 //   OUT=/tmp/frames/ node tools/record_trailer.cjs [sword|elf|mage|lancer|title]  (인자 없으면 전부)
 //   그다음 tools/make_trailer.sh /tmp/frames
+//   몇 장면만: SEG=kb_tomb OUT=… node tools/record_trailer.cjs sword  (그 직업의 장면 중 고른 것만, title도 같음)
 // 장면은 폴더 이름(a_ … l_) 순서로 이어 붙음. 장면 목록은 아래 SEGS
 let pw; try { pw = require('playwright'); } catch { pw = require('/opt/node22/lib/node_modules/playwright'); }
 const { chromium } = pw;
@@ -14,19 +15,23 @@ const SEGS = {
     ['b_palace', (g) => { g.night = 1; g.nightTarget = 1; g.teleport(0, 6); for (const [t, dx, dz] of [['blue', -3, -3], ['red', 2, -4], ['blue', 4, -1], ['wisp', -4, 1], ['blue', 0, -5], ['red', -2, 3]]) g.spawnEnemyAt(t, dx, 6 + dz); }, 150],
     ['c_kingdrop', (g) => { g.night = 1; g.nightTarget = 1; for (const e of g.enemies) e.dispose(); g.enemies = []; g.teleport(0, 6); g.spawnEnemy('boss'); }, 150],
     ['g_baekho', (g) => { g.night = 0; g.nightTarget = 0; for (const e of g.enemies) e.dispose(); g.enemies = []; g.teleport(0, 240); g.spawnEnemy('baekho'); }, 120],
+    ['kb_tomb', (g) => { g.night = 1; g.nightTarget = 1; for (const e of g.enemies) e.dispose(); g.enemies = []; g.teleport(-7, 436); g.spawnEnemy('eodum'); for (const [t, dx] of [['tombsoldier', -3], ['gungnyeo', 3]]) g.spawnEnemyAt(t, -7 + dx, 432); }, 100],
   ],
   elf: [
     ['d_bamboo', (g) => { g.teleport(0, 52); for (const [t, dx, dz] of [['fox', -3, -4], ['fox', 3, -4], ['foxfire', 0, -6], ['fox', 4, 1], ['foxfire', -4, 2]]) g.spawnEnemyAt(t, dx, 52 + dz); }, 120],
     ['h_dragon', (g) => { for (const e of g.enemies) e.dispose(); g.enemies = []; g.teleport(0, 292); g.spawnEnemy('dragon'); }, 120],
+    ['kc_market', (g) => { g.night = 1; g.nightTarget = 1; for (const e of g.enemies) e.dispose(); g.enemies = []; g.teleport(0, 486); g.spawnEnemy('dokgak'); for (const [t, dx] of [['imp', -3], ['gambler', 3], ['tanuki', 0]]) g.spawnEnemyAt(t, dx, 482); }, 100],
   ],
   mage: [
     ['e_temple', (g) => { g.night = 0; g.nightTarget = 0; g.teleport(0, 100); for (const [t, dx, dz] of [['jiangshi', -3, -4], ['ghost', 3, -4], ['jiangshi', 0, -6], ['ghost', 4, 1], ['jiangshi', -4, 2]]) g.spawnEnemyAt(t, dx, 100 + dz); }, 120],
     ['j_frost', (g) => { g.night = 0; g.nightTarget = 0; for (const e of g.enemies) e.dispose(); g.enemies = []; g.teleport(0, 390); g.spawnEnemy('frostgiant'); }, 150],
     ['k_kill', (g) => { const b = g.enemies.find((e) => e.isBoss && !e.dead); if (b) g.damageEnemy(b, b.hp + 10, true, 0, 0); }, 100],
+    ['ke_sky', (g) => { g.night = 0; g.nightTarget = 0; for (const e of g.enemies) e.dispose(); g.enemies = []; g.cine = null; g.killCam = null; g.teleport(-4, 584); g.spawnEnemy('noegong'); for (const [t, dx] of [['thunderkid', -3], ['shadowfairy', 3]]) g.spawnEnemyAt(t, -4 + dx, 580); }, 110],
   ],
   lancer: [
     ['f_imugi', (g) => { g.teleport(1, 147); g.spawnEnemy('imugi'); }, 120],
     ['i_valley', (g) => { for (const e of g.enemies) e.dispose(); g.enemies = []; g.teleport(4, 340); for (const [t, dx, dz] of [['boar', -3, -4], ['bee', 3, -4], ['mantis', 0, -6], ['bee', 4, 1]]) g.spawnEnemyAt(t, dx, 340 + dz); }, 100],
+    ['kd_tidal', (g) => { g.night = 0; g.nightTarget = 0; for (const e of g.enemies) e.dispose(); g.enemies = []; g.teleport(2, 544); g.spawnEnemy('jangsan'); for (const [t, dx] of [['fiddler', -3], ['fishman', 3]]) g.spawnEnemyAt(t, 2 + dx, 540); }, 100],
   ],
 };
 const KEYS = { sword: 'Digit1', mage: 'Digit2', elf: 'Digit3', lancer: 'Digit4' };
@@ -86,8 +91,9 @@ const KEYS = { sword: 'Digit1', mage: 'Digit2', elf: 'Digit3', lancer: 'Digit4' 
     // 첫 장면: 선택 화면 대신 로고만 크게
     await page.addStyleTag({ content: '#select,#title .title-btns,#title .press,#title-save,#title .credit,#title .hint,#title .corner,#title button{visibility:hidden!important} #title .logo-big{transform:scale(1.25)}' });
     for (const [name, frames] of [['a_title', 90], ['l_end', 120]]) {
+      if (process.env.SEG && !process.env.SEG.split(',').includes(name)) continue;
       const dir = OUT + name; fs.rmSync(dir, { recursive: true, force: true }); fs.mkdirSync(dir, { recursive: true });
-      if (name === 'l_end') await page.evaluate(() => { document.querySelector('#title .logo-big').insertAdjacentHTML('beforeend', '<div style="margin-top:28px;font-size:26px;color:#ffe9a8;letter-spacing:6px;text-shadow:2px 2px 0 #000">Steam 찜하기</div><div style="margin-top:10px;font-size:16px;color:#d8cfb8;letter-spacing:3px;text-shadow:1px 1px 0 #000">네 직업 · 열 개의 지역 · 열 마리의 보스</div>'); });
+      if (name === 'l_end') await page.evaluate(() => { document.querySelector('#title .logo-big').insertAdjacentHTML('beforeend', '<div style="margin-top:28px;font-size:26px;color:#ffe9a8;letter-spacing:6px;text-shadow:2px 2px 0 #000">Steam 찜하기</div><div style="margin-top:10px;font-size:16px;color:#d8cfb8;letter-spacing:3px;text-shadow:1px 1px 0 #000">네 직업 · 열네 개의 지역 · 열네 마리의 보스</div>'); });
       for (let i = 0; i < frames; i++) {
         await page.evaluate(() => { window.__t += 1000 / 30; const fs = window.__rafs.splice(0).filter((f) => f !== game.loop); for (const f of fs) f(window.__t); game.loop(window.__t); });
         await page.screenshot({ path: `${dir}/f_${String(i).padStart(5, '0')}.jpg`, type: 'jpeg', quality: 92 });

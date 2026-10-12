@@ -6,12 +6,13 @@ export const DEMO = typeof __DEMO__ !== 'undefined' && !!__DEMO__;
 // 스토어 페이지 (출시 전에 실제 주소로 바꿀 것)
 export const STORE_URL = 'https://store.steampowered.com/';
 // 체험판에서 열리지 않는 문 (뒷문 너머부터)
+// (체험판에서도 장터·공방·수호령·보스 도전·부탁은 그대로 — 물리친 보스·열린 지역만큼만 열림)
 export const DEMO_LOCKED_GATES = new Set(['swamp', 'canyon', 'fortress', 'sea', 'valley', 'snowfield', 'tomb', 'market', 'tidal', 'sky']);
 // 체험판 마지막을 알리는 가짜 임무 (퀘스트 창에 표시)
-export const DEMO_QUEST = { title: '체험판은 여기까지', type: 'demo', desc: '정식판에서는 <b>물안개 늪</b>부터 여섯 지역과 보스 일곱이 더 기다려요. 이 세 지역은 계속 돌아다닐 수 있어요' };
+export const DEMO_QUEST = { title: '체험판은 여기까지', type: 'demo', desc: '정식판에서는 <b>물안개 늪</b>부터 열 지역과 보스 열하나가 더 기다려요. 이 세 지역은 계속 돌아다닐 수 있어요' };
 export const DEMO_END_LINES = [
   '저승사자가 물러가고, 폐사찰 뒷문의 부적이 희미하게 빛난다…',
   '체험판은 여기까지입니다. 끝까지 함께해 주셔서 고맙습니다!',
-  '정식판에서는 물안개 늪, 불가사리 협곡, 단풍 산성, 동해 용궁, 청류 계곡, 백설 고원 — 여섯 지역과 보스 일곱이 더 기다립니다.',
+  '정식판에서는 물안개 늪, 불가사리 협곡, 단풍 산성, 동해 용궁, 청류 계곡, 백설 고원, 왕릉 고분, 도깨비 밤장터, 남해 갯벌 마을, 천상 선계 — 열 지역과 보스 열하나가 더 기다립니다.',
   '마음에 드셨다면 스토어 페이지에서 찜하기를 눌러 주세요. 정식판은 이 기록을 그대로 이어서 할 수 있어요.',
 ];
