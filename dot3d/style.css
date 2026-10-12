@@ -847,3 +847,48 @@ body.touch #coach.tut.show #coach-skip { pointer-events: auto; }
   body.touch #toast, body.touch #app:has(#coach.show) #toast { bottom: 280px; }
   body.touch #savemark { right: 20px; bottom: 280px; }
 }
+
+/* ---------- 터치 가로 화면: 왼쪽 위 상태·임무 | 가운데 위 보스·알림 | 오른쪽 위 단추·지도, 아래는 안내 | 기술 단추 ---------- */
+@media (orientation: landscape) {
+  body.touch #logo { display: none; }
+  body.touch #bag-btn, body.touch #evo-btn, body.touch #hunt-btn, body.touch #menu-btn { left: auto; text-align: center; white-space: nowrap; }
+  body.touch #coach { left: 12px; right: 220px; bottom: 12px; width: auto; max-width: 600px; transform: translateY(8px); }
+  body.touch #coach.show { transform: none; }
+  body.touch #toast { bottom: auto; white-space: normal; text-align: center; }
+}
+/* 휴대폰 가로 */
+@media (orientation: landscape) and (max-height: 520px) {
+  body.touch #status .col { width: 140px; }
+  body.touch #quest { left: 8px; right: auto; top: 66px; width: 200px; }
+  body.touch #minimap { left: auto; right: 8px; top: 8px; bottom: auto; }
+  body.touch #minimap canvas { width: 84px; height: 104px; }
+  body.touch #bag-btn, body.touch #evo-btn, body.touch #hunt-btn, body.touch #menu-btn { right: 110px; min-width: 76px; padding: 6px 8px; font-size: 11px; }
+  body.touch #bag-btn { top: 8px; }
+  body.touch #evo-btn { top: 40px; }
+  body.touch #hunt-btn { top: 72px; }
+  body.touch #menu-btn { top: 104px; }
+  body.touch #boss { top: 8px; width: max(200px, calc(100vw - 460px)); }
+  body.touch #toast { top: 60px; max-width: max(200px, calc(100vw - 460px)); }
+  body.touch #combo { top: 140px; right: 12px; }
+  body.touch #savemark { top: 140px; right: 110px; bottom: auto; }
+}
+/* 태블릿 가로 */
+@media (orientation: landscape) and (min-height: 521px) {
+  body.touch #status .col { width: 220px; }
+  body.touch #quest { left: 16px; right: auto; top: 112px; width: 300px; }
+  body.touch #minimap { left: auto; right: 16px; top: 16px; bottom: auto; }
+  body.touch #minimap canvas { width: 112px; height: 139px; }
+  body.touch #bag-btn, body.touch #evo-btn, body.touch #hunt-btn, body.touch #menu-btn { right: 148px; min-width: 124px; padding: 9px 12px; font-size: 14px; }
+  body.touch #bag-btn { top: 16px; }
+  body.touch #evo-btn { top: 60px; }
+  body.touch #hunt-btn { top: 104px; }
+  body.touch #menu-btn { top: 148px; }
+  body.touch #boss { top: 16px; width: min(560px, calc(100vw - 700px)); }
+  body.touch #toast { top: 76px; max-width: calc(100vw - 700px); }
+  body.touch #combo { top: 210px; right: 20px; }
+  body.touch #savemark { top: 200px; right: 160px; bottom: auto; }
+  body.touch #touch .btns { right: 20px; bottom: 28px; grid-template-columns: 72px 72px 72px; gap: 12px; }
+  body.touch #touch button { width: 72px; height: 72px; font-size: 13px; }
+  body.touch #touch .btns button.ult { top: -84px; }
+  body.touch #coach { left: 16px; right: 290px; bottom: 28px; }
+}
