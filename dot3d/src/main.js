@@ -38,6 +38,9 @@ import { Hub } from './hub.js';
 import { Codex, monStars, renderCodex } from './codex.js';
 import { rollMats, MATS, MAT_ORDER } from './enhance.js';
 import { DEMO, DEMO_LOCKED_GATES, DEMO_QUEST, DEMO_END_LINES } from './edition.js';
+import { Shop, coinsFor, salvageCoins, salvageDust, renderShop } from './shop.js';
+import { Pet } from './pet.js';
+import { challengeClear, finishRush, challengeQuest, renderChallenge } from './challenge.js';
 import { spearHit, lancerSkill1, lancerSkill2, lancerSkill3, updateLancer, clearLancer } from './lancer.js';
 
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
@@ -115,6 +118,7 @@ class Game {
     this.enh = {};     // 무기·갑옷 강화 단계 {아이템 id: +n}
     this.mats = {};    // 강화 재료 (주문서·혼석) 개수
     this.codexReg = {}; // 장신구 도감에 등록한 칸
+    this.ext = {};     // 1.2에 더한 것: 엽전·장터·수호령·보스 도전·부탁 기록 (shop.js · pet.js · challenge.js · requests.js)
     this.gear = [];    // 방어구·장신구 (무작위 옵션이 붙은 낱개). 착용 여부는 직업별 progress.eq
     this.drops = [];
     this.target = null;
@@ -151,6 +155,8 @@ class Game {
     this.stats = newStats(); // 누적 기록 (업적·도감)
     this.records = new Records(this);
     this.codex = new Codex(this);
+    this.shop = new Shop(this);
+    this.pet = new Pet(this);
     this.daily = null;  // 오늘의 목표 { day, goals, bonus }
     this.dailyGoals = new Daily(this);
     this.qk = new QuestKinds(this); // 추격·찾기·순서·호위·버티기 퀘스트
@@ -753,7 +759,9 @@ class Game {
       // 가방이 꽉 차면 바로 분해
       const ex = salvageExp(g);
       p.addExp(ex);
-      this.ui.toast(`가방이 가득 차서 ${g.name}을(를) 분해 → 경험치 +${ex}`, 2.4);
+      this.shop.gain(salvageCoins(g));
+      this.mats.dust = (this.mats.dust || 0) + salvageDust(g);
+      this.ui.toast(`가방이 가득 차서 ${g.name}을(를) 분해 → 경험치 +${ex} · 엽전 +${salvageCoins(g)}`, 2.4);
       return;
     }
     this.gear.push(g);
@@ -783,6 +791,7 @@ class Game {
     const keys = Object.keys(m);
     if (!keys.length) return;
     for (const k of keys) this.mats[k] = (this.mats[k] || 0) + m[k];
+    if (keys.some((k) => k.startsWith('scroll'))) this.coach.tip('enh', 2);
     const txt = keys.map((k) => `${MATS[k].name}${m[k] > 1 ? ' ×' + m[k] : ''}`).join(' · ');
     if (at) this.fx.number(V(at.x, (at.y || 0) + 3, at.z), txt, 'alert');
     if (m.soul || m.bless) this.ui.toast(`얻음: ${txt}`, 2.4); else this.ui.toast(`얻음: ${txt}`, 1.4);
@@ -820,17 +829,19 @@ class Game {
   }
 
   salvageGear(uids) {
-    let ex = 0, n = 0;
+    let ex = 0, n = 0, coins = 0, dust = 0;
     for (const uid of uids) {
       const g = this.gearByUid(uid);
-      if (!g || this.isEquipped(g) || CLASS_ORDER.some((c) => this.isEquipped(g, c))) continue;
-      ex += salvageExp(g); n++;
+      if (!g || g.lock || this.isEquipped(g) || CLASS_ORDER.some((c) => this.isEquipped(g, c))) continue;
+      ex += salvageExp(g); n++; coins += salvageCoins(g); dust += salvageDust(g);
       this.gear.splice(this.gear.indexOf(g), 1);
     }
     if (!n) return;
     this.player.addExp(ex);
+    this.shop.gain(coins);
+    this.mats.dust = (this.mats.dust || 0) + dust;
     this.audio.play('crit');
-    this.ui.toast(`${n}개 분해 → 경험치 +${ex}`, 2);
+    this.ui.toast(`${n}개 분해 → 경험치 +${ex} · 엽전 +${coins} · ${MATS.dust.name} +${dust}`, 2.4);
     this.ui.refreshBag();
     this.ui.setClass(this.player.cfg, this.player);
     this.save(false);
@@ -1089,6 +1100,7 @@ class Game {
     this.enh = { ...(d.enh || {}) };
     this.mats = { ...(d.mats || {}) };
     this.codexReg = { ...(d.codexReg || {}) };
+    this.ext = { ...(d.ext || {}) };
     this.codex.dirty();
     this.towerBest = d.towerBest | 0;
     if (d.cleared) this.cleared = { ...d.cleared };
@@ -1177,6 +1189,7 @@ class Game {
       enh: this.enh,
       mats: this.mats,
       codexReg: this.codexReg,
+      ext: this.ext,
       inv: [...this.inv],
       gear: this.gear,
       music: this.audio.musicOn,
@@ -1311,7 +1324,7 @@ class Game {
   resetProgress() {
     clearSave();
     this.kills = 0; this.round = 0; this.stage = 0; this.bestCombo = 0; this.playTime = 0; this.flags = {}; this.stats = newStats(); this.daily = null;
-    this.progress = {}; this.inv = new Set(['sw0', 'mg0', 'bw0', 'sp0', 'ot0']); this.gear = []; this.enh = {}; this.mats = {}; this.codexReg = {}; this.codex.dirty();
+    this.progress = {}; this.inv = new Set(['sw0', 'mg0', 'bw0', 'sp0', 'ot0']); this.gear = []; this.enh = {}; this.mats = {}; this.codexReg = {}; this.ext = {}; this.codex.dirty();
     this.cleared = {};
     this.quest = { step: 0, prog: {}, lit: [], bounty: null, shards: [], prologue: false, ended: false, qv: 5 };
     for (const f of this.flames) this.scene.remove(f);
@@ -1595,6 +1608,10 @@ class Game {
       this.records.render(el);
     } else if (tab === 'codex') {
       renderCodex(this, el, this.codex.sub || 'mon');
+    } else if (tab === 'shop') {
+      renderShop(this, el);
+    } else if (tab === 'challenge') {
+      renderChallenge(this, el);
     } else if (tab === 'keys') {
       el.innerHTML = `<h3>조작 · 키 바꾸기</h3>${ACTIONS.map(([a, n]) => `<div class="pz-row"><label>${n}</label><button class="pz-key${this.rebind === a ? ' wait' : ''}" data-a="${a}">${this.rebind === a ? '키를 누르세요…' : keyName(keyOf(S, a))}</button></div>`).join('')}
         <div class="pz-row"><button class="pz-btn" id="pz-keyreset">기본 키로 되돌리기</button></div>
@@ -1887,7 +1904,7 @@ class Game {
     const qo = this.qk.findInteract(p, bd);
     if (qo) { bd = qo.d; best = qo; }
     for (const P of this.world.portals) {
-      if (P.kind === 'next' && !(this.tower?.active && this.tower.cleared)) continue;
+      if (P.kind === 'next' && !(this.tower?.active && this.tower.cleared && !this.tower.mode)) continue;
       const d = Math.hypot(P.x - p.x, P.z - p.z);
       if (d < 2.4 && d < bd) { bd = d; best = { kind: 'portal', portal: P, label: P.kind === 'next' ? `${this.tower.floor + 1}층으로` : P.label, promptPos: V(P.x, (P.promptY || 3), P.z) }; }
     }
@@ -1950,6 +1967,7 @@ class Game {
     const ui = this.ui, M = this.map;
     const dl = document.getElementById('daily-line');
     if (dl) { const h = this.dailyGoals.line(); if (dl.dataset.h !== h) { dl.dataset.h = h; dl.innerHTML = h; } }
+    if (this.tower?.mode) { ui.setQuest(...challengeQuest(this)); return; }
     if (this.tower?.active) {
       const T = this.tower;
       const left = this.enemies.filter((e) => !e.dead && !e.field).length + this.spawnQueue.length;
@@ -2251,6 +2269,7 @@ class Game {
     if (!Q) return;
     this.quest.step++;
     this.giveReward(Q.reward);
+    this.shop.gain(40 + this.quest.step * 4, this.player.pos.clone().add(V(0, 2.8, 0)));
     this.ui.banner('임무 완료', Q.title, 2.2, 'win-banner');
     this.audio.play('victory');
     this.after(Q.type === 'wave' ? 4.2 : 2.4, () => this.startStep());
@@ -2335,6 +2354,7 @@ class Game {
         this.quest.bounty = null;
         this.giveReward({ exp: 150 + this.round * 30, item: rollDrop('boss', this.round, this.player.cls) });
         this.gainMats({ [['scrollW', 'scrollA', 'scrollG'][Math.floor(Math.random() * 3)]]: 2 });
+        this.shop.gain(150 + this.round * 30);
         this.ui.banner('현상수배 완료', BOUNTIES[B.i].title, 2.2, 'win-banner');
         this.records.bounty();
         this.updateQuest(); this.save(false);
@@ -2650,7 +2670,7 @@ class Game {
       if (this.waveActive) { this.ui.toast('싸우는 중에는 들어갈 수 없어요', 2); return; }
       this.enterTower();
     } else if (P.kind === 'exit') this.leaveTower();
-    else if (P.kind === 'next' && this.tower?.active && this.tower.cleared) this.startTowerFloor(this.tower.floor + 1);
+    else if (P.kind === 'next' && this.tower?.active && this.tower.cleared && !this.tower.mode) this.startTowerFloor(this.tower.floor + 1);
   }
 
   enterTower() {
@@ -2732,6 +2752,7 @@ class Game {
   updateTower() {
     const T = this.tower;
     if (!T?.active || T.cleared || this.player.dead) return;
+    if (T.mode) { if (!this.spawnQueue.length && !this.enemies.some((e) => !e.dead)) challengeClear(this); return; }
     // 불바다: 몇 초마다 내 주변에 불기둥
     if (T.rule?.key === 'fire' && this.time > T.fireAt && !this.cut) {
       T.fireAt = this.time + 3.5;
@@ -2773,6 +2794,7 @@ class Game {
   leaveTower(died = false) {
     const T = this.tower;
     if (!T) return;
+    if (T.mode === 'rush' && !T.rushDone) finishRush(this, false);
     T.active = false;
     for (const e of this.enemies) e.dispose();
     this.enemies = [];
@@ -2783,7 +2805,8 @@ class Game {
     const r = this.towerReturn || V(-9.3, 0, 214);
     this.teleport(r.x, r.z);
     this.player.hp = this.player.maxHp;
-    this.ui.banner('저승 시련탑', died ? `${T.floor}층에서 쓰러졌다… 최고 기록 ${T.best}층` : `최고 기록 ${T.best}층`, 3, '');
+    if (T.mode) this.ui.banner('보스 도전', died ? '쓰러졌다… 다시 도전해 보자' : '돌아왔다', 2.4, '');
+    else this.ui.banner('저승 시련탑', died ? `${T.floor}층에서 쓰러졌다… 최고 기록 ${T.best}층` : `최고 기록 ${T.best}층`, 3, '');
     this.tower = null;
     this.updateQuest();
     this.save(false);
@@ -2884,9 +2907,9 @@ class Game {
     if (TR?.rule?.key === 'swift') e.T = { ...e.T, speed: e.T.speed * 1.35 };
     // 각성 보스: 탑 20층부터의 보스 층, 또는 이미 평정한 지역을 다시 울려 부른 보스
     //  (회차(round)는 지역을 평정할 때마다 오르므로 첫 판에도 금방 커짐 — 그래서 '다시 싸우는 지역'으로 정함)
-    const awake = isBoss && (TR ? TR.floor >= 20 && TR.floor % 5 === 0 : !!this.cleared[this.mapId]);
+    const awake = isBoss && (TR ? !TR.mode && TR.floor >= 20 && TR.floor % 5 === 0 : !!this.cleared[this.mapId]);
     if (awake) awaken(e);
-    if (isBoss) { e.name = TR ? `${e.T.name} · ${TR.floor}층` : this.round > 0 ? `${e.T.name} +${this.round}` : e.T.name; if (awake) e.name = '각성 ' + e.name; this.ui.setBoss(e); this.shake(0.5); this.bossIntro(e); }
+    if (isBoss) { e.name = TR ? (TR.mode ? `${e.T.name} · 도전` : `${e.T.name} · ${TR.floor}층`) : this.round > 0 ? `${e.T.name} +${this.round}` : e.T.name; if (awake) e.name = '각성 ' + e.name; this.ui.setBoss(e); this.shake(0.5); this.bossIntro(e); }
     this.enemies.push(e);
   }
 
@@ -4559,8 +4582,11 @@ class Game {
       this.codex.dirty(); this.player.recalc();
       const n = monStars(this.stats.killsBy[e.type]);
       this.ui.toast(`도감 ${'★'.repeat(n)} ${e.T.name || KILL_NAME[e.type] || e.type} — 능력치가 올랐어요`, 2.2);
+      this.coach.tip('codex', 3);
+      if (e.isBoss) this.coach.tip('challenge', 9);
     }
     if (e.type !== 'foxclone') this.gainMats(rollMats(e, this.round, this.difficulty === 'hard'), e.pos);
+    if (e.type !== 'foxclone') this.shop.gain(Math.round(coinsFor(e, this.round) * this.pet.coinMul()), V(e.pos.x, e.y + (e.isBoss ? 3.4 : 1.6), e.pos.z));
     const exp = Math.round(e.T.exp * diffOf(this).exp * (1 + this.round * 0.25) * (e.elite ? 3 : 1) * (this.tower?.active ? 1 + this.tower.floor * 0.06 : 1));
     this.player.addExp(exp);
     this.fx.number(V(e.pos.x, e.y + (e.isBoss ? 4 : 2.2), e.pos.z), `+${exp} EXP`, 'exp');
@@ -4910,6 +4936,7 @@ class Game {
     this.updateTarget();
     this.player.update(wdt, inp);
     this.updateDrops(wdt);
+    this.pet.update(wdt);
     this.updateRegion();
     this.updateVents(wdt);
     this.updateTower();

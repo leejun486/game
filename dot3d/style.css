@@ -892,3 +892,41 @@ body.touch #coach.tut.show #coach-skip { pointer-events: auto; }
   body.touch #touch .btns button.ult { top: -84px; }
   body.touch #coach { left: 16px; right: 290px; bottom: 28px; }
 }
+
+/* ---------- 장터 · 공방 · 수호령 · 보스 도전 ---------- */
+.coin-ic { display: inline-block; width: 11px; height: 11px; margin-right: 3px; border-radius: 50%; background: radial-gradient(circle, transparent 0 2px, #f0c040 2px); border: 1px solid #6a4a10; box-shadow: 1px 1px 0 rgba(0, 0, 0, 0.4); vertical-align: -1px; }
+.box-ic { background: linear-gradient(180deg, #c8302c 0 40%, #f0c040 40% 55%, #c8302c 55%) !important; }
+.dmg.coin { font-size: 12px; color: #f0c040; }
+.shop-sum b { margin-right: 4px; }
+.shop-msg { margin: -2px 0 8px; }
+.shop-list, .pet-list { display: flex; flex-direction: column; gap: 5px; }
+.shop-row, .pet-row, .up-row, .ch-rush { display: flex; align-items: center; gap: 8px; background: #1a1522; border: 1px solid #3a3048; padding: 6px 8px; font-size: 12px; }
+.shop-row.off, .up-row.off { opacity: 0.6; }
+.shop-row .mat-ic { width: 14px; height: 18px; flex: none; }
+.sr-t { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.sr-t b { color: #f3ead6; font-weight: normal; font-size: 13px; }
+.sr-t small { color: #a89e8a; font-size: 11px; }
+.sr-t small.how { color: #c8a0ff; }
+.sr-p { color: #f0c040; white-space: nowrap; }
+.shop-row button, .pet-row button, .up-row button { font-family: var(--font); font-size: 12px; padding: 5px 10px; cursor: pointer; border: 2px solid #6a5a3a; background: #2a2230; color: #f3e6c0; white-space: nowrap; }
+.shop-row button:disabled, .pet-row button:disabled, .up-row button:disabled { opacity: 0.45; cursor: default; }
+.pet-row button.on { border-color: #7aff8a; color: #c8ffd0; }
+.pet-row.on { border-color: #7aff8a; }
+.pet-row.lock { opacity: 0.7; }
+.pet-dot { width: 16px; height: 16px; flex: none; border: 2px solid #1a1420; }
+.cx-h { margin: 12px 0 4px; color: var(--gold); font-size: 13px; font-weight: normal; }
+.craft-pick { display: flex; gap: 10px; align-items: flex-start; background: #1e1828; border: 1px solid #4a3e58; padding: 8px; margin: 6px 0; font-size: 12px; }
+.craft-pick canvas { width: 36px; height: 36px; image-rendering: pixelated; flex: none; }
+.cp-lines { display: flex; flex-direction: column; color: #c8bea8; margin-top: 3px; font-size: 11px; }
+.craft-cost { font-size: 12px; margin: 4px 0 6px; }
+.craft-grid { margin-top: 8px; max-height: 180px; overflow-y: auto; }
+.craft-it { cursor: pointer; display: flex; align-items: center; gap: 6px; font-size: 12px; padding: 3px 5px; }
+.craft-it canvas { width: 20px; height: 20px; image-rendering: pixelated; }
+.craft-it.on { outline: 2px solid var(--gold); }
+.craft-up { display: flex; flex-direction: column; gap: 4px; }
+.up-row > span:first-child { flex: 1; }
+.ch-rush { margin-bottom: 6px; border-color: #8a3a3a; }
+.ch-rush > div { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.ch-rush b { color: #ffb0a0; font-weight: normal; font-size: 13px; }
+.ch-rush small { color: #a89e8a; font-size: 11px; line-height: 1.5; }
+.cx-card .pz-btn { margin-top: 4px; padding: 3px 8px; font-size: 11px; }

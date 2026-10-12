@@ -13,8 +13,9 @@ export const MATS = {
   scrollG: { name: '장신구 강화 주문서', color: '#6ad08a', icon: ['#f4e4c0', '#3a8a5a'] },
   bless: { name: '축복받은 주문서', color: '#ffd76a', icon: ['#fff4c8', '#e0a020'] },
   soul: { name: '요괴 혼석', color: '#c890ff', icon: ['#e0c8ff', '#6a2aaa'] },
+  dust: { name: '도깨비 가루', color: '#7ad8e0', icon: ['#d8f8ff', '#3a8a9a'] }, // 분해하면 나옴 · 공방에서 씀
 };
-export const MAT_ORDER = ['scrollW', 'scrollA', 'scrollG', 'bless', 'soul'];
+export const MAT_ORDER = ['scrollW', 'scrollA', 'scrollG', 'bless', 'soul', 'dust'];
 
 // lv → lv+1 성공 확률
 const RATE = [1, 1, 1, 0.95, 0.9, 0.8, 0.7, 0.6, 0.5, 0.45, 0.4, 0.35, 0.3, 0.25, 0.2];

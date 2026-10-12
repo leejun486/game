@@ -70,6 +70,22 @@ export function makeGear(level, tier, kind) {
   return g;
 }
 
+// 공방: 주 옵션(처음 것)은 두고 나머지 옵션을 새로 뽑음 (이름 접두어도 새로)
+export function rerollGear(g) {
+  const keys = Object.keys(g.stats), main = keys[0];
+  const n = keys.length - 1;
+  const stats = { [main]: g.stats[main] };
+  const pool = POOL[g.kind].filter((k) => k !== main);
+  for (let i = 0; i < n && pool.length; i++) {
+    const k = pool.splice(Math.floor(Math.random() * pool.length), 1)[0];
+    stats[k] = rollStat(k, g.tier, g.lv);
+  }
+  g.stats = stats;
+  const pre = Object.keys(stats).filter((k) => k !== main)[0] || main;
+  g.name = `${STATS[pre].pre} ${BASES[g.kind][g.tier][0]}`;
+  return g;
+}
+
 // 드롭 등급 굴림 (적 종류·회차가 높을수록 좋은 등급)
 export function rollGearTier(strong, round) {
   const r = Math.random() + round * 0.1 + strong;

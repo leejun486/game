@@ -97,6 +97,8 @@ export class Player {
     // 도감 효과 (모든 직업 공통)
     const cx = this.game.codex?.stats() || {};
     for (const [k, v] of Object.entries(cx)) gs[k] = (gs[k] || 0) + v;
+    // 수호령
+    for (const [k, v] of Object.entries(this.game.pet?.stats() || {})) gs[k] = (gs[k] || 0) + v;
     for (const [k, c] of Object.entries(CAPS)) if (gs[k] > c) gs[k] = c;
     // 무기·갑옷 강화 단계
     const ew = w ? this.game.enh?.[w.id] || 0 : 0, eo = o ? this.game.enh?.[o.id] || 0 : 0;
