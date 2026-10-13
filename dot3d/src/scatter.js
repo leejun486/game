@@ -4,6 +4,7 @@
 //  - 막힌 곳(건물·바위·나무 밑동)과 물 위, 높은 단 위에는 놓지 않음
 //  - 화질 '낮음'·도트 모드는 개수를 줄임
 import * as THREE from 'three';
+import { softNormals } from './style.js';
 import { toon, animateMesh, ANIM } from './materials.js';
 import { mulberry32 } from './util.js';
 import { GFX } from './gfx.js';
@@ -100,8 +101,7 @@ function lumpy(detail, seed, amp) {
     if (k === undefined) { k = 1 - amp * 0.6; for (const [bx, by, bz, a] of bumps) k += a * Math.max(0, x * bx + y * by + z * bz); seen.set(key, k); }
     P.setXYZ(i, x * k, y * k, z * k);
   }
-  const ng = g.toNonIndexed(); ng.computeVertexNormals();
-  return ng;
+  return softNormals(g.toNonIndexed());
 }
 // 덤불: 울퉁불퉁한 덩어리 셋
 function bushGeo() {

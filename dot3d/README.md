@@ -4,6 +4,14 @@
 
 > **English:** *Wolhagung: Night Parade of the Dokkaebi* is a 3D action RPG set in a Joseon-era palace. The game is fully playable in English, Japanese (日本語) and Simplified Chinese (简体中文): it follows your browser language, and you can switch any time with the 🌐 button on the title screen or under **Menu → Display → Language**.
 
+## 그림 스타일
+
+기본은 **셀 애니** 스타일입니다 (`src/style.js`, 합성 셰이더 `src/pixel.js`).
+
+- 빛과 그늘을 두 단계로만 나눠 칠하고(그림자 가장자리도 또렷하게), 깊이·면 방향이 끊기는 곳에 진한 잉크 외곽선을 그립니다.
+- 3D 질감 없애기: 텍스처의 잔결은 흐린 단계와 섞어 평평한 붓칠처럼, 울퉁불퉁한 노멀맵은 끄고, 나무·바위·잎 덩어리의 각진 면은 둥글게 이어 붙입니다. 화면 전체에 붓칠(쿠와하라) 필터를 한 번 더 씌웁니다 (화질 '낮음'에서는 뺌).
+- 비교용으로 예전 그림과 다른 시안도 남아 있습니다: 주소 뒤에 `?style=hd`(예전), `?style=story`(동화 수채화), `?style=pastel`(파스텔).
+
 ## 코드 구조
 
 - `src/main.js` — `Game` 클래스(시작·입력·저장·전투 판정·적 처치·루프). 덩치가 큰 부분은 `src/game/`으로 나눠 두고 `Game.prototype`에 붙입니다: `skills.js`(스킬·고유 기술·투사체), `bossfx.js`(보스 패턴 도우미), `tower.js`(시련탑), `pause.js`(설정 창), `items.js`(줍기·장비), `auto.js`(자동 이동·사냥), `quest.js`(메인 퀘스트·표시), `shared.js`(함께 쓰는 것).

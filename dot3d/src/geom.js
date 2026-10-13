@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { softNormals, isPoly } from './style.js';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 
 // 면마다 실제 크기에 맞춰 UV를 늘린 박스 (텍셀 밀도 일정)
@@ -29,6 +30,7 @@ export class Batcher {
   constructor() { this.groups = new Map(); }
   add(geo, mat, matrix) {
     let g = geo.index ? geo.toNonIndexed() : geo.clone();
+    if (isPoly(geo)) softNormals(g); // 돌·잎 덩어리도 둥글게
     if (!g.attributes.uv) g.setAttribute('uv', new THREE.Float32BufferAttribute(new Float32Array(g.attributes.position.count * 2), 2));
     for (const k of Object.keys(g.attributes)) if (!['position', 'normal', 'uv'].includes(k)) g.deleteAttribute(k);
     g.applyMatrix4(matrix);

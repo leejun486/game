@@ -1,5 +1,6 @@
 // 궁궐 마당 레벨: 지오메트리 + 충돌/높이
 import * as THREE from 'three';
+import { softNormals } from './style.js';
 import { toon, animateMesh, ANIM, shared, softEdge } from './materials.js';
 import { boxGeo, cylGeo, Batcher, roofGeometry, latheGeo } from './geom.js';
 import * as T from './textures.js';
@@ -1381,8 +1382,7 @@ function puffGeo(R) {
     }
     P.setXYZ(i, x * k, (y < -0.2 ? y * 0.65 : y) * k, z * k);
   }
-  const ng = g.toNonIndexed();
-  ng.computeVertexNormals(); // 면마다 각진 저폴리 느낌
+  const ng = softNormals(g.toNonIndexed()); // 면마다 각진 저폴리 느낌 (새 그림 스타일에선 둥글게)
   puffCache[v] = ng;
   return ng;
 }
@@ -1415,8 +1415,7 @@ function needlePad(R) {
   g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
   g.setIndex(idx);
   g.computeVertexNormals();
-  padCache[v] = g.toNonIndexed();
-  padCache[v].computeVertexNormals();
+  padCache[v] = softNormals(g.toNonIndexed());
   return padCache[v];
 }
 
