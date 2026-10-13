@@ -1,7 +1,7 @@
 // 새 지역: 물안개 늪 (폐사찰 뒷문 너머)
 //  기믹: 얕은 물웅덩이는 걸음이 느려짐(물귀신은 오히려 빨라짐). 나무 다리 위는 괜찮음
 import * as THREE from 'three';
-import { toon, animateMesh, ANIM } from './materials.js';
+import { toon, animateMesh, ANIM, shared } from './materials.js';
 import { boxGeo, cylGeo, Batcher, latheGeo } from './geom.js';
 import * as T from './textures.js';
 import { mulberry32 } from './util.js';
@@ -278,13 +278,37 @@ function canyonMaterials(W) {
     M.basalt = toon({ ...HD.hdBlock([92, 84, 82]), roughness: 0.95 });
   }
   PAVED.add(M.basalt);
-  M.lava = toon({ color: C('#ff7a1a'), emissive: C('#ff4a00'), emissiveIntensity: 1.4 });
+  M.lava = lavaMaterial(W);
   M.lavaCrust = toon({ color: C('#2a1e1a'), emissive: C('#4a1200') });
   M.ember = toon({ color: C('#ffb060'), emissive: C('#ff6a00'), emissiveIntensity: 2 });
   M.iron = toon({ color: C('#4a4a50'), metalness: GFX.hd ? 0.8 : 0, roughness: 0.4 });
   M.rust = toon({ color: C('#8a4a2a') });
   W.lavaMats = W.lavaMats || [];
-  W.lavaMats.push({ mat: M.lava, base: 1.4 }, { mat: M.ember, base: 2 });
+  W.lavaMats.push({ mat: M.ember, base: 2 });
+}
+
+// 용암: 만화처럼 굵게 흐르는 띠 (주황 바탕 + 노란 물결 + 검붉은 굳은 조각), 밤에도 빛나게 그대로
+function lavaMaterial(W) {
+  const mat = new THREE.ShaderMaterial({
+    uniforms: { uTime: shared.time },
+    vertexShader: `
+      varying vec3 vW;
+      void main(){ vec4 w = modelMatrix * vec4(position,1.0); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`,
+    fragmentShader: `
+      uniform float uTime; varying vec3 vW;
+      void main(){
+        vec2 p = vW.xz * 0.55;
+        float t = uTime * 0.35;
+        float w = sin(p.x * 2.1 + sin(p.y * 1.7 + t) * 1.6 + t * 1.3) + sin(p.y * 2.7 - t * 1.1 + sin(p.x * 1.3) * 1.2) * 0.8;
+        vec3 c = vec3(1.0, 0.42, 0.08);
+        if (w > 0.7) c = vec3(1.0, 0.66, 0.12);
+        if (w > 1.35) c = vec3(1.0, 0.9, 0.45);
+        float k = sin(p.x * 3.3 - t * 0.6 + sin(p.y * 2.9) * 2.0) * sin(p.y * 3.1 + t * 0.4);
+        if (k > 0.72) c = vec3(0.42, 0.1, 0.06);
+        gl_FragColor = vec4(pow(c, vec3(2.2)) * 1.15, 1.0);
+      }`,
+  });
+  return mat;
 }
 
 // 용암 흐름: 이어진 점들을 따라 넓적한 띠. 판정은 막힌 사각형들

@@ -23,9 +23,8 @@ function streamMaterial(W) {
       varying vec2 vUv; varying vec3 vW;
       vec3 lin(vec3 c){ return pow(c, vec3(2.2)); }
       void main(){
-        vec2 q = floor(vec2(vUv.x * 10.0, vUv.y * 5.0)) ;
         float v = vUv.y * 2.2 - uTime * 1.6;
-        float w = sin(v * 3.1 + sin(vUv.x * 9.0 + vUv.y) * 1.4) + sin(v * 5.3 + vUv.x * 4.0) * 0.6 + sin(floor(vW.x * 8.0) * 0.7 + floor(vW.z * 8.0) * 1.3 - uTime * 3.0) * 0.35;
+        float w = sin(v * 3.1 + sin(vUv.x * 9.0 + vUv.y) * 1.4) + sin(v * 5.3 + vUv.x * 4.0) * 0.6 + sin(vW.x * 1.9 + vW.z * 1.3 - uTime * 2.2) * 0.35; // (예전엔 칸 무늬라 도트처럼 보였음)
         vec3 c = vec3(0.24, 0.58, 0.66);
         if (w > 0.9) c = vec3(0.38, 0.72, 0.78);
         if (w > 1.45) c = vec3(0.82, 0.95, 0.96);
