@@ -1802,7 +1802,7 @@ class Game {
     const TR = this.tower?.active ? this.tower : null;
     if (opt.weak) e.maxHp = e.hp = Math.max(1, Math.round(e.maxHp * 0.6));
     // 시간 던전: 한 시간 내내 싸우는 곳이라 적이 약함 (피해 35%, 체력 75%, 수호자는 보스 체력의 60%)
-    if (TR?.mode === 'dungeon') { e.dmg = Math.max(1, Math.round(e.dmg * 0.65)); e.maxHp = e.hp = Math.max(1, Math.round(e.maxHp * (opt.guard ? 0.9 : 1.0))); }
+    if (TR?.mode === 'dungeon') { e.dmg = Math.max(1, Math.round(e.dmg * 0.48)); e.maxHp = e.hp = Math.max(1, Math.round(e.maxHp * (opt.guard ? 0.8 : 0.9))); }
     if (TR?.rule?.key === 'swift') e.T = { ...e.T, speed: e.T.speed * 1.35 };
     // 각성 보스: 탑 20층부터의 보스 층, 또는 이미 평정한 지역을 다시 울려 부른 보스
     //  (회차(round)는 지역을 평정할 때마다 오르므로 첫 판에도 금방 커짐 — 그래서 '다시 싸우는 지역'으로 정함)
