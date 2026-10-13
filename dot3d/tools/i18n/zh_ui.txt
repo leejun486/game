@@ -947,3 +947,4 @@
 961|没有该礼包
 962|应用上架商店后即可购买。目前可通过达成成就收集月光珠
 963|购买未完成
+964|Jua · M PLUS Rounded 1c · ZCOOL KuaiLe · Noto Serif KR (OFL)

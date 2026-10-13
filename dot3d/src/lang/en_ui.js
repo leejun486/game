@@ -961,6 +961,7 @@ export const dict = {
   '없는 꾸러미예요': 'No such pack',
   '결제는 앱이 스토어에 나오면 열려요. 지금은 업적을 달성해 구슬을 모을 수 있어요': 'Purchases open when the app launches on the store. For now you can earn beads from achievements',
   '결제가 끝나지 않았어요': 'The purchase was not completed',
+  '주아 · M PLUS Rounded 1c · ZCOOL KuaiLe · Noto Serif KR (OFL)': 'Jua · M PLUS Rounded 1c · ZCOOL KuaiLe · Noto Serif KR (OFL)',
 };
 
 const RN = '([ⅠⅡⅢⅣⅤ])';

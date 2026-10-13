@@ -278,7 +278,8 @@ void main() {
   }
   // 필믹 대신 부드러운 톤 (밝은 곳이 바래지 않게)
   col = col / (1.0 + col * 0.35);
-  col *= mix(vec3(1.0), vec3(0.72, 0.82, 1.12), night);
+  // 애니메이션의 밤: 푸르고 밝게 (캐릭터가 잘 보이게)
+  col = mix(col, col * vec3(1.15, 1.3, 1.6) + vec3(0.006, 0.01, 0.025), night * 0.75);
   vec2 vc0 = vUv - 0.5;
   col *= 1.0 - dot(vc0, vc0) * vignette * 0.7;
   col = mix(col, flashColor, flash);

@@ -949,4 +949,5 @@ export default {
   '없는 꾸러미예요': '存在しないパックです',
   '결제는 앱이 스토어에 나오면 열려요. 지금은 업적을 달성해 구슬을 모을 수 있어요': '購入はアプリがストアに出たら開きます。今は実績を達成して玉を集められます',
   '결제가 끝나지 않았어요': '購入が完了しませんでした',
+  '주아 · M PLUS Rounded 1c · ZCOOL KuaiLe · Noto Serif KR (OFL)': 'Jua · M PLUS Rounded 1c · ZCOOL KuaiLe · Noto Serif KR (OFL)',
 };

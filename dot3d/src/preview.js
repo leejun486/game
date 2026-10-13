@@ -60,6 +60,41 @@ export class ClassPreview {
       c.rig.root.visible = false;
       this.scene.add(c.rig.root);
     }
+    // 외형이 바뀌면 초상화도
+    const pl = this.game.player;
+    if (pl && this.pTarget) this.portrait(pl.cls, document.getElementById('portrait-cv'));
+  }
+
+  // 화면 왼쪽 위 초상화: 지금 직업의 캐릭터 얼굴을 가까이서 그림 (예전엔 도트 그림)
+  portrait(cls, cv) {
+    const c = this.cards.find((x) => x.cls === cls);
+    if (!c || !cv) return false;
+    const S = 128;
+    if (!this.pTarget) {
+      this.pTarget = new THREE.WebGLRenderTarget(S, S, { samples: GFX.hd ? 4 : 0 });
+      this.pBuf = new Uint8Array(S * S * 4);
+      this.pCam = new THREE.OrthographicCamera(-0.5, 0.5, 0.5, -0.5, 0.1, 20);
+    }
+    if (cv.width !== S) { cv.width = cv.height = S; }
+    const ctx = cv.getContext('2d'), img = ctx.createImageData(S, S);
+    const r = this.renderer, rig = c.rig;
+    const prevT = r.getRenderTarget(), prevC = r.getClearColor(new THREE.Color()), prevA = r.getClearAlpha();
+    rig.root.visible = true;
+    rig.root.rotation.y = 0.35;
+    rig.animate(0.016, { speed: 0, attack: null, sheathing: 0, dash: false, hurt: 0, dead: false });
+    rig.root.updateMatrixWorld(true);
+    const hp = rig.head.getWorldPosition(new THREE.Vector3());
+    const cam = this.pCam, k = 0.42 * (rig.cfg.scale || 1);
+    cam.left = -k; cam.right = k; cam.top = k * 1.05; cam.bottom = -k * 0.95; cam.updateProjectionMatrix();
+    cam.position.set(hp.x + 1.2, hp.y + 0.5, hp.z + 4); cam.lookAt(hp.x, hp.y - 0.02, hp.z);
+    r.setClearColor(0x000000, 0);
+    r.setRenderTarget(this.pTarget); r.clear(); r.render(this.scene, cam);
+    r.readRenderTargetPixels(this.pTarget, 0, 0, S, S, this.pBuf);
+    r.setRenderTarget(prevT); r.setClearColor(prevC, prevA);
+    rig.root.visible = false;
+    this.copySmooth(this.pBuf, img, S, S);
+    ctx.clearRect(0, 0, S, S); ctx.putImageData(img, 0, 0);
+    return true;
   }
 
   update(dt) {

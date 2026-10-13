@@ -1,12 +1,12 @@
 /* 갈무리11 (SIL OFL 1.1, fonts/OFL.md) — 게임 안에 포함해서 인터넷 없이도 나옴 */
-@font-face { font-family: 'Galmuri11'; src: url('fonts/Galmuri11.woff2') format('woff2'); font-weight: 400; font-display: swap; }
-@font-face { font-family: 'Galmuri11'; src: url('fonts/Galmuri11-Bold.woff2') format('woff2'); font-weight: 700; font-display: swap; }
+/* 화면 글꼴: 둥근 손글씨풍 (애니메이션 그림체에 맞춤) — Jua · M PLUS Rounded 1c · ZCOOL KuaiLe (OFL), 게임에 쓰는 글자만 (tools/i18n/ui_font.py) */
+@font-face { font-family: 'WolhaUI'; src: url('fonts/ui-kr.woff2') format('woff2'); font-display: swap; }
+@font-face { font-family: 'WolhaUIJP'; src: url('fonts/ui-jp.woff2') format('woff2'); font-display: swap; }
+@font-face { font-family: 'WolhaUISC'; src: url('fonts/ui-sc.woff2') format('woff2'); font-display: swap; }
 /* 제목·배너 명조체: Noto Serif KR/JP/SC 900 (OFL)에서 쓰는 글자만 — tools/i18n/serif_font.py. 인터넷 없이도 같은 글꼴 */
 @font-face { font-family: 'WolhaSerif'; src: url('fonts/serif-kr.woff2') format('woff2'); font-weight: 900; font-display: swap; }
 @font-face { font-family: 'WolhaSerifJP'; src: url('fonts/serif-jp.woff2') format('woff2'); font-weight: 900; font-display: swap; }
 @font-face { font-family: 'WolhaSerifSC'; src: url('fonts/serif-sc.woff2') format('woff2'); font-weight: 900; font-display: swap; }
-/* 중국어(간체): Fusion Pixel 12px (OFL)에서 번역에 쓰인 글자만 뽑은 것 — tools/i18n/zh_font.py */
-@font-face { font-family: 'FusionZh'; src: url('fonts/fusion-zh.woff2') format('woff2'); font-display: swap; }
 :root {
   --ink: #1a1622;
   --panel: rgba(22, 18, 30, 0.82);
@@ -15,11 +15,11 @@
   --paper: #f3ead6;
   --red: #d8463a;
   --blue: #6ad0ff;
-  --font: 'Galmuri11', 'Galmuri9', 'Noto Sans KR', 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
+  --font: 'WolhaUI', 'Noto Sans KR', 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
-html[data-lang=zh] { --font: 'FusionZh', 'Galmuri11', 'Noto Sans SC', 'Microsoft YaHei', 'PingFang SC', sans-serif; }
-html[data-lang=ja] { --font: 'Galmuri11', 'Galmuri9', 'Noto Sans JP', 'Meiryo', 'Hiragino Sans', sans-serif; }
+html[data-lang=zh] { --font: 'WolhaUISC', 'WolhaUI', 'Noto Sans SC', 'Microsoft YaHei', 'PingFang SC', sans-serif; }
+html[data-lang=ja] { --font: 'WolhaUIJP', 'WolhaUI', 'Noto Sans JP', 'Meiryo', 'Hiragino Sans', sans-serif; }
 html, body { width: 100%; height: 100%; overflow: hidden; background: #0b0d14; color: var(--paper); font-family: var(--font); user-select: none; -webkit-user-select: none; }
 #app { position: fixed; inset: 0; overflow: hidden; cursor: crosshair; touch-action: none; }
 #stage { position: absolute; inset: 0; overflow: hidden; }
@@ -40,7 +40,7 @@ canvas.view { position: absolute; left: 0; top: 0; image-rendering: pixelated; i
 
 #status { position: absolute; left: 16px; top: 16px; display: flex; gap: 10px; padding: 8px 10px 8px 8px; }
 #portrait { width: 64px; height: 64px; border: 2px solid var(--gold); background: #2a3150; box-shadow: inset 0 0 0 2px #0a0810; }
-#portrait canvas { width: 100%; height: 100%; image-rendering: pixelated; }
+#portrait canvas { width: 100%; height: 100%; image-rendering: auto; }
 #status .col { display: flex; flex-direction: column; gap: 5px; width: 300px; }
 #status .name { font-size: 13px; color: #d8cfb8; letter-spacing: 1px; }
 #status .name b { color: #fff; font-weight: normal; }
@@ -994,3 +994,10 @@ body.native #pz-export { display: none; }
 .lk-sw.shop { border-style: dashed; }
 .lk-sw .lk-cost { color: #9ad8ff; }
 #ach-pop .ach-beads { display: block; font-style: normal; font-size: 11px; color: #bfe8ff; margin-top: 2px; }
+
+/* 애니메이션 그림체: 각진 도트풍 창 대신 둥글고 부드러운 창·막대·단추 */
+.panel { border-radius: 12px; box-shadow: 0 0 0 2px rgba(10, 8, 16, 0.55), inset 0 0 0 1px rgba(255, 220, 140, 0.12), 0 6px 18px rgba(0, 0, 0, 0.35); }
+#portrait { border-radius: 50%; overflow: hidden; background: radial-gradient(circle at 50% 40%, #4a5a8a, #232a48); }
+.bar, .bar i { border-radius: 6px; }
+#status .sk, #bag-btn, #evo-btn, #hunt-btn, #menu-btn, .tabs button, .bag-tabs button, .pz-btn, .lk-chip, .lk-sw, .lk-packs button, #quest, #minimap, #toast, #coach, #ach-pop, #gear-detail .gd, .row, .it { border-radius: 10px; }
+#touch .btns button { border-radius: 50%; }

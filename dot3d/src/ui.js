@@ -40,7 +40,7 @@ export class UI {
 
   // 직업에 맞게 이름·초상화·버튼 이름을 바꿈
   setClass(cfg, pl = this.game.player) {
-    drawPortrait(document.getElementById('portrait-cv'), cfg.id);
+    if (!this.game.preview?.portrait(cfg.id, document.getElementById('portrait-cv'))) drawPortrait(document.getElementById('portrait-cv'), cfg.id);
     document.getElementById('hero-name').innerHTML = `${cfg.title} <b>${cfg.name}</b><span class="lv">Lv.${pl?.level ?? 1}</span>`;
     this.refreshBag();
     const pr = this.game.progressOf ? this.game.progressOf(cfg.id) : null;

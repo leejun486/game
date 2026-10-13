@@ -32,14 +32,14 @@ module.exports = {
     // 중국어 글꼴 (fontTools가 있을 때만)
     let have = null;
     try {
-      have = execFileSync('python3', ['-c', `from fontTools.ttLib import TTFont\nprint(''.join(chr(c) for c in TTFont('${path.join(ROOT, 'fonts/fusion-zh.woff2')}').getBestCmap()))`], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
+      have = execFileSync('python3', ['-c', `from fontTools.ttLib import TTFont\nprint(''.join(chr(c) for c in TTFont('${path.join(ROOT, 'fonts/ui-sc.woff2')}').getBestCmap()))`], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
     } catch { ctx.log('fontTools 없음 — 중국어 글꼴 검사는 건너뜀'); }
     if (have) {
       const fs = require('fs');
       const used = new Set();
       for (const f of fs.readdirSync(path.join(ROOT, 'src/lang')).filter((f) => f.startsWith('zh_'))) for (const c of fs.readFileSync(path.join(ROOT, 'src/lang', f), 'utf8')) if (c.codePointAt(0) >= 0x3400 && c.codePointAt(0) <= 0x9fff) used.add(c);
       const lack = [...used].filter((c) => !have.includes(c));
-      check(!lack.length, `중국어 글꼴에 없는 글자 ${lack.length}개: ${lack.slice(0, 20).join('')} — python3 tools/i18n/zh_font.py 다시 돌리기`);
+      check(!lack.length, `중국어 글꼴에 없는 글자 ${lack.length}개: ${lack.slice(0, 20).join('')} — python3 tools/i18n/ui_font.py 다시 돌리기`);
     }
   },
 };
