@@ -524,11 +524,11 @@ export class Rig {
       // 요정: 어깨 아래로 매끈하게 떨어지는 긴 머리 + 얼굴 옆 머리 + 길쭉한 잎 귀 + 꽃 화관 (등에는 나비 날개 — buildFairyWings)
       if (HDC) {
         // 뒷머리: 매끈한 덩어리 하나 (가닥을 여럿 두면 걸레처럼 보였음) + 끝이 안으로 말린 두 갈래
-        const back = mesh(new THREE.SphereGeometry(hr * 1.02, 24, 16), hairM, 0, -hr * 0.42, -hr * 0.28);
-        back.scale.set(1.04, 1.45, 0.78);
+        const back = mesh(new THREE.SphereGeometry(hr * 1.02, 24, 16), hairM, 0, -hr * 0.3, -hr * 0.28);
+        back.scale.set(1.02, 1.25, 0.76);
         this.head.add(back);
         for (const s of [-1, 1]) {
-          const curl = mesh(new THREE.SphereGeometry(hr * 0.36, 14, 10), hairM, s * hr * 0.42, -hr * 1.42, -hr * 0.3);
+          const curl = mesh(new THREE.SphereGeometry(hr * 0.36, 14, 10), hairM, s * hr * 0.42, -hr * 1.15, -hr * 0.3);
           curl.scale.set(1, 0.8, 0.9);
           this.head.add(curl);
           // 얼굴 옆으로 내려오는 가는 머리
@@ -797,11 +797,12 @@ export class Rig {
     this.fWings = [];
     for (const s of [-1, 1]) {
       const g = new THREE.Group();
-      g.position.set(s * 0.05, 0.12, -0.18);
-      const a = new THREE.Mesh(new THREE.CircleGeometry(0.2, 20), up);
-      a.scale.set(1.25, 0.9, 1); a.position.set(s * 0.22, 0.14, 0); a.rotation.z = s * 0.5;
-      const b = new THREE.Mesh(new THREE.CircleGeometry(0.13, 16), lo);
-      b.scale.set(1.1, 0.95, 1); b.position.set(s * 0.15, -0.1, 0); b.rotation.z = -s * 0.5;
+      // 등 한가운데(허리 위)에 붙음: 머리가 커서 어깨 높이에 달면 머리 옆에 붙은 것처럼 보였음
+      g.position.set(s * 0.05, -0.1, -0.22);
+      const a = new THREE.Mesh(new THREE.CircleGeometry(0.22, 22), up);
+      a.scale.set(1.35, 0.85, 1); a.position.set(s * 0.32, 0.1, 0); a.rotation.z = s * 0.4;
+      const b = new THREE.Mesh(new THREE.CircleGeometry(0.14, 18), lo);
+      b.scale.set(1.15, 0.95, 1); b.position.set(s * 0.22, -0.14, 0); b.rotation.z = -s * 0.45;
       a.userData.noOutline = b.userData.noOutline = true;
       g.add(a, b, mesh(new THREE.SphereGeometry(0.018, 6, 5), rim));
       this.chest.add(g);
@@ -851,7 +852,7 @@ export class Rig {
 
   animCos(dt) {
     const t = this.idleT;
-    if (this.fWings) for (const w of this.fWings) w.g.rotation.y = w.s * (-0.55 + Math.sin(t * 7) * 0.32);
+    if (this.fWings) for (const w of this.fWings) w.g.rotation.y = w.s * (-0.3 + Math.sin(t * 7) * 0.25);
     if (this.wings) for (const w of this.wings) {
       w.g.rotation.y = w.s * (-0.2 + Math.sin(t * 2.2) * 0.14);
       w.g.rotation.x = -0.15 + Math.sin(t * 2.2 + 0.6) * 0.05;
