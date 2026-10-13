@@ -106,7 +106,7 @@ export class Player {
     const ew = w ? this.game.enh?.[w.id] || 0 : 0, eo = o ? this.game.enh?.[o.id] || 0 : 0;
     this.maxHp = Math.round(this.cfg.hp + (this.level - 1) * 12 + (o?.hp || 0) + outfitHp(eo) + (gs.hp || 0));
     this.atkMul = (1 + (this.level - 1) * 0.08) * (1 + (w?.atk || 0) + weaponBonus(ew)) * (1 + (gs.atk || 0));
-    this.def = Math.min(0.7, 1 - (1 - (o?.def || 0) - outfitDef(eo)) * (1 - (gs.def || 0)));
+    this.def = Math.min(0.7, 1 - (1 - (o?.def || 0) - outfitDef(eo)) * (1 - (gs.def || 0)) * (1 - (this.cfg.def || 0))); // cfg.def: 직업 기본 방어 (창술사)
     this.perks = perksOf(pr.weapon, pr.outfit);
     // 보스 무기 고유 기술
     this.ult = w?.ult || null;

@@ -22,8 +22,8 @@ export const CLASSES = {
   },
   lancer: {
     id: 'lancer', title: '창술사', name: '한결', make: makeLancer,
-    hp: 110, skillCd: 3.0, dashCd: 0.55, skill2Cd: 7, skill3Cd: 9,
-    role: '창술 · 중거리 관통', bars: { 체력: 3, 공격: 4, 사거리: 2, 기동: 3, 난이도: 3 }, desc: '길게 꿰뚫는 찌르기, 용아창, 뛰어올라 내려찍는 낙화창, 하늘에서 창이 쏟아지는 천창우',
+    hp: 125, skillCd: 3.0, dashCd: 0.55, skill2Cd: 7, skill3Cd: 9, power: 1.2, def: 0.12, // 앞에서 버티며 꿰뚫는 직업: 둘러싸이기 쉬워 체력·방어(받는 피해 -12%)·위력을 넉넉히
+    role: '창술 · 중거리 관통', bars: { 체력: 4, 공격: 4, 사거리: 2, 기동: 3, 난이도: 3 }, desc: '길게 꿰뚫는 찌르기, 용아창, 뛰어올라 내려찍는 낙화창, 하늘에서 창이 쏟아지는 천창우',
     labels: { atk: '찌르기', dash: '회피', skill: '용아창', skill2: '낙화창', skill3: '천창우' }, hitWord: '연속 찌르기',
   },
 };
