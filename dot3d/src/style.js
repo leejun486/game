@@ -31,7 +31,7 @@ if (STYLE !== 'hd') {
   // 울퉁불퉁한 노멀맵·범프맵은 끔, 하늘/땅 빛은 면 방향과 상관없이 고르게 (각진 면이 덜 보이게)
   C.map_fragment = C.map_fragment.replace(
     'vec4 sampledDiffuseColor = texture2D( map, vMapUv );',
-    'vec4 sampledDiffuseColor = texture2D( map, vMapUv );\n#ifndef KEEP_DETAIL\n\t{ vec3 lo_ = texture2D( map, vMapUv, 4.0 ).rgb; float d_ = dot( sampledDiffuseColor.rgb - lo_, vec3( 0.3333 ) ) / max( dot( lo_, vec3( 0.3333 ) ), 0.05 );\n\t  sampledDiffuseColor.rgb = lo_ * ( 1.0 - 0.3 * smoothstep( 0.16, 0.3, -d_ ) + 0.1 * smoothstep( 0.18, 0.32, d_ ) ); }\n#endif');
+    'vec4 sampledDiffuseColor = texture2D( map, vMapUv );\n#ifndef KEEP_DETAIL\n\t{ vec3 lo_ = texture2D( map, vMapUv, 4.0 ).rgb; float d_ = dot( sampledDiffuseColor.rgb - lo_, vec3( 0.3333 ) ) / max( dot( lo_, vec3( 0.3333 ) ), 0.05 );\n\t  sampledDiffuseColor.rgb = lo_ * ( 1.0 - 0.3 * smoothstep( 0.24, 0.4, -d_ ) ); }\n#endif');
   // 쇠붙이 반사·반짝임 없이 (그림처럼 고른 칠)
   C.metalnessmap_fragment = 'float metalnessFactor = 0.0;';
   C.roughnessmap_fragment = 'float roughnessFactor = 1.0;';
