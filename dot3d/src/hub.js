@@ -60,7 +60,7 @@ export class Hub {
         ['enh', '강화', '', 'enh', close(() => { g.toggleBag(true); g.ui.tab('enh'); })],
         ['refine', '세공', '', 'gem', close(() => { g.toggleBag(true); g.ui.tab('refine'); })],
         ['shop', '장터', '', 'shop', pane('shop'), false, false, `${g.ext.coins || 0}`],
-        ['look', '외형', '', 'look', close(() => { g.toggleBag(true); g.ui.tab('look'); g.ui.renderLook?.(); })],
+        ['look', '외형', '', 'look', close(() => { g.toggleBag(true); g.ui.tab('look'); g.ui.renderLook?.(); }), false, false, `💎 ${g.ext.beads || 0}`],
       ]],
       ['여정', [
         ['map', '지도 · 일지', 'V', 'map', close(() => g.minimap.toggle(true))],

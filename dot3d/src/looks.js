@@ -7,6 +7,7 @@
 import { item } from './items.js';
 import { outfitLook, gearLook } from './character.js';
 import { gearColor } from './gear.js';
+import { cosOf, owns } from './cosmetics.js';
 
 const P = (main, accent, trim, dark) => ({ main, accent, trim, dark });
 export const DYES = [
@@ -28,6 +29,12 @@ export const DYES = [
   { id: 'moon', name: '달빛 은', pal: P('#c8d0e8', '#6a7ab0', '#ffffff', '#3a4060'), ach: 'ending' },
   { id: 'dawn', name: '새벽빛', pal: P('#f0b8a0', '#7a8ad8', '#fff0d0', '#5a4a7a'), ach: 'daily7' },
   { id: 'bloodmoon', name: '붉은 달', pal: P('#8a1020', '#1a1a1a', '#ff6a5a', '#2a0810'), ach: 'hard1' },
+  // 달빛 구슬로 사는 염색 (cosmetics.js)
+  { id: 'cherry', name: '벚꽃 연분홍', pal: P('#f4b8c8', '#7a3a5a', '#fff4f8', '#6a3a4a'), cost: 60 },
+  { id: 'nightsky', name: '밤하늘 금수', pal: P('#141c40', '#f0c040', '#fff0b0', '#0a0e20'), cost: 60 },
+  { id: 'celadon', name: '청자', pal: P('#8ac0b0', '#2a4a44', '#e8f8f0', '#3a5a54'), cost: 60 },
+  { id: 'dancheong', name: '단청', pal: P('#2a7a5a', '#d8302c', '#f0c040', '#123a2a'), cost: 60 },
+  { id: 'inkred', name: '흑적', pal: P('#141014', '#c8302c', '#ff8a6a', '#0a0608'), cost: 60 },
 ];
 export const HAIRS = [
   { id: 'brown', name: '밤색', c: '#4a2a1a' },
@@ -37,26 +44,39 @@ export const HAIRS = [
   { id: 'white', name: '백발', c: '#f0eeea', ach: 'lv30' },
   { id: 'gold', name: '금발', c: '#d8b048', ach: 'codex' },
   { id: 'crimson', name: '홍발', c: '#b02a2a', ach: 'hard10' },
+  { id: 'pink', name: '분홍 머리', c: '#f0a0c0', cost: 40 },
+  { id: 'sky', name: '하늘색 머리', c: '#8ac8f0', cost: 40 },
+  { id: 'violet', name: '보랏빛 머리', c: '#7a4ac8', cost: 40 },
+  { id: 'teal', name: '청록 머리', c: '#2a9a9a', cost: 40 },
 ];
 const dyeById = Object.fromEntries(DYES.map((d) => [d.id, d]));
 const hairById = Object.fromEntries(HAIRS.map((h) => [h.id, h]));
 export const TYPE = { sword: 'hero', mage: 'mage', elf: 'elf', lancer: 'lancer' };
 
-export const unlocked = (game, x) => !x.ach || !!game.stats?.ach?.[x.ach];
+// 쓸 수 있는지: 업적으로 여는 것은 업적, 구슬로 사는 것은 샀는지
+export const unlocked = (game, x) => (x.ach ? !!game.stats?.ach?.[x.ach] : x.cost ? owns(game, x) : true);
 
 // 리그를 만들 설정 (입은 장비 + 외형)
 export function rigOptions(game, cls) {
   const pr = game.progressOf(cls);
-  const L = pr.look || {};
+  // 사기 전에 입어 보기: game.lookTry = { cls, k, v } (외형 탭을 닫으면 지움)
+  const T = game.lookTry?.cls === cls ? game.lookTry : null;
+  const L = T ? { ...(pr.look || {}), [T.k]: T.v } : pr.look || {};
+  const ok = (x) => x && (T && L[T.k] === x.id ? true : unlocked(game, x));
   const w0 = item(pr.weapon), o0 = item(pr.outfit);
   const w = L.weapon && game.inv.has(L.weapon) && item(L.weapon)?.cls === cls ? item(L.weapon) : w0;
   let o = L.outfit && game.inv.has(L.outfit) ? item(L.outfit) : o0;
   const dye = dyeById[L.dye];
-  if (dye && unlocked(game, dye)) o = { ...(o || {}), pal: { ...(o?.pal || {}), ...dye.pal } };
+  if (ok(dye)) o = { ...(o || {}), pal: { ...(o?.pal || {}), ...dye.pal } };
   const gl = {};
   if (!L.gearHide) for (const g of game.equippedGear(cls)) if (g.kind !== 'ring') gl[g.kind] = gearColor(g);
   const opt = { wstyle: w?.style, ...outfitLook(TYPE[cls], o), ...gearLook(gl) };
   const hair = hairById[L.hair];
-  if (hair && unlocked(game, hair)) opt.hair = hair.c;
+  if (ok(hair)) opt.hair = hair.c;
+  // 꾸밈: 머리 장식·등 장식·오라
+  for (const k of ['head', 'back', 'aura']) {
+    const x = L[k] && cosOf(k, L[k]);
+    if (ok(x)) opt['cos' + k[0].toUpperCase() + k.slice(1)] = x;
+  }
   return opt;
 }

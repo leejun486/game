@@ -3,6 +3,10 @@ import { renderRefine } from './refine.js';
 import { item, itemDesc, drawItemIcon, RARITY, WEAPONS, OUTFITS, ULTS } from './items.js';
 import { tr } from './i18n.js';
 import { DYES, HAIRS, unlocked } from './looks.js';
+import { HEADS, BACKS, AURAS, COS_KINDS, beads, buyCos, BEADS_PER_ACH } from './cosmetics.js';
+import { PACKS, buyPack } from './billing.js';
+
+const COS_NAME = { head: '머리 장식', back: '등 장식', aura: '오라' };
 import { ACHIEVEMENTS } from './records.js';
 import { EVOS, RUNES, branchOf, rankOf, runeOf, freePoints, RANK_NAME, MAX_RANK } from './evolve.js';
 import { drawGearIcon, gearLines, gearScore, SLOT_NAME, STATS, BAG_MAX, salvageExp, GEAR_SLOTS, rarityOf, SETS, setBonuses } from './gear.js';
@@ -184,6 +188,8 @@ export class UI {
   showBag(open) {
     document.getElementById('bag').classList.toggle('show', open);
     if (open) this.refreshBag();
+    // 입어 보던 꾸밈은 가방을 닫으면 벗음
+    else if (this.game.lookTry) { this.game.lookTry = null; this.game.player.buildRig(); this.game.preview?.rebuild(); }
   }
 
   itemRow(id, cls, onClick) {
@@ -376,35 +382,74 @@ export class UI {
   }
 
   // 외형 탭: 겉모습만 바꿈 (능력치는 입은 장비 그대로)
-  renderLook() {
+  // 꾸밈(머리 장식·등 장식·오라·구슬 염색·머리색)은 달빛 구슬로 삼. 안 산 것을 누르면 먼저 입어 봄 (game.lookTry)
+  renderLook(msg = '') {
     const g = this.game, p = g.player, pr = g.progressOf(p.cls);
     const L = (pr.look ||= {});
     const el = document.getElementById('tab-look');
+    const T = g.lookTry?.cls === p.cls ? g.lookTry : null;
     const achName = (id) => ACHIEVEMENTS.find((a) => a.id === id)?.name || id;
     const chip = (k, v, label, on, extra = '') => `<button class="lk-chip${on ? ' on' : ''}" data-lk="${k}" data-v="${v}"${extra}>${label}</button>`;
-    const sw = (k, x, cols, on) => {
-      const open = unlocked(g, x);
+    const isOn = (k, x) => (T?.k === k ? T.v === x.id : L[k] === x.id);
+    const sw = (k, x, cols) => {
+      const open = unlocked(g, x), shop = !open && x.cost;
       const box = cols.map((c) => `<i style="background:${c}"></i>`).join('');
-      return `<button class="lk-sw${on ? ' on' : ''}${open ? '' : ' locked'}" data-lk="${k}" data-v="${x.id}"${open ? '' : ' disabled'}><span class="lk-box">${box}</span><span class="lk-n">${x.name}</span>${open ? '' : `<small>🔒 ${achName(x.ach)}</small>`}</button>`;
+      const tag = open ? '' : shop ? `<small class="lk-cost">💎 ${x.cost}</small>` : `<small>🔒 ${achName(x.ach)}</small>`;
+      return `<button class="lk-sw${isOn(k, x) ? ' on' : ''}${open ? '' : shop ? ' shop' : ' locked'}" data-lk="${k}" data-v="${x.id}"${open || shop ? '' : ' disabled'}><span class="lk-box">${box}</span><span class="lk-n">${x.name}</span>${tag}</button>`;
     };
+    const cos = (k, list, cols) => `<div class="bag-sec">${COS_NAME[k]}</div><div class="lk-row">${chip(k, '', '없음', !(T?.k === k ? T.v : L[k]))}${list.map((x) => sw(k, x, cols(x))).join('')}</div>`;
     const outfits = OUTFITS.filter((o) => g.inv.has(o.id));
     const weapons = WEAPONS[p.cls].filter((w) => g.inv.has(w.id));
-    el.innerHTML = `<div class="pz-note" style="margin:0 0 6px">겉모습만 바뀌고 능력치·고유 효과는 입은 장비 그대로예요. 직업마다 따로 기억해요.</div>
+    const tryX = T && (T.k === 'dye' ? DYES : T.k === 'hair' ? HAIRS : COS_KINDS[T.k]).find((x) => x.id === T.v);
+    const packs = this.lookPacks ? `<div class="lk-packs">${PACKS.map((P) => `<button data-pack="${P.id}"><b>💎 ${P.beads}${P.bonus ? ` <em>+${P.bonus}</em>` : ''}</b><span>₩${P.krw.toLocaleString('ko-KR')}</span></button>`).join('')}</div><div class="pz-note" style="margin:2px 0 6px">달빛 구슬로는 겉모습만 살 수 있어요. 능력치·강화·보상은 돈으로 살 수 없어요.</div>` : '';
+    el.innerHTML = `<div class="lk-wallet"><span>💎 달빛 구슬 <b>${beads(g)}</b></span><button data-act="packs" class="sub">${this.lookPacks ? '닫기' : '구슬 얻기'}</button></div>${packs}
+      ${tryX ? `<div class="lk-try"><span>입어 보는 중: <b>${tryX.name}</b></span><button data-act="buy">💎 ${tryX.cost} 사기</button><button data-act="untry" class="sub">벗기</button></div>` : ''}
+      ${msg ? `<div class="enh-msg">${msg}</div>` : ''}
+      <div class="pz-note" style="margin:0 0 6px">겉모습만 바뀌고 능력치·고유 효과는 입은 장비 그대로예요. 직업마다 따로 기억해요.</div>
+      ${cos('head', HEADS, () => ['#ffd040', '#c8302c'])}
+      ${cos('back', BACKS, (x) => [x.a || '#f6f4f0', x.b || x.glow || '#1a1418'])}
+      ${cos('aura', AURAS, (x) => [x.c, x.c2])}
       <div class="bag-sec">겉옷 모양</div><div class="lk-row">${chip('outfit', '', '입은 옷 그대로', !L.outfit)}${outfits.map((o) => chip('outfit', o.id, `<span style="color:${RARITY[o.tier].color}">${o.name}</span>`, L.outfit === o.id)).join('')}</div>
       <div class="bag-sec">무기 모양</div><div class="lk-row">${chip('weapon', '', '든 무기 그대로', !L.weapon)}${weapons.map((w) => chip('weapon', w.id, `<span style="color:${RARITY[w.tier].color}">${w.name}</span>`, L.weapon === w.id)).join('')}</div>
-      <div class="bag-sec">염색</div><div class="lk-row">${chip('dye', '', '원래 색', !L.dye)}${DYES.map((d) => sw('dye', d, [d.pal.main, d.pal.accent, d.pal.trim], L.dye === d.id)).join('')}</div>
-      <div class="bag-sec">머리색</div><div class="lk-row">${chip('hair', '', '원래 색', !L.hair)}${HAIRS.map((h) => sw('hair', h, [h.c], L.hair === h.id)).join('')}</div>
-      <div class="bag-sec">방어구 색 (장갑·바지·띠)</div><div class="lk-row">${chip('gearHide', '', '보이기', !L.gearHide)}${chip('gearHide', '1', '숨기기', !!L.gearHide)}</div>`;
+      <div class="bag-sec">염색</div><div class="lk-row">${chip('dye', '', '원래 색', !(T?.k === 'dye' ? T.v : L.dye))}${DYES.map((d) => sw('dye', d, [d.pal.main, d.pal.accent, d.pal.trim])).join('')}</div>
+      <div class="bag-sec">머리색</div><div class="lk-row">${chip('hair', '', '원래 색', !(T?.k === 'hair' ? T.v : L.hair))}${HAIRS.map((h) => sw('hair', h, [h.c])).join('')}</div>
+      <div class="bag-sec">방어구 색 (장갑·바지·띠)</div><div class="lk-row">${chip('gearHide', '', '보이기', !L.gearHide)}${chip('gearHide', '1', '숨기기', !!L.gearHide)}</div>
+      <div class="pz-note">달빛 구슬은 업적을 하나 달성할 때마다 ${BEADS_PER_ACH}개씩 받아요. 산 꾸밈은 모든 직업이 함께 써요.</div>`;
+    const rebuild = () => { p.buildRig(); g.preview?.rebuild(); };
     el.onclick = (e) => {
+      const act = e.target.closest('[data-act]')?.dataset.act;
+      const pk = e.target.closest('[data-pack]')?.dataset.pack;
+      if (act || pk) e.stopPropagation();
+      if (act === 'packs') { this.lookPacks = !this.lookPacks; this.renderLook(); return; }
+      if (act === 'untry') { g.lookTry = null; rebuild(); this.renderLook(); return; }
+      if (act === 'buy' && tryX) {
+        const err = buyCos(g, tryX);
+        if (err) { g.audio.play('denied'); if (err === '달빛 구슬이 모자라요') this.lookPacks = true; this.renderLook(err); return; }
+        L[T.k] = T.v; g.lookTry = null;
+        g.audio.play('levelup'); this.flash('#bfe8ff', 0.12);
+        rebuild(); g.save(false); this.renderLook(`샀어요: ${tryX.name}`);
+        return;
+      }
+      if (pk) {
+        buyPack(g, pk).then((err) => { if (err) g.audio.play('denied'); else g.audio.play('coin'); this.renderLook(err || '구슬을 받았어요!'); });
+        return;
+      }
       const b = e.target.closest('[data-lk]');
       if (!b || b.disabled) return;
       e.stopPropagation();
       const k = b.dataset.lk, v = b.dataset.v;
-      if (k === 'gearHide') L.gearHide = v === '1'; else if (v) L[k] = v; else delete L[k];
-      p.buildRig();
-      g.preview?.rebuild();
+      const list = k === 'dye' ? DYES : k === 'hair' ? HAIRS : COS_KINDS[k];
+      const x = v && list?.find((y) => y.id === v);
+      if (x && !unlocked(g, x)) {
+        // 안 산 꾸밈: 입어 보기 (다시 누르면 벗음)
+        g.lookTry = T?.k === k && T.v === v ? null : { cls: p.cls, k, v };
+      } else {
+        if (T?.k === k) g.lookTry = null;
+        if (k === 'gearHide') L.gearHide = v === '1'; else if (v) L[k] = v; else delete L[k];
+        g.save(false);
+      }
+      rebuild();
       g.audio.play('talk');
-      g.save(false);
       this.renderLook();
     };
   }

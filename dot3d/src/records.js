@@ -1,5 +1,6 @@
 // 기록: 누적 통계, 업적, 몬스터 도감, 장비 도감
 // 통계는 game.stats에 모여 저장되고, 업적은 1초마다(그리고 큰 일이 있을 때) 조건을 확인해 달성 알림을 띄움
+import { achBeads, BEADS_PER_ACH } from './cosmetics.js';
 import { tr } from './i18n.js';
 import { WEAPONS, OUTFITS, RARITY } from './items.js';
 import { SETS, setBonuses } from './gear.js';
@@ -186,6 +187,7 @@ export class Records {
       this.queue.push(A);
       if (D?.steam) D.steamAchievement(steamName(A.id));
     }
+    achBeads(this.game); // 업적마다 달빛 구슬 (cosmetics.js)
   }
 
   update(dt) {
@@ -196,7 +198,7 @@ export class Records {
     if (this.popT > 0) { this.popT -= dt; if (this.popT <= 0) this.pop.classList.remove('show'); return; }
     const A = this.queue.shift();
     if (!A) return;
-    this.pop.innerHTML = `<small>${tr('업적 달성')}</small><b>${tr(A.name)}</b><span>${tr(A.desc)}</span>`;
+    this.pop.innerHTML = `<small>${tr('업적 달성')}</small><b>${tr(A.name)}</b><span>${tr(A.desc)}</span><em class="ach-beads">${tr(`달빛 구슬 +${BEADS_PER_ACH}`)}</em>`;
     this.pop.classList.add('show');
     this.popT = 3.4;
     g.audio.play('levelup');

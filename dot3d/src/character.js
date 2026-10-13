@@ -327,9 +327,17 @@ export class Rig {
     if (cfg.acc) this.buildAccessory(cfg.acc, hr, cfg);
     this.flutter = [];
     if (cfg.deco) for (const d of cfg.deco) this.buildDeco(d, hr, cfg);
+    // 꾸밈 (cosmetics.js): 머리 장식·등 장식은 옷 장식과 같은 것이면 겹쳐 만들지 않음
+    for (const x of [cfg.cosHead, cfg.cosBack]) {
+      if (!x) continue;
+      if (x.acc) { if (x.acc !== cfg.acc) this.buildAccessory(x.acc, hr, cfg); }
+      else if (x.deco) { if (!(cfg.deco || []).includes(x.deco)) this.buildDeco(x.deco, hr, { ...cfg, decoA: x.a || cfg.decoA, decoB: x.b || cfg.decoB, decoGlow: x.glow || cfg.decoGlow }); }
+      else if (x.wings) this.buildWings();
+    }
     if (cfg.weapon) this.buildWeapon(cfg.weapon);
 
     this.root.traverse((o) => { if (o.isMesh) o.castShadow = true; });
+    if (cfg.cosAura) this.buildAura(cfg.cosAura); // 빛이라 그림자 없음
 
     // 애니메이션 상태
     this.phase = 0;
@@ -718,6 +726,36 @@ export class Rig {
         this.hips.add(t);
         this.foxTails.push(t);
       }
+    } else if (acc === 'jokduri') {
+      // 족두리: 정수리 위 검은 여섯모 관 + 둘레의 구슬
+      if (cfg.type === 'mage') return;
+      const blk = this.mat({ color: C('#1a1420') }), gold = this.mat({ color: C('#ffd040'), emissive: C('#3a2600') });
+      const jw = this.mat({ color: C('#ff4a6a'), emissive: C('#4a0a1a') }), jade = this.mat({ color: C('#4ad8a0'), emissive: C('#0a3a2a') });
+      const y = hr * 0.92;
+      this.head.add(mesh(new THREE.CylinderGeometry(0.12, 0.16, 0.16, 6), blk, 0, y, -0.02));
+      this.head.add(mesh(new THREE.CylinderGeometry(0.165, 0.165, 0.03, 6), gold, 0, y - 0.07, -0.02));
+      for (let i = 0; i < 6; i++) {
+        const a = (i / 6) * Math.PI * 2;
+        this.head.add(mesh(new THREE.IcosahedronGeometry(0.03, 0), i % 2 ? jade : jw, Math.cos(a) * 0.14, y, Math.sin(a) * 0.14 - 0.02));
+      }
+      this.head.add(mesh(new THREE.IcosahedronGeometry(0.045, 0), jw, 0, y + 0.11, -0.02));
+    } else if (acc === 'mask') {
+      // 도깨비 탈: 머리 옆에 비스듬히 걸쳐 쓴 붉은 탈 (뿔·눈·이빨)
+      const red = this.mat({ color: C('#c8302c') }), wht = this.mat({ color: C('#f4ece0') }), blk = this.mat({ color: C('#141014') });
+      const gold = this.mat({ color: C('#ffd040'), emissive: C('#3a2600') });
+      const m = new THREE.Group();
+      m.position.set(hr * 0.8, hr * 0.4, hr * 0.25);
+      m.rotation.set(0, 1.15, -0.3);
+      m.scale.setScalar(1.45);
+      m.add(mesh(new THREE.BoxGeometry(0.2, 0.24, 0.045), red));
+      for (const s of [-1, 1]) {
+        m.add(mesh(new THREE.BoxGeometry(0.055, 0.035, 0.02), wht, s * 0.05, 0.04, 0.026));
+        m.add(mesh(new THREE.BoxGeometry(0.024, 0.024, 0.02), blk, s * 0.05, 0.04, 0.036));
+        m.add(mesh(new THREE.ConeGeometry(0.026, 0.09, 4), gold, s * 0.07, 0.16, 0));
+        m.add(mesh(new THREE.ConeGeometry(0.014, 0.04, 3), wht, s * 0.035, -0.09, 0.03));
+      }
+      m.add(mesh(new THREE.BoxGeometry(0.12, 0.025, 0.02), blk, 0, -0.065, 0.026));
+      this.head.add(m);
     } else if (acc === 'gat') {
       const hatM = this.mat({ color: C('#0c0a10') });
       const band = this.mat({ color: C('#8a5ad8'), emissive: C('#2a0a4a') });
@@ -730,6 +768,68 @@ export class Rig {
       // 갓끈: 보랏빛 구슬 줄
       const bead = this.mat({ color: C('#e0c8ff'), emissive: C('#4a2a8a') });
       for (const s of [-1, 1]) for (let i = 0; i < 6; i++) this.head.add(mesh(new THREE.SphereGeometry(0.024, 4, 3), bead, s * (0.24 - i * 0.012), hy - 0.05 - i * 0.065, 0.07));
+    }
+  }
+
+  // 꾸밈: 학 날개 (깃 넷이 부채꼴로, 천천히 퍼덕임)
+  buildWings() {
+    const wM = this.mat({ color: C('#f6f4f0') }), tipM = this.mat({ color: C('#1a1418') });
+    this.wings = [];
+    for (const s of [-1, 1]) {
+      const g = new THREE.Group();
+      g.position.set(s * 0.07, 0.1, -0.2);
+      for (let i = 0; i < 5; i++) {
+        const len = 0.66 - i * 0.08, piv = new THREE.Group();
+        piv.rotation.z = s * (0.65 - i * 0.26);
+        piv.add(mesh(new THREE.BoxGeometry(len, 0.11, 0.018), wM, s * len / 2, 0, -i * 0.012));
+        if (i < 3) piv.add(mesh(new THREE.BoxGeometry(0.14, 0.114, 0.022), tipM, s * (len - 0.06), 0, -i * 0.012));
+        g.add(piv);
+      }
+      this.chest.add(g);
+      this.wings.push({ g, s });
+    }
+  }
+
+  // 꾸밈: 오라 (발밑 빛 고리 둘 + 떠오르는 빛 알갱이·꽃잎). 몸 크기와 상관없이 뿌리에 붙임
+  buildAura(a) {
+    const basic = (c, op) => new THREE.MeshBasicMaterial({ color: C(c), transparent: true, opacity: op, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
+    const ringM = basic(a.c, 0.5), moteM = basic(a.c2, 0.9), moteM2 = basic(a.c, 0.8);
+    const g = new THREE.Group();
+    const ring = new THREE.Mesh(new THREE.RingGeometry(0.44, 0.52, 36), ringM);
+    ring.rotation.x = -Math.PI / 2; ring.position.y = 0.03;
+    const ring2 = new THREE.Mesh(new THREE.RingGeometry(0.26, 0.29, 6), ringM);
+    ring2.rotation.x = -Math.PI / 2; ring2.position.y = 0.035;
+    g.add(ring, ring2);
+    const geo = a.petal ? new THREE.PlaneGeometry(0.08, 0.05) : new THREE.OctahedronGeometry(0.035, 0);
+    const motes = [];
+    for (let i = 0; i < 14; i++) {
+      const m = new THREE.Mesh(geo, i % 2 ? moteM : moteM2);
+      m.userData = { a: Math.random() * 6.28, r: 0.22 + Math.random() * 0.32, y: Math.random() * 1.8, v: 0.3 + Math.random() * 0.4 };
+      g.add(m); motes.push(m);
+    }
+    this.root.add(g);
+    this.aura = { g, ring, ring2, ringM, motes, petal: !!a.petal };
+  }
+
+  animCos(dt) {
+    const t = this.idleT;
+    if (this.wings) for (const w of this.wings) {
+      w.g.rotation.y = w.s * (-0.2 + Math.sin(t * 2.2) * 0.14);
+      w.g.rotation.x = -0.15 + Math.sin(t * 2.2 + 0.6) * 0.05;
+    }
+    const A = this.aura;
+    if (!A) return;
+    A.ring.rotation.z += dt * 0.5;
+    A.ring2.rotation.z -= dt * 0.9;
+    A.ringM.opacity = 0.38 + Math.sin(t * 3) * 0.14;
+    for (const m of A.motes) {
+      const u = m.userData;
+      u.y += u.v * dt;
+      u.a += dt * (A.petal ? 1.2 : 0.7);
+      if (u.y > 1.8) { u.y = 0; u.a = Math.random() * 6.28; }
+      m.position.set(Math.cos(u.a) * u.r, u.y, Math.sin(u.a) * u.r);
+      m.scale.setScalar(Math.max(0.05, Math.sin((u.y / 1.8) * Math.PI)));
+      if (A.petal) m.rotation.set(t * 2 + u.a, u.a * 3, t);
     }
   }
 
@@ -982,6 +1082,7 @@ export class Rig {
 
   // p: {speed, moving, attack:{t, kind} | null, dash, hurt, dead, dt}
   animate(dt, p) {
+    if (this.wings || this.aura) this.animCos(dt);
     // 떠다니는 장식 (명부·업경대): 천천히 오르내리며 돎
     if (this.floaters) { this._ft = (this._ft || 0) + dt; for (const f of this.floaters) { f.obj.position.y = f.base.y + Math.sin(this._ft * 1.6) * 0.06; f.obj.rotation.y += f.spin * dt; } }
     const s = p.speed || 0;
