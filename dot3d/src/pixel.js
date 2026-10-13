@@ -261,17 +261,17 @@ void main() {
   {
     float ink = dr < 0.9999 ? inkEdge(vUv, STYLE == 3 ? 2.6 : STYLE == 2 ? 1.6 : 2.0) : 0.0;
   #if STYLE == 1
-    col = max(sat(col, 1.3), 0.0) * 1.25 + vec3(0.02, 0.02, 0.03);
+    col = max(sat(col, 1.3), 0.0) * 1.25;
     col = mix(col, col * vec3(0.18, 0.14, 0.24), ink * 0.9);
   #elif STYLE == 2
     // 종이 결 (낮은 주파수 얼룩 + 가는 섬유)
     float paper = hash(floor(gl_FragCoord.xy * 0.5)) * 0.05 + texture2D(tCloud, gl_FragCoord.xy / res * 1.7).r * 0.12;
-    col = max(sat(col, 0.85), 0.0) * 1.15 + 0.08;
-    col *= 0.95 + paper;
+    col = max(sat(col, 0.85), 0.0) * 1.2 + 0.006;
+    col *= 0.93 + paper;
     float wob = hash(floor(gl_FragCoord.xy / 3.0)) * 0.4 + 0.6;
     col = mix(col, vec3(0.30, 0.20, 0.14), ink * 0.7 * wob);
   #else
-    col = max(sat(col, 1.05), 0.0) * 1.2 + vec3(0.09, 0.07, 0.11);
+    col = max(sat(col, 1.15), 0.0) * 1.3 + vec3(0.008, 0.005, 0.012);
     col = mix(col, vec3(0.25, 0.16, 0.32), ink * 0.95);
   #endif
   }
