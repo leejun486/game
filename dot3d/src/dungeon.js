@@ -32,7 +32,7 @@ export const DUNGEONS = {
 };
 export const DG_ORDER = ['scroll', 'gear', 'stone'];
 const GUARD_EVERY = 240; // 수호자 간격 (초)
-const KEEP = 5;          // 늘 이만큼은 살아 있게
+const KEEP = 7;          // 늘 이만큼은 살아 있게
 
 export function dgState(g) {
   const E = (g.ext.dg ||= { day: null, used: {}, total: 0 });
@@ -53,7 +53,7 @@ export function startDungeon(g, id) {
   const p = g.player;
   g.towerReturn = p.pos.clone();
   // 적 레벨 = 1 + floor + (내 레벨-1)/3 (spawnEnemy) → 내 레벨보다 4쯤 낮게 (오래 싸우는 곳이라)
-  g.tower = { active: true, mode: 'dungeon', dg: id, floor: Math.max(1, p.level - 5 - Math.floor((p.level - 1) / 3)), best: 0, cleared: false, lastT: g.time, kills: 0, loot: {}, guardAt: g.time + GUARD_EVERY, spawnAt: g.time + 2 };
+  g.tower = { active: true, mode: 'dungeon', dg: id, floor: Math.max(1, p.level - 2 - Math.floor((p.level - 1) / 6)), best: 0, cleared: false, lastT: g.time, kills: 0, loot: {}, guardAt: g.time + GUARD_EVERY, spawnAt: g.time + 2 };
   g.teleport(0, g.towerZ() + 8);
   addDungeonProps(g, id);
   g.audio.play('portal');
@@ -133,7 +133,7 @@ export function updateDungeon(g) {
   if (g.time > T.spawnAt && alive < KEEP) {
     T.spawnAt = g.time + 0.5;
     const n = Math.min(3, KEEP - alive);
-    for (let i = 0; i < n; i++) g.spawnQueue.push({ type: D.pool[Math.floor(Math.random() * D.pool.length)], elite: Math.random() < 0.08, at: g.time + 0.3 + i * 0.35 });
+    for (let i = 0; i < n; i++) g.spawnQueue.push({ type: D.pool[Math.floor(Math.random() * D.pool.length)], elite: Math.random() < 0.15, at: g.time + 0.3 + i * 0.35 });
   }
   if (g.time > T.guardAt) {
     T.guardAt = g.time + GUARD_EVERY;
@@ -166,7 +166,7 @@ export function dungeonLoot(g, e) {
   const T = g.tower, id = T.dg, lv = Math.max(1, e.lvl || 1) + g.round;
   T.kills++;
   // 한 시간 내내 싸우니 숨 돌릴 틈: 수호자를 잡으면 40%, 20마리마다 20% 회복
-  const pl = g.player, heal = e.isBoss ? 0.4 : T.kills % 20 === 0 ? 0.2 : 0;
+  const pl = g.player, heal = e.isBoss ? 0.3 : T.kills % 20 === 0 ? 0.1 : 0;
   if (heal && !pl.dead) { const h = Math.min(pl.maxHp - pl.hp, Math.round(pl.maxHp * heal)); if (h > 0) { pl.hp += h; g.fx.number(pl.pos.clone().add(new pl.pos.constructor(0, 2.2, 0)), `+${h}`, 'heal'); } }
   const add = (k, n = 1) => { T.loot[k] = (T.loot[k] || 0) + n; };
   const r = Math.random;
