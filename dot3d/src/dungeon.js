@@ -53,7 +53,7 @@ export function startDungeon(g, id) {
   const p = g.player;
   g.towerReturn = p.pos.clone();
   // 적 레벨 = 1 + floor + (내 레벨-1)/3 (spawnEnemy) → 내 레벨보다 4쯤 낮게 (오래 싸우는 곳이라)
-  g.tower = { active: true, mode: 'dungeon', dg: id, floor: Math.max(1, p.level - 4 - Math.floor((p.level - 1) / 4)), best: 0, cleared: false, lastT: g.time, kills: 0, loot: {}, guardAt: g.time + GUARD_EVERY, spawnAt: g.time + 2 };
+  g.tower = { active: true, mode: 'dungeon', dg: id, floor: Math.max(1, p.level - 7), best: 0, cleared: false, lastT: g.time, kills: 0, loot: {}, guardAt: g.time + GUARD_EVERY, spawnAt: g.time + 2 };
   g.teleport(0, g.towerZ() + 8);
   addDungeonProps(g, id);
   g.audio.play('portal');
