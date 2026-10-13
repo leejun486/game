@@ -1,6 +1,7 @@
 // 새 지역 몬스터 모양 (기존 Rig·StoneRig를 바탕으로 덧붙임)
 //  왕릉 고분: 망령 병사, 무인석, 원귀 궁녀, 어둑시니
 import * as THREE from 'three';
+import { rbox } from './style.js';
 import { toon } from './materials.js';
 import { Rig, StoneRig, makeDokkaebi, makeLady } from './character.js';
 import { BaseRig, makeBeast, CrabRig, CrowRig } from './rigs2.js';
@@ -28,8 +29,8 @@ export function makeTombSoldier() {
     sh.scale.set(1.1, 0.6, 1);
     r.chest.add(sh);
   }
-  r.hips.add(mesh(new THREE.BoxGeometry(0.34, 0.24, 0.04), plate, 0, 0.26, 0.2));
-  r.hips.add(mesh(new THREE.BoxGeometry(0.12, 0.08, 0.045), rust, 0.08, 0.2, 0.2));
+  r.hips.add(mesh(rbox(0.34, 0.24, 0.04), plate, 0, 0.26, 0.2));
+  r.hips.add(mesh(rbox(0.12, 0.08, 0.045), rust, 0.08, 0.2, 0.2));
   // 넋의 푸른 기운 (가슴 한가운데)
   r.hips.add(mesh(new THREE.SphereGeometry(0.04, 6, 4), toon({ color: C('#bfffee'), emissive: C('#2affc0'), emissiveIntensity: 1.6 }), 0, 0.3, 0.23));
   return r;
@@ -42,7 +43,7 @@ export function makeCourtGhost() {
     deco: ['flowerPin', 'ribbon'], decoA: '#b890ff', decoB: '#f0e0ff', decoGlow: '#4a2a8a',
   });
   // 당의 앞섶의 금박 띠
-  r.hips.add(mesh(new THREE.BoxGeometry(0.3, 0.05, 0.02), r.mat({ color: C('#e0c060') }), 0, 0.12, 0.23));
+  r.hips.add(mesh(rbox(0.3, 0.05, 0.02), r.mat({ color: C('#e0c060') }), 0, 0.12, 0.23));
   return r;
 }
 
@@ -52,14 +53,14 @@ export function makeMuinseok() {
   const st = r.stoneMat, dk = r.darkMat;
   // 투구 끝 뿔과 귀 가리개
   r.torso.add(mesh(new THREE.ConeGeometry(0.12, 0.3, 6), dk, 0, 1.4, 0));
-  for (const s of [-1, 1]) r.torso.add(mesh(new THREE.BoxGeometry(0.06, 0.26, 0.24), dk, s * 0.36, 0.82, 0));
+  for (const s of [-1, 1]) r.torso.add(mesh(rbox(0.06, 0.26, 0.24), dk, s * 0.36, 0.82, 0));
   // 갑옷 비늘 줄
-  for (let i = 0; i < 3; i++) r.torso.add(mesh(new THREE.BoxGeometry(0.64, 0.05, 0.52), dk, 0, 0.42 + i * 0.16, 0));
+  for (let i = 0; i < 3; i++) r.torso.add(mesh(rbox(0.64, 0.05, 0.52), dk, 0, 0.42 + i * 0.16, 0));
   // 오른손 큰 돌칼 (팔과 함께 휘두름)
   const arm = r.arms[1];
-  const blade = mesh(new THREE.BoxGeometry(0.08, 0.9, 0.16), st, 0, -0.95, 0.12);
+  const blade = mesh(rbox(0.08, 0.9, 0.16), st, 0, -0.95, 0.12);
   arm.add(blade);
-  arm.add(mesh(new THREE.BoxGeometry(0.26, 0.06, 0.2), dk, 0, -0.55, 0.1));
+  arm.add(mesh(rbox(0.26, 0.06, 0.2), dk, 0, -0.55, 0.1));
   // 이끼
   const moss = toon({ color: C('#5a6a3a') });
   r.mats.push(moss);
@@ -96,7 +97,7 @@ class EodumRig extends BaseRig {
       const z = Math.sqrt(Math.max(0, 0.25 - x * x - y * y)) * 0.98;
       this.head.add(mesh(new THREE.SphereGeometry(r, 10, 8), eye, x, y, z));
     }
-    this.head.add(mesh(new THREE.BoxGeometry(0.42, 0.05, 0.05), this.mat({ color: C('#4a0a2a'), emissive: C('#2a0010') }), 0, -0.2, 0.44));
+    this.head.add(mesh(rbox(0.42, 0.05, 0.05), this.mat({ color: C('#4a0a2a'), emissive: C('#2a0010') }), 0, -0.2, 0.44));
     // 긴 팔: 어깨 → 팔꿈치 → 발톱
     this.arms = [];
     for (const s of [-1, 1]) {
@@ -240,9 +241,9 @@ class FishRig extends BaseRig {
     this.head.add(f);
     for (const sx of [-1, 1]) {
       this.head.add(mesh(new THREE.SphereGeometry(0.03, 6, 4), dark, sx * 0.06, 0.04, 0.12));
-      this.head.add(mesh(new THREE.BoxGeometry(0.06, 0.012, 0.01), dark, sx * 0.06, 0.09, 0.115, 0, 0, sx * 0.25));
+      this.head.add(mesh(rbox(0.06, 0.012, 0.01), dark, sx * 0.06, 0.09, 0.115, 0, 0, sx * 0.25));
     }
-    this.head.add(mesh(new THREE.BoxGeometry(0.08, 0.025, 0.02), lip, 0, -0.07, 0.11));
+    this.head.add(mesh(rbox(0.08, 0.025, 0.02), lip, 0, -0.07, 0.11));
     // 등지느러미
     for (let k = 0; k < 5; k++) this.torso.add(mesh(new THREE.ConeGeometry(0.05, 0.22 - k * 0.02, 4), fin, 0, 0.45 - k * 0.12, -0.22 - k * 0.02, -0.6, 0, 0));
     // 지느러미 팔

@@ -171,6 +171,7 @@ float inkEdge(vec2 uv, float w) {
   vec2 px = w / res;
   float e = 0.0;
   for (int i = 0; i < 8; i++) {
+    if (aoOn == 0.0 && mod(float(i), 2.0) > 0.5) continue; // 화질 낮음: 네 방향만 (휴대폰 부담 절반)
     float a = float(i) * 0.7854;
     vec2 o = vec2(cos(a), sin(a)) * px;
     float d = linD(uv + o);
@@ -389,8 +390,10 @@ export class PixelRenderer {
   }
 
   autoPixelSize() {
-    // 고화질은 한 단계 멀리서 (레퍼런스처럼 마당이 넓게 보이게)
-    return this.basePixelSize() + this.userZoom - (this.hd ? 1 : 0);
+    // 고화질은 한 단계 멀리서 (레퍼런스처럼 마당이 넓게 보이게).
+    // 애니메이션 그림체는 캐릭터가 크게 보이도록 한 단계 가까이 (세로 화면은 시야가 좁아 그대로 멀리)
+    const far = this.hd && !(STYLE_ID !== 0 && window.innerWidth >= window.innerHeight) ? 1 : 0;
+    return this.basePixelSize() + this.userZoom - far;
   }
 
   zoom(dir) {

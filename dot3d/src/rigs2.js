@@ -1,6 +1,7 @@
 // 단풍 산성·용궁의 몬스터 리그: 까마귀 요괴, 꽃게 병사, 해파리, 거북 장군
 // 다른 리그와 같은 꼴: root, mats, setFlash(v), animate(dt, {speed, attack, hurt, dead})
 import * as THREE from 'three';
+import { rbox } from './style.js';
 import { toon } from './materials.js';
 import { clamp, lerp, smooth } from './util.js';
 
@@ -67,7 +68,7 @@ export class CrowRig extends BaseRig {
       const w = new THREE.Group();
       w.position.set(s * 0.18, 0.08, 0.02);
       for (let k = 0; k < 4; k++) {
-        const f = mesh(new THREE.BoxGeometry(0.36 - k * 0.04, 0.025, 0.14), k % 2 ? sheen : black, s * (0.18 + k * 0.17), 0, -k * 0.05);
+        const f = mesh(rbox(0.36 - k * 0.04, 0.025, 0.14), k % 2 ? sheen : black, s * (0.18 + k * 0.17), 0, -k * 0.05);
         f.rotation.y = s * k * 0.12;
         w.add(f);
       }
@@ -75,7 +76,7 @@ export class CrowRig extends BaseRig {
       this.wings.push({ g: w, s });
     }
     // 꼬리깃과 세 발
-    for (let k = -1; k <= 1; k++) this.fly.add(mesh(new THREE.BoxGeometry(0.08, 0.02, 0.32), black, k * 0.07, -0.02, -0.38, 0, k * 0.25, 0));
+    for (let k = -1; k <= 1; k++) this.fly.add(mesh(rbox(0.08, 0.02, 0.32), black, k * 0.07, -0.02, -0.38, 0, k * 0.25, 0));
     for (let k = -1; k <= 1; k++) this.fly.add(mesh(new THREE.CylinderGeometry(0.015, 0.012, 0.22, 4), beak, k * 0.06, -0.26, 0.02));
     this.finish();
   }
@@ -251,7 +252,7 @@ export class TurtleRig extends BaseRig {
     this.head.add(hd);
     this.head.add(mesh(new THREE.SphereGeometry(0.19, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), helm, 0, 0.04, 0));
     this.head.add(mesh(new THREE.ConeGeometry(0.04, 0.2, 5), gold, 0, 0.27, 0));
-    this.head.add(mesh(new THREE.BoxGeometry(0.4, 0.03, 0.04), gold, 0, 0.06, 0.12));
+    this.head.add(mesh(rbox(0.4, 0.03, 0.04), gold, 0, 0.06, 0.12));
     for (const s of [-1, 1]) this.head.add(mesh(new THREE.SphereGeometry(0.03, 6, 4), eyeM, s * 0.08, 0.0, 0.2));
     // 팔: 짧고 굵은 앞발 (물갈퀴 방패)
     this.arms = [];
@@ -259,7 +260,7 @@ export class TurtleRig extends BaseRig {
       const g = new THREE.Group();
       g.position.set(s * 0.36, 0.55, 0.05);
       g.add(mesh(new THREE.CapsuleGeometry(0.08, 0.24, 3, 6), skin, 0, -0.18, 0));
-      g.add(mesh(new THREE.BoxGeometry(0.2, 0.06, 0.24), skin, 0, -0.38, 0.04));
+      g.add(mesh(rbox(0.2, 0.06, 0.24), skin, 0, -0.38, 0.04));
       this.torso.add(g);
       this.arms.push(g);
     }
@@ -268,7 +269,7 @@ export class TurtleRig extends BaseRig {
       const g = new THREE.Group();
       g.position.set(s * 0.2, 0.5, 0);
       g.add(mesh(new THREE.CapsuleGeometry(0.1, 0.22, 3, 6), skin, 0, -0.26, 0));
-      g.add(mesh(new THREE.BoxGeometry(0.22, 0.07, 0.28), skin, 0, -0.48, 0.05));
+      g.add(mesh(rbox(0.22, 0.07, 0.28), skin, 0, -0.48, 0.05));
       this.body.add(g);
       this.legs.push(g);
     }
@@ -389,7 +390,7 @@ export class MantisRig extends BaseRig {
       a.add(mesh(new THREE.CapsuleGeometry(0.03, 0.22, 3, 5), g1, 0, -0.06, 0.1, 1.0, 0, 0));
       const fore = new THREE.Group();
       fore.position.set(0, -0.12, 0.22);
-      fore.add(mesh(new THREE.BoxGeometry(0.03, 0.3, 0.05), g2, 0, 0.15, 0));
+      fore.add(mesh(rbox(0.03, 0.3, 0.05), g2, 0, 0.15, 0));
       for (let k = 0; k < 4; k++) fore.add(mesh(new THREE.ConeGeometry(0.012, 0.06, 3), dk, 0, 0.05 + k * 0.06, 0.03, Math.PI / 2, 0, 0));
       a.add(fore);
       this.torso.add(a);
@@ -495,23 +496,23 @@ export class BeastRig extends BaseRig {
     skull.scale.set(1, 0.92, 1);
     this.head.add(skull);
     const mz = V.muzzle;
-    const snout = mesh(new THREE.BoxGeometry(0.2 * mz, 0.13, 0.22 * mz), V.ruff ? fur : belly, 0, -0.04, 0.2);
+    const snout = mesh(rbox(0.2 * mz, 0.13, 0.22 * mz), V.ruff ? fur : belly, 0, -0.04, 0.2);
     this.head.add(snout);
     this.head.add(mesh(new THREE.SphereGeometry(0.045 * mz, 6, 4), dark, 0, 0.0, 0.31 + 0.05 * (mz - 1)));
     this.jaw = new THREE.Group();
     this.jaw.position.set(0, -0.1, 0.08);
     this.head.add(this.jaw);
-    this.jaw.add(mesh(new THREE.BoxGeometry(0.17 * mz, 0.05, 0.22 * mz), belly, 0, 0, 0.12));
+    this.jaw.add(mesh(rbox(0.17 * mz, 0.05, 0.22 * mz), belly, 0, 0, 0.12));
     for (const s of [-1, 1]) {
       this.jaw.add(mesh(new THREE.ConeGeometry(0.018, 0.06, 4), toon({ color: C('#f4f0e4') }), s * 0.05, 0.04, 0.2, 0, 0, 0));
-      this.head.add(mesh(new THREE.BoxGeometry(0.06, 0.035, 0.02), eyeM, s * 0.09, 0.05, 0.17));
+      this.head.add(mesh(rbox(0.06, 0.035, 0.02), eyeM, s * 0.09, 0.05, 0.17));
       if (V.ears === 'round') { const e = mesh(new THREE.SphereGeometry(0.065, 8, 6), fur, s * 0.13, 0.15, -0.04); e.scale.set(1, 1, 0.45); this.head.add(e); }
       else if (V.ears === 'pointy') this.head.add(mesh(new THREE.ConeGeometry(0.06, 0.18, 4), fur, s * 0.1, 0.2, -0.04, -0.15, 0, -s * 0.2));
       else this.head.add(mesh(new THREE.ConeGeometry(0.045, 0.1, 4), fur, s * 0.13, 0.14, -0.02, -0.3, 0, -s * 0.6));
       if (V.tusks) this.head.add(mesh(new THREE.ConeGeometry(0.025, 0.16, 5), toon({ color: C('#f4ecd8') }), s * 0.1, -0.05, 0.3, -0.7, 0, s * 0.35));
     }
-    if (V.stripes) for (const s of [-1, 0, 1]) { const b = mesh(new THREE.BoxGeometry(0.025, 0.09, 0.02), dark, s * 0.05, 0.12, 0.18); b.rotation.z = s * 0.3; this.head.add(b); }
-    if (V.mark) for (const s of [-1, 1]) this.head.add(mesh(new THREE.BoxGeometry(0.03, 0.1, 0.02), toon({ color: C(V.mark), emissive: C(V.mark), emissiveIntensity: 0.6 }), s * 0.05, 0.13, 0.17)).rotation.z = s * 0.2;
+    if (V.stripes) for (const s of [-1, 0, 1]) { const b = mesh(rbox(0.025, 0.09, 0.02), dark, s * 0.05, 0.12, 0.18); b.rotation.z = s * 0.3; this.head.add(b); }
+    if (V.mark) for (const s of [-1, 1]) this.head.add(mesh(rbox(0.03, 0.1, 0.02), toon({ color: C(V.mark), emissive: C(V.mark), emissiveIntensity: 0.6 }), s * 0.05, 0.13, 0.17)).rotation.z = s * 0.2;
     // 다리: 어깨/엉덩이 → 무릎 → 발
     this.legs = [];
     for (const [x, z, front, ph] of [[-0.17, 0.34, 1, 0], [0.17, 0.34, 1, Math.PI], [-0.17, -0.34, 0, Math.PI], [0.17, -0.34, 0, 0]]) {

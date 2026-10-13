@@ -4,6 +4,7 @@
 //  story    — 동화 수채화: 세 단계 부드러운 음영, 갈색 연필 선, 종이 결, 파스텔
 //  pastel   — 파스텔 캐주얼: 거의 평면 음영, 굵은 보라 외곽선, 밝고 귀여운 색
 import * as THREE from 'three';
+import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 
 export const STYLES = ['hd', 'anime', 'story', 'pastel'];
 export const STYLE = (() => {
@@ -70,4 +71,11 @@ export const isPoly = (geo) => SOFT && POLY.test(geo.type || '');
 export function keepDetail(m) {
   if (SOFT && m) { m.defines = { ...(m.defines || {}), KEEP_DETAIL: '' }; m.needsUpdate = true; }
   return m;
+}
+
+// 모서리가 둥근 상자: 캐릭터·몬스터를 이루는 상자를 둥글게 (블록 장난감처럼 보이지 않게). 예전 스타일은 그대로 각진 상자
+export function rbox(w, h, d, ...rest) {
+  const r = Math.min(w, h, d) * 0.32;
+  if (!SOFT || r < 0.006) return new THREE.BoxGeometry(w, h, d, ...rest);
+  return new RoundedBoxGeometry(w, h, d, 2, r);
 }

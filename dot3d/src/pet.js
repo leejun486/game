@@ -2,6 +2,7 @@
 //  얻는 법: 보스를 처음 물리치면 그 보스의 수호령, 장터에서 엽전으로, 보스 연속 도전 기록으로
 //  game.ext.pets = 가진 것 목록, game.ext.pet = 데리고 다니는 것
 import * as THREE from 'three';
+import { rbox } from './style.js';
 import { fmtStats } from './codex.js';
 
 export const PETS = {
@@ -28,7 +29,7 @@ export function petOwned(g, id) {
 function buildMesh(P) {
   const g = new THREE.Group();
   const mat = (c, e = 0.25) => new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: e, roughness: 0.8, flatShading: true });
-  const box = (w, h, d, c, x, y, z, e) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat(c, e)); m.position.set(x, y, z); g.add(m); return m; };
+  const box = (w, h, d, c, x, y, z, e) => { const m = new THREE.Mesh(rbox(w, h, d), mat(c, e)); m.position.set(x, y, z); g.add(m); return m; };
   if (P.shape === 'orb') {
     const core = new THREE.Mesh(new THREE.IcosahedronGeometry(0.2, 0), new THREE.MeshBasicMaterial({ color: P.glow }));
     const shell = new THREE.Mesh(new THREE.IcosahedronGeometry(0.3, 0), new THREE.MeshBasicMaterial({ color: P.color, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false }));

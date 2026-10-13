@@ -1,6 +1,6 @@
 // 2.5등신 로우폴리 캐릭터 + 절차적 애니메이션
 import * as THREE from 'three';
-import { keepDetail } from './style.js';
+import { keepDetail, rbox } from './style.js';
 import { toon } from './materials.js';
 import { GFX } from './gfx.js';
 import { tigerTex, clothTex } from './textures.js';
@@ -131,7 +131,7 @@ export class Rig {
         g.add(toe);
       } else {
         g.add(mesh(new THREE.CapsuleGeometry(0.075 * (cfg.limb || 1), legLen - 0.15, 3, 6), legMat, 0, -legLen / 2 + 0.02, 0));
-        g.add(mesh(new THREE.BoxGeometry(0.14, 0.08, 0.2), shoeMat, 0, -legLen + 0.04, 0.03));
+        g.add(mesh(rbox(0.14, 0.08, 0.2), shoeMat, 0, -legLen + 0.04, 0.03));
       }
       this.body.add(g);
       this.legs.push(g);
@@ -161,12 +161,12 @@ export class Rig {
       this.hips.add(mesh(pleat(0.228, 0.235, 0.06, 0, 0), trim, 0, 0.1, 0));
       const collar = mat({ color: C('#f0ead8') });
       for (const s of [-1, 1]) {
-        const cl = mesh(new THREE.BoxGeometry(0.06, 0.3, 0.04), collar, s * 0.05, 0.28, 0.19);
+        const cl = mesh(rbox(0.06, 0.3, 0.04), collar, s * 0.05, 0.28, 0.19);
         cl.rotation.z = s * 0.5; this.hips.add(cl);
       }
       // 허리에 매단 부적 주머니 / 강시 관복 흉배
-      if (cfg.type === 'mage') this.hips.add(mesh(new THREE.BoxGeometry(0.1, 0.13, 0.06), mat({ color: C('#c8302c') }), -0.2, 0.0, 0.12));
-      if (cfg.type === 'jiangshi') this.hips.add(mesh(new THREE.BoxGeometry(0.2, 0.18, 0.04), mat({ color: C('#e0b040') }), 0, 0.26, 0.2));
+      if (cfg.type === 'mage') this.hips.add(mesh(rbox(0.1, 0.13, 0.06), mat({ color: C('#c8302c') }), -0.2, 0.0, 0.12));
+      if (cfg.type === 'jiangshi') this.hips.add(mesh(rbox(0.2, 0.18, 0.04), mat({ color: C('#e0b040') }), 0, 0.26, 0.2));
     } else if (cfg.type === 'elf') {
       // 요정: 잎사귀 빛 저고리 + 짧은 치마 + 가죽 띠
       const top = cloth(cfg.robe, 0.42);
@@ -179,7 +179,7 @@ export class Rig {
       // 잎 모양 깃
       const leaf = mat({ color: C('#bfe07a') });
       for (const s of [-1, 1]) {
-        const l = mesh(new THREE.BoxGeometry(0.12, 0.05, 0.08), leaf, s * 0.09, 0.4, 0.12);
+        const l = mesh(rbox(0.12, 0.05, 0.08), leaf, s * 0.09, 0.4, 0.12);
         l.rotation.z = s * 0.4; this.hips.add(l);
       }
       // 등의 화살통
@@ -188,7 +188,7 @@ export class Rig {
       quiver.rotation.set(-0.25, 0, 0.45);
       quiver.add(mesh(new THREE.CylinderGeometry(0.07, 0.06, 0.42, 8), belt, 0, 0, 0));
       const feather = mat({ color: C('#f4f0e4') });
-      for (let i = 0; i < 4; i++) quiver.add(mesh(new THREE.BoxGeometry(0.03, 0.12, 0.05), feather, (i - 1.5) * 0.03, 0.27, (i % 2) * 0.03));
+      for (let i = 0; i < 4; i++) quiver.add(mesh(rbox(0.03, 0.12, 0.05), feather, (i - 1.5) * 0.03, 0.27, (i % 2) * 0.03));
       this.hips.add(quiver);
     } else if (cfg.type === 'hero' || cfg.type === 'guard' || cfg.type === 'lancer') {
       const robe = cloth(cfg.robe, 0.44), robe2 = cloth(cfg.robe, 0.24);
@@ -202,18 +202,18 @@ export class Rig {
         this.skirtParts = [mesh(pleat(0.312, 0.318, 0.035, 12, 0.08), mat({ color: C(cfg.collar || cfg.belt) }), 0, -0.155, 0)];
         this.hips.add(this.skirtParts[0]);
         const dong = mat({ color: C('#f4efe2') });
-        for (const sx of [-1, 1]) { const d = mesh(new THREE.BoxGeometry(0.022, 0.2, 0.03), dong, sx * 0.085, 0.33, 0.2); d.rotation.z = sx * 0.5; this.hips.add(d); }
+        for (const sx of [-1, 1]) { const d = mesh(rbox(0.022, 0.2, 0.03), dong, sx * 0.085, 0.33, 0.2); d.rotation.z = sx * 0.5; this.hips.add(d); }
         this.hips.add(mesh(new THREE.TorusGeometry(0.035, 0.016, 6, 12), belt, -0.12, 0.1, 0.2));
-        for (const [x, rz] of [[-0.135, 0.15], [-0.105, -0.1]]) { const t2 = mesh(new THREE.BoxGeometry(0.03, 0.16, 0.012), belt, x, 0.0, 0.215); t2.rotation.z = rz; this.hips.add(t2); }
+        for (const [x, rz] of [[-0.135, 0.15], [-0.105, -0.1]]) { const t2 = mesh(rbox(0.03, 0.16, 0.012), belt, x, 0.0, 0.215); t2.rotation.z = rz; this.hips.add(t2); }
       }
       // 깃 (V자)
       const collar = mat({ color: C(cfg.collar || '#2a2a36') });
-      const cl = mesh(new THREE.BoxGeometry(0.05, 0.26, 0.04), collar, 0.05, 0.3, 0.19);
+      const cl = mesh(rbox(0.05, 0.26, 0.04), collar, 0.05, 0.3, 0.19);
       cl.rotation.z = 0.5; this.hips.add(cl);
-      const cr = mesh(new THREE.BoxGeometry(0.05, 0.26, 0.04), collar, -0.05, 0.3, 0.19);
+      const cr = mesh(rbox(0.05, 0.26, 0.04), collar, -0.05, 0.3, 0.19);
       cr.rotation.z = -0.5; this.hips.add(cr);
       // 옷고름
-      const tie = mesh(new THREE.BoxGeometry(0.04, 0.16, 0.02), belt, 0.06, 0.04, 0.24);
+      const tie = mesh(rbox(0.04, 0.16, 0.02), belt, 0.06, 0.04, 0.24);
       tie.rotation.z = 0.2; this.hips.add(tie);
       this.tie = tie;
     } else if (cfg.type === 'lady') {
@@ -223,7 +223,7 @@ export class Rig {
       this.skirt = mesh(pleat(0.17, 0.42, 0.62, 16, 0.06), skirt, 0, -0.06, 0); this.skirtH = 0.62;
       this.hips.add(this.skirt);
       const ribbon = mat({ color: C('#c23a4a') });
-      this.hips.add(mesh(new THREE.BoxGeometry(0.06, 0.2, 0.03), ribbon, 0.04, 0.18, 0.18));
+      this.hips.add(mesh(rbox(0.06, 0.2, 0.03), ribbon, 0.04, 0.18, 0.18));
     } else if (cfg.type === 'dokkaebi') {
       // 볼록한 배 + 호피 반바지
       this.hips.add(mesh(new THREE.SphereGeometry(0.27, 10, 8), skin, 0, 0.25, 0.02));
@@ -359,14 +359,14 @@ export class Rig {
         const e = mesh(new THREE.SphereGeometry(0.075, 6, 5), white, s * 0.11, 0.03, z - 0.04);
         e.scale.z = 0.5;
         this.head.add(e);
-        this.head.add(mesh(new THREE.BoxGeometry(0.045, 0.06, 0.02), eye, s * 0.11, 0.03, z + 0.0));
+        this.head.add(mesh(rbox(0.045, 0.06, 0.02), eye, s * 0.11, 0.03, z + 0.0));
         // 눈썹
-        const br = mesh(new THREE.BoxGeometry(0.12, 0.035, 0.03), this.mat({ color: C(cfg.hair) }), s * 0.11, 0.13, z - 0.02);
+        const br = mesh(rbox(0.12, 0.035, 0.03), this.mat({ color: C(cfg.hair) }), s * 0.11, 0.13, z - 0.02);
         br.rotation.z = s * 0.35;
         this.head.add(br);
       }
       // 큰 입 + 이빨
-      const mouth = mesh(new THREE.BoxGeometry(0.26, 0.07, 0.04), this.mat({ color: C('#5a1820') }), 0, -0.11, z - 0.05);
+      const mouth = mesh(rbox(0.26, 0.07, 0.04), this.mat({ color: C('#5a1820') }), 0, -0.11, z - 0.05);
       this.head.add(mouth);
       const tooth = this.mat({ color: C('#fbf6e8') });
       for (const s of [-1, 1]) this.head.add(mesh(new THREE.ConeGeometry(0.025, 0.07, 4), tooth, s * 0.08, -0.06, z - 0.03));
@@ -403,7 +403,7 @@ export class Rig {
         lash.scale.set(1, 1.15, 0.5);
         this.head.add(lash);
         this.eyes.push(lash);
-        const br = mesh(new THREE.BoxGeometry(0.07, 0.014, 0.012), this.mat({ color: C(cfg.hair || '#231c1e') }), s * 0.1, 0.075, z - 0.03);
+        const br = mesh(rbox(0.07, 0.014, 0.012), this.mat({ color: C(cfg.hair || '#231c1e') }), s * 0.1, 0.075, z - 0.03);
         br.rotation.z = s * -0.12;
         br.userData.base = br.rotation.z;
         br.userData.side = s;
@@ -414,16 +414,16 @@ export class Rig {
         blush.userData.noOutline = true;
         this.head.add(blush);
       }
-      this.mouth = mesh(new THREE.BoxGeometry(0.035, 0.01, 0.01), this.mat({ color: C('#a04848') }), 0, -0.1, z - 0.035);
+      this.mouth = mesh(rbox(0.035, 0.01, 0.01), this.mat({ color: C('#a04848') }), 0, -0.1, z - 0.035);
       this.head.add(this.mouth);
     } else {
       for (const s of [-1, 1]) {
-        this.head.add(mesh(new THREE.BoxGeometry(0.05, 0.085, 0.03), eye, s * 0.095, -0.02, z - 0.01));
+        this.head.add(mesh(rbox(0.05, 0.085, 0.03), eye, s * 0.095, -0.02, z - 0.01));
         // 눈 하이라이트
-        this.head.add(mesh(new THREE.BoxGeometry(0.02, 0.025, 0.01), this.mat({ color: C('#ffffff') }), s * 0.095 + 0.01, 0.005, z + 0.008));
+        this.head.add(mesh(rbox(0.02, 0.025, 0.01), this.mat({ color: C('#ffffff') }), s * 0.095 + 0.01, 0.005, z + 0.008));
       }
       const blush = this.mat({ color: C('#f0a0a0') });
-      for (const s of [-1, 1]) this.head.add(mesh(new THREE.BoxGeometry(0.06, 0.025, 0.02), blush, s * 0.16, -0.085, z - 0.06));
+      for (const s of [-1, 1]) this.head.add(mesh(rbox(0.06, 0.025, 0.02), blush, s * 0.16, -0.085, z - 0.06));
     }
   }
 
@@ -471,7 +471,7 @@ export class Rig {
         this.head.add(mesh(strand([onHead(sx * 1.05, 0.7), onHead(sx * 1.25, 0.3, 1.08), onHead(sx * 1.3, -0.15, 1.1), onHead(sx * 1.32, tied ? -0.35 : -0.6, 1.12)], 0.042, 0.005), hairM));
       }
     } else for (let i = -2; i <= 2; i++) {
-      const b = mesh(new THREE.BoxGeometry(0.09, 0.12, 0.06), hairM, i * 0.07, hr * 0.62, hr * 0.68);
+      const b = mesh(rbox(0.09, 0.12, 0.06), hairM, i * 0.07, hr * 0.62, hr * 0.68);
       b.rotation.x = 0.5;
       b.rotation.z = i * 0.15;
       this.head.add(b);
@@ -493,7 +493,7 @@ export class Rig {
           tail.add(r);
         }
         tail.add(mesh(new THREE.SphereGeometry(0.035, 8, 6), ribM, 0, 0, 0.005));
-      } else tail.add(mesh(new THREE.BoxGeometry(0.07, 0.36, 0.02), ribM, 0, -0.18, 0));
+      } else tail.add(mesh(rbox(0.07, 0.36, 0.02), ribM, 0, -0.18, 0));
       this.head.add(tail);
       this.tail = tail;
       if (HDC) this.head.add(mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.26, 6), this.mat({ color: C('#e0b040') }), 0, hr + 0.05, -0.06, 0, 0, Math.PI / 2)); // 동곳
@@ -509,7 +509,7 @@ export class Rig {
       if (HDC) {
         for (let i = -2; i <= 2; i++) tail.add(mesh(strand([[i * 0.025, 0, 0], [i * 0.04, -0.12, -0.12], [i * 0.05, -0.42, -0.16], [i * 0.04, -0.72, -0.1]], 0.05, 0.008, 6, 12), hairM));
         tail.add(mesh(new THREE.TorusGeometry(0.06, 0.02, 6, 12), this.mat({ color: C('#e0b040') }), 0, -0.02, -0.02, Math.PI / 2 - 0.6));
-      } else tail.add(mesh(new THREE.BoxGeometry(0.16, 0.6, 0.08), hairM, 0, -0.3, -0.08));
+      } else tail.add(mesh(rbox(0.16, 0.6, 0.08), hairM, 0, -0.3, -0.08));
       this.head.add(tail);
       this.tail = tail;
     } else if (cfg.type === 'mage') {
@@ -535,9 +535,9 @@ export class Rig {
           // 얼굴 옆으로 내려오는 가는 머리
           this.head.add(mesh(strand([[s * hr * 0.78, hr * 0.45, hr * 0.42], [s * hr * 0.98, 0, hr * 0.4], [s * hr * 0.96, -hr * 0.6, hr * 0.34], [s * hr * 0.86, -hr * 1.0, hr * 0.36]], 0.05, 0.016), hairM));
         }
-      } else this.head.add(mesh(new THREE.BoxGeometry(0.46, 0.55, 0.14), hairM, 0, -0.2, -0.2));
+      } else this.head.add(mesh(rbox(0.46, 0.55, 0.14), hairM, 0, -0.2, -0.2));
       for (const s of [-1, 1]) {
-        if (!HDC) this.head.add(mesh(new THREE.BoxGeometry(0.08, 0.38, 0.1), hairM, s * 0.25, -0.12, 0.06));
+        if (!HDC) this.head.add(mesh(rbox(0.08, 0.38, 0.1), hairM, s * 0.25, -0.12, 0.06));
         // 길쭉한 잎 모양 귀: 비스듬히 위·뒤로
         const ear = mesh(new THREE.ConeGeometry(0.05, 0.3, 8), this.mat({ color: C(cfg.skin) }), s * 0.33, 0.06, -0.02);
         ear.scale.z = 0.45;
@@ -584,16 +584,16 @@ export class Rig {
     } else if (cfg.type === 'ghost') {
       // 길게 늘어진 검은 머리가 얼굴을 반쯤 가림
       const hm = this.mat({ color: C(cfg.hair), transparent: true, opacity: 0.92 });
-      this.head.add(mesh(new THREE.BoxGeometry(0.5, 0.95, 0.16), hm, 0, -0.32, -0.18));
-      for (const s of [-1, 1]) this.head.add(mesh(new THREE.BoxGeometry(0.15, 0.85, 0.08), hm, s * 0.15, -0.25, hr * 0.92));
-      this.head.add(mesh(new THREE.BoxGeometry(0.5, 0.1, 0.5), hm, 0, hr * 0.85, 0));
+      this.head.add(mesh(rbox(0.5, 0.95, 0.16), hm, 0, -0.32, -0.18));
+      for (const s of [-1, 1]) this.head.add(mesh(rbox(0.15, 0.85, 0.08), hm, s * 0.15, -0.25, hr * 0.92));
+      this.head.add(mesh(rbox(0.5, 0.1, 0.5), hm, 0, hr * 0.85, 0));
     } else if (cfg.type === 'reaper') {
       // 저승사자 흑립: 아주 넓은 챙 + 높은 대우
       const hatM = this.mat({ color: C('#0e0c12') });
       const hy = hr * 0.66;
       this.head.add(mesh(new THREE.CylinderGeometry(0.55, 0.55, 0.025, 18), hatM, 0, hy, 0));
       this.head.add(mesh(new THREE.CylinderGeometry(0.15, 0.17, 0.32, 12), hatM, 0, hy + 0.16, 0));
-      this.head.add(mesh(new THREE.BoxGeometry(0.1, 0.035, 0.03), this.mat({ color: C('#a01a2a') }), 0, -0.12, hr * 0.92));
+      this.head.add(mesh(rbox(0.1, 0.035, 0.03), this.mat({ color: C('#a01a2a') }), 0, -0.12, hr * 0.92));
       for (const s of [-1, 1]) for (let i = 0; i < 5; i++) this.head.add(mesh(new THREE.SphereGeometry(0.022, 4, 3), this.mat({ color: C('#2a2a30') }), s * (0.24 - i * 0.015), hy - 0.06 - i * 0.07, 0.06));
     } else if (cfg.type === 'guard') {
       // 전립 (챙 넓은 모자)
@@ -604,7 +604,7 @@ export class Rig {
       this.head.add(mesh(new THREE.ConeGeometry(0.05, 0.15, 5), this.mat({ color: C('#c8302c') }), 0, hr * 0.62 + 0.3, 0));
     } else if (cfg.type === 'lady') {
       this.head.add(mesh(new THREE.SphereGeometry(0.13, 8, 6), hairM, 0, -0.05, -hr * 0.95));
-      this.head.add(mesh(new THREE.BoxGeometry(0.3, 0.025, 0.025), this.mat({ color: C('#e0b040') }), 0, -0.04, -hr * 1.1));
+      this.head.add(mesh(rbox(0.3, 0.025, 0.025), this.mat({ color: C('#e0b040') }), 0, -0.04, -hr * 1.1));
     }
   }
 
@@ -614,19 +614,19 @@ export class Rig {
     const plate = this.mat({ color: C(cfg.trim || '#d9a83a') });
     const dark = this.mat({ color: C(cfg.pants || '#2a2a34') });
     for (const side of [-1, 1]) {
-      const pad = mesh(new THREE.BoxGeometry(heavy ? 0.2 : 0.16, 0.08, heavy ? 0.24 : 0.2), plate, side * (heavy ? 0.25 : 0.23), 0.0, 0);
+      const pad = mesh(rbox(heavy ? 0.2 : 0.16, 0.08, heavy ? 0.24 : 0.2), plate, side * (heavy ? 0.25 : 0.23), 0.0, 0);
       pad.rotation.z = side * -0.35;
       this.chest.add(pad);
       if (heavy) {
-        const pad2 = mesh(new THREE.BoxGeometry(0.17, 0.06, 0.22), dark, side * 0.28, -0.07, 0);
+        const pad2 = mesh(rbox(0.17, 0.06, 0.22), dark, side * 0.28, -0.07, 0);
         pad2.rotation.z = side * -0.5;
         this.chest.add(pad2);
       }
     }
-    this.hips.add(mesh(new THREE.BoxGeometry(0.26, heavy ? 0.26 : 0.18, 0.06), plate, 0, 0.24, 0.17));
+    this.hips.add(mesh(rbox(0.26, heavy ? 0.26 : 0.18, 0.06), plate, 0, 0.24, 0.17));
     if (heavy) {
-      this.hips.add(mesh(new THREE.BoxGeometry(0.42, 0.14, 0.06), dark, 0, -0.06, 0.24));
-      this.head.add(mesh(new THREE.BoxGeometry(0.06, 0.12, 0.03), plate, 0, 0.2, 0.28));
+      this.hips.add(mesh(rbox(0.42, 0.14, 0.06), dark, 0, -0.06, 0.24));
+      this.head.add(mesh(rbox(0.06, 0.12, 0.03), plate, 0, 0.2, 0.28));
     }
   }
 
@@ -640,7 +640,7 @@ export class Rig {
       const g = new THREE.Group();
       g.position.set(x, y, z);
       g.rotation.z = rz;
-      g.add(mesh(new THREE.BoxGeometry(w, len, 0.02), m, 0, -len / 2, 0));
+      g.add(mesh(rbox(w, len, 0.02), m, 0, -len / 2, 0));
       parent.add(g);
       this.flutter.push({ g, base, amp, run, ph: Math.random() * 6 });
       return g;
@@ -648,8 +648,8 @@ export class Rig {
     if (d === 'cape') {
       // 어깨에서 등으로 떨어지는 망토 (겉감 + 안감 테두리)
       const g = flap(this.chest, 0, 0.0, -0.17, 0.44, 0.62, A, 0.12, 0.06, 0.6);
-      g.add(mesh(new THREE.BoxGeometry(0.46, 0.04, 0.024), T, 0, -0.6, 0));
-      g.add(mesh(new THREE.BoxGeometry(0.46, 0.05, 0.05), T, 0, 0, 0.01));
+      g.add(mesh(rbox(0.46, 0.04, 0.024), T, 0, -0.6, 0));
+      g.add(mesh(rbox(0.46, 0.05, 0.05), T, 0, 0, 0.01));
       for (const sx of [-1, 1]) this.chest.add(mesh(new THREE.SphereGeometry(0.035, 5, 4), T, sx * 0.13, -0.02, 0.15));
     } else if (d === 'scarf') {
       const ring = mesh(new THREE.TorusGeometry(0.13, 0.045, 5, 12), A, 0, 0.01, 0);
@@ -673,9 +673,9 @@ export class Rig {
       flap(this.chest, -0.4, -0.02, -0.2, 0.05, 0.55, glow, 0.25, 0.15, 0.9);
     } else if (d === 'badge') {
       // 흉배: 가슴의 네모 수놓은 판
-      this.hips.add(mesh(new THREE.BoxGeometry(0.17, 0.16, 0.02), T, 0, 0.27, torsoZ));
-      this.hips.add(mesh(new THREE.BoxGeometry(0.1, 0.09, 0.02), A, 0, 0.27, torsoZ + 0.008));
-      this.hips.add(mesh(new THREE.BoxGeometry(0.04, 0.04, 0.02), T, 0, 0.27, torsoZ + 0.014));
+      this.hips.add(mesh(rbox(0.17, 0.16, 0.02), T, 0, 0.27, torsoZ));
+      this.hips.add(mesh(rbox(0.1, 0.09, 0.02), A, 0, 0.27, torsoZ + 0.008));
+      this.hips.add(mesh(rbox(0.04, 0.04, 0.02), T, 0, 0.27, torsoZ + 0.014));
     } else if (d === 'bracers') {
       for (const arm of this.arms) {
         const fore = arm.userData.elbow || arm, oy = arm.userData.elbow ? 0.15 : 0;
@@ -767,14 +767,14 @@ export class Rig {
       m.position.set(hr * 0.8, hr * 0.4, hr * 0.25);
       m.rotation.set(0, 1.15, -0.3);
       m.scale.setScalar(1.45);
-      m.add(mesh(new THREE.BoxGeometry(0.2, 0.24, 0.045), red));
+      m.add(mesh(rbox(0.2, 0.24, 0.045), red));
       for (const s of [-1, 1]) {
-        m.add(mesh(new THREE.BoxGeometry(0.055, 0.035, 0.02), wht, s * 0.05, 0.04, 0.026));
-        m.add(mesh(new THREE.BoxGeometry(0.024, 0.024, 0.02), blk, s * 0.05, 0.04, 0.036));
+        m.add(mesh(rbox(0.055, 0.035, 0.02), wht, s * 0.05, 0.04, 0.026));
+        m.add(mesh(rbox(0.024, 0.024, 0.02), blk, s * 0.05, 0.04, 0.036));
         m.add(mesh(new THREE.ConeGeometry(0.026, 0.09, 4), gold, s * 0.07, 0.16, 0));
         m.add(mesh(new THREE.ConeGeometry(0.014, 0.04, 3), wht, s * 0.035, -0.09, 0.03));
       }
-      m.add(mesh(new THREE.BoxGeometry(0.12, 0.025, 0.02), blk, 0, -0.065, 0.026));
+      m.add(mesh(rbox(0.12, 0.025, 0.02), blk, 0, -0.065, 0.026));
       this.head.add(m);
     } else if (acc === 'gat') {
       const hatM = this.mat({ color: C('#0c0a10') });
@@ -821,8 +821,8 @@ export class Rig {
       for (let i = 0; i < 5; i++) {
         const len = 0.66 - i * 0.08, piv = new THREE.Group();
         piv.rotation.z = s * (0.65 - i * 0.26);
-        piv.add(mesh(new THREE.BoxGeometry(len, 0.11, 0.018), wM, s * len / 2, 0, -i * 0.012));
-        if (i < 3) piv.add(mesh(new THREE.BoxGeometry(0.14, 0.114, 0.022), tipM, s * (len - 0.06), 0, -i * 0.012));
+        piv.add(mesh(rbox(len, 0.11, 0.018), wM, s * len / 2, 0, -i * 0.012));
+        if (i < 3) piv.add(mesh(rbox(0.14, 0.114, 0.022), tipM, s * (len - 0.06), 0, -i * 0.012));
         g.add(piv);
       }
       this.chest.add(g);
@@ -898,7 +898,7 @@ export class Rig {
       const tsuba = mesh(new THREE.CylinderGeometry(0.075, 0.075, 0.022, 10), black, 0, -0.13, 0);
       w.add(tsuba);
       w.add(rot(mesh(new THREE.TorusGeometry(0.072, 0.008, 4, 12), gold, 0, -0.13, 0), 'x', Math.PI / 2));
-      w.add(mesh(new THREE.BoxGeometry(0.03, 0.05, 0.045), gold, 0, -0.165, 0)); // 하바키
+      w.add(mesh(rbox(0.03, 0.05, 0.045), gold, 0, -0.165, 0)); // 하바키
       // 칼날: 여러 마디를 살짝씩 휘어 이어 붙임 (등 쪽으로 곡선), 끝으로 갈수록 가늘게
       const N = 7, L = 1.08 * (ws.long || 1);
       let y = -0.19, z = 0, ang = 0;
@@ -908,8 +908,8 @@ export class Rig {
         const g = new THREE.Group();
         g.position.set(0, y, z);
         g.rotation.x = ang;
-        const b = mesh(new THREE.BoxGeometry(0.03, segL + 0.012, 0.068 * taper), blade, 0, -segL / 2, -0.004);
-        const e = mesh(new THREE.BoxGeometry(0.034, segL + 0.012, 0.02), edge, 0, -segL / 2, 0.032 * taper);
+        const b = mesh(rbox(0.03, segL + 0.012, 0.068 * taper), blade, 0, -segL / 2, -0.004);
+        const e = mesh(rbox(0.034, segL + 0.012, 0.02), edge, 0, -segL / 2, 0.032 * taper);
         g.add(b, e);
         w.add(g);
         y -= Math.cos(ang) * segL;
@@ -939,15 +939,15 @@ export class Rig {
           const g = new THREE.Group();
           g.position.set(0, sy, sz);
           g.rotation.x = sa;
-          g.add(mesh(new THREE.BoxGeometry(0.05, segL + 0.02, 0.108), lac, 0, -segL / 2, 0.008));
-          if (i === SN - 1) g.add(mesh(new THREE.BoxGeometry(0.056, 0.05, 0.088), gold, 0, -segL + 0.01, 0));
+          g.add(mesh(rbox(0.05, segL + 0.02, 0.108), lac, 0, -segL / 2, 0.008));
+          if (i === SN - 1) g.add(mesh(rbox(0.056, 0.05, 0.088), gold, 0, -segL + 0.01, 0));
           saya.add(g);
           sy -= Math.cos(sa) * segL;
           sz -= Math.sin(sa) * segL;
           sa -= (0.035 * 7 / L) * segL; // 칼날과 같은 단위 길이당 휨
         }
-        saya.add(mesh(new THREE.BoxGeometry(0.052, 0.05, 0.096), this.mat({ color: C('#c8302c') }), 0, -0.12, 0.004));
-        saya.add(mesh(new THREE.BoxGeometry(0.052, 0.03, 0.096), gold, 0, -0.015, 0.004));
+        saya.add(mesh(rbox(0.052, 0.05, 0.096), this.mat({ color: C('#c8302c') }), 0, -0.12, 0.004));
+        saya.add(mesh(rbox(0.052, 0.03, 0.096), gold, 0, -0.015, 0.004));
         this.hips.add(saya);
         this.saya = saya;
       }
@@ -996,14 +996,14 @@ export class Rig {
       this.bowMat = wood;
       const curve = new THREE.QuadraticBezierCurve3(new THREE.Vector3(0, 0.1, 0.5 * big), new THREE.Vector3(0, -0.22 * big, 0), new THREE.Vector3(0, 0.1, -0.5 * big));
       w.add(mesh(new THREE.TubeGeometry(curve, 10, 0.024, 4), wood));
-      w.add(mesh(new THREE.BoxGeometry(0.05, 0.05, 0.12), this.mat({ color: C(ws.grip || '#3a7a3a') }), 0, -0.1, 0));
-      if (ws.tips) for (const s of [-1, 1]) w.add(mesh(new THREE.BoxGeometry(0.05, 0.05, 0.1), this.mat({ color: C(ws.tips) }), 0, 0.1, s * 0.5 * big));
+      w.add(mesh(rbox(0.05, 0.05, 0.12), this.mat({ color: C(ws.grip || '#3a7a3a') }), 0, -0.1, 0));
+      if (ws.tips) for (const s of [-1, 1]) w.add(mesh(rbox(0.05, 0.05, 0.1), this.mat({ color: C(ws.tips) }), 0, 0.1, s * 0.5 * big));
       const strM = new THREE.MeshBasicMaterial({ color: new THREE.Color('#f0ece0') });
       this.bowEnds = [new THREE.Vector3(0, 0.1, 0.5 * big), new THREE.Vector3(0, 0.1, -0.5 * big)];
-      this.bowStrings = [0, 1].map(() => { const s = new THREE.Mesh(new THREE.BoxGeometry(0.012, 1, 0.012), strM); w.add(s); return s; });
+      this.bowStrings = [0, 1].map(() => { const s = new THREE.Mesh(rbox(0.012, 1, 0.012), strM); w.add(s); return s; });
       // 시위에 건 화살
       const arrow = new THREE.Group();
-      arrow.add(mesh(new THREE.BoxGeometry(0.02, 0.72, 0.02), this.mat({ color: C('#9a7a52') }), 0, -0.36, 0));
+      arrow.add(mesh(rbox(0.02, 0.72, 0.02), this.mat({ color: C('#9a7a52') }), 0, -0.36, 0));
       arrow.add(rot(mesh(new THREE.ConeGeometry(0.03, 0.09, 4), this.mat({ color: C('#d8dde4') }), 0, -0.76, 0), 'x', Math.PI));
       this.nockArrow = arrow;
       w.add(arrow);
@@ -1031,11 +1031,11 @@ export class Rig {
       const blade = mesh(new THREE.ConeGeometry(0.075, 0.42 * (ws.big || 1), 4), steel, 0, tipY - 0.25 * (ws.big || 1), 0, Math.PI);
       blade.scale.set(1, 1, 0.35);
       w.add(blade);
-      w.add(mesh(new THREE.BoxGeometry(0.012, 0.36 * (ws.big || 1), 0.03), this.edgeMat, 0, tipY - 0.22 * (ws.big || 1), 0)); // 날 가운데 등줄
+      w.add(mesh(rbox(0.012, 0.36 * (ws.big || 1), 0.03), this.edgeMat, 0, tipY - 0.22 * (ws.big || 1), 0)); // 날 가운데 등줄
       if (ws.wings) for (const sx of [-1, 1]) w.add(mesh(new THREE.ConeGeometry(0.03, 0.16, 4), steel, sx * 0.07, tipY - 0.04, 0, 0, 0, sx * 2.3));
       for (let i = 0; i < 7; i++) {
         const a = (i / 7) * Math.PI * 2;
-        w.add(mesh(new THREE.BoxGeometry(0.02, 0.16, 0.02), tassel, Math.cos(a) * 0.04, tipY + 0.12, Math.sin(a) * 0.04, Math.sin(a) * 0.35, 0, -Math.cos(a) * 0.35));
+        w.add(mesh(rbox(0.02, 0.16, 0.02), tassel, Math.cos(a) * 0.04, tipY + 0.12, Math.sin(a) * 0.04, Math.sin(a) * 0.35, 0, -Math.cos(a) * 0.35));
       }
       w.add(mesh(new THREE.SphereGeometry(0.05, 8, 6), tassel, 0, tipY + 0.05, 0));
     } else if (kind === 'spear') {
@@ -1599,21 +1599,21 @@ export class QuadRig {
         b.rotation.z = Math.PI * 0.125 + (k % 2 ? 0.15 : -0.15);
         this.torso.add(b);
       }
-      for (const s of [-1, 0, 1]) this.head.add(mesh(new THREE.BoxGeometry(0.025, 0.08, 0.02), st, s * 0.05, 0.12, 0.13)).rotation.z = s * 0.3;
+      for (const s of [-1, 0, 1]) this.head.add(mesh(rbox(0.025, 0.08, 0.02), st, s * 0.05, 0.12, 0.13)).rotation.z = s * 0.3;
       snout.scale.set(1.3, 0.7, 0.75);
     }
     for (const s of [-1, 1]) {
       if (tiger) {
         this.head.add(mesh(new THREE.SphereGeometry(0.06, 6, 4), fur, s * 0.12, 0.14, -0.03)).scale.set(1, 1, 0.5);
-        this.head.add(mesh(new THREE.BoxGeometry(0.06, 0.035, 0.02), toon({ color: C(variant === 'baekho' ? '#7fd8ff' : boar ? '#ff4a2a' : '#ffd040'), emissive: C(variant === 'baekho' ? '#1a6aff' : boar ? '#6a0a00' : '#5a3a00') }), s * 0.08, 0.04, 0.15));
+        this.head.add(mesh(rbox(0.06, 0.035, 0.02), toon({ color: C(variant === 'baekho' ? '#7fd8ff' : boar ? '#ff4a2a' : '#ffd040'), emissive: C(variant === 'baekho' ? '#1a6aff' : boar ? '#6a0a00' : '#5a3a00') }), s * 0.08, 0.04, 0.15));
         continue;
       }
       const ear = mesh(new THREE.ConeGeometry(0.07, 0.2, 4), fur, s * 0.1, 0.17, -0.02);
       ear.rotation.z = -s * 0.25;
       this.head.add(ear);
       this.head.add(mesh(new THREE.ConeGeometry(0.035, 0.1, 4), dark, s * 0.1, 0.2, 0.01)).rotation.z = 0;
-      this.head.add(mesh(new THREE.BoxGeometry(0.06, 0.035, 0.02), toon({ color: C(boss ? '#ff4a6a' : wolf ? '#8ad8ff' : '#ffd040'), emissive: C(boss ? '#8a0a2a' : wolf ? '#1a5aaa' : '#5a3a00') }), s * 0.08, 0.04, 0.15));
-      if (boss) this.head.add(mesh(new THREE.BoxGeometry(0.03, 0.09, 0.02), mat({ color: C(pal.mark) }), s * 0.05, 0.1, 0.15));
+      this.head.add(mesh(rbox(0.06, 0.035, 0.02), toon({ color: C(boss ? '#ff4a6a' : wolf ? '#8ad8ff' : '#ffd040'), emissive: C(boss ? '#8a0a2a' : wolf ? '#1a5aaa' : '#5a3a00') }), s * 0.08, 0.04, 0.15));
+      if (boss) this.head.add(mesh(rbox(0.03, 0.09, 0.02), mat({ color: C(pal.mark) }), s * 0.05, 0.1, 0.15));
     }
     // 꼬리 (구미호는 아홉 개를 부채처럼)
     this.tails = [];
@@ -1765,7 +1765,7 @@ export class ToadRig {
     for (const s of [-1, 1]) {
       const eye = mesh(new THREE.SphereGeometry(0.1, 10, 8), eyeM, s * 0.17, 0.17, 0.05);
       this.head.add(eye);
-      this.head.add(mesh(new THREE.BoxGeometry(0.025, 0.1, 0.03), toon({ color: C('#100800') }), s * 0.17, 0.17, 0.145));
+      this.head.add(mesh(rbox(0.025, 0.1, 0.03), toon({ color: C('#100800') }), s * 0.17, 0.17, 0.145));
       this.head.add(mesh(new THREE.SphereGeometry(0.11, 8, 6, 0, Math.PI * 2, 0, Math.PI / 2.4), skin, s * 0.17, 0.2, 0.04));
     }
     // 다리: 앞다리는 버팀, 뒷다리는 접혀 있다가 뛰어오를 때 펴짐
@@ -1776,7 +1776,7 @@ export class ToadRig {
       const th = mesh(new THREE.CapsuleGeometry(back ? 0.1 : 0.06, back ? 0.18 : 0.14, 3, 6), skin, 0, -0.1, back ? -0.05 : 0);
       th.rotation.x = back ? 0.9 : 0.2;
       g.add(th);
-      const foot = mesh(new THREE.BoxGeometry(0.16, 0.03, 0.18), skin, 0, -0.2, back ? 0.05 : 0.06);
+      const foot = mesh(rbox(0.16, 0.03, 0.18), skin, 0, -0.2, back ? 0.05 : 0.06);
       g.add(foot);
       this.body.add(g);
       this.legs.push({ g, back });
@@ -1848,13 +1848,13 @@ export class SerpentRig {
     skull.scale.set(1, 0.75, 1.25);
     skull.scale.multiplyScalar(S);
     this.head.add(skull);
-    const snout = mesh(new THREE.BoxGeometry(0.42, 0.2, 0.5), scale, 0, -0.02 * S, 0.42 * S);
+    const snout = mesh(rbox(0.42, 0.2, 0.5), scale, 0, -0.02 * S, 0.42 * S);
     snout.scale.multiplyScalar(S);
     this.head.add(snout);
     this.jaw = new THREE.Group();
     this.jaw.position.set(0, -0.12 * S, 0.12 * S);
     this.head.add(this.jaw);
-    const jaw = mesh(new THREE.BoxGeometry(0.36, 0.1, 0.55), belly, 0, 0, 0.26 * S);
+    const jaw = mesh(rbox(0.36, 0.1, 0.55), belly, 0, 0, 0.26 * S);
     jaw.scale.multiplyScalar(S);
     this.jaw.add(jaw);
     for (const s of [-1, 1]) {
@@ -1912,7 +1912,7 @@ export class SerpentRig {
         const rim = mesh(new THREE.TorusGeometry(r * 1.1, r * 0.08, 4, 16), dark, 0, -r * 0.1, 0, Math.PI / 2, 0, 0);
         rim.scale.set(1.2, 0.85, 1);
         g.add(rim);
-        g.add(mesh(new THREE.BoxGeometry(r * 0.25, r * 0.12, r * 0.7), fin, 0, r * 0.48, 0));
+        g.add(mesh(rbox(r * 0.25, r * 0.12, r * 0.7), fin, 0, r * 0.48, 0));
         const bl = mesh(new THREE.SphereGeometry(r * 0.9, 10, 6), belly, 0, -r * 0.2, 0);
         bl.scale.set(1.25, 0.35, 0.9);
         g.add(bl);
@@ -2054,8 +2054,8 @@ export class StoneRig {
     this.torso = new THREE.Group();
     this.torso.position.y = 0.45;
     this.body.add(this.torso);
-    this.torso.add(mesh(new THREE.BoxGeometry(0.62, 0.95, 0.5), stone, 0, 0.5, 0));
-    this.torso.add(mesh(new THREE.BoxGeometry(0.66, 0.08, 0.54), dark, 0, 0.2, 0));
+    this.torso.add(mesh(rbox(0.62, 0.95, 0.5), stone, 0, 0.5, 0));
+    this.torso.add(mesh(rbox(0.66, 0.08, 0.54), dark, 0, 0.2, 0));
     // 얼굴: 관모, 부릅뜬 눈, 주먹코, 드러낸 이
     this.torso.add(mesh(new THREE.CylinderGeometry(0.34, 0.36, 0.3, 10), hat, 0, 1.12, 0));
     this.torso.add(mesh(new THREE.CylinderGeometry(0.46, 0.46, 0.05, 12), hat, 0, 0.98, 0));
@@ -2064,14 +2064,14 @@ export class StoneRig {
       this.torso.add(mesh(new THREE.SphereGeometry(0.055, 6, 4), glow, sx * 0.15, 0.78, 0.33));
     }
     this.torso.add(mesh(new THREE.SphereGeometry(0.1, 6, 4), dark, 0, 0.62, 0.28));
-    this.torso.add(mesh(new THREE.BoxGeometry(0.34, 0.06, 0.04), mat({ color: C('#e8e0d0') }), 0, 0.46, 0.26));
-    this.torso.add(mesh(new THREE.BoxGeometry(0.1, 0.5, 0.03), mat({ color: C('#a8302a') }), 0, 0.12, 0.26));
+    this.torso.add(mesh(rbox(0.34, 0.06, 0.04), mat({ color: C('#e8e0d0') }), 0, 0.46, 0.26));
+    this.torso.add(mesh(rbox(0.1, 0.5, 0.03), mat({ color: C('#a8302a') }), 0, 0.12, 0.26));
     // 팔: 어깨 → 바위 주먹
     this.arms = [];
     for (const sx of [-1, 1]) {
       const g = new THREE.Group();
       g.position.set(sx * 0.42, 0.85, 0);
-      g.add(mesh(new THREE.BoxGeometry(0.2, 0.5, 0.22), dark, 0, -0.25, 0));
+      g.add(mesh(rbox(0.2, 0.5, 0.22), dark, 0, -0.25, 0));
       const fist = mesh(new THREE.IcosahedronGeometry(0.2, 0), stone, 0, -0.58, 0.02);
       g.add(fist);
       this.torso.add(g);
@@ -2081,8 +2081,8 @@ export class StoneRig {
     for (const sx of [-1, 1]) {
       const g = new THREE.Group();
       g.position.set(sx * 0.17, 0.45, 0);
-      g.add(mesh(new THREE.BoxGeometry(0.22, 0.42, 0.26), dark, 0, -0.22, 0));
-      g.add(mesh(new THREE.BoxGeometry(0.28, 0.1, 0.34), stone, 0, -0.42, 0.04));
+      g.add(mesh(rbox(0.22, 0.42, 0.26), dark, 0, -0.22, 0));
+      g.add(mesh(rbox(0.28, 0.1, 0.34), stone, 0, -0.42, 0.04));
       this.body.add(g);
       this.legs.push(g);
     }
@@ -2159,12 +2159,12 @@ export class BeastRig {
     this.crackMat = toon({ color: C('#3a1a10'), emissive: C('#ff5a00'), emissiveIntensity: 0.5 });
     this.mats.push(this.crackMat);
     for (const sd of [-1, 1]) for (let k = 0; k < 4; k++) {
-      const c = mesh(new THREE.BoxGeometry(0.02, 0.18 + (k % 2) * 0.08, 0.04), this.crackMat, sd * 0.35, 0.02, 0.28 - k * 0.2);
+      const c = mesh(rbox(0.02, 0.18 + (k % 2) * 0.08, 0.04), this.crackMat, sd * 0.35, 0.02, 0.28 - k * 0.2);
       c.rotation.set(0.3 * (k % 2 ? 1 : -1), 0, sd * 0.2);
       this.torso.add(c);
     }
     for (const sd of [-1, 1]) {
-      const pl = mesh(new THREE.BoxGeometry(0.26, 0.05, 0.3), this.spikeMat, sd * 0.28, 0.24, 0.32);
+      const pl = mesh(rbox(0.26, 0.05, 0.3), this.spikeMat, sd * 0.28, 0.24, 0.32);
       pl.rotation.z = sd * -0.6;
       this.torso.add(pl);
     }

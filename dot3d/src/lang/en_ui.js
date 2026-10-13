@@ -962,6 +962,10 @@ export const dict = {
   '결제는 앱이 스토어에 나오면 열려요. 지금은 업적을 달성해 구슬을 모을 수 있어요': 'Purchases open when the app launches on the store. For now you can earn beads from achievements',
   '결제가 끝나지 않았어요': 'The purchase was not completed',
   '주아 · M PLUS Rounded 1c · ZCOOL KuaiLe · Noto Serif KR (OFL)': 'Jua · M PLUS Rounded 1c · ZCOOL KuaiLe · Noto Serif KR (OFL)',
+  '그림체': 'Art style',
+  '애니메이션': 'Anime',
+  '예전 3D': 'Classic 3D',
+  '그림체를 바꾸면 저장한 뒤 게임을 다시 불러와요.': 'Changing the art style saves and reloads the game.',
 };
 
 const RN = '([ⅠⅡⅢⅣⅤ])';

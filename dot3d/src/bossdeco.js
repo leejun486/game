@@ -3,6 +3,7 @@
 //  저승사자: 좁힌 갓 챙, 떠다니는 명부, 발밑 어둠 기운
 //  염라대왕: 면류관(구슬 줄), 등 뒤에 떠 있는 업경대(업보를 비추는 거울)
 import * as THREE from 'three';
+import { rbox } from './style.js';
 import { toon } from './materials.js';
 import { tigerTex } from './textures.js';
 
@@ -52,10 +53,10 @@ export function decorateReaper(r) {
   const cover = r.mat({ color: C('#2a1a3a') }), page = r.mat({ color: C('#efe6d0') });
   const glow = toon({ color: C('#c890ff'), emissive: C('#8a3aff'), emissiveIntensity: 1.4 });
   for (const s of [-1, 1]) {
-    const leaf = mesh(new THREE.BoxGeometry(0.24, 0.02, 0.3), cover, s * 0.12, 0, 0, 0, 0, -s * 0.18);
+    const leaf = mesh(rbox(0.24, 0.02, 0.3), cover, s * 0.12, 0, 0, 0, 0, -s * 0.18);
     book.add(leaf);
-    book.add(mesh(new THREE.BoxGeometry(0.21, 0.02, 0.27), page, s * 0.11, 0.015, 0, 0, 0, -s * 0.18));
-    for (let k = 0; k < 4; k++) book.add(mesh(new THREE.BoxGeometry(0.015, 0.005, 0.2), glow, s * (0.05 + k * 0.035), 0.03, 0, 0, 0, -s * 0.18));
+    book.add(mesh(rbox(0.21, 0.02, 0.27), page, s * 0.11, 0.015, 0, 0, 0, -s * 0.18));
+    for (let k = 0; k < 4; k++) book.add(mesh(rbox(0.015, 0.005, 0.2), glow, s * (0.05 + k * 0.035), 0.03, 0, 0, 0, -s * 0.18));
   }
   book.position.set(-0.42, 0.25, 0.2);
   book.userData.float = true;
@@ -85,8 +86,8 @@ export function decorateYeomra(r) {
   const crown = new THREE.Group();
   crown.position.set(0, 0.3, 0);
   crown.add(mesh(new THREE.CylinderGeometry(0.17, 0.19, 0.18, 12), black, 0, 0, 0));
-  crown.add(mesh(new THREE.BoxGeometry(0.62, 0.035, 0.42), black, 0, 0.11, 0, -0.08, 0, 0));
-  crown.add(mesh(new THREE.BoxGeometry(0.64, 0.02, 0.44), gold, 0, 0.09, 0, -0.08, 0, 0));
+  crown.add(mesh(rbox(0.62, 0.035, 0.42), black, 0, 0.11, 0, -0.08, 0, 0));
+  crown.add(mesh(rbox(0.64, 0.02, 0.44), gold, 0, 0.09, 0, -0.08, 0, 0));
   const beadCols = ['#c8302c', '#2a6aff', '#f0c040', '#3aa85a', '#ffffff'];
   const beads = beadCols.map((c) => r.mat({ color: C(c) }));
   for (const zs of [-1, 1]) for (let i = 0; i < 9; i++) {

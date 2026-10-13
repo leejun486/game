@@ -950,4 +950,8 @@ export default {
   '결제는 앱이 스토어에 나오면 열려요. 지금은 업적을 달성해 구슬을 모을 수 있어요': '应用上架商店后即可购买。目前可通过达成成就收集月光珠',
   '결제가 끝나지 않았어요': '购买未完成',
   '주아 · M PLUS Rounded 1c · ZCOOL KuaiLe · Noto Serif KR (OFL)': 'Jua · M PLUS Rounded 1c · ZCOOL KuaiLe · Noto Serif KR (OFL)',
+  '그림체': '画风',
+  '애니메이션': '动画',
+  '예전 3D': '经典3D',
+  '그림체를 바꾸면 저장한 뒤 게임을 다시 불러와요.': '更改画风会先存档再重新载入游戏。',
 };

@@ -1,6 +1,7 @@
 // Game의 한 부분: 일시정지 창: 소리·화면·조작·저장 파일·각 창 그리기
 //  main.js의 Game 클래스에서 떼어 낸 메서드들 (main.js가 Game.prototype에 붙임 — this는 game)
 import { exportSave, importSave, makeTransferCode, readTransferCode } from '../save.js';
+import { STYLE } from '../style.js';
 import { ACTIONS, keyOf, keyName } from '../settings.js';
 import { GFX } from '../gfx.js';
 import { LANG, LANGS } from '../i18n.js';
@@ -48,6 +49,8 @@ export class PausePart {
         <div class="pz-row"><label>언어</label>${seg('lang', LANGS, LANG)}</div>
         <div class="pz-row"><label>난이도</label>${seg('diff', DIFF_ORDER.map((k) => [k, DIFFS[k].name]), this.difficulty)}</div>
         <div class="pz-note" style="margin-top:-4px">${DIFF_NOTE[this.difficulty]}</div>
+        <div class="pz-row"><label>그림체</label>${seg('art', [['anime', '애니메이션'], ['hd', '예전 3D']], STYLE === 'hd' ? 'hd' : 'anime')}</div>
+        <div class="pz-note" style="margin-top:-4px">그림체를 바꾸면 저장한 뒤 게임을 다시 불러와요.</div>
         <div class="pz-row"><label>화질</label>${seg('quality', [['high', '높음'], ['mid', '보통'], ['low', '낮음']], S.quality)}</div>
         <div class="pz-row"><label>화면 흔들림</label>${seg('shake', [[1, '보통'], [0.5, '약하게'], [0, '끔']], S.shake)}</div>
         <div class="pz-row"><label>도움말</label>${seg('tips', [[1, '보이기'], [0, '숨기기']], S.tips === false ? 0 : 1)}</div>
@@ -63,6 +66,7 @@ export class PausePart {
         const k = b.dataset.k, v = b.dataset.val;
         if (k === 'lang') { if (v !== LANG) this.setLang(v); return; }
         if (k === 'diff') this.setDifficulty(v);
+        if (k === 'art') { if (v !== (STYLE === 'hd' ? 'hd' : 'anime')) { try { localStorage.setItem('dot3d-style', v); } catch { /* 저장소 없음 */ } this.save(false); location.reload(); } return; }
         if (k === 'quality') { this.setSetting((s) => { s.quality = v; s.autoQ = false; }); this.applyQuality(v); }
         if (k === 'shake') this.setSetting((s) => { s.shake = +v; });
         if (k === 'numbers') this.setSetting((s) => { s.numbers = v === '1'; });
