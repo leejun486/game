@@ -209,8 +209,8 @@ void main() {
 #if STYLE == 0
   vec3 col = texture2D(tColor, vUv).rgb;
 #else
-  // 쿠와하라는 무거워서 '낮음' 화질에서는 뺌
-  vec3 col = aoOn > 0.0 ? kuwahara(vUv, STYLE == 1 ? 3 : 2) : texture2D(tColor, vUv).rgb;
+  // 셀 애니는 선명하게 (붓칠 필터는 화면을 뭉개서 동화 수채화에만)
+  vec3 col = STYLE == 2 && aoOn > 0.0 ? kuwahara(vUv, 2) : texture2D(tColor, vUv).rgb;
 #endif
   float dr = texture2D(tDepth, vUv).r;
   vec3 blur = texture2D(tBlur, vUv).rgb;
@@ -246,7 +246,7 @@ void main() {
   // ---- 틸트시프트: 화면 위아래로 갈수록 흐리게 (미니어처 느낌) ----
   float ty = abs(vUv.y - 0.45) * 2.0;
   float dof = smoothstep(0.58, 1.05, ty);
-  col = mix(col, blur * (1.0 - ao * 0.3), dof * (STYLE == 0 ? 0.75 : 0.15));
+  col = mix(col, blur * (1.0 - ao * 0.3), dof * (STYLE == 0 ? 0.75 : 0.0));
 
   // ---- 블룸: 밝은 곳이 은은하게 번짐 ----
   vec3 bloom = max(blur - vec3(0.78 - night * 0.45), 0.0);
@@ -260,7 +260,7 @@ void main() {
 #if STYLE != 0
   // ---- 그림 스타일: 외곽선 + 색 ----
   {
-    float ink = dr < 0.9999 ? inkEdge(vUv, STYLE == 3 ? 2.6 : STYLE == 2 ? 1.6 : 2.0) : 0.0;
+    float ink = dr < 0.9999 ? inkEdge(vUv, STYLE == 3 ? 2.6 : STYLE == 2 ? 1.6 : 1.3) : 0.0;
   #if STYLE == 1
     col = max(sat(col, 1.3), 0.0) * 1.25;
     col = mix(col, col * vec3(0.18, 0.14, 0.24), ink * 0.9);

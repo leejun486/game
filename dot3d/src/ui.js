@@ -760,7 +760,7 @@ const PORTRAITS = {
       '....ggggggllgggggg..',
       '...gggggggggggggggg.',
     ],
-    col: { h: '#e8e4c8', s: '#fbe2cc', e: '#2a6a4a', W: '#ffffff', p: '#f8a8b8', m: '#c86a60', g: '#5aa84e', l: '#bfe07a', f: '#ff9ac0', F: '#fff0a0' },
+    col: { h: '#f4c86a', s: '#fbe2cc', e: '#2a6a4a', W: '#ffffff', p: '#f8a8b8', m: '#c86a60', g: '#5aa84e', l: '#bfe07a', f: '#ff9ac0', F: '#fff0a0' },
   },
   lancer: {
     bg: '#6a2a2e',

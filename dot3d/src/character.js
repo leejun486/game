@@ -334,6 +334,7 @@ export class Rig {
       else if (x.deco) { if (!(cfg.deco || []).includes(x.deco)) this.buildDeco(x.deco, hr, { ...cfg, decoA: x.a || cfg.decoA, decoB: x.b || cfg.decoB, decoGlow: x.glow || cfg.decoGlow }); }
       else if (x.wings) this.buildWings();
     }
+    if (cfg.type === 'elf' && HDC && !cfg.cosBack) this.buildFairyWings(cfg);
     if (cfg.weapon) this.buildWeapon(cfg.weapon);
 
     this.root.traverse((o) => { if (o.isMesh) o.castShadow = true; });
@@ -388,20 +389,20 @@ export class Rig {
       const lashM = this.mat({ color: C('#1a1214') });
       for (const s of [-1, 1]) {
         const eg = new THREE.Group();
-        eg.position.set(s * 0.095, -0.02, z - 0.025);
-        const e = mesh(new THREE.SphereGeometry(0.036, 14, 10), glossy);
-        e.scale.set(0.95, 1.35, 0.6);
+        eg.position.set(s * 0.1, -0.03, z - 0.03);
+        const e = mesh(new THREE.SphereGeometry(0.05, 16, 12), glossy);
+        e.scale.set(0.92, 1.38, 0.6);
         eg.add(e);
-        eg.add(mesh(new THREE.SphereGeometry(0.011, 8, 6), white, 0.012, 0.026, 0.021));
-        eg.add(mesh(new THREE.SphereGeometry(0.006, 6, 4), white, -0.01, -0.015, 0.019));
+        eg.add(mesh(new THREE.SphereGeometry(0.016, 8, 6), white, 0.016, 0.034, 0.028));
+        eg.add(mesh(new THREE.SphereGeometry(0.008, 6, 4), white, -0.014, -0.022, 0.026));
         this.head.add(eg);
         this.eyes.push(eg);
-        const lash = mesh(new THREE.TorusGeometry(0.04, 0.0065, 4, 12, Math.PI * 0.8), lashM, s * 0.095, -0.012, z - 0.016);
+        const lash = mesh(new THREE.TorusGeometry(0.054, 0.008, 4, 12, Math.PI * 0.8), lashM, s * 0.1, -0.02, z - 0.02);
         lash.rotation.z = Math.PI * 0.1 + (s > 0 ? 0.04 : -0.04);
         lash.scale.set(1, 1.15, 0.5);
         this.head.add(lash);
         this.eyes.push(lash);
-        const br = mesh(new THREE.BoxGeometry(0.07, 0.014, 0.012), this.mat({ color: C(cfg.hair || '#231c1e') }), s * 0.1, 0.06, z - 0.03);
+        const br = mesh(new THREE.BoxGeometry(0.07, 0.014, 0.012), this.mat({ color: C(cfg.hair || '#231c1e') }), s * 0.1, 0.075, z - 0.03);
         br.rotation.z = s * -0.12;
         br.userData.base = br.rotation.z;
         br.userData.side = s;
@@ -520,33 +521,51 @@ export class Rig {
       const bead = this.mat({ color: C('#e0a84a') });
       for (const s of [-1, 1]) for (let i = 0; i < 4; i++) this.head.add(mesh(new THREE.SphereGeometry(0.022, 4, 3), bead, s * (0.22 - i * 0.015), hy - 0.06 - i * 0.07, 0.06));
     } else if (cfg.type === 'elf') {
-      // 긴 머리 + 뾰족한 귀 + 꽃 머리핀
+      // 요정: 어깨 아래로 매끈하게 떨어지는 긴 머리 + 얼굴 옆 머리 + 길쭉한 잎 귀 + 꽃 화관 (등에는 나비 날개 — buildFairyWings)
       if (HDC) {
-        // 뒷머리: 정수리에서 등으로 흘러내리는 굵은 가닥들 (끝이 바깥으로 살짝 뻗침)
-        for (let i = 0; i < 9; i++) {
-          const a = Math.PI * (0.62 + (i / 8) * 0.76), sa = Math.sin(a), ca = Math.cos(a);
-          this.head.add(mesh(strand([[sa * hr * 0.5, hr * 0.8, ca * hr * 0.5], [sa * hr * 1.02, hr * 0.2, ca * hr * 1.02], [sa * hr * 0.98, -hr * 0.6, ca * hr * 1.05 - 0.02], [sa * hr * 1.1, -hr * 1.35, ca * hr * 1.1 - 0.06]], 0.075, 0.012, 7, 12), hairM));
+        // 뒷머리: 매끈한 덩어리 하나 (가닥을 여럿 두면 걸레처럼 보였음) + 끝이 안으로 말린 두 갈래
+        const back = mesh(new THREE.SphereGeometry(hr * 1.02, 24, 16), hairM, 0, -hr * 0.42, -hr * 0.28);
+        back.scale.set(1.04, 1.45, 0.78);
+        this.head.add(back);
+        for (const s of [-1, 1]) {
+          const curl = mesh(new THREE.SphereGeometry(hr * 0.36, 14, 10), hairM, s * hr * 0.42, -hr * 1.42, -hr * 0.3);
+          curl.scale.set(1, 0.8, 0.9);
+          this.head.add(curl);
+          // 얼굴 옆으로 내려오는 가는 머리
+          this.head.add(mesh(strand([[s * hr * 0.78, hr * 0.45, hr * 0.42], [s * hr * 0.98, 0, hr * 0.4], [s * hr * 0.96, -hr * 0.6, hr * 0.34], [s * hr * 0.86, -hr * 1.0, hr * 0.36]], 0.05, 0.016), hairM));
         }
-        for (const s of [-1, 1]) this.head.add(mesh(strand([[s * hr * 0.8, hr * 0.5, hr * 0.3], [s * hr * 1.02, 0, hr * 0.32], [s * hr * 0.98, -hr * 0.7, hr * 0.28], [s * hr * 0.9, -hr * 1.2, hr * 0.32]], 0.05, 0.01), hairM));
       } else this.head.add(mesh(new THREE.BoxGeometry(0.46, 0.55, 0.14), hairM, 0, -0.2, -0.2));
       for (const s of [-1, 1]) {
         if (!HDC) this.head.add(mesh(new THREE.BoxGeometry(0.08, 0.38, 0.1), hairM, s * 0.25, -0.12, 0.06));
-        const ear = mesh(new THREE.ConeGeometry(0.045, 0.2, 4), this.mat({ color: C(cfg.skin) }), s * 0.3, 0.04, -0.02);
-        ear.rotation.z = -s * 1.15;
+        // 길쭉한 잎 모양 귀: 비스듬히 위·뒤로
+        const ear = mesh(new THREE.ConeGeometry(0.05, 0.3, 8), this.mat({ color: C(cfg.skin) }), s * 0.33, 0.06, -0.02);
+        ear.scale.z = 0.45;
+        ear.rotation.set(-0.25, 0, -s * 1.0);
         this.head.add(ear);
       }
-      const flower = this.mat({ color: C('#ff9ac0') });
-      this.head.add(mesh(new THREE.IcosahedronGeometry(0.06, 0), flower, 0.2, 0.18, 0.1));
-      this.head.add(mesh(new THREE.IcosahedronGeometry(0.035, 0), this.mat({ color: C('#fff0a0') }), 0.22, 0.2, 0.14));
-      const tail = new THREE.Group();
-      tail.position.set(0, -0.3, -0.24);
-      if (HDC) {
-        // 낮게 묶은 머리채 + 초록 댕기 (용수철로 흔들림)
-        for (let i = -1; i <= 1; i++) tail.add(mesh(strand([[i * 0.03, 0, 0], [i * 0.05, -0.15, -0.04], [i * 0.035, -0.32, -0.02]], 0.06, 0.01), hairM));
-        tail.add(mesh(new THREE.TorusGeometry(0.05, 0.018, 6, 12), this.mat({ color: C('#3a8a4a') }), 0, -0.02, 0, Math.PI / 2));
-      } else tail.add(mesh(new THREE.BoxGeometry(0.3, 0.32, 0.06), hairM, 0, -0.16, 0));
-      this.head.add(tail);
-      this.tail = tail;
+      // 꽃 화관: 머리띠처럼 둘러진 작은 꽃들 (분홍·흰·노랑) + 잎
+      const crown = new THREE.Group();
+      crown.position.set(0, hr * 0.62, -0.02);
+      crown.rotation.x = -0.32;
+      const pet = [this.mat({ color: C('#ff9ac0') }), this.mat({ color: C('#fff4fa') }), this.mat({ color: C('#ffd36a') })];
+      const mid = this.mat({ color: C('#ffe070') }), leafM = this.mat({ color: C('#5ab84e') });
+      for (let i = 0; i < 9; i++) {
+        const a = -Math.PI * 0.55 + (i / 8) * Math.PI * 1.1, r = hr * 0.98;
+        const x = Math.sin(a) * r, z = Math.cos(a) * r;
+        const f = new THREE.Group();
+        f.position.set(x, 0, z);
+        f.lookAt(x * 2, 0.4, z * 2);
+        for (let k = 0; k < 5; k++) {
+          const pa = (k / 5) * Math.PI * 2;
+          const pm = mesh(new THREE.SphereGeometry(0.03, 8, 6), pet[i % 3], Math.cos(pa) * 0.03, Math.sin(pa) * 0.03, 0);
+          pm.scale.z = 0.4;
+          f.add(pm);
+        }
+        f.add(mesh(new THREE.SphereGeometry(0.018, 8, 6), mid, 0, 0, 0.012));
+        crown.add(f);
+        if (i % 2) { const lf = mesh(new THREE.SphereGeometry(0.03, 8, 6), leafM, Math.sin(a + 0.17) * r, -0.01, Math.cos(a + 0.17) * r); lf.scale.set(1.6, 0.5, 0.6); crown.add(lf); }
+      }
+      this.head.add(crown);
     } else if (cfg.type === 'jiangshi') {
       // 둥근 관모 + 꼭지 + 이마에 붙은 부적
       const hatM = this.mat({ color: C('#1a1a20') });
@@ -771,6 +790,25 @@ export class Rig {
     }
   }
 
+  // 요정 날개: 반투명한 나비 날개 두 쌍 (위가 크고 아래가 작음), 살랑살랑 접혔다 펴짐
+  buildFairyWings(cfg) {
+    const wm = (c) => new THREE.MeshBasicMaterial({ color: C(c), transparent: true, opacity: 0.55, side: THREE.DoubleSide, depthWrite: false });
+    const up = wm(cfg.wingA || '#bff4e0'), lo = wm(cfg.wingB || '#ffd0ec'), rim = this.mat({ color: C('#ffffff'), emissive: C('#3a6a5a') });
+    this.fWings = [];
+    for (const s of [-1, 1]) {
+      const g = new THREE.Group();
+      g.position.set(s * 0.05, 0.12, -0.18);
+      const a = new THREE.Mesh(new THREE.CircleGeometry(0.2, 20), up);
+      a.scale.set(1.25, 0.9, 1); a.position.set(s * 0.22, 0.14, 0); a.rotation.z = s * 0.5;
+      const b = new THREE.Mesh(new THREE.CircleGeometry(0.13, 16), lo);
+      b.scale.set(1.1, 0.95, 1); b.position.set(s * 0.15, -0.1, 0); b.rotation.z = -s * 0.5;
+      a.userData.noOutline = b.userData.noOutline = true;
+      g.add(a, b, mesh(new THREE.SphereGeometry(0.018, 6, 5), rim));
+      this.chest.add(g);
+      this.fWings.push({ g, s });
+    }
+  }
+
   // 꾸밈: 학 날개 (깃 넷이 부채꼴로, 천천히 퍼덕임)
   buildWings() {
     const wM = this.mat({ color: C('#f6f4f0') }), tipM = this.mat({ color: C('#1a1418') });
@@ -813,6 +851,7 @@ export class Rig {
 
   animCos(dt) {
     const t = this.idleT;
+    if (this.fWings) for (const w of this.fWings) w.g.rotation.y = w.s * (-0.55 + Math.sin(t * 7) * 0.32);
     if (this.wings) for (const w of this.wings) {
       w.g.rotation.y = w.s * (-0.2 + Math.sin(t * 2.2) * 0.14);
       w.g.rotation.x = -0.15 + Math.sin(t * 2.2 + 0.6) * 0.05;
@@ -1082,7 +1121,7 @@ export class Rig {
 
   // p: {speed, moving, attack:{t, kind} | null, dash, hurt, dead, dt}
   animate(dt, p) {
-    if (this.wings || this.aura) this.animCos(dt);
+    if (this.wings || this.aura || this.fWings) this.animCos(dt);
     // 떠다니는 장식 (명부·업경대): 천천히 오르내리며 돎
     if (this.floaters) { this._ft = (this._ft || 0) + dt; for (const f of this.floaters) { f.obj.position.y = f.base.y + Math.sin(this._ft * 1.6) * 0.06; f.obj.rotation.y += f.spin * dt; } }
     const s = p.speed || 0;
@@ -1472,7 +1511,7 @@ export function makeMage(o = {}) {
 export function makeElf(o = {}) {
   return new Rig({ ...{
     type: 'elf', scale: 1.12, skin: '#fbe2cc', robe: '#5aa84e', sleeve: '#5aa84e', cuff: '#e8d8a0', skirt: '#3f7a3a', belt: '#7a4e2e',
-    pants: '#f0e8d0', shoes: '#6a4428', hair: '#e8e4c8', eye: '#2a6a4a', weapon: 'bow',
+    pants: '#f0e8d0', shoes: '#6a4428', hair: '#f4c86a', eye: '#2a7a5a', weapon: 'bow',
   }, ...o });
 }
 

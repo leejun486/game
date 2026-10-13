@@ -31,7 +31,7 @@ if (STYLE !== 'hd') {
   // 울퉁불퉁한 노멀맵·범프맵은 끔, 하늘/땅 빛은 면 방향과 상관없이 고르게 (각진 면이 덜 보이게)
   C.map_fragment = C.map_fragment.replace(
     'vec4 sampledDiffuseColor = texture2D( map, vMapUv );',
-    'vec4 sampledDiffuseColor = texture2D( map, vMapUv );\n\tsampledDiffuseColor.rgb = mix( texture2D( map, vMapUv, 3.0 ).rgb, sampledDiffuseColor.rgb, 0.3 );');
+    'vec4 sampledDiffuseColor = texture2D( map, vMapUv );\n\tsampledDiffuseColor.rgb = mix( texture2D( map, vMapUv, 2.5 ).rgb, sampledDiffuseColor.rgb, 0.4 );');
   C.normal_fragment_maps = '';
   C.lights_pars_begin = C.lights_pars_begin.replace('float hemiDiffuseWeight = 0.5 * dotNL + 0.5;', 'float hemiDiffuseWeight = 0.62 + dotNL * 0.08;');
   // 그림자 가장자리도 또렷하게
