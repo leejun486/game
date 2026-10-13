@@ -1,6 +1,7 @@
 // 방어구·장신구: 장갑, 각반, 허리띠, 반지(두 개). 주울 때마다 등급과 옵션이 무작위로 붙음
 import { RARITY, PERKS } from './items.js';
 import { gearMul } from './enhance.js';
+import { smoothIcon } from './util.js';
 
 export const GEAR_SLOTS = ['gloves', 'legs', 'belt', 'ring1', 'ring2'];
 export const SLOT_NAME = { weapon: '무기', outfit: '갑옷', gloves: '장갑', legs: '각반', belt: '허리띠', ring1: '반지', ring2: '반지', ring: '반지' };
@@ -124,6 +125,10 @@ export const salvageExp = (g) => 8 + g.tier * g.tier * 10 + g.lv * 2;
 
 // 16x16 도트 아이콘
 export function drawGearIcon(cv, g) {
+  if (cv.width !== 16) cv.width = cv.height = 16;
+  try { drawGearIcon16(cv, g); } finally { smoothIcon(cv); }
+}
+function drawGearIcon16(cv, g) {
   const c = cv.getContext('2d');
   c.clearRect(0, 0, 16, 16);
   const rc = (g.set ? SET_RARITY : RARITY[g.tier]).color, col = gearColor(g);

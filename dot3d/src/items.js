@@ -1,4 +1,5 @@
 // 장비 아이템: 무기(직업 전용)와 옷(모든 직업 공용). 착용하면 캐릭터 모습이 바뀜
+import { smoothIcon } from './util.js';
 export const RARITY = [
   { name: '일반', color: '#d8d0c0' },
   { name: '고급', color: '#6ad06a' },
@@ -259,10 +260,14 @@ export function rollDrop(enemyType, round, cls) {
 
 // 작은 도트 아이콘 (16x16)
 export function drawItemIcon(cv, id) {
+  if (cv.width !== 16) cv.width = cv.height = 16;
   const it = item(id);
   const g = cv.getContext('2d');
   g.clearRect(0, 0, 16, 16);
   if (!it) return;
+  try { drawItemIcon16(g, it); } finally { smoothIcon(cv); }
+}
+function drawItemIcon16(g, it) {
   const rc = RARITY[it.tier].color;
   g.fillStyle = '#14101c';
   g.fillRect(0, 0, 16, 16);

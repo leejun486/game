@@ -253,7 +253,7 @@ body.touch #gameover .s b::after { content: ' / 화면 탭'; }
 #bag-stats b { color: #ffd76a; font-weight: normal; }
 .eq-label, .bag-sec { font-size: 11px; color: var(--gold); margin: 4px 0; }
 .eq, .it { display: flex; align-items: center; gap: 8px; padding: 5px; background: rgba(0, 0, 0, 0.3); border: 2px solid #3a3020; font-size: 12px; }
-.eq canvas, .it canvas { width: 32px; height: 32px; image-rendering: pixelated; flex: none; }
+.eq canvas, .it canvas { width: 32px; height: 32px; image-rendering: auto; flex: none; }
 .eq small, .it small { display: block; font-size: 10px; color: #c8bea8; }
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; }
 .it { cursor: pointer; }
@@ -343,7 +343,7 @@ body.touch #gameover .s b::after { content: ' / 화면 탭'; }
 #bag-stats .st { display: flex; justify-content: space-between; }
 #bag-eq { display: flex; flex-direction: column; gap: 4px; }
 .eqs { display: flex; align-items: center; gap: 6px; padding: 3px 5px; background: rgba(0, 0, 0, 0.3); border: 2px solid #3a3020; font-size: 11px; cursor: pointer; min-height: 30px; }
-.eqs canvas { width: 24px; height: 24px; image-rendering: pixelated; flex: none; }
+.eqs canvas { width: 24px; height: 24px; image-rendering: auto; flex: none; }
 .eqs .sl { color: #8a7e6a; width: 34px; flex: none; font-size: 10px; }
 .eqs .empty { color: #5a5060; }
 .eqs:hover, .eqs.sel { border-color: var(--gold); }
@@ -354,7 +354,7 @@ body.touch #gameover .s b::after { content: ' / 화면 탭'; }
 #gear-detail { min-height: 0; margin-bottom: 6px; }
 #gear-detail .gd { background: rgba(10, 6, 16, 0.85); border: 2px solid var(--gold-dark); padding: 8px; font-size: 11.5px; line-height: 1.55; }
 #gear-detail .gd-top { display: flex; gap: 8px; align-items: center; margin-bottom: 4px; }
-#gear-detail .gd-top canvas { width: 36px; height: 36px; image-rendering: pixelated; }
+#gear-detail .gd-top canvas { width: 36px; height: 36px; image-rendering: auto; }
 #gear-detail .gd-name { font-size: 14px; }
 #gear-detail small { color: #a89e8a; }
 #gear-detail em { font-style: normal; color: #ff9a7a; }
@@ -935,7 +935,7 @@ body.touch #coach.tut.show #coach-skip { pointer-events: auto; }
 .pet-dot { width: 16px; height: 16px; flex: none; border: 2px solid #1a1420; }
 .cx-h { margin: 12px 0 4px; color: var(--gold); font-size: 13px; font-weight: normal; }
 .craft-pick { display: flex; gap: 10px; align-items: flex-start; background: #1e1828; border: 1px solid #4a3e58; padding: 8px; margin: 6px 0; font-size: 12px; }
-.craft-pick canvas { width: 36px; height: 36px; image-rendering: pixelated; flex: none; }
+.craft-pick canvas { width: 36px; height: 36px; image-rendering: auto; flex: none; }
 .cp-lines { display: flex; flex-direction: column; color: #c8bea8; margin-top: 3px; font-size: 11px; }
 .craft-cost { font-size: 12px; margin: 4px 0 6px; }
 .craft-grid { margin-top: 8px; max-height: 180px; overflow-y: auto; }
