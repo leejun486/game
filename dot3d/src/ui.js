@@ -573,6 +573,7 @@ export class UI {
   setBoss(enemy, keepLag = false) {
     this.bossEnemy = enemy;
     this.el.boss.classList.toggle('show', !!enemy);
+    document.body.classList.toggle('boss-on', !!enemy); // 세로 화면: 보스 바를 맨 위에 두고 나머지를 조금 내림
     if (enemy) { this.el.bossName.textContent = (enemy.name || '도깨비 대왕') + (enemy.phase > 1 ? ` · ${enemy.phase}단계` : ''); if (!keepLag) this.bossLag = 1; }
     this.el.boss.dataset.phase = enemy?.phase || 1;
   }
