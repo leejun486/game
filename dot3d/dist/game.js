@@ -4658,13 +4658,17 @@ void main() {
   vColor = aColor; vAlpha = aAlpha;
   vec4 mv = modelViewMatrix * vec4(position, 1.0);
   gl_Position = projectionMatrix * mv;
-  gl_PointSize = aSize;
+  gl_PointSize = aSize * 1.3; // \uB465\uAE00\uAC8C \uAE4E\uC774\uB294 \uB9CC\uD07C \uC870\uAE08 \uD06C\uAC8C
 }`,vk=`
 varying vec3 vColor;
 varying float vAlpha;
 void main() {
   if (vAlpha <= 0.01) discard;
-  gl_FragColor = vec4(vColor * vAlpha, vAlpha);
+  // \uB465\uADFC \uC785\uC790 (\uC608\uC804\uC5D4 \uB124\uBAA8\uB09C \uB3C4\uD2B8): \uAC00\uC7A5\uC790\uB9AC\uB9CC \uC0B4\uC9DD \uBD80\uB4DC\uB7FD\uAC8C
+  float d = length(gl_PointCoord - 0.5);
+  if (d > 0.5) discard;
+  float a = vAlpha * smoothstep(0.5, 0.36, d);
+  gl_FragColor = vec4(vColor * a, a);
 }`,wg=class wg{constructor(e,t,s){this.cap=t,this.list=[];let i=this.geo=new _t;this.pos=new Float32Array(t*3),this.col=new Float32Array(t*3),this.size=new Float32Array(t),this.alpha=new Float32Array(t),i.setAttribute("position",new _s(this.pos,3).setUsage(fr)),i.setAttribute("aColor",new _s(this.col,3).setUsage(fr)),i.setAttribute("aSize",new _s(this.size,1).setUsage(fr)),i.setAttribute("aAlpha",new _s(this.alpha,1).setUsage(fr));let o=new Bt({vertexShader:wk,fragmentShader:vk,transparent:!0,depthWrite:!1,blending:s?zt:td,blendSrc:sd,blendDst:Dl});this.points=new bl(i,o),this.points.frustumCulled=!1,this.points.renderOrder=s?20:10,e.add(this.points)}emit(e){this.list.length>=this.cap&&this.list.shift();let t=e.color instanceof fe?e.color:new fe(e.color??16777215);this.list.push({x:e.x,y:e.y,z:e.z,vx:e.vx||0,vy:e.vy||0,vz:e.vz||0,g:e.g??0,drag:e.drag??0,life:e.life??1,max:e.life??1,size:e.size??2,endSize:e.endSize??e.size??2,r:t.r,gg:t.g,b:t.b,c2:e.color2?new fe(e.color2):null,alpha:e.alpha??1,flicker:e.flicker||0,floor:e.floor??-100,wob:e.wob||0,seed:Math.random()*100})}update(e,t){let s=this.list,i=0;for(let o=s.length-1;o>=0;o--){let a=s[o];if(a.life-=e,a.life<=0){s.splice(o,1);continue}a.vy-=a.g*e;let r=Math.exp(-a.drag*e);a.vx*=r,a.vy*=r,a.vz*=r,a.x+=a.vx*e,a.y+=a.vy*e,a.z+=a.vz*e,a.wob&&(a.x+=Math.sin(t*2+a.seed)*a.wob*e,a.z+=Math.cos(t*1.7+a.seed)*a.wob*e),a.y<a.floor&&(a.y=a.floor,a.vy*=-.3,a.vx*=.6,a.vz*=.6)}for(let o of s){if(i>=this.cap)break;let a=o.life/o.max;this.pos[i*3]=o.x,this.pos[i*3+1]=o.y,this.pos[i*3+2]=o.z;let r=o.r,l=o.gg,h=o.b;o.c2&&(r=o.c2.r+(r-o.c2.r)*a,l=o.c2.g+(l-o.c2.g)*a,h=o.c2.b+(h-o.c2.b)*a),this.col[i*3]=r,this.col[i*3+1]=l,this.col[i*3+2]=h,this.size[i]=Math.max(1,Math.round(o.endSize+(o.size-o.endSize)*a));let c=o.alpha*Math.min(1,a*3);o.flicker&&(c*=1-o.flicker*(Math.sin(t*30+o.seed*10)*.5+.5)),this.alpha[i]=c,i++}this.geo.setDrawRange(0,i);for(let o of["position","aColor","aSize","aAlpha"])this.geo.attributes[o].needsUpdate=!0}};u(wg,"ParticlePool");var Mf=wg,vf=`
 varying vec2 vL;
 void main(){ vL = position.xy; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`,Mk=`

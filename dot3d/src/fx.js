@@ -63,14 +63,18 @@ void main() {
   vColor = aColor; vAlpha = aAlpha;
   vec4 mv = modelViewMatrix * vec4(position, 1.0);
   gl_Position = projectionMatrix * mv;
-  gl_PointSize = aSize;
+  gl_PointSize = aSize * 1.3; // 둥글게 깎이는 만큼 조금 크게
 }`;
 const pFrag = /* glsl */`
 varying vec3 vColor;
 varying float vAlpha;
 void main() {
   if (vAlpha <= 0.01) discard;
-  gl_FragColor = vec4(vColor * vAlpha, vAlpha);
+  // 둥근 입자 (예전엔 네모난 도트): 가장자리만 살짝 부드럽게
+  float d = length(gl_PointCoord - 0.5);
+  if (d > 0.5) discard;
+  float a = vAlpha * smoothstep(0.5, 0.36, d);
+  gl_FragColor = vec4(vColor * a, a);
 }`;
 
 class ParticlePool {
