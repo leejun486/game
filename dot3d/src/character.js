@@ -1,5 +1,6 @@
 // 2.5등신 로우폴리 캐릭터 + 절차적 애니메이션
 import * as THREE from 'three';
+import { keepDetail } from './style.js';
 import { toon } from './materials.js';
 import { GFX } from './gfx.js';
 import { tigerTex, clothTex } from './textures.js';
@@ -101,7 +102,7 @@ export class Rig {
       t.userData.owned = true; // 이 캐릭터만 쓰는 복제본 → 캐릭터를 지울 때 함께 해제
       t.needsUpdate = true;
       t.repeat.set(1, kind === 'saekdong' ? Math.max(0.25, h * 0.7) : Math.max(0.2, h * 0.45));
-      return mat({ map: t, ...fab });
+      return keepDetail(mat({ map: t, ...fab }));
     };
     this.cloth = cloth;
     this.fab = fab;

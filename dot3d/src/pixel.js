@@ -253,7 +253,7 @@ void main() {
   col += bloom * mix(0.55, 1.1, night);
 
   // ---- 지역 색감: 먼 곳(화면 위쪽)에 대기가 끼고, 지역마다 색과 채도가 다름 (밤엔 절반만) ----
-  float gk = 1.0 - night * 0.5;
+  float gk = (1.0 - night * 0.5) * (STYLE == 0 ? 1.0 : 0.45); // 그림 스타일은 지역 색 보정을 옅게 (맑은 색)
   col = mix(col, gHaze * mix(1.0, 0.35, night), gHazeAmt * gk * smoothstep(0.3, 1.0, vUv.y) * (dr < 0.9999 ? 1.0 : 0.6));
   col = max(sat(col, mix(1.0, gSat, gk)), 0.0) * mix(vec3(1.0), gTint, gk);
 

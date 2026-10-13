@@ -1,6 +1,6 @@
 // 궁궐 마당 레벨: 지오메트리 + 충돌/높이
 import * as THREE from 'three';
-import { softNormals } from './style.js';
+import { softNormals, keepDetail } from './style.js';
 import { toon, animateMesh, ANIM, shared, softEdge } from './materials.js';
 import { boxGeo, cylGeo, Batcher, roofGeometry, latheGeo } from './geom.js';
 import * as T from './textures.js';
@@ -267,12 +267,12 @@ export class World {
       use('leaf2', HD.hdNeedle([68, 108, 60]), { roughness: 0.9 });
       // 단청 띠: 띠 높이(약 0.42) 하나에 무늬가 꽉 차게 세로 반복을 맞춤
       const dc = HD.hdDancheong().map.clone(); dc.needsUpdate = true; dc.repeat.set(1, 1 / 0.105);
-      M.dancheong = toon({ map: dc, roughness: 0.7 });
-      M.roofUnder = toon({ ...HD.hdRafter(), roughness: 0.8 });
-      M.fascia = toon({ map: dc, side: THREE.DoubleSide, roughness: 0.7 });
-      M.carving = toon({ ...HD.hdCarving(), roughness: 0.9 });
-      M.lattice = toon({ map: HD.hdLattice().map, emissiveMap: HD.hdLattice(true).map, emissive: c('#000000'), roughness: 0.85 });
-      use('medallion', HD.hdMedallion(), { roughness: 0.92, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 });
+      M.dancheong = keepDetail(toon({ map: dc, roughness: 0.7 }));
+      M.roofUnder = keepDetail(toon({ ...HD.hdRafter(), roughness: 0.8 }));
+      M.fascia = keepDetail(toon({ map: dc, side: THREE.DoubleSide, roughness: 0.7 }));
+      M.carving = keepDetail(toon({ ...HD.hdCarving(), roughness: 0.9 }));
+      M.lattice = keepDetail(toon({ map: HD.hdLattice().map, emissiveMap: HD.hdLattice(true).map, emissive: c('#000000'), roughness: 0.85 }));
+      use('medallion', HD.hdMedallion(), { roughness: 0.92, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 }); keepDetail(M.medallion);
       for (const k of ['gold', 'bronze', 'bronzeDark']) { M[k].metalness = 0.55; M[k].roughness = 0.45; }
     }
     this.glowMats.push({ mat: this.M.lattice, color: new THREE.Color('#ffb060'), k: 1.1 });
@@ -775,7 +775,7 @@ export class World {
     // 깃발 (깃대 쪽이 로컬 x=-0.5)
     const fw = GFX.hd ? 1.5 : 1.1, fh = GFX.hd ? 1.9 : 1.4;
     const geo = new THREE.PlaneGeometry(fw, fh, 10, 6);
-    const mat = toon({ map: GFX.hd ? HD.hdBanner(kind).map : T.bannerTex(kind), side: THREE.DoubleSide, roughness: 0.95 });
+    const mat = keepDetail(toon({ map: GFX.hd ? HD.hdBanner(kind).map : T.bannerTex(kind), side: THREE.DoubleSide, roughness: 0.95 }));
     const m = new THREE.Mesh(geo, mat);
     m.position.set(x + side * (fw / 2 + 0.05), y + h - fh * 0.62, z);
     if (side < 0) m.scale.x = -1;

@@ -27,13 +27,18 @@ if (STYLE !== 'hd') {
   C.lights_physical_pars_fragment = fn + C.lights_physical_pars_fragment.replace(
     'float dotNL = saturate( dot( geometryNormal, directLight.direction ) );\n\n\tvec3 irradiance = dotNL * directLight.color;',
     'float dotNL = saturate( dot( geometryNormal, directLight.direction ) );\n\n\tvec3 irradiance = celBand( dotNL ) * directLight.color;');
-  // 3D 질감 없애기: 텍스처의 잔결(돌 틈·흙 알갱이·풀 결)은 흐린 단계(밉맵)와 섞어 평평한 붓칠처럼,
+  // 3D 질감 없애기: 텍스처는 흐린 단계(밉맵)의 고른 색으로 칠하고, 원래 무늬 중 아주 어두운 곳(돌 틈·금)만 선처럼 남김 → 손으로 그린 배경,
   // 울퉁불퉁한 노멀맵·범프맵은 끔, 하늘/땅 빛은 면 방향과 상관없이 고르게 (각진 면이 덜 보이게)
   C.map_fragment = C.map_fragment.replace(
     'vec4 sampledDiffuseColor = texture2D( map, vMapUv );',
-    'vec4 sampledDiffuseColor = texture2D( map, vMapUv );\n\tsampledDiffuseColor.rgb = mix( texture2D( map, vMapUv, 2.5 ).rgb, sampledDiffuseColor.rgb, 0.4 );');
+    'vec4 sampledDiffuseColor = texture2D( map, vMapUv );\n#ifndef KEEP_DETAIL\n\t{ vec3 lo_ = texture2D( map, vMapUv, 4.0 ).rgb; float d_ = dot( sampledDiffuseColor.rgb - lo_, vec3( 0.3333 ) ) / max( dot( lo_, vec3( 0.3333 ) ), 0.05 );\n\t  sampledDiffuseColor.rgb = lo_ * ( 1.0 - 0.3 * smoothstep( 0.16, 0.3, -d_ ) + 0.1 * smoothstep( 0.18, 0.32, d_ ) ); }\n#endif');
+  // 쇠붙이 반사·반짝임 없이 (그림처럼 고른 칠)
+  C.metalnessmap_fragment = 'float metalnessFactor = 0.0;';
+  C.roughnessmap_fragment = 'float roughnessFactor = 1.0;';
   C.normal_fragment_maps = '';
-  C.lights_pars_begin = C.lights_pars_begin.replace('float hemiDiffuseWeight = 0.5 * dotNL + 0.5;', 'float hemiDiffuseWeight = 0.62 + dotNL * 0.08;');
+  C.lights_pars_begin = C.lights_pars_begin.replace('float hemiDiffuseWeight = 0.5 * dotNL + 0.5;', 'float hemiDiffuseWeight = 0.65;')
+    // 그늘은 살짝 푸른 보랏빛으로 (애니메이션 채색처럼 그늘색이 따로 있는 느낌)
+    .replace('vec3 irradiance = mix( hemiLight.groundColor, hemiLight.skyColor, hemiDiffuseWeight );', 'vec3 irradiance = mix( hemiLight.groundColor, hemiLight.skyColor, hemiDiffuseWeight ) * vec3( 0.86, 0.9, 1.12 );');
   // 그림자 가장자리도 또렷하게
   C.lights_fragment_begin = C.lights_fragment_begin.replace(
     'directLight.color *= ( directLight.visible && receiveShadow ) ? getShadow( directionalShadowMap[ i ], directionalLightShadow.shadowMapSize, directionalLightShadow.shadowIntensity, directionalLightShadow.shadowBias, directionalLightShadow.shadowRadius, vDirectionalShadowCoord[ i ] ) : 1.0;',
@@ -60,3 +65,9 @@ export function softNormals(g) {
 }
 const POLY = /Icosahedron|Dodecahedron|Octahedron|Tetrahedron/;
 export const isPoly = (geo) => SOFT && POLY.test(geo.type || '');
+
+// 무늬가 중요한 재질(단청·현판·깃발·옷 무늬)은 잔결 지우기에서 뺌
+export function keepDetail(m) {
+  if (SOFT && m) { m.defines = { ...(m.defines || {}), KEEP_DETAIL: '' }; m.needsUpdate = true; }
+  return m;
+}
