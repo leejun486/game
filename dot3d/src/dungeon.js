@@ -53,7 +53,7 @@ export function startDungeon(g, id) {
   const p = g.player;
   g.towerReturn = p.pos.clone();
   // 적 레벨 = 1 + floor + (내 레벨-1)/3 (spawnEnemy) → 내 레벨보다 4쯤 낮게 (오래 싸우는 곳이라)
-  g.tower = { active: true, mode: 'dungeon', dg: id, floor: Math.max(1, p.level - 3 - Math.floor((p.level - 1) / 5)), best: 0, cleared: false, lastT: g.time, kills: 0, loot: {}, guardAt: g.time + GUARD_EVERY, spawnAt: g.time + 2 };
+  g.tower = { active: true, mode: 'dungeon', dg: id, floor: Math.max(1, p.level - 4 - Math.floor((p.level - 1) / 4)), best: 0, cleared: false, lastT: g.time, kills: 0, loot: {}, guardAt: g.time + GUARD_EVERY, spawnAt: g.time + 2 };
   g.teleport(0, g.towerZ() + 8);
   addDungeonProps(g, id);
   g.audio.play('portal');
@@ -133,7 +133,7 @@ export function updateDungeon(g) {
   if (g.time > T.spawnAt && alive < KEEP) {
     T.spawnAt = g.time + 0.5;
     const n = Math.min(3, KEEP - alive);
-    for (let i = 0; i < n; i++) g.spawnQueue.push({ type: D.pool[Math.floor(Math.random() * D.pool.length)], elite: Math.random() < 0.12, at: g.time + 0.3 + i * 0.35 });
+    for (let i = 0; i < n; i++) g.spawnQueue.push({ type: D.pool[Math.floor(Math.random() * D.pool.length)], elite: Math.random() < 0.1, at: g.time + 0.3 + i * 0.35 });
   }
   if (g.time > T.guardAt) {
     T.guardAt = g.time + GUARD_EVERY;
