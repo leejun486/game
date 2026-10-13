@@ -19,8 +19,8 @@ export const STYLE_ID = STYLES.indexOf(STYLE);
 if (STYLE !== 'hd') {
   const band = {
     anime: 'mix(0.42, 1.0, smoothstep(0.16, 0.22, x))',
-    story: 'mix(0.5, 1.0, smoothstep(0.05, 0.35, x) * 0.5 + smoothstep(0.45, 0.6, x) * 0.5)',
-    pastel: 'mix(0.72, 1.0, smoothstep(0.12, 0.2, x))',
+    story: 'mix(0.42, 1.0, smoothstep(0.05, 0.35, x) * 0.5 + smoothstep(0.45, 0.6, x) * 0.5)',
+    pastel: 'mix(0.55, 1.0, smoothstep(0.12, 0.2, x))',
   }[STYLE];
   const C = THREE.ShaderChunk;
   const fn = `float celBand(float x) { return ${band}; }\n`;

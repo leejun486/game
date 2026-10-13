@@ -209,7 +209,7 @@ void main() {
 #if STYLE == 0
   vec3 col = texture2D(tColor, vUv).rgb;
 #else
-  vec3 col = kuwahara(vUv, STYLE == 2 ? 4 : 3);
+  vec3 col = kuwahara(vUv, 2);
 #endif
   float dr = texture2D(tDepth, vUv).r;
   vec3 blur = texture2D(tBlur, vUv).rgb;
@@ -266,12 +266,12 @@ void main() {
   #elif STYLE == 2
     // 종이 결 (낮은 주파수 얼룩 + 가는 섬유)
     float paper = hash(floor(gl_FragCoord.xy * 0.5)) * 0.05 + texture2D(tCloud, gl_FragCoord.xy / res * 1.7).r * 0.12;
-    col = max(sat(col, 0.85), 0.0) * 1.2 + 0.006;
+    col = max(sat(col, 0.95), 0.0) * 1.15;
     col *= 0.93 + paper;
     float wob = hash(floor(gl_FragCoord.xy / 3.0)) * 0.4 + 0.6;
     col = mix(col, vec3(0.30, 0.20, 0.14), ink * 0.7 * wob);
   #else
-    col = max(sat(col, 1.15), 0.0) * 1.3 + vec3(0.008, 0.005, 0.012);
+    col = max(sat(col, 1.25), 0.0) * 1.25;
     col = mix(col, vec3(0.25, 0.16, 0.32), ink * 0.95);
   #endif
   }

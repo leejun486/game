@@ -4262,7 +4262,7 @@ float seN(vec2 p) { vec2 i = floor(p), f = fract(p); vec2 u = f * f * (3.0 - 2.0
 uniform float uRimK;
 `+n.fragmentShader.replace("#include <emissivemap_fragment>",`#include <emissivemap_fragment>
           float rimF = 1.0 - clamp(dot(normalize(normal), normalize(vViewPosition)), 0.0, 1.0);
-          totalEmissiveRadiance += uRimColor * (pow(rimF, 2.6) * uRimK);`)},t.customProgramCacheKey=()=>(i?i():"")+"|rim",t.needsUpdate=!0}})}u(gr,"addRim");var L2="dot3d-settings-v1",of=[["atk","\uAE30\uBCF8 \uACF5\uACA9","KeyJ"],["dash","\uD53C\uD558\uAE30","Space"],["skill","\uAE30\uC220 1","KeyK"],["skill2","\uAE30\uC220 2","KeyL"],["skill3","\uAE30\uC220 3","KeyI"],["ult","\uACE0\uC720 \uAE30\uC220","KeyU"],["act","\uB300\uD654\xB7\uC870\uC0AC","KeyE"],["bag","\uAC00\uBC29","KeyB"],["skills","\uAE30\uC220 \uC218\uB828","KeyT"],["records","\uAE30\uB85D","KeyY"],["map","\uC9C0\uB3C4","KeyV"],["auto","\uC790\uB3D9 \uC774\uB3D9","KeyF"],["hunt","\uC790\uB3D9 \uC0AC\uB0E5","KeyH"]],nf={vol:{master:.7,music:.55,sfx:.95,amb:.6},quality:"high",shake:1,numbers:!0,tips:!0,binds:{},lang:"auto",warn:"",ui:1,flash:1};function cn(){try{let o=JSON.parse(localStorage.getItem(L2)||"null");return o?{...structuredClone(nf),...o,vol:{...nf.vol,...o.vol||{}},binds:{...o.binds||{}}}:structuredClone(nf)}catch{return structuredClone(nf)}}u(cn,"loadSettings");function H2(o){try{localStorage.setItem(L2,JSON.stringify(o))}catch{}}u(H2,"saveSettings");function af(o,e){let t=of.find(s=>s[0]===e);return o.binds[e]||(t?t[2]:"")}u(af,"keyOf");function B2(o){let e={};for(let[t]of of)o.binds[t]&&(e[o.binds[t]]=t);return e}u(B2,"bindMap");function rf(o){return o?o.startsWith("Key")?o.slice(3):o.startsWith("Digit")?o.slice(5):{Space:"Space",ShiftLeft:"Shift",ShiftRight:"\uC624\uB978 Shift",Enter:"Enter",Tab:"Tab",ArrowUp:"\u2191",ArrowDown:"\u2193",ArrowLeft:"\u2190",ArrowRight:"\u2192",ControlLeft:"Ctrl",AltLeft:"Alt",Backquote:"`",Semicolon:";",Comma:",",Period:".",Slash:"/"}[o]||o:"-"}u(rf,"keyName");var N2=["hd","anime","story","pastel"],Zm=(()=>{try{let e=new URLSearchParams(location.search).get("style")||localStorage.getItem("dot3d-style");return N2.includes(e)?e:"hd"}catch{return"hd"}})(),F2=N2.indexOf(Zm);if(Zm!=="hd"){let o={anime:"mix(0.42, 1.0, smoothstep(0.16, 0.22, x))",story:"mix(0.5, 1.0, smoothstep(0.05, 0.35, x) * 0.5 + smoothstep(0.45, 0.6, x) * 0.5)",pastel:"mix(0.72, 1.0, smoothstep(0.12, 0.2, x))"}[Zm],e=vt,t=`float celBand(float x) { return ${o}; }
+          totalEmissiveRadiance += uRimColor * (pow(rimF, 2.6) * uRimK);`)},t.customProgramCacheKey=()=>(i?i():"")+"|rim",t.needsUpdate=!0}})}u(gr,"addRim");var L2="dot3d-settings-v1",of=[["atk","\uAE30\uBCF8 \uACF5\uACA9","KeyJ"],["dash","\uD53C\uD558\uAE30","Space"],["skill","\uAE30\uC220 1","KeyK"],["skill2","\uAE30\uC220 2","KeyL"],["skill3","\uAE30\uC220 3","KeyI"],["ult","\uACE0\uC720 \uAE30\uC220","KeyU"],["act","\uB300\uD654\xB7\uC870\uC0AC","KeyE"],["bag","\uAC00\uBC29","KeyB"],["skills","\uAE30\uC220 \uC218\uB828","KeyT"],["records","\uAE30\uB85D","KeyY"],["map","\uC9C0\uB3C4","KeyV"],["auto","\uC790\uB3D9 \uC774\uB3D9","KeyF"],["hunt","\uC790\uB3D9 \uC0AC\uB0E5","KeyH"]],nf={vol:{master:.7,music:.55,sfx:.95,amb:.6},quality:"high",shake:1,numbers:!0,tips:!0,binds:{},lang:"auto",warn:"",ui:1,flash:1};function cn(){try{let o=JSON.parse(localStorage.getItem(L2)||"null");return o?{...structuredClone(nf),...o,vol:{...nf.vol,...o.vol||{}},binds:{...o.binds||{}}}:structuredClone(nf)}catch{return structuredClone(nf)}}u(cn,"loadSettings");function H2(o){try{localStorage.setItem(L2,JSON.stringify(o))}catch{}}u(H2,"saveSettings");function af(o,e){let t=of.find(s=>s[0]===e);return o.binds[e]||(t?t[2]:"")}u(af,"keyOf");function B2(o){let e={};for(let[t]of of)o.binds[t]&&(e[o.binds[t]]=t);return e}u(B2,"bindMap");function rf(o){return o?o.startsWith("Key")?o.slice(3):o.startsWith("Digit")?o.slice(5):{Space:"Space",ShiftLeft:"Shift",ShiftRight:"\uC624\uB978 Shift",Enter:"Enter",Tab:"Tab",ArrowUp:"\u2191",ArrowDown:"\u2193",ArrowLeft:"\u2190",ArrowRight:"\u2192",ControlLeft:"Ctrl",AltLeft:"Alt",Backquote:"`",Semicolon:";",Comma:",",Period:".",Slash:"/"}[o]||o:"-"}u(rf,"keyName");var N2=["hd","anime","story","pastel"],Zm=(()=>{try{let e=new URLSearchParams(location.search).get("style")||localStorage.getItem("dot3d-style");return N2.includes(e)?e:"hd"}catch{return"hd"}})(),F2=N2.indexOf(Zm);if(Zm!=="hd"){let o={anime:"mix(0.42, 1.0, smoothstep(0.16, 0.22, x))",story:"mix(0.42, 1.0, smoothstep(0.05, 0.35, x) * 0.5 + smoothstep(0.45, 0.6, x) * 0.5)",pastel:"mix(0.55, 1.0, smoothstep(0.12, 0.2, x))"}[Zm],e=vt,t=`float celBand(float x) { return ${o}; }
 `;e.lights_physical_pars_fragment=t+e.lights_physical_pars_fragment.replace(`float dotNL = saturate( dot( geometryNormal, directLight.direction ) );
 
 	vec3 irradiance = dotNL * directLight.color;`,`float dotNL = saturate( dot( geometryNormal, directLight.direction ) );
@@ -4456,7 +4456,7 @@ void main() {
 #if STYLE == 0
   vec3 col = texture2D(tColor, vUv).rgb;
 #else
-  vec3 col = kuwahara(vUv, STYLE == 2 ? 4 : 3);
+  vec3 col = kuwahara(vUv, 2);
 #endif
   float dr = texture2D(tDepth, vUv).r;
   vec3 blur = texture2D(tBlur, vUv).rgb;
@@ -4513,12 +4513,12 @@ void main() {
   #elif STYLE == 2
     // \uC885\uC774 \uACB0 (\uB0AE\uC740 \uC8FC\uD30C\uC218 \uC5BC\uB8E9 + \uAC00\uB294 \uC12C\uC720)
     float paper = hash(floor(gl_FragCoord.xy * 0.5)) * 0.05 + texture2D(tCloud, gl_FragCoord.xy / res * 1.7).r * 0.12;
-    col = max(sat(col, 0.85), 0.0) * 1.2 + 0.006;
+    col = max(sat(col, 0.95), 0.0) * 1.15;
     col *= 0.93 + paper;
     float wob = hash(floor(gl_FragCoord.xy / 3.0)) * 0.4 + 0.6;
     col = mix(col, vec3(0.30, 0.20, 0.14), ink * 0.7 * wob);
   #else
-    col = max(sat(col, 1.15), 0.0) * 1.3 + vec3(0.008, 0.005, 0.012);
+    col = max(sat(col, 1.25), 0.0) * 1.25;
     col = mix(col, vec3(0.25, 0.16, 0.32), ink * 0.95);
   #endif
   }
