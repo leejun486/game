@@ -8,6 +8,7 @@ import { cloudNoiseTex } from './textures.js';
 import { shared } from './materials.js';
 import { GFX } from './gfx.js';
 import { loadSettings } from './settings.js';
+import { STYLE_ID } from './style.js';
 
 export const PPU = 16; // 화면 픽셀 / 월드 유닛
 
@@ -131,6 +132,7 @@ void main() {
 }`;
 
 const hdFrag = /* glsl */`
+#define STYLE ${STYLE_ID}
 uniform sampler2D tColor;
 uniform sampler2D tBlur;
 uniform sampler2D tNormal;
@@ -162,14 +164,59 @@ vec3 viewPos(vec2 uv) { float z = linD(uv); return vec3((uv.x * 2.0 - 1.0) * tan
 float hash(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
 vec3 sat(vec3 c, float s) { float l = dot(c, vec3(0.299, 0.587, 0.114)); return mix(vec3(l), c, s); }
 
+// 그림 스타일 외곽선: 깊이가 끊기거나 면 방향이 크게 바뀌는 곳 (w = 선 굵기, 픽셀)
+float inkEdge(vec2 uv, float w) {
+  float d0 = linD(uv);
+  vec3 n0 = texture2D(tNormal, uv).rgb * 2.0 - 1.0;
+  vec2 px = w / res;
+  float e = 0.0;
+  for (int i = 0; i < 8; i++) {
+    float a = float(i) * 0.7854;
+    vec2 o = vec2(cos(a), sin(a)) * px;
+    float d = linD(uv + o);
+    vec3 n = texture2D(tNormal, uv + o).rgb * 2.0 - 1.0;
+    e = max(e, smoothstep(0.02, 0.045, (d - d0) / d0));
+    e = max(e, smoothstep(0.35, 0.6, 1.0 - dot(n0, n)) * step(abs(d - d0) / d0, 0.2));
+  }
+  return e;
+}
+
+// 쿠와하라 필터: 네 구역 중 가장 고른 구역의 평균 → 잔무늬가 지워지고 붓으로 칠한 듯한 면이 됨
+vec3 kuwahara(vec2 uv, int R) {
+  vec2 px = 1.0 / res;
+  vec3 m[4]; vec3 s2[4];
+  for (int k = 0; k < 4; k++) { m[k] = vec3(0.0); s2[k] = vec3(0.0); }
+  float n = 0.0;
+  for (int j = 0; j <= 4; j++) for (int i = 0; i <= 4; i++) {
+    if (i > R || j > R) continue;
+    vec2 o = vec2(float(i), float(j)) * px * 1.5;
+    vec3 a = texture2D(tColor, uv + vec2(-o.x, -o.y)).rgb; m[0] += a; s2[0] += a * a;
+    vec3 b = texture2D(tColor, uv + vec2(o.x, -o.y)).rgb; m[1] += b; s2[1] += b * b;
+    vec3 c = texture2D(tColor, uv + vec2(-o.x, o.y)).rgb; m[2] += c; s2[2] += c * c;
+    vec3 d = texture2D(tColor, uv + vec2(o.x, o.y)).rgb; m[3] += d; s2[3] += d * d;
+    n += 1.0;
+  }
+  vec3 best = m[0] / n; float bv = 1e9;
+  for (int k = 0; k < 4; k++) {
+    vec3 mu = m[k] / n; vec3 v = abs(s2[k] / n - mu * mu);
+    float vs = v.r + v.g + v.b;
+    if (vs < bv) { bv = vs; best = mu; }
+  }
+  return best;
+}
+
 void main() {
+#if STYLE == 0
   vec3 col = texture2D(tColor, vUv).rgb;
+#else
+  vec3 col = kuwahara(vUv, STYLE == 2 ? 4 : 3);
+#endif
   float dr = texture2D(tDepth, vUv).r;
   vec3 blur = texture2D(tBlur, vUv).rgb;
 
   // ---- 화면 공간 AO: 노멀 쪽 반구에서 가까이 막힌 정도 ----
   float ao = 0.0;
-  if (dr < 0.9999 && aoOn > 0.0) {
+  if (dr < 0.9999 && aoOn > 0.0 && STYLE == 0) {
     vec3 P = viewPos(vUv);
     vec3 N = normalize(texture2D(tNormal, vUv).rgb * 2.0 - 1.0);
     float rad = 0.55 / (2.0 * P.z * -1.0 * tanHalf); // 0.55유닛이 그 깊이에서 차지하는 화면 비율
@@ -198,7 +245,7 @@ void main() {
   // ---- 틸트시프트: 화면 위아래로 갈수록 흐리게 (미니어처 느낌) ----
   float ty = abs(vUv.y - 0.45) * 2.0;
   float dof = smoothstep(0.58, 1.05, ty);
-  col = mix(col, blur * (1.0 - ao * 0.3), dof * 0.75);
+  col = mix(col, blur * (1.0 - ao * 0.3), dof * (STYLE == 0 ? 0.75 : 0.35));
 
   // ---- 블룸: 밝은 곳이 은은하게 번짐 ----
   vec3 bloom = max(blur - vec3(0.78 - night * 0.45), 0.0);
@@ -209,6 +256,35 @@ void main() {
   col = mix(col, gHaze * mix(1.0, 0.35, night), gHazeAmt * gk * smoothstep(0.3, 1.0, vUv.y) * (dr < 0.9999 ? 1.0 : 0.6));
   col = max(sat(col, mix(1.0, gSat, gk)), 0.0) * mix(vec3(1.0), gTint, gk);
 
+#if STYLE != 0
+  // ---- 그림 스타일: 외곽선 + 색 ----
+  {
+    float ink = dr < 0.9999 ? inkEdge(vUv, STYLE == 3 ? 2.6 : STYLE == 2 ? 1.6 : 2.0) : 0.0;
+  #if STYLE == 1
+    col = max(sat(col, 1.3), 0.0) * 1.25 + vec3(0.02, 0.02, 0.03);
+    col = mix(col, col * vec3(0.18, 0.14, 0.24), ink * 0.9);
+  #elif STYLE == 2
+    // 종이 결 (낮은 주파수 얼룩 + 가는 섬유)
+    float paper = hash(floor(gl_FragCoord.xy * 0.5)) * 0.05 + texture2D(tCloud, gl_FragCoord.xy / res * 1.7).r * 0.12;
+    col = max(sat(col, 0.85), 0.0) * 1.15 + 0.08;
+    col *= 0.95 + paper;
+    float wob = hash(floor(gl_FragCoord.xy / 3.0)) * 0.4 + 0.6;
+    col = mix(col, vec3(0.30, 0.20, 0.14), ink * 0.7 * wob);
+  #else
+    col = max(sat(col, 1.05), 0.0) * 1.2 + vec3(0.09, 0.07, 0.11);
+    col = mix(col, vec3(0.25, 0.16, 0.32), ink * 0.95);
+  #endif
+  }
+  // 필믹 대신 부드러운 톤 (밝은 곳이 바래지 않게)
+  col = col / (1.0 + col * 0.35);
+  col *= mix(vec3(1.0), vec3(0.72, 0.82, 1.12), night);
+  vec2 vc0 = vUv - 0.5;
+  col *= 1.0 - dot(vc0, vc0) * vignette * 0.7;
+  col = mix(col, flashColor, flash);
+  col = clamp(col, 0.0, 1.0);
+  gl_FragColor = vec4(pow(col, vec3(1.0 / 2.2)) + (hash(gl_FragCoord.xy + time) - 0.5) / 255.0, 1.0);
+  return;
+#endif
   // ---- 색보정: 낮은 따뜻하고 부드럽게, 밤은 푸르게 ----
   col = max(sat(col, mix(1.08, 0.82, night)), 0.0);
   col *= mix(vec3(1.06, 1.0, 0.9), vec3(0.7, 0.82, 1.14), night);
