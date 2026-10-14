@@ -54,7 +54,6 @@ import { ItemsPart } from './game/items.js';
 import { AutoPart } from './game/auto.js';
 import { QuestPart } from './game/quest.js';
 import { spearHit, lancerSkill1, lancerSkill2, lancerSkill3, updateLancer, clearLancer } from './lancer.js';
-import { LAYER_HIDDEN } from './sprite.js';
 
 
 // 시련탑 안에서 저장하면 협곡(저승 문 앞)에서 이어지게
@@ -81,8 +80,6 @@ const BOSS_PHASE_LINE = {
 
 class Game {
   constructor() {
-    // 주소에 ?sprite=0 을 붙이면 그림(2D) 캐릭터 대신 예전 3D 캐릭터 (비교용)
-    this.spritesOff = /[?&]sprite=0\b/.test(location.search);
     this.pixel = new PixelRenderer(document.getElementById('stage'));
     const scene = (this.scene = new THREE.Scene());
     scene.background = new THREE.Color('#3b4a3a');
@@ -194,7 +191,6 @@ class Game {
     sun.shadow.mapSize.set(smap, smap);
     if (GFX.hd) sun.shadow.radius = 3;
     const sc = sun.shadow.camera;
-    sc.layers.enable(LAYER_HIDDEN); // 그림 캐릭터의 숨긴 3D 몸도 그림자는 드리움
     sc.left = -30; sc.right = 30; sc.top = 30; sc.bottom = -30; sc.near = 1; sc.far = 140;
     sun.shadow.bias = -0.0006;
     sun.shadow.normalBias = 0.03;

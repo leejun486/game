@@ -458,13 +458,7 @@ export class FX {
   // 잔상: 몸이 겹치는 곳이 더해져 하얗게 뜨지 않게 옅게 (예전 0.55는 캐릭터가 하얗게 깜빡이는 것처럼 보였음)
   ghost(rig, color = '#5ab8ff', dur = 0.28, alpha = 0.26) {
     const mat = new THREE.MeshBasicMaterial({ color: new THREE.Color(color), transparent: true, opacity: alpha, blending: THREE.AdditiveBlending, depthWrite: false });
-    let c;
-    if (rig.sprite?.mesh.visible) {
-      // 그림 캐릭터: 지금 그림 한 장을 그 자리에 남김 (판 모양은 따로 복사 — 원래 판은 다음 그림으로 바뀜)
-      c = rig.sprite.group.clone();
-      mat.map = rig.sprite.mat.map;
-      c.traverse((o) => { if (o.isMesh) { o.geometry = o.geometry.clone(); o.material = mat; o.userData.ownGeo = true; } });
-    } else c = cloneSkinned(rig.root);
+    const c = cloneSkinned(rig.root);
     c.traverse((o) => { if (o.isMesh) { o.material = mat; o.castShadow = false; o.receiveShadow = false; } });
     this.scene.add(c);
     this.ghosts.push({ c, mat, t: 0, dur, alpha });
@@ -583,7 +577,7 @@ export class FX {
       gh.t += dt;
       const k = gh.t / gh.dur;
       gh.mat.opacity = gh.alpha * (1 - k) * (1 - k);
-      if (k >= 1) { this.scene.remove(gh.c); gh.mat.dispose(); disposeSkeletons(gh.c); gh.c.traverse((o) => { if (o.userData.ownGeo) o.geometry.dispose(); }); this.ghosts.splice(i, 1); }
+      if (k >= 1) { this.scene.remove(gh.c); gh.mat.dispose(); disposeSkeletons(gh.c); this.ghosts.splice(i, 1); }
     }
     for (let i = this.numbers.length - 1; i >= 0; i--) {
       const n = this.numbers[i];

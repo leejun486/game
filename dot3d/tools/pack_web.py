@@ -10,7 +10,7 @@ DEMO = len(sys.argv) > 1 and sys.argv[1] == 'demo'
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ver = re.search(r"VERSION = '([^']+)'", open(os.path.join(ROOT, 'src', 'version.js'), encoding='utf-8').read()).group(1)
 FILES = ['index.html', 'style.css', 'icon.png', 'favicon.png', 'manifest.webmanifest', 'sw.js']
-DIRS = ['dist', 'audio', 'fonts', 'sprites']
+DIRS = ['dist', 'audio', 'fonts']
 
 os.makedirs(os.path.join(ROOT, 'release'), exist_ok=True)
 out = os.path.join(ROOT, 'release', f'Wolhagung-{"demo-" if DEMO else ""}web-{ver}.zip')
