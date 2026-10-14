@@ -3,6 +3,7 @@ import { disposeTree } from './dispose.js';
 import { CLASSES } from './classes.js';
 import { rigOptions } from './looks.js';
 import { GFX } from './gfx.js';
+import { SPRITES, loadSheet, drawFrame } from './sprite.js';
 
 // 직업 선택 카드의 전신 미리보기.
 // 게임과 같은 리그(착용 장비 포함)를 작은 렌더 타깃에 그린 뒤 픽셀을 읽어
@@ -70,6 +71,19 @@ export class ClassPreview {
     const c = this.cards.find((x) => x.cls === cls);
     if (!c || !cv) return false;
     const S = 128;
+    const sd = this.sprite(cls);
+    if (sd) {
+      // 그림 캐릭터: 정면 그림(a1)에서 머리 부분만 잘라 그림. 아직 안 불러왔으면 불러온 뒤 다시
+      const e = loadSheet(sd.src);
+      if (!e.ready) { e.promise.then(() => e.ready && this.portrait(cls, cv)); return true; }
+      if (cv.width !== S) { cv.width = cv.height = S; }
+      const [x, y, , , ax, ay] = e.meta.frames.a1, hs = sd.bodyPx * 0.34;
+      const ctx = cv.getContext('2d');
+      ctx.clearRect(0, 0, S, S);
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(e.img, x + ax - hs / 2, y + ay - sd.bodyPx - hs * 0.04, hs, hs, 0, 0, S, S);
+      return true;
+    }
     if (!this.pTarget) {
       this.pTarget = new THREE.WebGLRenderTarget(S, S, { samples: GFX.hd ? 4 : 0 });
       this.pBuf = new Uint8Array(S * S * 4);
@@ -106,6 +120,16 @@ export class ClassPreview {
     for (const c of this.cards) {
       const sel = c.el.classList.contains('sel');
       c.t += dt;
+      // 그림 캐릭터: 고른 카드는 여덟 방향을 차례로, 나머지는 비스듬히 선 그림
+      const sd = this.sprite(c.cls);
+      if (sd) {
+        const name = (sel && sd.idle[Math.floor(c.t / 0.6) % 8]) || sd.idle[1];
+        const draw = (ctx, w, h) => { ctx.clearRect(0, 0, w, h); ctx.imageSmoothingQuality = 'high'; return drawFrame(ctx, sd, name, w / 2, h * 0.94, (h * 0.8) / sd.bodyPx); };
+        if (draw(c.ctx, W, H)) {
+          if (sel) { this.bigCtx ||= document.getElementById('cls-big')?.getContext('2d'); if (this.bigCtx) draw(this.bigCtx, this.bigCtx.canvas.width, this.bigCtx.canvas.height); }
+          continue;
+        }
+      }
       // 고른 카드는 천천히 한 바퀴, 나머지는 비스듬히 서서 숨쉬기
       c.yaw = sel ? c.yaw + dt * 0.9 : c.yaw + (0.5 - c.yaw) * Math.min(1, dt * 3);
       const rig = c.rig;
@@ -135,6 +159,8 @@ export class ClassPreview {
     r.setRenderTarget(prevTarget);
     r.setClearColor(prevClear, prevAlpha);
   }
+
+  sprite(cls) { return this.game.spritesOff ? null : SPRITES[cls]; }
 
   // 고화질: 위아래 뒤집고 sRGB로, 반투명 가장자리는 알파를 되돌려 부드럽게
   copySmooth(src, img, w, h) {

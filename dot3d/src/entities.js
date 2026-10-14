@@ -7,6 +7,7 @@ import { decorateDokkaebiKing, decorateReaper, decorateYeomra } from './bossdeco
 import { makeCrow, makeCrab, makeJelly, makeTurtle, makeBee, makeMantis, makeBeast } from './rigs2.js';
 import { makeTombSoldier, makeCourtGhost, makeMuinseok, makeEodum, makeImp, makeGambler, makeTanuki, makeDokgak, makeFiddler, makeFishman, makeMudGhost, makeJangsan, makeThunderKid, makeCrane, makeShadowFairy, makeNoegong } from './rigs3.js';
 import { CLASSES } from './classes.js';
+import { SPRITES, SpriteBody, hideRig } from './sprite.js';
 import { rigOptions } from './looks.js';
 import { sumStats, setBonuses } from './gear.js';
 import { item, WEAPONS, perksOf, ULTS } from './items.js';
@@ -86,6 +87,14 @@ export class Player {
     }
     addRim(this.rig.root);
     this.game.scene.add(this.rig.root);
+    // 그림(2D) 캐릭터가 있는 직업: 3D 몸은 숨기고(그림자·칼 위치용으로만 둠) 그림을 세움
+    const sd = this.game.spritesOff ? null : SPRITES[this.cls];
+    if (this.sprite && this.sprite.def !== sd) { this.sprite.dispose(); this.sprite = null; }
+    if (sd) {
+      if (!this.sprite) this.sprite = new SpriteBody(this.game.scene, sd);
+      hideRig(this.rig);
+      this.rig.sprite = this.sprite;
+    }
   }
 
   // 레벨·장비로 능력치 계산
@@ -579,6 +588,12 @@ export class Player {
     this.blinkT = Math.max(0, (this.blinkT || 0) - dt);
     r.root.visible = this.dead || this.blinkT <= 0 || Math.floor(g.time * 18) % 2 === 0;
     r.setFlash(this.hurtT > 0.2 ? 0.6 : 0);
+    this.sprite?.update(dt, {
+      pos: r.root.position, yaw: this.yaw + spin, speed: this.dead ? 0 : speed,
+      attack: this.attack ? { t: Math.min(1, this.attack.t), kind: this.attack.kind } : null,
+      dash: this.dashT > 0, hurt: clamp(this.hurtT / 0.3, 0, 1), dead: this.dead,
+      visible: r.root.visible, flash: this.hurtT > 0.2 ? 0.6 : 0, night: g.night || 0, pitch: g.pixel.pitch,
+    });
     if (r.bladeMat) {
       const glow = this.attack ? 0.5 : r.sheathed ? 0 : (g.night > 0.5 ? 0.16 : 0.08); // 뽑은 칼엔 은은한 칼빛
       if (r.glowColor) {

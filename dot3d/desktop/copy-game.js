@@ -6,7 +6,7 @@ const demo = process.argv[2] === 'demo';
 const src = path.join(__dirname, '..');
 const dst = path.join(__dirname, 'game');
 fs.rmSync(dst, { recursive: true, force: true });
-for (const f of ['index.html', 'style.css', 'icon.png', 'favicon.png', 'dist', 'audio', 'fonts']) {
+for (const f of ['index.html', 'style.css', 'icon.png', 'favicon.png', 'dist', 'audio', 'fonts', 'sprites']) {
   fs.cpSync(path.join(src, f), path.join(dst, f), { recursive: true });
 }
 if (demo) {

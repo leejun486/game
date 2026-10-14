@@ -4,7 +4,7 @@ const fs = require('fs'), path = require('path');
 const root = path.join(__dirname, '..');
 const out = path.join(root, 'mobile', 'www');
 const FILES = ['index.html', 'style.css', 'icon.png', 'favicon.png'];
-const DIRS = ['dist', 'audio', 'fonts'];
+const DIRS = ['dist', 'audio', 'fonts', 'sprites'];
 fs.rmSync(out, { recursive: true, force: true });
 fs.mkdirSync(out, { recursive: true });
 let n = 0, bytes = 0;
