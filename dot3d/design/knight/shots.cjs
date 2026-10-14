@@ -45,8 +45,7 @@ const only = process.argv[2];
       const mk = (x, z, yaw, opt) => { const b = new S(g.scene, def); b.update(0.016, Object.assign({ pos: { x, y: g.world.heightAt(x, z), z }, yaw, speed: 0, attack: null, dash: false, hurt: 0, dead: false, visible: true, flash: 0, night: 0, pitch: g.pixel.pitch }, opt)); return b; };
       p.rig.root.visible = false; p.sprite.group.visible = false;
       const cx = p.pos.x, cz = p.pos.z + 0.4;
-      for (let i = 0; i < 8; i++) mk(cx + (i - 3.5) * 1.35, cz - 2.2, i * Math.PI / 4);
-      for (let i = 0; i < 8; i++) { const b = mk(cx + (i - 3.5) * 1.35, cz + 1.4, i * Math.PI / 4, { speed: 1 }); }
+      for (let i = 0; i < 8; i++) mk(cx + (i - 3.5) * 1.35, cz - 1.6, i * Math.PI / 4);
       g.pixel.userZoom = 2; g.pixel.resize(); g.focus.set(cx, 0.8, cz); g.hitstop = 1000;
     });
     await page.close();
@@ -70,7 +69,7 @@ const only = process.argv[2];
     for (const [x, z] of dirs) for (let i = 0; i < 6; i++) plan.push({ mx: x, mz: z, moveLen: 1 });
     for (let i = 0; i < 6; i++) plan.push({ mx: 0, mz: 0, moveLen: 0 });
     for (let k = 0; k < 3; k++) { plan.push({ mx: 0, mz: 0, moveLen: 0, atk: 1 }); for (let i = 0; i < 6; i++) plan.push({ mx: 0, mz: 0, moveLen: 0 }); }
-    let n = 0;
+    let n = 0; const pos = [];
     for (const inp of plan) {
       await page.evaluate((inp) => {
         const g = window.game, p = g.player;
@@ -80,9 +79,11 @@ const only = process.argv[2];
         g.focus.set(p.pos.x, 0.8, p.pos.z + 0.6); g.hitstop = 1000;
       }, inp);
       await page.waitForTimeout(120);
+      const sp = await page.evaluate(() => { const g = window.game, v = g.player.sprite.group.position.clone(); v.y += 0.9; v.project(g.pixel.camera); return [Math.round((v.x + 1) / 2 * innerWidth), Math.round((1 - v.y) / 2 * innerHeight)]; });
+      pos.push(sp);
       await page.screenshot({ path: `${out}/anim_${String(n++).padStart(3, '0')}.jpg`, type: 'jpeg', quality: 85 });
     }
-    console.log('anim frames', n);
+    console.log('anim frames', n); require('fs').writeFileSync(`${out}/anim_pos.json`, JSON.stringify(pos));
     await page.close();
   }
   await browser.close(); srv.close();

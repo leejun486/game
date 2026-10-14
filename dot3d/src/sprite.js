@@ -3,6 +3,7 @@ import * as THREE from 'three';
 // 2D 그림 캐릭터 (스프라이트): 3D 배경 위에 그림 한 장을 세워서 보여 줌
 //  - 카메라가 돌지 않으므로(늘 같은 각도로 내려다봄) 그림 판을 세워 두기만 하면 됨
 //  - 방향 8개는 그림을 바꿔서 (위 줄 a1~a8 = 아래·오른아래·오른쪽·오른위·위·왼위·왼쪽·왼아래)
+//  - 걷기·공격·피격은 그 그림 한 장을 튀기고 기울이고 눌러서 (방향별 연속 동작 그림이 생기면 그림 교체로)
 //  - 3D 몸(리그)은 그대로 두고 화면에서만 숨김 → 칼 위치·칼빛 궤적·그림자·충돌은 예전처럼 리그가 맡음
 //    숨김: 리그를 1번 층(layer)에 두면 카메라엔 안 보이고, 해 그림자 카메라는 1번 층도 봐서 그림자는 남음
 //  - 그림은 sprites/<이름>.webp + .json (tools/sprites/cut_sheet.py 가 시트 한 장에서 만듦)
@@ -14,17 +15,6 @@ export const SPRITES = {
     height: 1.85, // 발끝~머리 꼭대기 (a1 기준, 게임 단위)
     bodyPx: 217, // a1 그림에서 발끝~머리 꼭대기 픽셀 (묶음 그림 기준)
     idle: ['a1', 'a2', 'a3', 'a4', 'a5', 'a6', 'a7', 'a8'],
-    // 달리기: 방향마다 번갈아 보여 줄 그림 [이름, 좌우 뒤집기]
-    run: [
-      [['b4', 0], ['b5', 0]], // 아래
-      [['b2', 0], ['b3', 0]], // 오른아래
-      [['b6', 1], ['b8', 1]], // 오른쪽
-      [['b7', 1], ['a4', 0]], // 오른위
-      [['a5', 0], ['a5', 0]], // 위
-      [['b7', 0], ['a6', 0]], // 왼위
-      [['b6', 0], ['b8', 0]], // 왼쪽
-      [['b2', 1], ['b3', 1]], // 왼아래
-    ],
   },
 };
 
@@ -78,7 +68,11 @@ export class SpriteBody {
     scene.add(this.group);
     this.dir = 0;
     this.t = 0;
-    this.runT = 0;
+    this.phase = 0;
+    this.mv = 0;
+    this.rz = 0;
+    this.turnT = 0;
+    this.lastDir = 0;
     this.frame = null;
     this.tint = new THREE.Color(1, 1, 1);
   }
@@ -126,46 +120,60 @@ export class SpriteBody {
       if (Math.abs(d) > Math.PI / 8 + 0.08 || p.attack) this.dir = want;
     }
     const D = this.def, d = this.dir;
+    if (d !== this.lastDir) { this.lastDir = d; this.turnT = 1; }
     const fwdX = Math.sin(p.yaw), fwdZ = Math.cos(p.yaw);
-    let name = D.idle[d], flip = 0, lift = 0, sx = 1, sy = 1, lean = 0, push = 0, tilt = -p.pitch * 0.35;
+    // 옆을 볼 때 기울일 쪽 (정면·뒷면은 오른쪽 기준)
+    const side = Math.abs(fwdX) > 0.3 ? Math.sign(fwdX) : 1;
+    // 방향마다 그림은 한 장만 씀 (시트의 달리기 그림은 장마다 자세·크기가 달라 바꿔 끼우면 튐)
+    //  → 움직임은 그림 한 장을 튀기고·기울이고·눌러서 만듦
+    const name = D.idle[d];
+    let lift = 0, sx = 1, sy = 1, rz = 0, push = 0, tilt = -p.pitch * 0.35;
+    const moving = !p.dead && !p.attack && p.speed > 0.05;
+    this.mv += ((moving ? 1 : 0) - this.mv) * Math.min(1, dt * 12);
     if (p.dead) {
       // 쓰러짐: 판을 뒤로 눕힘
       this.deadT = Math.min(1, (this.deadT || 0) + dt * 2.2);
       tilt = -p.pitch * 0.35 - smooth01(this.deadT) * (Math.PI / 2 - p.pitch * 0.35);
     } else {
       this.deadT = 0;
-      if (p.attack) {
-        // 공격: 칼을 어깨에 올린 그림(준비) → 서 있는 그림으로 내려치며 앞으로 내딛음
-        const t = p.attack.t;
-        if (t < 0.32) {
-          [name, flip] = D.run[d][0];
-          sy = 1 + 0.04 * smooth01(t / 0.32); sx = 1 - 0.03 * smooth01(t / 0.32);
-          push = -0.06 * smooth01(t / 0.32);
-        } else {
-          const k = Math.min(1, (t - 0.32) / 0.2), r = Math.max(0, (t - 0.6) / 0.4);
-          push = 0.22 * smooth01(k) * (1 - r);
-          sx = 1 + 0.06 * (1 - k); sy = 1 - 0.05 * (1 - k);
-        }
-      } else if (p.dash) {
-        [name, flip] = D.run[d][1];
-        lean = 0.12;
-      } else if (p.speed > 0.05) {
-        // 달리기: 두 그림을 번갈아, 걸음마다 살짝 튐
-        this.runT += dt * (5 + 4 * Math.min(1, p.speed));
-        const step = Math.floor(this.runT) % 2;
-        [name, flip] = D.run[d][step];
-        const ph = this.runT % 1;
-        lift = Math.sin(ph * Math.PI) * 0.06;
-        sy = 1 - 0.04 * Math.cos(ph * Math.PI * 2) * 0.5;
+      // 걷기·달리기: 걸음마다 통통 튀고, 좌우로 살짝 뒤뚱, 가는 쪽으로 기울임
+      const mv = this.mv;
+      if (mv > 0.001) {
+        this.phase += dt * (3.2 + 2.4 * Math.min(1, p.speed / 6)) * mv;
+        const s = Math.sin(this.phase * Math.PI), a = Math.abs(s);
+        lift = a * 0.08 * mv;
+        sy = 1 + 0.05 * mv * (a - 0.5);
+        sx = 1 - 0.035 * mv * (a - 0.5);
+        rz = s * 0.05 * mv - side * 0.07 * mv * Math.abs(fwdX);
       } else {
-        // 숨쉬기
-        sy = 1 + Math.sin(this.t * 2.4) * 0.012;
+        this.phase = 0;
+        sy = 1 + Math.sin(this.t * 2.4) * 0.012; // 숨쉬기
       }
-      if (p.hurt > 0) { lean = -0.18 * p.hurt; sx *= 1 + 0.05 * p.hurt; }
+      if (p.attack) {
+        // 공격: 뒤로 젖히며 움츠림 → 앞으로 내딛으며 내려침 → 제자리로
+        const t = p.attack.t;
+        const w = smooth01(Math.min(1, t / 0.3));
+        const k = smooth01(Math.min(1, Math.max(0, (t - 0.3) / 0.18)));
+        const r = smooth01(Math.max(0, (t - 0.55) / 0.45));
+        const back = w * (1 - k), hit = k * (1 - r);
+        rz += side * (0.13 * back - 0.17 * hit);
+        push += -0.06 * back + 0.24 * hit;
+        sy *= 1 + 0.05 * back - 0.05 * hit;
+        sx *= 1 - 0.04 * back + 0.07 * hit;
+        lift += 0.03 * back;
+      } else if (p.dash) {
+        rz -= side * 0.16; sx *= 1.1; sy *= 0.93;
+      }
+      if (p.hurt > 0) { rz += side * 0.16 * p.hurt; sx *= 1 + 0.05 * p.hurt; sy *= 1 - 0.04 * p.hurt; }
     }
+    // 방향이 바뀌면 그림을 뒤집는 듯 잠깐 좁혔다 폄
+    if (this.turnT > 0) { this.turnT = Math.max(0, this.turnT - dt * 9); sx *= 1 - 0.3 * Math.sin(this.turnT * Math.PI); }
+    // 기울기는 부드럽게 따라감 (갑자기 꺾이지 않게)
+    this.rz += (rz - this.rz) * Math.min(1, dt * 16);
+    const flip = 0;
     this.setFrame(name, flip);
     g.position.set(p.pos.x + fwdX * push, p.pos.y + lift, p.pos.z + fwdZ * push);
-    g.rotation.set(tilt, 0, lean * (fwdX >= 0 ? -1 : 1));
+    g.rotation.set(tilt, 0, this.rz);
     g.scale.set(sx, sy, 1);
     g.visible = p.visible;
     // 밤엔 푸르고 어둡게, 맞으면 하얗게 번쩍
