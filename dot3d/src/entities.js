@@ -14,7 +14,7 @@ import { weaponBonus, outfitHp, outfitDef } from './enhance.js';
 import { CAPS } from './gear.js';
 
 // 스킬 해금 레벨
-export const SKILL_LEVEL = { 2: 3, 3: 5 };
+export const SKILL_LEVEL = { 2: 6, 3: 10 }; // 스킬 2는 죽림에 들어설 즈음, 스킬 3은 구미호를 물리칠 즈음
 // 레벨이 오를수록 가파르게 (Lv.10 약 1.7배, Lv.20 약 2.2배 — 플레이 시간에 맞춤)
 export const expNeed = (lv) => Math.round(50 + lv * 40 + lv * lv * 1.4);
 import { toon, addRim } from './materials.js';
