@@ -1,0 +1,146 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>귀여운 2D 검객</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jua&family=Gowun+Dodum&display=swap">
+<style>
+/* 위: 결론 한 줄 → 세 방향 → 표정 → 작게 볼 때 → 게임 화면 → 넣는 방법 → 필요한 파일 → 다음 순서 */
+:root {
+  --bg: #f4f2ee; --fg: #241f2a; --muted: #6c6474; --card: #ffffff; --stage: #ebe7f1; --line: #e0dbe4; --accent: #c8302c; --ok: #2a8a6a;
+  --f-display: 'Jua', 'Gowun Dodum', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+  --f-body: 'Gowun Dodum', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #17141c; --fg: #efeaf2; --muted: #a79eb2; --card: #211d28; --stage: #d9d4e2; --line: #352f3e; --accent: #ff6a5a; --ok: #5ad8a8; color-scheme: dark } }
+:root[data-theme="dark"] { --bg: #17141c; --fg: #efeaf2; --muted: #a79eb2; --card: #211d28; --stage: #d9d4e2; --line: #352f3e; --accent: #ff6a5a; --ok: #5ad8a8; color-scheme: dark }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--f-body); line-height: 1.6; }
+main { max-width: 1120px; margin: 0 auto; padding: 28px 16px 56px; display: grid; gap: 34px; }
+h1, h2, h3 { font-family: var(--f-display); font-weight: 400; margin: 0; text-wrap: balance; }
+h1 { font-size: clamp(28px, 4.6vw, 40px); }
+h2 { font-size: 24px; }
+h3 { font-size: 17px; }
+p { margin: 0; }
+.lead { color: var(--muted); max-width: 70ch; margin-top: 6px; }
+section { display: grid; gap: 14px; }
+.yes { display: inline-block; font-family: var(--f-display); background: var(--ok); color: #fff; border-radius: 999px; padding: 2px 14px; margin-right: 6px; }
+.stage { background: var(--stage); border-radius: 14px; padding: 18px 12px 10px; display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-end; gap: 10px 22px; }
+.stage figure { margin: 0; display: grid; justify-items: center; gap: 4px; }
+.stage figcaption { font-family: var(--f-display); font-size: 15px; color: #4a4152; }
+.stage svg { max-width: 100%; height: auto; }
+.views svg { width: clamp(120px, 20vw, 210px); }
+.faces svg { width: clamp(96px, 15vw, 150px); }
+.sizes { align-items: flex-end; }
+.sizes svg { width: auto; }
+.shot { margin: 0; position: relative; border-radius: 12px; overflow: hidden; border: 1px solid var(--line); background: var(--card); }
+.shot img { display: block; width: 100%; cursor: zoom-in; }
+.tag { position: absolute; left: 10px; top: 10px; font-family: var(--f-display); font-size: 14px; padding: 2px 10px; border-radius: 999px; background: rgba(20, 16, 24, 0.75); color: #fff; }
+.grid2 { display: grid; grid-template-columns: minmax(0, 2.3fr) minmax(0, 1fr); gap: 10px; align-items: start; }
+.crop { aspect-ratio: 1 / 1; background: url(play_default.jpg) no-repeat; background-size: 400% auto; background-position: 50.5% 50%; image-rendering: auto; border-radius: 12px; border: 1px solid var(--line); position: relative; }
+@media (max-width: 720px) { .grid2 { grid-template-columns: 1fr; } .crop { max-width: 360px; } }
+.mobile { max-width: 300px; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px 20px; max-width: 82ch; }
+.card ul, .card ol { margin: 0; padding-left: 20px; display: grid; gap: 6px; }
+.tw { overflow-x: auto; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 6px 14px; max-width: 900px; }
+table { border-collapse: collapse; min-width: 560px; width: 100%; }
+th, td { text-align: left; padding: 8px 14px 8px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { color: var(--muted); font-weight: 400; font-size: 14px; }
+tr:last-child td { border-bottom: 0; }
+code { font-size: 0.92em; }
+dialog { padding: 0; border: 0; background: transparent; max-width: 96vw; }
+dialog img { max-width: 96vw; max-height: 90vh; display: block; border-radius: 8px; }
+dialog::backdrop { background: rgba(0, 0, 0, 0.82); }
+</style>
+<main>
+  <header>
+    <h1>귀여운 2D 검객</h1>
+    <p class="lead"><span class="yes">넣을 수 있어요</span>고르신 1번 그림을 기준으로 약 2.5등신 검객을 새로 그렸어요. 아래 게임 화면 사진은 지금 게임의 3D 배경에 이 그림을 실제로 세워서 찍은 거예요. 아직 게임에는 넣지 않았어요.</p>
+  </header>
+
+  <section>
+    <h2>세 방향</h2>
+    <p class="lead">정면·측면·뒷면 세 장이면 네 방향을 다 쓸 수 있어요. 왼쪽 보기는 측면을 뒤집어서 써요. 붉은 머리띠와 긴 끈, 높이 묶은 머리, 흰 도포에 남색 띠가 어느 방향에서도 보이게 했어요.</p>
+    <div class="stage views" id="views"></div>
+  </section>
+
+  <section>
+    <h2>표정</h2>
+    <p class="lead">눈과 입만 바꿔서 표정을 만들어요. 기합은 공격, 아픔은 맞았을 때, 놀람은 보스가 나올 때 쓸 생각이에요.</p>
+    <div class="stage faces" id="faces"></div>
+  </section>
+
+  <section>
+    <h2>작게 볼 때</h2>
+    <p class="lead">게임에서 검객은 화면 높이로 40~120픽셀쯤이에요. 휴대폰 세로 화면이 가장 작아요. 작아져도 붉은 머리띠, 흰 옷과 남색 띠, 검은 칼집으로 알아볼 수 있게 줄무늬와 작은 장식은 빼고 굵은 선만 남겼어요.</p>
+    <div class="stage sizes" id="sizes"></div>
+  </section>
+
+  <section>
+    <h2>게임 화면</h2>
+    <p class="lead">월하궁 길에서 도깨비 세 마리 옆에 세웠어요. 오른쪽은 기본 화면에서 검객 부분만 크게 본 거예요. 사진을 누르면 크게 볼 수 있어요.</p>
+    <div class="grid2">
+      <figure class="shot"><span class="tag">기본 거리</span><img src="play_default.jpg" alt="기본 거리 게임 화면"></figure>
+      <div class="crop" role="img" aria-label="기본 화면 검객 확대"><span class="tag">확대</span></div>
+    </div>
+    <figure class="shot"><span class="tag">가까이 · 왼쪽부터 측면, 정면, 뒷면</span><img src="play_close.jpg" alt="가까이 본 게임 화면, 측면·정면·뒷면"></figure>
+    <figure class="shot mobile"><span class="tag">휴대폰</span><img src="play_mobile.jpg" alt="휴대폰 세로 게임 화면"></figure>
+  </section>
+
+  <section>
+    <h2>어떻게 넣나요</h2>
+    <div class="card"><ul>
+      <li><b>카메라가 돌지 않아요.</b> 게임 카메라는 늘 같은 각도로 위에서 비스듬히 내려다봐요. 그래서 그림 한 장을 세워 두기만 해도 어색하지 않아요.</li>
+      <li><b>방향은 그림을 바꿔서 해요.</b> 위로 가면 뒷면, 아래로 가면 정면, 옆으로 가면 측면을 보여 줘요.</li>
+      <li><b>외곽선은 그림이 가져요.</b> 게임이 3D 물체에 긋는 잉크 선을 그림에는 긋지 않게 해서, 네모 테두리가 생기지 않아요.</li>
+      <li><b>게임 코드는 조금만 바꿔요.</b> 지금 3D 캐릭터 대신 같은 일을 하는 그림 캐릭터를 하나 만들어서 끼우면 돼요. 이동·전투·저장은 그대로예요.</li>
+    </ul></div>
+    <p class="lead">넣을 때 같이 손볼 것:</p>
+    <div class="card"><ul>
+      <li>그림자: 사진에서는 발밑 그림자가 없어요. 넣을 때 발밑에 둥근 그림자를 깔아요.</li>
+      <li>밤: 그림은 조명을 받지 않아서 밤에도 밝아요. 밤에는 그림을 같이 어둡고 푸르게 칠해요.</li>
+      <li>맞았을 때 번쩍임, 잔상, 왼쪽 위 얼굴 그림, 꾸미기 기운·날개도 그림에 맞춰 다시 붙여요.</li>
+      <li>칼 끝 위치: 공격 효과가 칼 끝에서 나오도록, 그림마다 칼 끝 자리를 적어 둬요.</li>
+    </ul></div>
+  </section>
+
+  <section>
+    <h2>그림은 제가 만들 수 있어요</h2>
+    <p class="lead">위 그림은 모두 제가 코드로 그린 벡터 그림이라 얼마든지 고칠 수 있고, 걷기·공격·피격 동작도 같은 방식으로 그려요. 더 손맛 있는 그림을 원하시면 아래 파일을 준비해 주시면 그대로 끼울 수 있어요.</p>
+    <div class="tw"><table>
+      <thead><tr><th>파일</th><th>내용</th><th>형식</th></tr></thead>
+      <tbody>
+        <tr><td>방향 그림</td><td>정면·측면(오른쪽 보기)·뒷면, 서 있는 자세</td><td>PNG, 투명 배경, 높이 512픽셀, 발끝을 아래 가운데에</td></tr>
+        <tr><td>걷기</td><td>방향마다 6장</td><td>같은 크기 PNG 또는 한 줄로 이어 붙인 시트</td></tr>
+        <tr><td>공격</td><td>방향마다 4~6장 (휘두르기 준비 → 베기 → 마무리)</td><td>같음, 칼 끝 위치를 따로 적어 주시면 좋아요</td></tr>
+        <tr><td>피격</td><td>방향마다 2장 (움찔 → 돌아오기)</td><td>같음</td></tr>
+        <tr><td>표정</td><td>얼굴만 5장 (기본·웃음·기합·놀람·아픔)</td><td>PNG, 얼굴 부분만</td></tr>
+      </tbody>
+    </table></div>
+    <p class="lead">AI 그림 생성 도구로 만들 수도 있지만 크레딧이 들어서, 원하실 때만 쓸게요.</p>
+  </section>
+
+  <section>
+    <h2>다음 순서</h2>
+    <div class="card"><ol>
+      <li>검객 모습 확인 — 고칠 곳을 말씀해 주세요 (머리, 얼굴, 옷, 색, 비율 등).</li>
+      <li>검객을 게임에 넣고 걷기·공격·피격 동작 만들기.</li>
+      <li>창술사·궁수·도사와 요정, 몬스터를 같은 그림체로.</li>
+    </ol></div>
+  </section>
+</main>
+<dialog id="big"><img id="big-img" alt=""></dialog>
+<script src="sword2d.js"></script>
+<script>
+const S = window.SWORD2D;
+const fig = (svg, cap) => `<figure>${svg}<figcaption>${cap}</figcaption></figure>`;
+document.getElementById('views').innerHTML =
+  fig(svg2d(S.front('calm'), 380), '정면') +
+  fig(svg2d(S.side(), 380), '측면') +
+  fig(svg2d(S.back(), 380), '뒷면') +
+  fig(svg2d(S.side(), 380, undefined, true), '측면 뒤집기');
+document.getElementById('faces').innerHTML = S.EXPRS.map(([e, n]) => fig(svg2d(S.front(e), 200, '50 20 140 200'), n)).join('');
+document.getElementById('sizes').innerHTML = [[240, '크게'], [120, '가까이'], [70, '기본 거리'], [40, '휴대폰']]
+  .map(([h, n]) => fig(svg2d(S.front('calm'), h), `${n} ${h}px`)).join('');
+const dlg = document.getElementById('big'), big = document.getElementById('big-img');
+document.querySelector('main').addEventListener('click', (e) => { const i = e.target.closest('.shot img'); if (!i) return; big.src = i.src; big.alt = i.alt; dlg.showModal(); });
+dlg.addEventListener('click', () => dlg.close());
+</script>
