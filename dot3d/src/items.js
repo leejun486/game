@@ -243,12 +243,12 @@ export function bossDrop(type, cls, inv, round = 0) {
 // 처치 보상: 적 종류·회차에 따라 등급이 오름. 무기는 지금 직업용 위주
 export function rollDrop(enemyType, round, cls) {
   const chance = { blue: 0.07, red: 0.12, wisp: 0.1, fox: 0.09, foxfire: 0.1, jiangshi: 0.11, ghost: 0.11, waterghost: 0.12, toad: 0.12, firedok: 0.13, stonegolem: 0.2, bandit: 0.13, crow: 0.13, tiger: 0.15, crab: 0.14, jelly: 0.14, turtle: 0.22, baekho: 1, dragon: 1, centipede: 1, frostgiant: 1, eodum: 1, dokgak: 1, jangsan: 1, noegong: 1, thunderkid: 0.18, crane: 0.18, shadowfairy: 0.19, fiddler: 0.2, fishman: 0.17, mudghost: 0.17, imp: 0.16, gambler: 0.16, tanuki: 0.18, tombsoldier: 0.16, muinseok: 0.22, gungnyeo: 0.16, boar: 0.15, mantis: 0.15, bee: 0.14, wolf: 0.15, icedok: 0.17, icewisp: 0.15, boss: 1, gumiho: 1, reaper: 1, imugi: 1, bulgasari: 1, yeomra: 1 }[enemyType] ?? 0;
-  // 일반 몹은 절반으로 (보스는 반드시)
-  if (Math.random() > (chance >= 1 ? 1 : chance * 0.5)) return null;
+  // 일반 몹은 35%로 (보스는 반드시)
+  if (Math.random() > (chance >= 1 ? 1 : chance * 0.35)) return null;
   let tier = 1;
   const strong = { boss: 0.55, gumiho: 0.6, reaper: 0.7, imugi: 0.8, bulgasari: 0.9, yeomra: 1.1, red: 0.1, jiangshi: 0.15, ghost: 0.15, fox: 0.08, foxfire: 0.08, waterghost: 0.22, toad: 0.22, firedok: 0.3, stonegolem: 0.4, bandit: 0.38, crow: 0.38, tiger: 0.45, crab: 0.48, jelly: 0.48, turtle: 0.55, baekho: 1.0, dragon: 1.05, boar: 0.6, mantis: 0.6, bee: 0.6, wolf: 0.7, icedok: 0.72, icewisp: 0.7, centipede: 1.1, frostgiant: 1.15, eodum: 1.2, dokgak: 1.25, jangsan: 1.3, noegong: 1.35, thunderkid: 0.88, crane: 0.88, shadowfairy: 0.9, fiddler: 0.85, fishman: 0.82, mudghost: 0.82, imp: 0.78, gambler: 0.78, tanuki: 0.8, tombsoldier: 0.75, muinseok: 0.8, gungnyeo: 0.75 }[enemyType] || 0;
   const r = Math.random() + round * 0.12 + strong;
-  if (r > 1.35) tier = 4; else if (r > 1.05) tier = 3; else if (r > 0.7) tier = 2;
+  if (r > 1.8) tier = 4; else if (r > 1.3) tier = 3; else if (r > 0.8) tier = 2; // 전설은 늦은 지역에서도 드물게
   if (Math.random() < 0.55) {
     const all = Object.keys(WEAPONS);
     const pool = Math.random() < 0.8 ? cls : all[Math.floor(Math.random() * all.length)];

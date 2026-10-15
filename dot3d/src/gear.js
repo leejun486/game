@@ -91,7 +91,7 @@ export function rerollGear(g) {
 // 드롭 등급 굴림 (적 종류·회차가 높을수록 좋은 등급)
 export function rollGearTier(strong, round) {
   const r = Math.random() + round * 0.1 + strong;
-  return r > 1.45 ? 4 : r > 1.15 ? 3 : r > 0.82 ? 2 : r > 0.5 ? 1 : 0;
+  return r > 1.75 ? 4 : r > 1.3 ? 3 : r > 0.9 ? 2 : r > 0.5 ? 1 : 0;
 }
 
 export const gearColor = (g) => (g.set ? SETS[g.set].color : BASES[g.kind][g.tier][1]);

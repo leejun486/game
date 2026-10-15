@@ -2088,7 +2088,7 @@ class Game {
     }
     // 방어구·장신구: 일반 몬스터는 가끔, 보스는 두세 개 (등급이 높게)
     const gm = diffOf(this).gear * (this.player.perks?.has('fortune') ? 1.3 : 1);
-    const gearN = inDg ? 0 : e.isBoss ? 1 + (Math.random() < 0.5 * gm ? 1 : 0) : Math.random() < (e.field ? 0.08 : 0.06) * gm ? 1 : 0;
+    const gearN = inDg ? 0 : e.isBoss ? 1 + (Math.random() < 0.5 * gm ? 1 : 0) : Math.random() < (e.field ? 0.06 : 0.045) * gm ? 1 : 0;
     for (let i = 0; i < gearN; i++) {
       const strong = e.isBoss ? 0.6 : e.T.hp > 60 ? 0.12 : 0;
       const lv = Math.max(1, e.lvl || 1) + this.round;

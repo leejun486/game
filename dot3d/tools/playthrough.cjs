@@ -27,6 +27,15 @@ function installBot({ diff }) {
   window.requestAnimationFrame = () => 0; // 그리기 루프 멈춤 (아래 tick이 대신 돌림)
   g.difficulty = diff;
   const B = (window.__bot = { t: 0, deaths: 0, log: [], stuck: [], step: g.quest.step, stepT: 0, decideT: 0, equipT: 0, phase: 'main', floorWait: 0, firstDeathAt: {} });
+  // 드롭 세기: 무기·옷 / 방어구·장신구 (등급별)
+  B.drops = { weapon: 0, outfit: 0, gear: 0, tiers: {} };
+  const spawn0 = g.spawnDrop.bind(g);
+  g.spawnDrop = (pos, it) => {
+    const r = spawn0(pos, it), d = g.drops[g.drops.length - 1];
+    const k = typeof it === 'object' ? 'gear' : /^o/.test(it) || /outfit|robe/.test(it) ? 'outfit' : 'weapon';
+    B.drops[k]++; const c = '#' + d.col.getHexString(); B.drops.tiers[c] = (B.drops.tiers[c] || 0) + 1;
+    return r;
+  };
   // 측정: 단계마다 가장 낮았던 체력(%), 레벨업으로 찬 체력, 보스를 잡는 데 걸린 시간
   B.minHp = 1; B.lvHeal = 0; B.bossT = {}; B.bosses = [];
   const olu = g.onLevelUp.bind(g);
@@ -193,7 +202,7 @@ async function runClass(ctx, cls) {
     if (s.step !== last) { last = s.step; process.stdout.write(`  [${cls}] ${(s.t / 60).toFixed(1)}분 · ${s.phase === 'tower' ? `시련탑 ${s.floor}층` : `${s.step}단계`} · Lv.${s.lv} · 쓰러짐 ${s.deaths} (실제 ${((Date.now() - t0) / 60000).toFixed(1)}분)\n`); }
     if (s.phase === 'done' || s.t > MAX_MIN * 60) break;
   }
-  const r = await g.eval(() => { const B = window.__bot, G = window.game; return { log: B.log, bosses: B.bosses, stuck: B.stuck, minutes: +(B.t / 60).toFixed(1), level: G.player.level, deaths: B.deaths, deathsByStep: B.firstDeathAt, kills: G.kills, ended: !!G.quest.ended, towerBest: G.towerBest || 0, step: G.quest.step }; });
+  const r = await g.eval(() => { const B = window.__bot, G = window.game; return { log: B.log, bosses: B.bosses, stuck: B.stuck, minutes: +(B.t / 60).toFixed(1), level: G.player.level, deaths: B.deaths, deathsByStep: B.firstDeathAt, kills: G.kills, drops: B.drops, ended: !!G.quest.ended, towerBest: G.towerBest || 0, step: G.quest.step }; });
   r.cls = cls; r.errors = g.errors.slice(0, 10);
   await g.close();
   return r;

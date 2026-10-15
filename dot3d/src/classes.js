@@ -10,7 +10,7 @@ export const CLASSES = {
   },
   mage: {
     id: 'mage', title: '도사', name: '청운', make: makeMage,
-    hp: 100, skillCd: 4.2, dashCd: 0.8, skill2Cd: 6.5, skill3Cd: 9, power: 1.2, // 몸이 약한 대신 한 방이 셈
+    hp: 110, skillCd: 4.2, dashCd: 0.8, skill2Cd: 6.5, skill3Cd: 9, power: 1.2, def: 0.1, // 몸이 약한 대신 한 방이 셈. 호신 부적으로 받는 피해 -10% (보스가 세진 뒤 너무 자주 쓰러져서)
     role: '부적술 · 원거리 광역', bars: { 체력: 2, 공격: 5, 사거리: 4, 기동: 2, 난이도: 3 }, desc: '불부적, 낙뢰, 불뱀을 부르는 화룡부, 얼음 가시 빙결진',
     labels: { atk: '불부적', dash: '축지', skill: '낙뢰', skill2: '화룡부', skill3: '빙결진' }, hitWord: '연속 타격',
   },
