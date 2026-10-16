@@ -18,7 +18,7 @@ def chars(paths):
 
 base = set(chr(c) for c in range(0x20, 0x7f)) | set('·—…!?「」『』《》“”‘’、。,:;()★☆◆▶')
 need = {
-    'KR': chars(glob.glob(os.path.join(root, 'src', '*.js')) + [os.path.join(root, 'index.html')] + glob.glob(os.path.join(root, 'src', 'lang', 'en_*.js'))) | base,
+    'KR': chars(glob.glob(os.path.join(root, 'src', '*.js')) + glob.glob(os.path.join(root, 'src', 'game', '*.js')) + [os.path.join(root, 'index.html')] + glob.glob(os.path.join(root, 'src', 'lang', 'en_*.js'))) | base,
     'JP': chars(glob.glob(os.path.join(root, 'src', 'lang', 'ja_*.js'))) | base,
     'SC': chars(glob.glob(os.path.join(root, 'src', 'lang', 'zh_*.js'))) | base,
 }

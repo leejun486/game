@@ -158,6 +158,7 @@ export class TowerPart {
     this.teleport(r.x, r.z);
     this.player.hp = this.player.maxHp;
     if (T.mode === 'dungeon') this.ui.banner(DUNGEONS[T.dg].name, `처치 ${T.kills} · 얻은 것: ${lootLine(T)}`, 3.4, '');
+    else if (T.mode === 'weekly' && !T.rushDone) this.ui.banner('주간 경연', died ? '쓰러졌다… 기록은 남지 않았다' : '그만두었다 — 기록은 남지 않았다', 2.6, '');
     else if (T.mode) this.ui.banner('보스 도전', died ? '쓰러졌다… 다시 도전해 보자' : '돌아왔다', 2.4, '');
     else this.ui.banner('저승 시련탑', died ? `${T.floor}층에서 쓰러졌다… 최고 기록 ${T.best}층` : `최고 기록 ${T.best}층`, 3, '');
     this.tower = null;

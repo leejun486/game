@@ -1013,3 +1013,24 @@ body.native #pz-export { display: none; }
 #away .aw-list b { color: #9ff0b0; font-weight: normal; font-variant-numeric: tabular-nums; }
 #away .aw-n { font-size: 12px; color: #a89eb4; margin-bottom: 10px; }
 #away .tbtn { min-width: 120px; }
+
+/* 주간 경연: 완주 카드 · 도전 창의 순위표 */
+#wk-card { position: absolute; left: 50%; top: 46%; transform: translate(-50%, -50%) scale(0.96); z-index: 26; width: min(360px, 92vw); padding: 16px 20px 14px; background: rgba(14, 10, 22, 0.96); text-align: center; opacity: 0; pointer-events: none; transition: opacity 0.25s, transform 0.25s; }
+#wk-card.show { opacity: 1; pointer-events: auto; transform: translate(-50%, -50%) scale(1); }
+#wk-card .aw-t { font-size: 18px; color: #fff6e2; }
+#wk-card .wk-time { font-size: 44px; color: #ffd77a; margin: 4px 0 2px; font-variant-numeric: tabular-nums; }
+#wk-card .aw-n { font-size: 12px; color: #a89eb4; margin-bottom: 10px; }
+.wk-code { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 6px 10px; border-radius: 8px; background: rgba(255, 255, 255, 0.07); font-size: 13px; color: #c8bea8; margin: 6px 0 8px; }
+.wk-code b { color: #ffd77a; font-weight: normal; letter-spacing: 0.04em; user-select: all; font-variant-numeric: tabular-nums; }
+.wk-btns { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-bottom: 6px; }
+#wk-card .tbtn { min-width: 0; font-size: 13px; padding-inline: 14px; }
+.wk-box { margin-bottom: 12px; padding: 8px 10px 10px; border-radius: 10px; background: rgba(255, 215, 122, 0.07); border: 1px solid rgba(255, 215, 122, 0.25); }
+.wk-box .wk-week { color: #ffd77a; }
+.wk-box .wk-rule { color: #ff9a7a; }
+.wk-board { display: grid; gap: 3px; margin: 8px 0 4px; }
+.wk-board > div { display: grid; grid-template-columns: 2em 1fr 1.6fr auto; gap: 8px; align-items: center; padding: 4px 8px; border-radius: 6px; background: rgba(255, 255, 255, 0.05); font-size: 13px; }
+.wk-board > div.me { background: rgba(255, 215, 122, 0.16); }
+.wk-board b { color: #9ff0b0; font-weight: normal; font-variant-numeric: tabular-nums; }
+.wk-board .wk-empty { display: block; color: #a89eb4; text-align: center; }
+.wk-add { display: flex; gap: 6px; margin-top: 6px; }
+.wk-add input { flex: 1; min-width: 0; font: inherit; font-size: 13px; padding: 5px 8px; border-radius: 6px; border: 1px solid #5a4a6a; background: #120e1a; color: #f2e8d0; }
