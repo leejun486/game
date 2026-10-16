@@ -1,0 +1,190 @@
+<title>월하궁 개편 방향</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Do+Hyeon&family=Gowun+Dodum&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* 레이아웃: 읽기 한 줄(약 70자) + 넓은 표·배치도. 밤하늘 남색 잉크와 놋쇠빛 강조, 우리 게임(월하궁)의 달빛 톤 */
+:root {
+  --bg: #f2f3f7; --surface: #e6e8f0; --ink: #1b1f2e; --muted: #5d6276; --rule: #cfd3e0;
+  --brass: #9a6a12; --brass-soft: #f0e2c2; --take: #2f7d55; --drop: #a8423a;
+  --hud-bg: #1c2030; --hud-grid: #2a2f42; --hud-label: #e8e6f0;
+  --display: 'Do Hyeon', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+  --body: 'Gowun Dodum', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+  --mono: 'IBM Plex Mono', ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #141722; --surface: #1d2130; --ink: #e9e8f1; --muted: #a2a6ba; --rule: #333a50;
+  --brass: #e2b25a; --brass-soft: #3b3020; --take: #6fd0a0; --drop: #f08a7e; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #141722; --surface: #1d2130; --ink: #e9e8f1; --muted: #a2a6ba; --rule: #333a50;
+  --brass: #e2b25a; --brass-soft: #3b3020; --take: #6fd0a0; --drop: #f08a7e; color-scheme: dark }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 16px; line-height: 1.75;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 40px 72px; }
+.wrap { max-width: 900px; margin: 0 auto; display: flex; flex-direction: column; gap: 52px; }
+header { display: flex; flex-direction: column; gap: 12px; border-bottom: 2px solid var(--ink); padding-bottom: 26px; }
+.eyebrow { font-family: var(--mono); font-size: 12px; letter-spacing: 0.1em; color: var(--brass); }
+h1 { font-family: var(--display); font-weight: 400; font-size: clamp(34px, 6vw, 50px); line-height: 1.15; margin: 0; text-wrap: balance; }
+h2 { font-family: var(--display); font-weight: 400; font-size: 27px; line-height: 1.3; margin: 0; text-wrap: balance; }
+h3 { font-size: 16px; margin: 0; }
+p { margin: 0; max-width: 68ch; }
+.lede { font-size: 18px; color: var(--muted); max-width: 62ch; }
+section { display: flex; flex-direction: column; gap: 16px; }
+.sec-head { display: flex; align-items: baseline; gap: 14px; border-top: 1px solid var(--rule); padding-top: 20px; flex-wrap: wrap; }
+.sec-head .tag { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+code { font-family: var(--mono); font-size: 0.86em; background: var(--surface); padding: 1px 5px; border-radius: 3px; overflow-wrap: anywhere; }
+.callout { background: var(--brass-soft); border-left: 3px solid var(--brass); padding: 14px 18px; display: flex; flex-direction: column; gap: 6px; }
+.tbl { overflow-x: auto; border: 1px solid var(--rule); }
+table { border-collapse: collapse; width: 100%; font-size: 14.5px; min-width: 620px; }
+th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { background: var(--surface); font-weight: 600; font-size: 13px; }
+tr:last-child td { border-bottom: 0; }
+.v { font-family: var(--mono); font-size: 12px; padding: 1px 7px; border-radius: 999px; white-space: nowrap; border: 1px solid; }
+.v.take { color: var(--take); border-color: var(--take); }
+.v.drop { color: var(--drop); border-color: var(--drop); }
+.v.keep { color: var(--muted); border-color: var(--rule); }
+ul.plain, ol.plain { margin: 0; padding-left: 1.3em; display: flex; flex-direction: column; gap: 5px; max-width: 68ch; }
+.two { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 18px; }
+.two > figure { min-width: 0; }
+figure { margin: 0; display: flex; flex-direction: column; gap: 8px; }
+figcaption { font-size: 13px; color: var(--muted); }
+.hud { overflow-x: auto; border: 1px solid var(--rule); }
+.hud svg { display: block; width: 100%; min-width: 380px; height: auto; }
+.phase { display: grid; grid-template-columns: 3.2em 1fr; gap: 4px 14px; padding: 14px 0; border-bottom: 1px solid var(--rule); }
+.phase:last-child { border-bottom: 0; }
+.phase .n { font-family: var(--display); font-size: 30px; color: var(--brass); line-height: 1; }
+.phase .body { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.phase .meta { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+footer { border-top: 1px solid var(--rule); padding-top: 16px; font-size: 13px; color: var(--muted); }
+</style>
+
+<div class="wrap">
+
+<header>
+  <span class="eyebrow">벤치마킹 · 도깨비의 세계 클라이언트 분석 기준 · 2026-10-16</span>
+  <h1>월하궁 개편 방향</h1>
+  <p class="lede">보내 주신 분석 보고서를 우리 게임과 하나씩 맞대 봤습니다. 도깨비의 세계는 모바일식 MMORPG를 PC로 옮긴 온라인 게임이고, 월하궁은 혼자 하는 오프라인 액션 RPG입니다. 그래서 <b>화면 구성, 장비 성장 사다리, 등급 체계, UI 톤</b>은 가져오고, 서버가 있어야 굴러가는 것은 버립니다.</p>
+</header>
+
+<section>
+  <div class="sec-head"><h2>한 줄로 정리하면</h2></div>
+  <div class="callout">
+    <h3>"오래 키우는 맛"을 장비에 몰고, 화면은 익숙한 MMO 배치로</h3>
+    <p>도깨비의 세계는 레벨 상한이 50이고, 그 뒤의 성장은 장비의 강화 → 한계돌파 → 초월 → 각성 네 단계가 맡습니다. 월하궁은 엔딩까지 레벨이 85 넘게 오르고 장비 성장은 강화·세공 두 가지뿐입니다. 레벨은 덜 오르게 하고 장비를 오래 키우게 바꾸면, 오프라인에서도 "내 칼을 키운다"는 MMO의 손맛이 납니다.</p>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head"><h2>나란히 놓고 보기</h2><span class="tag">보고서 수치 vs 지금 월하궁</span></div>
+  <div class="tbl"><table>
+    <tr><th>항목</th><th>도깨비의 세계</th><th>월하궁 (지금)</th><th>방향</th></tr>
+    <tr><td>장르</td><td>MMORPG (길드·레이드·점령전)</td><td>오프라인 액션 RPG, 지역 14곳 이야기</td><td><span class="v keep">유지</span></td></tr>
+    <tr><td>레벨</td><td>상한 50</td><td>상한 없음, 엔딩에서 Lv.85 남짓</td><td><span class="v take">가져옴</span> 상한 50</td></tr>
+    <tr><td>장비 성장</td><td>강화 → 한계돌파 → 초월 → 각성</td><td>강화 · 세공</td><td><span class="v take">가져옴</span> 네 단계</td></tr>
+    <tr><td>장비 등급</td><td>4단 (일반·희귀·영웅·전설) + 특수, 197종</td><td>6단 (일반·고급·희귀·영웅·전설·보스), 무기·옷 약 100종 + 방어구·장신구 무작위</td><td><span class="v take">가져옴</span> 4단 + 보스</td></tr>
+    <tr><td>무기</td><td>검 · 도 · 지팡이 · 부채 · 활</td><td>검 · 부적·지팡이 · 활 · 창</td><td><span class="v take">나중에</span> 부채 직업</td></tr>
+    <tr><td>HUD</td><td>미니맵 왼쪽 위, 스킬 5+3 + 궁극기 오른쪽 아래, HP 아래 가운데, 경험치 맨 아래</td><td>상태창·스킬 왼쪽 위, 퀘스트 오른쪽 위, 미니맵 오른쪽 아래</td><td><span class="v take">가져옴</span> 배치</td></tr>
+    <tr><td>UI 톤</td><td>흰 글씨 + 검은 외곽선, 베이지 보조, 주황 강조, 번개문 원형 테두리·금색 마름모·붓 띠</td><td>둥근 손글씨풍 창, 금색 테두리</td><td><span class="v take">가져옴</span> 우리 식으로</td></tr>
+    <tr><td>패스</td><td>미션 패스 (유료 칸 포함)</td><td>오늘의 목표 · 출석</td><td><span class="v take">가져옴</span> 무료 수련 패스</td></tr>
+    <tr><td>길드·채팅·점령전·레이드 매칭</td><td>있음</td><td>없음</td><td><span class="v drop">버림</span> 서버 필요</td></tr>
+    <tr><td>캐시샵·멤버십</td><td>있음</td><td>달빛 구슬 꾸미기</td><td><span class="v drop">버림</span> 판매 안 함</td></tr>
+    <tr><td>엔진·그래픽</td><td>Unity 6 · DOTS · URP, 4.7 GB</td><td>Three.js 웹, 수십 MB</td><td><span class="v keep">유지</span> 따라갈 수 없음</td></tr>
+  </table></div>
+</section>
+
+<section>
+  <div class="sec-head"><h2>화면 배치</h2><span class="tag">1920×1080 기준</span></div>
+  <p>도깨비의 세계 배치는 보고서의 RectTransform 값을 그대로 옮겼고, 월하궁은 지금 화면을 같은 비율로 그렸습니다. 오른손 엄지(또는 키보드 오른손) 쪽에 전투 단추를 모으고, 눈이 가장 자주 가는 아래 가운데에 내 체력을 두는 것이 핵심입니다.</p>
+  <div class="two">
+    <figure>
+      <div class="hud"><svg id="hud-now" viewBox="0 0 1920 1080" role="img" aria-label="지금 월하궁 화면 배치"></svg></div>
+      <figcaption>지금 월하궁. 상태·스킬이 왼쪽 위에 몰려 있어 싸우는 동안 체력을 보려면 시선을 크게 옮겨야 합니다.</figcaption>
+    </figure>
+    <figure>
+      <div class="hud"><svg id="hud-new" viewBox="0 0 1920 1080" role="img" aria-label="바꿀 월하궁 화면 배치"></svg></div>
+      <figcaption>바꿀 배치 (도깨비의 세계식). 채팅 자리는 우리 게임의 알림·획득 기록으로 씁니다.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head"><h2>장비 성장 사다리</h2><span class="tag">contentunlockfeature 순서</span></div>
+  <div class="tbl"><table>
+    <tr><th>단계</th><th>도깨비의 세계</th><th>월하궁에 들일 모양</th></tr>
+    <tr><td>강화</td><td>있음</td><td>지금 그대로 (+0~+15). 상한에 닿으면 다음 단계 안내</td></tr>
+    <tr><td>한계돌파</td><td>있음</td><td>같은 장비 하나를 먹여 강화 상한 +5 (세 번까지). 쓸모없던 중복 드롭이 재료가 됨</td></tr>
+    <tr><td>초월</td><td>있음</td><td>영웅·전설 장비만. 요괴 혼석으로 별 1~5, 별마다 기본 능력치 +10%</td></tr>
+    <tr><td>각성</td><td>있음</td><td>전설 장비 별 5에서 고유 효과 하나가 열림 (보스 무기의 고유 기술처럼)</td></tr>
+  </table></div>
+  <p>레벨 상한을 50으로 두고 남는 경험치는 수련점·장비 재료로 돌리면, 후반 지역에서도 성장 동력이 장비로 이어집니다. 지금 난이도는 레벨이 계속 오르는 것을 전제로 맞춰져 있어서, 이 단계는 자동 완주 봇으로 다시 맞춰야 합니다.</p>
+</section>
+
+<section>
+  <div class="sec-head"><h2>가져오지 않는 것</h2></div>
+  <ul class="plain">
+    <li><b>파일에서 뽑은 그림·글꼴·데이터.</b> 아틀라스, 아이콘, 데이터 테이블을 그대로 쓰지 않습니다. 판매하지 않는 게임이라도 우리 코드는 GitHub 저장소와 게임 페이지(아티팩트)에 올라가 있어서, 그 안에 넣는 순간 남에게 보여지는 곳에 올라갑니다. 배치·구조·수치의 "생각"만 가져오고 모양은 우리가 새로 그립니다.</li>
+    <li><b>글꼴은 따로 구할 수 있습니다.</b> 보고서의 G마켓 산스는 G마켓이 무료로 배포하는 글꼴이라, 게임에서 뽑지 않고 공식 배포본을 받아 쓰면 됩니다. 원하시면 화면 글꼴을 바꿔 볼 수 있습니다.</li>
+    <li><b>온라인 기능.</b> 길드, 채팅, 점령전, 레이드 매칭, 캐시샵, 멤버십, 안티치트, 패치 시스템은 서버와 운영이 있어야 의미가 있어서 뺍니다.</li>
+    <li><b>그래픽 수준.</b> Unity 6 + DOTS + URP로 만든 4.7 GB 그래픽은 웹 3D로 따라갈 수 없습니다. 화면 배치·색·UI 장식으로 "같은 부류의 게임"이라는 느낌을 맞추는 쪽이 현실적입니다.</li>
+  </ul>
+</section>
+
+<section>
+  <div class="sec-head"><h2>순서</h2><span class="tag">하나씩, 매번 화면 사진으로 확인</span></div>
+  <div>
+    <div class="phase"><div class="n">1</div><div class="body"><h3>화면 배치 바꾸기</h3><p>미니맵 왼쪽 위, 메뉴 오른쪽 위 한 줄, 스킬 5+3 + 궁극기 + 회피 + 공격 오른쪽 아래, 내 체력 아래 가운데, 경험치 맨 아래, 자동 사냥 단추 가운데 아래, 알림 기록 왼쪽 아래. 휴대폰 세로 화면도 같은 원칙으로.</p><span class="meta">가장 먼저 · 보이는 변화가 가장 큼 · 기존 휴대폰 겹침 테스트로 확인</span></div></div>
+    <div class="phase"><div class="n">2</div><div class="body"><h3>등급 4단 + UI 톤</h3><p>일반·희귀·영웅·전설(+보스) 네 단으로 줄이고, 아이템 칸을 등급 배경 + 테두리 타일로. 흰 글씨에 검은 외곽선, 베이지 보조, 주황 강조. 번개문 원형 테두리·금색 마름모·붓 띠 장식을 우리 그림으로.</p><span class="meta">옛 저장 파일의 '고급' 장비는 '희귀'로 옮김</span></div></div>
+    <div class="phase"><div class="n">3</div><div class="body"><h3>장비 성장 사다리</h3><p>한계돌파 · 초월 · 각성을 강화 창에 이어 붙이기.</p><span class="meta">새 재료 흐름 · 봇으로 재료 수급 확인</span></div></div>
+    <div class="phase"><div class="n">4</div><div class="body"><h3>레벨 상한 50 + 난이도 다시 맞추기</h3><p>지역별 권장 레벨을 50 안으로 다시 나누고, 남는 경험치는 재료로. 네 직업 자동 완주로 쓰러짐·보스전 체력을 지금 수준에 맞춤.</p><span class="meta">가장 품이 큼 · 3단계 뒤에</span></div></div>
+    <div class="phase"><div class="n">5</div><div class="body"><h3>무료 수련 패스</h3><p>미션 패스를 오프라인으로: 주간 과제 30칸, 칸마다 재료·꾸밈. 유료 칸 없음.</p></div></div>
+    <div class="phase"><div class="n">6</div><div class="body"><h3>부채 직업</h3><p>다섯 번째 무기. 바람을 부리는 원거리·제어 직업.</p><span class="meta">선택</span></div></div>
+  </div>
+</section>
+
+<footer>보고서의 수치(레벨 상한, 성장 단계, 등급, HUD 좌표, 색 체계)만 참고했습니다. 도깨비의 세계 파일에서 나온 그림·글꼴·데이터는 이 페이지와 게임 어디에도 들어가지 않습니다.</footer>
+</div>
+
+<script>
+(function () {
+  var NS = 'http://www.w3.org/2000/svg';
+  function draw(id, rects) {
+    var s = document.getElementById(id);
+    var bg = document.createElementNS(NS, 'rect'); bg.setAttribute('width', 1920); bg.setAttribute('height', 1080); bg.setAttribute('fill', 'var(--hud-bg)'); s.appendChild(bg);
+    for (var x = 240; x < 1920; x += 240) { var l = document.createElementNS(NS, 'line'); l.setAttribute('x1', x); l.setAttribute('x2', x); l.setAttribute('y1', 0); l.setAttribute('y2', 1080); l.setAttribute('stroke', 'var(--hud-grid)'); s.appendChild(l); }
+    for (var y = 270; y < 1080; y += 270) { var m = document.createElementNS(NS, 'line'); m.setAttribute('x1', 0); m.setAttribute('x2', 1920); m.setAttribute('y1', y); m.setAttribute('y2', y); m.setAttribute('stroke', 'var(--hud-grid)'); s.appendChild(m); }
+    rects.forEach(function (r) {
+      var e = document.createElementNS(NS, 'rect');
+      e.setAttribute('x', r[1]); e.setAttribute('y', r[2]); e.setAttribute('width', r[3]); e.setAttribute('height', r[4]);
+      e.setAttribute('fill', r[5]); e.setAttribute('fill-opacity', '0.2'); e.setAttribute('stroke', r[5]); e.setAttribute('stroke-width', 4); e.setAttribute('rx', 8);
+      s.appendChild(e);
+      if (r[0]) { var t = document.createElementNS(NS, 'text'); t.setAttribute('x', r[1] + 10); t.setAttribute('y', r[2] + Math.min(38, r[4] - 8)); t.setAttribute('fill', 'var(--hud-label)'); t.setAttribute('font-size', 32); t.setAttribute('font-family', 'Gowun Dodum, sans-serif'); t.textContent = r[0]; s.appendChild(t); }
+    });
+  }
+  // 지금 월하궁 (1280×720 화면을 1.5배)
+  draw('hud-now', [
+    ['상태·체력·스킬', 24, 24, 594, 174, '#66bb6a'],
+    ['가방·기술·메뉴', 24, 200, 114, 210, '#a1887f'],
+    ['퀘스트', 1524, 180, 372, 180, '#42a5f5'],
+    ['미니맵', 1686, 756, 210, 258, '#26c6da'],
+    ['조작 안내', 480, 996, 960, 60, '#9e9e9e'],
+  ]);
+  // 바꿀 배치 (보고서 좌표 기준)
+  var R = [
+    ['미니맵', 30, 20, 238, 340, '#26c6da'],
+    ['퀘스트', 30, 380, 300, 170, '#42a5f5'],
+    ['메뉴', 1080, 0, 840, 100, '#42a5f5'],
+    ['자동 사냥', 765, 657, 390, 56, '#bdbdbd'],
+    ['내 체력', 780, 855, 360, 78, '#66bb6a'],
+    ['빠른 칸', 702, 940, 516, 92, '#ffca28'],
+    ['알림 기록', 40, 860, 520, 170, '#ff8a65'],
+    ['궁극기', 1594, 684, 134, 132, '#ab47bc'],
+    ['회피', 1738, 708, 104, 104, '#ab47bc'],
+    ['공격', 1784, 817, 104, 104, '#ab47bc'],
+    ['', 0, 1040, 1920, 40, '#66bb6a'],
+  ];
+  for (var i = 0; i < 5; i++) R.push([i === 0 ? '스킬' : '', 1248 + 101 * i, 814, 92, 92, '#ab47bc']);
+  for (var j = 0; j < 3; j++) R.push(['', 1286 + 101 * j, 709, 92, 92, '#ab47bc']);
+  draw('hud-new', R);
+})();
+</script>
