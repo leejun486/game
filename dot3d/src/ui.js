@@ -11,6 +11,7 @@ import { ACHIEVEMENTS } from './records.js';
 import { EVOS, RUNES, branchOf, rankOf, runeOf, freePoints, RANK_NAME, MAX_RANK } from './evolve.js';
 import { drawGearIcon, gearLines, gearScore, SLOT_NAME, STATS, BAG_MAX, salvageExp, GEAR_SLOTS, rarityOf, SETS, setBonuses } from './gear.js';
 import { expNeed, SKILL_LEVEL } from './entities.js';
+import { growInfo, doGrow, growOf, growTag, capOf, LB_MAX, STAR_MAX } from './growth.js';
 import { MATS, MAT_ORDER, ENH_MAX, rateOf, soulCost, dropsOnFail, weaponBonus, outfitHp, outfitDef, gearMul, targetInfo, tryEnhance, enhName } from './enhance.js';
 
 // HTML HUD: 체력, 스킬, 임무, 배너, 대화창, 보스 체력, 적 체력바, 상호작용 표시
@@ -265,7 +266,7 @@ export class UI {
       const cur = g.gearInSlot(it.kind === 'ring' ? g.worseRingSlot() : it.kind);
       const better = !worn && gearScore(it) > gearScore(cur);
       const txt = document.createElement('div');
-      txt.innerHTML = `<span style="color:${rarityOf(it).color}">${it.lock ? '🔒 ' : ''}${enhName(it.name, it.enh || 0)}</span><small>${it.set ? SETS[it.set].name : rarityOf(it).name} ${SLOT_NAME[it.kind]}${other ? ' · 다른 직업 착용' : ''}</small>`;
+      txt.innerHTML = `<span style="color:${rarityOf(it).color}">${it.lock ? '🔒 ' : ''}${enhName(it.name, it.enh || 0)}${growTag(it)}</span><small>${it.set ? SETS[it.set].name : rarityOf(it).name} ${SLOT_NAME[it.kind]}${other ? ' · 다른 직업 착용' : ''}</small>`;
       row.append(cv, txt);
       if (better) row.insertAdjacentHTML('beforeend', '<span class="better">▲</span>');
       row.addEventListener('click', (e) => { e.stopPropagation(); this.pick = it.uid; this.pickSlot = null; this.refreshBag(); });
@@ -311,20 +312,22 @@ export class UI {
     const T = this.enhPick, info = T && targetInfo(g, T);
     let detail = '<div class="pz-note">강화할 장비를 고르세요.</div>';
     if (info) {
-      const lv = info.lv, nx = Math.min(ENH_MAX, lv + 1);
+      const lv = info.lv, CAP = info.cap || ENH_MAX, nx = Math.min(CAP, lv + 1);
       const eff = (L) => T.kind === 'weapon' ? `무기 공격력 +${Math.round(weaponBonus(L) * 100)}%` : T.kind === 'outfit' ? `최대 체력 +${outfitHp(L)} · 받는 피해 -${(outfitDef(L) * 100).toFixed(1)}%` : `모든 옵션 ×${gearMul(L).toFixed(2)}`;
-      const soul = soulCost(lv), maxed = lv >= ENH_MAX;
+      const soul = soulCost(lv), maxed = lv >= CAP;
+      const gr = growInfo(g, T), gs = growOf(g, T);
       const can = !maxed && (M[info.mat] || 0) >= 1 && (M.soul || 0) >= soul;
       detail = `<div class="enh-box${this.enhFx ? ' ' + this.enhFx : ''}">
-        <div class="enh-name" style="color:${rows.find((r) => key(r.t) === key(T))?.color || '#fff'}">${enhName(info.name, lv)}${maxed ? '' : ` <span class="arrow">→</span> <b>+${nx}</b>`}</div>
+        <div class="enh-name" style="color:${rows.find((r) => key(r.t) === key(T))?.color || '#fff'}">${enhName(info.name, lv)}${growTag(gs)}${maxed ? '' : ` <span class="arrow">→</span> <b>+${nx}</b>`}</div>
         <div class="enh-eff"><span>${tr('지금')}: ${lv ? eff(lv) : '강화 안 함'}</span>${maxed ? '' : `<span class="up">${tr('성공하면')}: ${eff(nx)}</span>`}</div>
-        ${maxed ? '<div class="pz-note">최고 단계예요 (+15)</div>' : `
+        ${maxed ? `<div class="pz-note">지금 한계예요 (+${CAP})</div>` : `
         <div class="enh-rate">성공 확률 <b>${Math.round(rateOf(lv) * 100)}%</b>${dropsOnFail(lv) ? ' · 실패하면 한 단계 떨어짐' : ' · 실패해도 그대로'}</div>
         <div class="enh-cost">${icon(info.mat)} ${MATS[info.mat].name} 1 <small>(${M[info.mat] || 0})</small>${soul ? ` · ${icon('soul')} ${MATS.soul.name} ${soul} <small>(${M.soul || 0})</small>` : ''}</div>
         ${dropsOnFail(lv) ? `<label class="enh-bless"><input type="checkbox" id="enh-bless" ${this.enhBless && M.bless ? 'checked' : ''} ${M.bless ? '' : 'disabled'}> ${icon('bless')} ${MATS.bless.name} 함께 쓰기 (실패해도 안 떨어짐) <small>(${M.bless || 0})</small></label>` : ''}
         <button id="enh-go" ${can ? '' : 'disabled'}>강화하기</button>
-        <div class="enh-auto"><label>목표 <select id="enh-target">${Array.from({ length: ENH_MAX - lv }, (_, i) => lv + 1 + i).map((n) => `<option value="${n}" ${n === (this.enhTarget > lv ? this.enhTarget : Math.min(ENH_MAX, Math.max(lv + 1, 10))) ? 'selected' : ''}>+${n}</option>`).join('')}</select></label><button id="enh-auto" ${can ? '' : 'disabled'}>목표까지 자동 강화</button></div>`}
+        <div class="enh-auto"><label>목표 <select id="enh-target">${Array.from({ length: CAP - lv }, (_, i) => lv + 1 + i).map((n) => `<option value="${n}" ${n === (this.enhTarget > lv ? this.enhTarget : Math.min(CAP, Math.max(lv + 1, 10))) ? 'selected' : ''}>+${n}</option>`).join('')}</select></label><button id="enh-auto" ${can ? '' : 'disabled'}>목표까지 자동 강화</button></div>`}
         <div class="enh-msg">${msg}</div>
+        ${this.growBox(gr, T)}
         ${lv >= 9 && !maxed ? '<div class="pz-note">+10부터는 보스만 떨어뜨리는 요괴 혼석이 더 들어가요.</div>' : ''}
       </div>`;
     }
@@ -337,7 +340,7 @@ export class UI {
       row.className = 'it' + (key(r.t) === key(T || {}) ? ' pick' : '');
       const cv = document.createElement('canvas'); cv.width = cv.height = 16; r.draw(cv);
       const txt = document.createElement('div');
-      txt.innerHTML = `<span style="color:${r.color}">${enhName(r.name, lv)}</span><small>${r.sub}</small>`;
+      txt.innerHTML = `<span style="color:${r.color}">${enhName(r.name, lv)}${growTag(growOf(g, r.t))}</span><small>${r.sub}</small>`;
       row.append(cv, txt);
       row.addEventListener('click', (e) => { e.stopPropagation(); this.enhPick = r.t; this.enhFx = ''; this.renderEnh(); });
       list.append(row);
@@ -365,6 +368,16 @@ export class UI {
       this.refreshBag();
       this.renderEnh(tries ? `${tries}번 시도 · 성공 ${ok} · 실패 ${fail} → 지금 +${now}${reached ? ' · 목표 달성!' : last ? ` · 멈춤: ${last}` : ''}` : last || '');
     });
+    el.querySelector('#grow-go')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const r = doGrow(g, T);
+      if (!r.ok) { g.audio.play('denied'); this.renderEnh(r.msg); return; }
+      p.recalc(); g.records?.check?.(); g.save(false);
+      g.audio.play('levelup'); g.ui.flash('#ffd76a', 0.2); this.enhFx = 'ok';
+      this.refreshBag();
+      this.renderEnh(r.msg);
+      setTimeout(() => { this.enhFx = ''; }, 50);
+    });
     el.querySelector('#enh-go')?.addEventListener('click', (e) => {
       e.stopPropagation();
       const r = tryEnhance(g, T, !!this.enhBless);
@@ -379,6 +392,31 @@ export class UI {
       this.renderEnh(m);
       setTimeout(() => { this.enhFx = ''; }, 50);
     });
+  }
+
+  // 성장 사다리 (growth.js): 한계돌파 · 초월 · 각성 칸
+  growBox(gr, T) {
+    if (!gr) return '';
+    const M = this.game.mats;
+    const ic = (k) => `<i class="mat-ic" style="background:linear-gradient(180deg, ${MATS[k].icon[0]} 0 62%, ${MATS[k].icon[1]} 62%)"></i>`;
+    const steps = [
+      ['lb', '한계돌파', `<b>${gr.lb}</b>/${LB_MAX}`],
+      ['star', '초월', gr.canStar ? `★<b>${gr.star}</b>/${STAR_MAX}` : '<small>영웅 이상</small>'],
+      ['awk', '각성', gr.canAwk ? (gr.awk ? '◆' : '-') : '<small>전설 이상</small>'],
+    ].map(([k, n, v]) => `<span class="gw-st${gr.step === k ? ' now' : ''}"><em>${n}</em>${v}</span>`).join('<i class="gw-ar">›</i>');
+    let body = '';
+    if (gr.step) {
+      const N = gr.need, parts = [];
+      if (N.coins) parts.push(`🪙 <b>${N.coins}</b> <small>(${this.game.shop.coins})</small>`);
+      if (N.fodder) parts.push(gr.fodder ? `${tr('재료 장비')}: <span style="color:${rarityOf(gr.fodder).color}">${enhName(gr.fodder.name, gr.fodder.enh || 0)}</span>` : `${tr('재료 장비')}: <small>${tr('없음')}</small>`);
+      for (const k of ['soul', 'dust', 'bless']) if (N[k]) parts.push(`${ic(k)} ${MATS[k].name} <b>${N[k]}</b> <small>(${M[k] || 0})</small>`);
+      const what = gr.step === 'lb' ? `강화 한계 +${gr.cap} → +${gr.cap + 5}` : gr.step === 'star' ? `능력치 +${gr.star * 10}% → +${(gr.star + 1) * 10}%` : T.kind === 'gear' ? '고유 효과가 없으면 하나 붙고, 있으면 능력치 ×1.15' : '능력치 ×1.15';
+      body = `<div class="gw-what">${what}</div><div class="gw-cost">${parts.join(' · ')}</div>
+        <button id="grow-go" ${gr.ok ? '' : 'disabled'}>${gr.step === 'lb' ? '한계돌파' : gr.step === 'star' ? '초월하기' : '각성하기'}</button>${gr.ok ? '' : `<div class="pz-note">${gr.why}</div>`}`;
+    } else if (gr.lv < gr.cap && gr.lb < LB_MAX) body = `<div class="pz-note">+${gr.cap}까지 강화하면 한계돌파할 수 있어요.</div>`;
+    else if (gr.canStar && gr.lb < 1) body = '<div class="pz-note">한계돌파를 한 번 하면 초월할 수 있어요.</div>';
+    else body = `<div class="pz-note">${gr.awk || (!gr.canAwk && gr.star >= STAR_MAX) || (!gr.canStar && gr.lb >= LB_MAX) ? '끝까지 성장했어요!' : gr.canAwk ? '★5가 되면 각성할 수 있어요.' : '더 성장하려면 강화하세요.'}</div>`;
+    return `<div class="grow-box"><div class="bag-sec">성장</div><div class="gw-steps">${steps}</div>${body}</div>`;
   }
 
   // 외형 탭: 겉모습만 바꿈 (능력치는 입은 장비 그대로)

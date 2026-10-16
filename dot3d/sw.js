@@ -2,7 +2,7 @@
 //  - index.html: 먼저 인터넷에서 새로 받고, 안 되면 저장해 둔 것
 //  - 나머지(스크립트·글꼴·소리·그림): 저장해 둔 것이 있으면 그것 (주소에 ?v=해시가 붙어 새 버전은 새 주소)
 //  CACHE 이름은 npm run build(tools/stamp.cjs)가 바꿔 씀 → 옛 저장분은 activate 때 지움
-const CACHE = 'wolhagung-c4f34aec4c';
+const CACHE = 'wolhagung-49bfe6492d';
 const CORE = ['./', 'index.html', 'manifest.webmanifest', 'icon.png', 'favicon.png', 'fonts/ui-kr.woff2'];
 
 self.addEventListener('install', (e) => {

@@ -36,7 +36,7 @@ export const CAPS = { def: 0.6, crit: 0.6, cdr: 0.4, spd: 0.4, ls: 0.1 };
 const MAIN = { gloves: ['crit'], legs: ['spd', 'hp'], belt: ['hp'], ring: ['atk', 'critDmg', 'cdr', 'ls'] };
 const POOL = { gloves: ['atk', 'crit', 'critDmg', 'ls', 'hp'], legs: ['hp', 'def', 'spd', 'regen', 'exp'], belt: ['hp', 'def', 'regen', 'exp', 'atk'], ring: ['atk', 'crit', 'critDmg', 'cdr', 'ls', 'exp', 'regen'] };
 const TIER_MUL = [1, 1.4, 1.9, 2.5, 3.2];
-const LEGEND_PERKS = ['quake', 'drain', 'execute', 'rage', 'swift', 'soul'];
+export const LEGEND_PERKS = ['quake', 'drain', 'execute', 'rage', 'swift', 'soul'];
 
 let uidSeed = Date.now() % 100000;
 export const newUid = () => 'g' + (uidSeed++).toString(36) + Math.floor(Math.random() * 1296).toString(36);
@@ -96,10 +96,10 @@ export function rollGearTier(strong, round) {
 
 export const gearColor = (g) => (g.set ? SETS[g.set].color : BASES[g.kind][g.tier][1]);
 
-// 장착한 장비 옵션 합계 (한계 적용)
+// 장착한 장비 옵션 합계 (한계 적용) · 강화 × 초월·각성 배율 (growth.js)
 export function sumStats(list) {
   const t = {};
-  for (const g of list) if (g) { const m = gearMul(g.enh || 0); for (const [k, v] of Object.entries(g.stats)) t[k] = (t[k] || 0) + (k === 'hp' ? Math.round(v * m) : v * m); }
+  for (const g of list) if (g) { const m = gearMul(g.enh || 0) * (1 + 0.1 * (g.star || 0)) * (g.awk && !g.awkPerk ? 1.15 : 1); for (const [k, v] of Object.entries(g.stats)) t[k] = (t[k] || 0) + (k === 'hp' ? Math.round(v * m) : v * m); }
   for (const [k, v] of Object.entries(setBonuses(list).stats)) t[k] = (t[k] || 0) + v;
   for (const [k, c] of Object.entries(CAPS)) if (t[k] > c) t[k] = c;
   return t;

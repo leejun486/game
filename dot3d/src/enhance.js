@@ -1,10 +1,11 @@
-// 강화: 무기·갑옷·방어구/장신구(장갑·각반·허리띠·반지)를 주문서로 +1씩 올림 (최대 +15)
+// 강화: 무기·갑옷·방어구/장신구(장갑·각반·허리띠·반지)를 주문서로 +1씩 올림 (+15, 한계돌파하면 최대 +30 — growth.js)
 //  - 주문서는 종류마다 따로 (무기 / 갑옷 / 장신구). 몬스터가 가끔, 보스가 여럿 떨어뜨림
 //  - 성공 확률은 단계가 오를수록 낮아짐. +6부터는 실패하면 한 단계 떨어짐 (장비가 사라지지는 않음)
 //  - 축복받은 주문서를 함께 쓰면 실패해도 떨어지지 않음
 //  - +10 → +11부터는 보스만 떨어뜨리는 '요괴 혼석'이 더 필요 (+10→11: 1개 … +14→15: 5개)
 //  무기·갑옷 강화 단계는 game.enh[아이템 id] (직업끼리 함께 씀), 방어구·장신구는 그 장비의 g.enh
 import { item } from './items.js';
+import { capOf } from './growth.js';
 
 export const ENH_MAX = 15;
 export const MATS = {
@@ -22,10 +23,11 @@ export const MATS = {
 export const MAT_ORDER = ['scrollW', 'scrollA', 'scrollG', 'bless', 'soul', 'dust', 'stoneR', 'stoneC', 'stoneM'];
 
 // lv → lv+1 성공 확률
-const RATE = [1, 1, 1, 0.95, 0.9, 0.8, 0.7, 0.6, 0.5, 0.45, 0.4, 0.35, 0.3, 0.25, 0.2];
+const RATE = [1, 1, 1, 0.95, 0.9, 0.8, 0.7, 0.6, 0.5, 0.45, 0.4, 0.35, 0.3, 0.25, 0.2,
+  0.18, 0.17, 0.16, 0.15, 0.14, 0.13, 0.12, 0.12, 0.11, 0.11, 0.1, 0.1, 0.09, 0.09, 0.08]; // +16~30은 한계돌파 뒤 (growth.js)
 export const rateOf = (lv) => RATE[lv] ?? 0;
 // lv → lv+1에 드는 요괴 혼석
-export const soulCost = (lv) => (lv >= 10 ? lv - 9 : 0);
+export const soulCost = (lv) => (lv >= 10 ? Math.min(lv - 9, 8) : 0);
 export const dropsOnFail = (lv) => lv >= 6;
 
 // 강화 단계에 따른 효과
@@ -38,11 +40,11 @@ export const gearMul = (lv) => 1 + lv * 0.05 + Math.max(0, lv - 9) * 0.04; // �
 export function targetInfo(game, t) {
   if (t.kind === 'gear') {
     const g = game.gearByUid(t.uid);
-    return g ? { name: g.name, lv: g.enh || 0, mat: 'scrollG', obj: g } : null;
+    return g ? { name: g.name, lv: g.enh || 0, mat: 'scrollG', obj: g, cap: capOf(g) } : null;
   }
   const it = item(t.id);
   if (!it || !game.inv.has(t.id)) return null;
-  return { name: it.name, lv: game.enh[t.id] || 0, mat: it.kind === 'weapon' ? 'scrollW' : 'scrollA', obj: it };
+  return { name: it.name, lv: game.enh[t.id] || 0, mat: it.kind === 'weapon' ? 'scrollW' : 'scrollA', obj: it, cap: capOf(game.ext?.grow?.[t.id]) };
 }
 
 export const enhName = (name, lv) => (lv ? `+${lv} ${name}` : name);
@@ -52,7 +54,7 @@ export function tryEnhance(game, t, useBless = false) {
   const info = targetInfo(game, t);
   if (!info) return { ok: null, msg: '강화할 장비가 없어요' };
   const lv = info.lv, M = game.mats;
-  if (lv >= ENH_MAX) return { ok: null, msg: '더 강화할 수 없어요 (+15)' };
+  if (lv >= info.cap) return { ok: null, msg: `더 강화할 수 없어요 (+${info.cap}) — 한계돌파가 필요해요` };
   if ((M[info.mat] || 0) < 1) return { ok: null, msg: `${MATS[info.mat].name}가 모자라요` };
   const soul = soulCost(lv);
   if ((M.soul || 0) < soul) return { ok: null, msg: `요괴 혼석이 ${soul}개 필요해요 (보스가 떨어뜨려요)` };

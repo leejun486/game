@@ -788,15 +788,25 @@ body.pad:not(.touch) #help-pad { display: flex; }
 .enh-rate b { color: #ffd76a; font-weight: normal; }
 .enh-cost small, .enh-bless small { color: #a89e8a; }
 .enh-bless { display: block; font-size: 12px; margin: 4px 0 8px; cursor: pointer; }
-#enh-go { font: inherit; padding: 7px 18px; background: #8a2a20; color: #fff4e0; border: 1px solid #e2b85a; cursor: pointer; }
-#enh-go:disabled { opacity: 0.4; cursor: default; }
+#enh-go, #grow-go { font: inherit; padding: 7px 18px; background: #8a2a20; color: #fff4e0; border: 1px solid #e2b85a; cursor: pointer; }
+#enh-go:disabled, #grow-go:disabled { opacity: 0.4; cursor: default; }
 .enh-auto { display: flex; gap: 8px; align-items: center; margin-top: 8px; font-size: 12px; flex-wrap: wrap; }
 .enh-auto select { font-family: var(--font); font-size: 12px; background: #2a2230; color: #e8dcc0; border: 1px solid #6a5a3a; padding: 2px 4px; }
 #enh-auto { font: inherit; font-size: 12px; padding: 5px 12px; background: #2a2230; color: #ffd76a; border: 1px solid #e2b85a; cursor: pointer; }
 #enh-auto:disabled { opacity: 0.4; cursor: default; }
-#enh-go:not(:disabled):hover { background: #a8382a; }
+#enh-go:not(:disabled):hover, #grow-go:not(:disabled):hover { background: #a8382a; }
 .enh-msg { min-height: 16px; margin-top: 6px; color: #ffd76a; font-size: 13px; }
 .enh-box.fail .enh-msg { color: #ff8a7a; }
+.grow-box { margin-top: 10px; border-top: 1px dashed #4a3e58; padding-top: 6px; }
+.gw-steps { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 4px 0 6px; }
+.gw-st { display: inline-flex; gap: 4px; align-items: baseline; padding: 3px 8px; border: 1px solid #4a3e58; background: #1a1522; font-size: 12px; color: #cfc6da; }
+.gw-st em { font-style: normal; color: #9a8fae; }
+.gw-st.now { border-color: #f3d354; color: #ffe8a0; box-shadow: 0 0 6px rgba(243, 211, 84, .35); }
+.gw-ar { color: #6a5e78; font-style: normal; }
+.gw-what { color: #ffe8a0; font-size: 13px; margin-bottom: 4px; }
+.gw-cost { font-size: 12px; color: #cfc6da; margin-bottom: 6px; display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; }
+.gr-tag { color: #f3d354; font-size: .85em; }
+.gr-tag i { font-style: normal; }
 
 /* ===== 도감 ===== */
 .cx-sum { background: #1e1828; border: 1px solid #4a3e58; padding: 8px 10px; margin-bottom: 8px; font-size: 12px; line-height: 1.6; }
