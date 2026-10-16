@@ -1049,3 +1049,99 @@ body.native #pz-export { display: none; }
 .at-c.next { border-color: #ffd77a; }
 .at-c.now { opacity: 1; border-color: #9ff0b0; background: rgba(159, 240, 176, 0.14); box-shadow: 0 0 12px rgba(159, 240, 176, 0.35); }
 .at-c em { position: absolute; right: 5px; top: 3px; font-style: normal; color: #9ff0b0; font-size: 12px; }
+
+/* ===== MMO식 화면 배치 (컴퓨터 화면) =====
+   미니맵·퀘스트 왼쪽 위, 메뉴 단추 오른쪽 위 한 줄, 내 정보·체력 아래 가운데, 경험치 맨 아래 전체 폭,
+   전투 단추 오른쪽 아래(공격 크게 · 회피 · 고유 기술 · 기술 셋), 자동 사냥 가운데, 알림 기록 왼쪽 아래 */
+#map-btn, #feed { display: none; }
+@media (min-width: 761px) and (min-height: 561px) {
+  body:not(.touch) #logo, body:not(.touch) #help, body:not(.touch) #help-pad { display: none; }
+  body:not(.touch) #minimap { left: 16px; top: 16px; right: auto; bottom: auto; }
+  body:not(.touch) #quest { left: 16px; top: 236px; right: auto; width: 260px; }
+  /* 메뉴 단추: 오른쪽 위 한 줄 */
+  body:not(.touch) #bag-btn, body:not(.touch) #evo-btn, body:not(.touch) #map-btn, body:not(.touch) #menu-btn { display: block; top: 16px; left: auto; width: 92px; padding: 8px 0; text-align: center; font-size: 14px; }
+  body:not(.touch) #bag-btn { right: 316px; }
+  body:not(.touch) #evo-btn { right: 216px; }
+  body:not(.touch) #map-btn { position: absolute; right: 116px; pointer-events: auto; cursor: pointer; color: #fff; font-family: var(--font); }
+  body:not(.touch) #menu-btn { right: 16px; }
+  body:not(.touch) #bag-btn span, body:not(.touch) #evo-btn span, body:not(.touch) #map-btn span, body:not(.touch) #menu-btn span { display: block; margin: 2px 0 0; font-size: 10px; color: var(--gold); }
+  /* 내 정보: 아래 가운데 (초상화 · 이름 · 체력) */
+  body:not(.touch) #status { left: calc(50% - 212px); width: 424px; top: auto; bottom: 22px; align-items: center; padding: 6px 12px 6px 6px; }
+  body:not(.touch) #portrait { width: 52px; height: 52px; border-radius: 50%; overflow: hidden; }
+  body:not(.touch) #status .col { width: 340px; gap: 4px; }
+  body:not(.touch) #status .bar.hp { height: 20px; }
+  body:not(.touch) #hp-text { font-size: 12px; line-height: 16px; }
+  /* 경험치: 맨 아래 전체 폭 */
+  body:not(.touch) #status .bar.exp { position: fixed; left: 0; right: 0; bottom: 0; height: 10px; border: 0; border-top: 1px solid #0a0810; box-shadow: none; background: rgba(10, 8, 16, 0.85); }
+  body:not(.touch) #exp-fill { background: linear-gradient(90deg, #c89a2a, #ffd76a); }
+  body:not(.touch) #exp-text { font-size: 9px; line-height: 10px; }
+  /* 전투 단추: 오른쪽 아래 둥근 단추 무리 */
+  body:not(.touch) #status .skills { position: fixed; right: 26px; bottom: 26px; width: 330px; height: 196px; margin: 0; display: block; pointer-events: none; }
+  body:not(.touch) #status .sk { position: absolute; width: 66px; height: 66px; border-radius: 50%; border: 3px solid var(--gold-dark); box-shadow: 0 0 0 2px #0a0810, 0 4px 10px rgba(0, 0, 0, 0.45); background: radial-gradient(circle at 50% 35%, #34395a, #161a2c); }
+  body:not(.touch) #status .sk .key { position: absolute; top: 7px; font-size: 11px; }
+  body:not(.touch) #status .sk em { font-size: 12px; margin-top: 10px; }
+  body:not(.touch) #status .sk.atk { right: 0; bottom: 0; width: 96px; height: 96px; border-color: var(--gold); background: radial-gradient(circle at 50% 35%, #5a3a2a, #2a1610); }
+  body:not(.touch) #status .sk.atk em { font-size: 16px; }
+  body:not(.touch) #status .sk[data-slot="dash"] { right: 10px; bottom: 110px; }
+  body:not(.touch) #status .sk[data-slot="ult"] { right: 88px; bottom: 112px; width: 76px; height: 76px; border-color: #c87aff; }
+  body:not(.touch) #status .sk[data-slot="skill"] { right: 254px; bottom: 6px; }
+  body:not(.touch) #status .sk[data-slot="skill2"] { right: 180px; bottom: 6px; }
+  body:not(.touch) #status .sk[data-slot="skill3"] { right: 106px; bottom: 6px; }
+  /* 자동 사냥: 가운데, 내 정보 위 */
+  body:not(.touch) #hunt-btn { left: 50%; top: auto; bottom: 104px; transform: translateX(-50%); width: 200px; padding: 7px 0; text-align: center; font-size: 14px; border-radius: 999px; }
+  /* 알림 기록: 왼쪽 아래 */
+  body:not(.touch) #feed { display: flex; flex-direction: column; justify-content: flex-end; gap: 2px; position: absolute; left: 16px; bottom: 22px; width: 380px; max-height: 150px; overflow: hidden; padding: 8px 10px; background: rgba(10, 8, 16, 0.42); border-radius: 8px; font-size: 13px; line-height: 1.45; color: #f2ead8; text-shadow: 1px 1px 0 #000; pointer-events: none; }
+  body:not(.touch) #feed > div { overflow-wrap: anywhere; }
+  body:not(.touch) #feed > div:nth-last-child(n+4) { opacity: 0.55; }
+  /* 알림·안내·저장 표시는 자동 사냥 단추 위로 */
+  body:not(.touch) #toast { bottom: 150px; }
+  body:not(.touch) #coach { bottom: 196px; }
+  body:not(.touch) #app:has(#coach.show) #toast { bottom: 300px; }
+  body:not(.touch) #savemark { right: 380px; bottom: 30px; }
+}
+/* 큰 화면에서는 화면 요소를 비율대로 키움 (1920×1080 = 1.35배) */
+@media (min-width: 1600px) and (min-height: 900px) { body:not(.touch) #hud { zoom: 1.35; } }
+@media (min-width: 2400px) and (min-height: 1300px) { body:not(.touch) #hud { zoom: 1.8; } }
+@media (min-width: 1600px) and (min-height: 900px) {
+  body:not(.touch) #toast { bottom: 210px; }
+  body:not(.touch) #coach { bottom: 266px; }
+  body:not(.touch) #app:has(#coach.show) #toast { bottom: 400px; }
+}
+/* 1024~1279 폭: 알림 기록·내 정보·전투 단추가 닿지 않게 좁힘 */
+@media (min-width: 761px) and (max-width: 1279px) and (min-height: 561px) {
+  body:not(.touch) #feed { width: 300px; font-size: 12px; }
+  body:not(.touch) #status { left: calc(50% - 172px); width: 344px; }
+  body:not(.touch) #status .col { width: 260px; }
+  body:not(.touch) #status .skills { width: 300px; }
+  body:not(.touch) #status .sk { width: 58px; height: 58px; }
+  body:not(.touch) #status .sk[data-slot="skill"] { right: 226px; }
+  body:not(.touch) #status .sk[data-slot="skill2"] { right: 162px; }
+  body:not(.touch) #status .sk[data-slot="skill3"] { right: 98px; }
+  body:not(.touch) #status .sk.atk { width: 88px; height: 88px; }
+}
+/* 태블릿 가로 (터치): 같은 MMO 배치, 전투 단추는 터치 단추가 오른쪽 아래를 맡음 */
+@media (orientation: landscape) and (min-width: 761px) and (min-height: 561px) {
+  body.touch #logo { display: none; }
+  body.touch #minimap { left: 16px; top: 16px; right: auto; bottom: auto; }
+  body.touch #quest { left: 16px; top: 236px; right: auto; width: 260px; }
+  body.touch #bag-btn, body.touch #evo-btn, body.touch #map-btn, body.touch #menu-btn { display: block; top: 16px; left: auto; width: 92px; min-width: 0; padding: 10px 0; text-align: center; font-size: 14px; box-sizing: border-box; }
+  body.touch #bag-btn { right: 316px; }
+  body.touch #evo-btn { right: 216px; }
+  body.touch #map-btn { position: absolute; right: 116px; pointer-events: auto; color: #fff; font-family: var(--font); }
+  body.touch #menu-btn { right: 16px; }
+  body.touch #map-btn span { display: none; }
+  body.touch #status { left: calc(50% - 190px); width: 380px; top: auto; bottom: 18px; align-items: center; padding: 6px 12px 6px 6px; }
+  body.touch #portrait { width: 48px; height: 48px; border-radius: 50%; overflow: hidden; }
+  body.touch #status .col { width: 300px; }
+  body.touch #status .bar.exp { position: fixed; left: 0; right: 0; bottom: 0; height: 8px; border: 0; box-shadow: none; background: rgba(10, 8, 16, 0.85); }
+  body.touch #status .bar.exp #exp-text { display: none; }
+  body.touch #exp-fill { background: linear-gradient(90deg, #c89a2a, #ffd76a); }
+  body.touch #hunt-btn { left: calc(50% - 90px); width: 180px; top: auto; bottom: 96px; right: auto; padding: 9px 0; text-align: center; border-radius: 999px; }
+  body.touch #toast { top: auto; bottom: 146px; }
+  body.touch #coach { bottom: 190px; }
+  body.touch #app:has(#coach.show) #toast { bottom: 300px; }
+  body.touch:has(#boss.show) #status, body.touch:has(#boss.show) #quest, body.touch:has(#boss.show) #minimap { translate: none; }
+}
+/* 보스 체력 바는 오른쪽 위 메뉴 줄 아래로 */
+@media (min-width: 761px) and (min-height: 561px) { body:not(.touch) #boss { top: 86px; width: min(560px, calc(100vw - 440px)); } }
+@media (orientation: landscape) and (min-width: 761px) and (min-height: 561px) { body.touch #boss { top: 86px; width: min(560px, calc(100vw - 440px)); } }

@@ -295,7 +295,7 @@ class Game {
     stage.addEventListener('contextmenu', (e) => e.preventDefault());
     document.getElementById('story').addEventListener('click', () => { if (this.story && !this.story.credits) this.storyNext(); });
     // 가방 버튼·창: 클릭이 공격으로 새지 않게
-    for (const id of ['bag-btn', 'bag', 'evo-btn', 'skills', 'hunt-btn', 'quest', 'pause', 'menu-btn', 'coach', 'minimap', 'worldmap']) {
+    for (const id of ['bag-btn', 'bag', 'evo-btn', 'skills', 'hunt-btn', 'quest', 'pause', 'menu-btn', 'map-btn', 'coach', 'minimap', 'worldmap']) {
       const el = document.getElementById(id);
       el.addEventListener('mousedown', (e) => e.stopPropagation());
       el.addEventListener('touchstart', (e) => e.stopPropagation(), { passive: true });
@@ -318,6 +318,7 @@ class Game {
     });
     document.getElementById('evo-btn').addEventListener('click', () => { if (this.state === 'play') this.toggleSkills(); });
     document.getElementById('hunt-btn').addEventListener('click', () => { if (this.state === 'play') this.setAutoHunt(!this.autoHunt); });
+    document.getElementById('map-btn').addEventListener('click', () => { if (this.state === 'play') { this.hub.toggle(false); this.minimap.toggle(); } });
     document.getElementById('quest').addEventListener('click', () => { if (this.state === 'play') this.toggleAutoMove(); });
     document.getElementById('skills-close').addEventListener('click', () => this.toggleSkills(false));
     stage.addEventListener('wheel', (e) => { this.pixel.zoom(e.deltaY > 0 ? -1 : 1); this.saveT = Math.min(this.saveT, 2); }, { passive: true });

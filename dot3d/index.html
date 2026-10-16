@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="manifest" href="manifest.webmanifest">
 <title>월하궁: 도깨비 야행</title>
-<link rel="stylesheet" href="style.css?v=ac9c60871f">
+<link rel="stylesheet" href="style.css?v=4f9e423a18">
 <link rel="icon" type="image/png" href="favicon.png">
 <link rel="apple-touch-icon" href="icon.png">
 </head>
@@ -29,7 +29,7 @@
         <div class="bar hp"><i id="hp-lag"></i><i id="hp-fill"></i><span id="hp-text"></span></div>
         <div class="bar exp"><i id="exp-fill"></i><span id="exp-text"></span></div>
         <div class="skills">
-          <div class="sk"><span class="key">J</span><em id="sk-atk">베기</em></div>
+          <div class="sk atk"><span class="key">J</span><em id="sk-atk">베기</em></div>
           <div class="sk" data-slot="dash"><i class="cd"></i><span class="key">␣</span><em id="sk-dash">회피</em><b class="cdt"></b></div>
           <div class="sk" data-slot="skill"><i class="cd"></i><span class="key">K</span><em id="sk-skill">검기</em><b class="cdt"></b></div>
           <div class="sk" data-slot="skill2"><i class="cd"></i><span class="key">L</span><em id="sk-skill2">일섬</em><b class="cdt"></b></div>
@@ -51,6 +51,8 @@
     </div>
     <button id="hunt-btn" class="panel" data-k="hunt">자동 사냥<span>H</span></button>
     <button id="menu-btn" class="panel">메뉴<span>Esc</span></button>
+    <button id="map-btn" class="panel" data-k="map">지도<span>V</span></button>
+    <div id="feed" aria-live="polite"></div>
 
     <div id="logo"><span class="han">월하궁</span><span class="sub">도깨비 야행</span></div>
 
@@ -198,6 +200,6 @@
     </div>
   </div>
 </div>
-<script src="dist/game.js?v=c89e878955"></script>
+<script src="dist/game.js?v=8861d86a83"></script>
 </body>
 </html>

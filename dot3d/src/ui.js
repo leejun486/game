@@ -524,6 +524,7 @@ export class UI {
 
   // 알림: 하나가 떠 있는 동안 새 것이 오면 줄을 세웠다가 차례로 (같은 글은 한 번만, 밀리면 짧게)
   toast(text, dur = 2.2) {
+    this.feed(text);
     const Q = (this.toastQ ||= []);
     if (this.toastT > 0.3 && this.el.toast.textContent !== text) {
       if (!Q.some((q) => q.text === text)) Q.push({ text, dur });
@@ -534,6 +535,17 @@ export class UI {
     this.el.toast.textContent = text;
     this.el.toast.classList.add('show');
     this.toastT = dur;
+  }
+
+  // 왼쪽 아래 알림 기록 (MMO의 채팅 자리): 최근 알림 여섯 줄, 오래된 줄은 흐려짐
+  feed(text) {
+    const el = (this.feedEl ||= document.getElementById('feed'));
+    if (!el || !text || el.lastElementChild?.dataset.t === text) return;
+    const d = document.createElement('div');
+    d.dataset.t = text;
+    d.textContent = text;
+    el.appendChild(d);
+    while (el.children.length > 6) el.firstElementChild.remove();
   }
 
   flash(color, strength) {
