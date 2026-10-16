@@ -1,5 +1,5 @@
 // 방어구·장신구: 장갑, 각반, 허리띠, 반지(두 개). 주울 때마다 등급과 옵션이 무작위로 붙음
-import { RARITY, PERKS } from './items.js';
+import { RARITY, PERKS, gradeTile } from './items.js';
 import { gearMul } from './enhance.js';
 import { smoothIcon } from './util.js';
 
@@ -57,7 +57,7 @@ export function makeGear(level, tier, kind) {
   const stats = {};
   const main = MAIN[kind][Math.floor(Math.random() * MAIN[kind].length)];
   stats[main] = rollStat(main, tier, level);
-  // 등급이 높을수록 옵션이 많음 (일반 1개 ~ 전설 4개 + 고유 효과)
+  // 등급이 높을수록 옵션이 많음 (기본 1개 ~ 전설 4개 + 고유 효과)
   const extra = Math.min(tier, 3);
   const pool = POOL[kind].filter((k) => k !== main);
   for (let i = 0; i < extra && pool.length; i++) {
@@ -131,9 +131,8 @@ export function drawGearIcon(cv, g) {
 function drawGearIcon16(cv, g) {
   const c = cv.getContext('2d');
   c.clearRect(0, 0, 16, 16);
-  const rc = (g.set ? SET_RARITY : RARITY[g.tier]).color, col = gearColor(g);
-  c.fillStyle = '#14101c'; c.fillRect(0, 0, 16, 16);
-  c.globalAlpha = 0.25; c.fillStyle = rc; c.fillRect(0, 0, 16, 16); c.globalAlpha = 1;
+  const R = g.set ? SET_RARITY : RARITY[g.tier], rc = R.color, col = gearColor(g);
+  gradeTile(c, R);
   const px = (x, y, w, h, k) => { c.fillStyle = k; c.fillRect(x, y, w, h); };
   if (g.kind === 'gloves') {
     px(4, 4, 7, 7, col); px(4, 2, 2, 3, col); px(6, 1, 2, 4, col); px(8, 1, 2, 4, col); px(10, 3, 2, 3, col); px(11, 6, 2, 3, col);
@@ -153,7 +152,7 @@ function drawGearIcon16(cv, g) {
 
 // ================= 세트 아이템 =================
 // 부위 네 개(장갑·각반·허리띠·반지). 2개·4개를 함께 끼면 세트 효과
-export const SET_RARITY = { name: '세트', color: '#5aff9a' };
+export const SET_RARITY = { name: '세트', color: '#5aff9a', bg: '#24503a', frame: '#5aff9a' };
 export const SETS = {
   dokkaebi: {
     name: '도깨비 대왕의 차림', from: ['blue', 'red', 'wisp', 'boss'], color: '#c8302c',

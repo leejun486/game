@@ -145,13 +145,13 @@ export function renderShop(game, el, sub = game.shop.sub || 'buy', msg = '') {
     } else body += '<div class="pz-note">바꿀 수 있는 장비가 없어요.</div>';
     body += `<div class="grid craft-grid">${free.map((x) => `<div class="row craft-it${x.uid === S.pick ? ' on' : ''}" data-pick="${x.uid}"><canvas width="12" height="12" data-g="${x.uid}"></canvas><span style="color:${rarityOf(x).color}">${x.enh ? '+' + x.enh + ' ' : ''}${x.name}</span>${x.lock ? '🔒' : ''}</div>`).join('')}</div>`;
     // 등급 올리기
-    const TIER = ['일반', '고급', '희귀', '영웅'];
+    const TIER = RARITY.map((r) => r.name);
     body += `<h4 class="cx-h">등급 올리기</h4><div class="pz-note" style="margin-top:0">끼지 않은 같은 종류·같은 등급 셋을 바쳐 한 등급 높은 것 하나를 만들어요 (잠근 것은 빼고). 레벨은 셋 중 가장 높은 것을 따라요.</div><div class="craft-up">`;
     for (const kind of ['gloves', 'legs', 'belt', 'ring']) for (let t = 0; t < 4; t++) {
       const n = g.gear.filter((x) => x.kind === kind && x.tier === t && !x.set && !x.lock && !g.isEquippedAny(x)).length;
       if (!n) continue;
       const ok = n >= 3 && S.coins >= upgradeCost(t);
-      body += `<div class="up-row${ok ? '' : ' off'}"><span><b style="color:${RARITY[t].color}">${TIER[t]}</b> ${SLOT_NAME[kind]} ${n}/3 → <b style="color:${RARITY[t + 1].color}">${['고급', '희귀', '영웅', '전설'][t]}</b></span><span>${coinIcon()}${upgradeCost(t)}</span><button data-up="${kind}:${t}" ${ok ? '' : 'disabled'}>만들기</button></div>`;
+      body += `<div class="up-row${ok ? '' : ' off'}"><span><b style="color:${RARITY[t].color}">${TIER[t]}</b> ${SLOT_NAME[kind]} ${n}/3 → <b style="color:${RARITY[t + 1].color}">${TIER[t + 1]}</b></span><span>${coinIcon()}${upgradeCost(t)}</span><button data-up="${kind}:${t}" ${ok ? '' : 'disabled'}>만들기</button></div>`;
     }
     body += '</div>';
   } else {

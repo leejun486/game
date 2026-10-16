@@ -969,6 +969,7 @@ export const dict = {
   '자리를 비운 동안 수련했어요': 'You kept training while away', '시간': 'h', '분': 'm', '경험치': 'EXP', '확인': 'OK', '최대 8시간까지 쌓여요': 'Stores up to 8 hours', '8시간이 꽉 찼어요 — 더 자주 들러 주세요': 'The 8-hour limit was reached — drop by more often',
   '주간 경연': 'Weekly Trial', '주간 경연 · ': 'Weekly Trial · ', '주간 경연 완주!': 'Weekly Trial cleared!', '최고 기록!': 'New best!', '내 기록 코드': 'My record code', '자랑하기': 'Share', '그림 저장': 'Save image', '복사했어요 — 친구에게 붙여 넣어 보내세요': 'Copied — paste it to a friend', '모두 같은 보스·규칙 · 빠를수록 높은 순위 · 이번 주 첫 완주에 요괴 혼석·엽전': 'Same bosses and rule for everyone · faster ranks higher · first clear this week gives a Spirit Stone and coins', '아직 기록이 없어요': 'No records yet', '친구 기록 코드 붙여 넣기': 'Paste a friend\'s record code', '친구 기록 코드': 'Friend\'s record code', '더하기': 'Add', '나': 'Me', '코드가 맞지 않아요': 'That code doesn\'t look right', '이번 주 기록이 아니에요': 'That record isn\'t from this week', '내 기록이에요': 'That\'s your own record', '이미 더 좋은 기록이 있어요': 'A better record from them is already here', '친구 기록을 더했어요': 'Friend\'s record added', '쓰러졌다… 기록은 남지 않았다': 'You fell… no record this time', '그만두었다 — 기록은 남지 않았다': 'You quit — no record this time', '이 코드를 친구에게 보내 기록을 겨뤄 보세요': 'Send this code to a friend and race your times', '걸린 시간': 'Time', '월하궁': 'Wolhagung',
   '출석 보상': 'Daily Check-in', '강화 주문서': 'Enhance Scroll', '하루 빠져도 처음으로 돌아가지 않아요 · 7일차마다 달빛 구슬': 'Missing a day never resets it · Moon Beads every 7th day',
+  '기본': 'Basic', '기본·일반 모두 분해': 'Salvage all Basic/Common',
 };
 
 const RN = '([ⅠⅡⅢⅣⅤ])';

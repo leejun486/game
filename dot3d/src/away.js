@@ -36,6 +36,6 @@ export function grantAway(g, r) {
   for (let i = 0; i < r.gear; i++) g.pickupGear(makeGear(r.elv, rollGearTier(0.1, g.round || 0)));
   p.addExp(r.exp);
   g.stats.away = (g.stats.away || 0) + 1;
-  g.ui.refreshBag?.();
+  if (!g.ui.bagOpen) g.ui.refreshBag?.(); // 가방이 열려 있으면 다시 그리지 않음 (창의 안내 문구가 지워짐)
   return { ...r, mats, lv0, lv1: p.level };
 }

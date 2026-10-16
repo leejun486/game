@@ -1,13 +1,27 @@
 // 장비 아이템: 무기(직업 전용)와 옷(모든 직업 공용). 착용하면 캐릭터 모습이 바뀜
 import { smoothIcon } from './util.js';
+// 등급 (아이템 칸 배경·테두리·이름 색). 기본 · 일반 · 희귀 · 영웅 · 전설 + 보스 장비는 '특별'(무지개빛 칸)
+//  MMO의 등급 칸처럼 칸 전체를 등급 색으로 깔고 밝은 테두리를 두름
 export const RARITY = [
-  { name: '일반', color: '#d8d0c0' },
-  { name: '고급', color: '#6ad06a' },
-  { name: '희귀', color: '#5ab0ff' },
-  { name: '영웅', color: '#c87aff' },
-  { name: '전설', color: '#ffc040' },
-  { name: '보스', color: '#ff5a4a' },
+  { name: '기본', color: '#8fc0ec', bg: '#2e5078', frame: '#5aa0e0' },
+  { name: '일반', color: '#cfcfcf', bg: '#433f3a', frame: '#949aa1' },
+  { name: '희귀', color: '#6cb4ec', bg: '#2f485e', frame: '#3f8ac0' },
+  { name: '영웅', color: '#c77dff', bg: '#623184', frame: '#c45ae0' },
+  { name: '전설', color: '#ffbe5c', bg: '#be831f', frame: '#f3d354' },
+  { name: '보스', color: '#f0b8ff', bg: ['#d48ae8', '#78b7eb', '#9fe3f5'], frame: '#e9f4ff' },
 ];
+// 16×16 아이콘 바탕: 등급 색 칸 + 1픽셀 테두리 (그 위에 아이템을 그림)
+export function gradeTile(c, R) {
+  if (Array.isArray(R.bg)) {
+    const gr = c.createLinearGradient(0, 0, 16, 16);
+    R.bg.forEach((col, i) => gr.addColorStop(i / (R.bg.length - 1), col));
+    c.fillStyle = gr;
+  } else c.fillStyle = R.bg || '#14101c';
+  c.fillRect(0, 0, 16, 16);
+  c.fillStyle = 'rgba(0, 0, 0, 0.28)'; c.fillRect(1, 1, 14, 14); // 안쪽을 살짝 어둡게 해서 아이템이 보이게
+  c.fillStyle = R.frame || R.color;
+  c.fillRect(0, 0, 16, 1); c.fillRect(0, 15, 16, 1); c.fillRect(0, 0, 1, 16); c.fillRect(15, 0, 1, 16);
+}
 
 // 보스 전용 장비: 그 보스를 쓰러뜨려야만 나옴. 무기·옷마다 고유 효과(perk)가 있고,
 // 옷은 머리나 몸에 보스를 닮은 장식(acc)이 붙음
@@ -268,13 +282,8 @@ export function drawItemIcon(cv, id) {
   try { drawItemIcon16(g, it); } finally { smoothIcon(cv); }
 }
 function drawItemIcon16(g, it) {
-  const rc = RARITY[it.tier].color;
-  g.fillStyle = '#14101c';
-  g.fillRect(0, 0, 16, 16);
-  g.fillStyle = rc;
-  g.globalAlpha = 0.25;
-  g.fillRect(0, 0, 16, 16);
-  g.globalAlpha = 1;
+  const R = RARITY[it.tier], rc = R.frame;
+  gradeTile(g, R);
   const px = (x, y, c) => { g.fillStyle = c; g.fillRect(x, y, 1, 1); };
   const s = it.style || {};
   if (it.kind === 'weapon' && it.cls === 'sword') {
@@ -311,6 +320,4 @@ function drawItemIcon16(g, it) {
     if (it.acc === 'gat') { g.fillStyle = '#0c0a10'; g.fillRect(3, 2, 10, 1); g.fillRect(6, 0, 4, 2); g.fillStyle = '#c8b0ff'; g.fillRect(4, 3, 1, 3); g.fillRect(11, 3, 1, 3); }
   }
   if (it.perk) { px(1, 1, '#ffffff'); px(2, 1, rc); px(1, 2, rc); px(14, 14, '#ffffff'); }
-  g.strokeStyle = rc;
-  g.strokeRect(0.5, 0.5, 15, 15);
 }

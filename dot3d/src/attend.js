@@ -45,7 +45,7 @@ export function claimAttend(g) {
   if (r.beads) gainBeads(g, r.beads);
   A.n++;
   A.day = today();
-  g.ui.refreshBag?.();
+  if (!g.ui.bagOpen) g.ui.refreshBag?.(); // 가방이 열려 있으면 다시 그리지 않음 (창의 안내 문구가 지워짐)
   return { idx, n: A.n };
 }
 

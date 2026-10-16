@@ -5,7 +5,7 @@
 //  - 장신구 도감: 방어구·장신구를 하나씩 '등록'(그 장비는 사라짐) — 종류 넷 × 등급 다섯 + 세트 여덟
 //                 한 종류의 다섯 등급을 모두 채우면 줄 효과
 import { MONSTERS } from './records.js';
-import { WEAPONS, OUTFITS } from './items.js';
+import { WEAPONS, OUTFITS, RARITY } from './items.js';
 import { SETS, STATS } from './gear.js';
 
 export const CODEX_KINDS = ['gloves', 'legs', 'belt', 'ring'];
@@ -113,7 +113,7 @@ export function renderCodex(game, el, sub = 'mon') {
   } else {
     const can = [...CODEX_KINDS.flatMap((k) => [0, 1, 2, 3, 4].map((t) => gearKey(k, t))), ...Object.keys(SETS).map((id) => 'set_' + id)].filter((k) => !C.reg[k] && C.candidate(k));
     body += `<div class="pz-note" style="margin-top:0">끼지 않은 방어구·장신구를 하나 바쳐 칸을 채워요 (바친 장비는 사라지고 잠근 것은 빠져요). 한 줄 다섯 칸을 모두 채우면 줄 효과가 더 붙어요.</div>${can.length ? `<button class="pz-btn main" data-regall style="margin-bottom:8px">등록할 수 있는 ${can.length}칸 모두 등록</button>` : ''}`;
-    const TIER = ['일반', '고급', '희귀', '영웅', '전설'];
+    const TIER = RARITY.map((r) => r.name);
     for (const kind of CODEX_KINDS) {
       const full = [0, 1, 2, 3, 4].every((t) => C.reg[gearKey(kind, t)]);
       body += `<div class="cx-region"><span>${KIND_NAME[kind]}</span><span class="${full ? 'done' : ''}">${full ? '✔ ' : ''}줄 효과: ${fmtStats(ROW_BONUS[kind])}</span></div><div class="cx-row">`;
