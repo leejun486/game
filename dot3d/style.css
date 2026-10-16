@@ -1001,3 +1001,15 @@ body.native #pz-export { display: none; }
 .bar, .bar i { border-radius: 6px; }
 #status .sk, #bag-btn, #evo-btn, #hunt-btn, #menu-btn, .tabs button, .bag-tabs button, .pz-btn, .lk-chip, .lk-sw, .lk-packs button, #quest, #minimap, #toast, #coach, #ach-pop, #gear-detail .gd, .row, .it { border-radius: 10px; }
 #touch .btns button { border-radius: 50%; }
+
+/* 자리 비운 동안 수련 (방치 보상) */
+#away { position: absolute; left: 50%; top: 46%; transform: translate(-50%, -50%) scale(0.96); z-index: 26; width: min(340px, 90vw); padding: 16px 20px 14px; background: rgba(14, 10, 22, 0.96); text-align: center; opacity: 0; pointer-events: none; transition: opacity 0.25s, transform 0.25s; }
+#away.show { opacity: 1; pointer-events: auto; transform: translate(-50%, -50%) scale(1); }
+#away .aw-t { font-size: 18px; color: #fff6e2; }
+#away .aw-time { margin: 4px 0 10px; color: #c8bea8; font-size: 13px; }
+#away .aw-time b { color: #ffd77a; font-size: 18px; font-weight: normal; margin: 0 2px; }
+#away .aw-list { display: grid; gap: 4px; margin-bottom: 10px; }
+#away .aw-list > div { display: flex; justify-content: space-between; gap: 12px; padding: 5px 10px; border-radius: 8px; background: rgba(255, 255, 255, 0.06); font-size: 14px; color: #f2e8d0; }
+#away .aw-list b { color: #9ff0b0; font-weight: normal; font-variant-numeric: tabular-nums; }
+#away .aw-n { font-size: 12px; color: #a89eb4; margin-bottom: 10px; }
+#away .tbtn { min-width: 120px; }

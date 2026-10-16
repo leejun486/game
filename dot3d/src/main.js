@@ -16,6 +16,7 @@ import { QUESTS, BOUNTIES, KILL_NAME } from './quests.js';
 import { makeGear, rollGearTier, gearScore, salvageExp, BAG_MAX, GEAR_SLOTS, slotKind, rarityOf, makeSetPiece, setFor, SETS } from './gear.js';
 import { item, rollDrop, bossDrop, RARITY, itemDesc, WEAPONS, OUTFITS, ULTS } from './items.js';
 import { expNeed, SKILL_LEVEL } from './entities.js';
+import { awayReward, grantAway } from './away.js';
 import { MAPS, BOSS_TYPES, BOSS_NAME, WIN_LINE, GRADE } from './maps.js';
 import { PROLOGUE, SHARD_LINES, SHARD_MAX, ENDING, CREDITS, fillStory } from './story.js';
 import { clamp, lerp, rand, angleDiff, damp } from './util.js';
@@ -173,7 +174,12 @@ class Game {
     this.ui.setClass(this.player.cfg);
     this.updateQuest();
     // 탭을 닫거나 숨길 때 저장
-    document.addEventListener('visibilitychange', () => { if (document.hidden) this.save(false); });
+    // 앱을 내려 뒀다가 돌아오면(새로 고침 없이) 그동안의 수련 보상
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) { this.save(false); this.hiddenAt = Date.now(); return; }
+      if (this.hiddenAt && this.state === 'play') this.claimAway(Date.now() - this.hiddenAt);
+      this.hiddenAt = 0;
+    });
     window.addEventListener('pagehide', () => this.save(false));
     this.last = performance.now();
     this.loop = this.loop.bind(this);
@@ -403,6 +409,7 @@ class Game {
     document.getElementById('title-diff')?.addEventListener('click', (ev) => { const b = ev.target.closest('[data-diff]'); if (b) { this.audio.unlock(); this.audio.play('talk'); this.setDifficulty(b.dataset.diff); } });
     btn('cf-yes', () => this.newGame(true));
     btn('cf-no', () => this.showConfirm(false));
+    btn('away-ok', () => document.getElementById('away').classList.remove('show'));
     document.querySelector('#title .credit').textContent = `3D 액션 · Three.js · v${VERSION}${DEMO ? ' · 체험판' : ''}`;
     if (DEMO) document.querySelector('#title .logo-big').insertAdjacentHTML('beforeend', '<span class="demo-badge">체험판</span>');
     // 선택 화면의 언어 버튼: 누를 때마다 다음 언어로
@@ -869,6 +876,7 @@ class Game {
     this.hasSave = !!d;
     if (!d) { if (info) info.textContent = ''; this.refreshTitle(); return; }
     this.difficulty = DIFFS[d.difficulty] ? d.difficulty : 'normal';
+    this.awayFrom = d.savedAt || 0; // 마지막으로 저장한 때 → 이어하기를 누르면 그동안의 수련 보상
     this.kills = d.kills | 0;
     this.round = d.round | 0;
     this.bestCombo = d.bestCombo | 0;
@@ -1392,8 +1400,34 @@ class Game {
       this.ui.banner('월하궁', '도깨비 야행', 2.8, 'title-banner');
       if (!this.flags.tut && this.quest.step === 0) this.after(2.6, () => this.coach.startTutorial());
     };
+    const from = this.awayFrom;
+    this.awayFrom = 0;
     if (!this.quest.prologue) this.playStory(PROLOGUE, { moon: true, onDone: () => { this.quest.prologue = true; this.save(false); playScene(this, 'prologue', open); } });
-    else open();
+    else {
+      open();
+      if (from) setTimeout(() => this.state === 'play' && this.claimAway(Date.now() - from), 2500); // 지역 이름 배너가 지나간 뒤
+    }
+  }
+
+  // 자리 비운 동안 수련 (src/away.js): 10분 넘게 비웠으면 보상을 주고 카드로 보여 줌
+  claimAway(ms) {
+    const r = awayReward(this, ms);
+    if (!r || this.player.dead) return false;
+    const got = grantAway(this, r);
+    const el = document.getElementById('away');
+    if (!el) return true;
+    const min = Math.round(got.ms / 60000), h = Math.floor(min / 60), m = min % 60;
+    el.querySelector('.aw-time').innerHTML = (h ? `<b>${h}</b><span>시간</span> ` : '') + `<b>${m}</b><span>분</span>`;
+    const row = (label, val) => `<div><span>${label}</span><b>${val}</b></div>`;
+    el.querySelector('.aw-list').innerHTML = row('경험치', `+${got.exp.toLocaleString()}`) + (got.lv1 > got.lv0 ? row('Lv.', `${got.lv0} → ${got.lv1}`) : '') +
+      row('엽전', `+${got.coins.toLocaleString()}`) + Object.entries(got.mats).map(([k, n]) => row(MATS[k].name, `×${n}`)).join('') + (got.gear ? row('방어구·장신구', `×${got.gear}`) : '');
+    el.querySelector('.aw-n').textContent = got.capped ? '8시간이 꽉 찼어요 — 더 자주 들러 주세요' : '최대 8시간까지 쌓여요';
+    el.classList.add('show');
+    this.audio.play('levelup');
+    clearTimeout(this.awayHide);
+    this.awayHide = setTimeout(() => el.classList.remove('show'), 9000);
+    this.save(false);
+    return true;
   }
 
   // 지금 화면을 PNG로 저장 (그린 직후에 읽어야 해서 한 번 더 그리고 바로 꺼냄)
