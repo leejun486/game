@@ -1034,3 +1034,18 @@ body.native #pz-export { display: none; }
 .wk-board .wk-empty { display: block; color: #a89eb4; text-align: center; }
 .wk-add { display: flex; gap: 6px; margin-top: 6px; }
 .wk-add input { flex: 1; min-width: 0; font: inherit; font-size: 13px; padding: 5px 8px; border-radius: 6px; border: 1px solid #5a4a6a; background: #120e1a; color: #f2e8d0; }
+
+/* 출석 보상: 7칸 (카드 · 오늘의 목표 창) */
+#att-card { position: absolute; left: 50%; top: 46%; transform: translate(-50%, -50%) scale(0.96); z-index: 27; width: min(520px, 94vw); padding: 16px 18px 14px; background: rgba(14, 10, 22, 0.96); text-align: center; opacity: 0; pointer-events: none; transition: opacity 0.25s, transform 0.25s; }
+#att-card.show { opacity: 1; pointer-events: auto; transform: translate(-50%, -50%) scale(1); }
+#att-card .aw-t { font-size: 18px; color: #fff6e2; }
+#att-card .aw-n { font-size: 12px; color: #a89eb4; margin: 4px 0 10px; }
+.at-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin-bottom: 8px; }
+.at-c { position: relative; display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 6px 4px 7px; border-radius: 8px; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.08); font-size: 12px; color: #e8dcc0; min-height: 64px; }
+.at-c small { color: #a89eb4; font-size: 11px; }
+.at-c b { color: #ffd77a; font-weight: normal; }
+.at-c.big { grid-column: span 2; background: rgba(200, 160, 255, 0.12); border-color: rgba(200, 160, 255, 0.35); }
+.at-c.got { opacity: 0.55; }
+.at-c.next { border-color: #ffd77a; }
+.at-c.now { opacity: 1; border-color: #9ff0b0; background: rgba(159, 240, 176, 0.14); box-shadow: 0 0 12px rgba(159, 240, 176, 0.35); }
+.at-c em { position: absolute; right: 5px; top: 3px; font-style: normal; color: #9ff0b0; font-size: 12px; }

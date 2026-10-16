@@ -1,5 +1,6 @@
 // Game의 한 부분: 일시정지 창: 소리·화면·조작·저장 파일·각 창 그리기
 //  main.js의 Game 클래스에서 떼어 낸 메서드들 (main.js가 Game.prototype에 붙임 — this는 game)
+import { attendHtml, attendState } from '../attend.js';
 import { exportSave, importSave, makeTransferCode, readTransferCode } from '../save.js';
 import { STYLE } from '../style.js';
 import { ACTIONS, keyOf, keyName } from '../settings.js';
@@ -80,6 +81,7 @@ export class PausePart {
       renderDevice(this, el);
     } else if (tab === 'daily') {
       this.dailyGoals.render(el);
+      el.insertAdjacentHTML('beforeend', `<h4 class="cx-h">출석 보상</h4><div class="pz-note" style="margin-top:0"><span>누적 출석 ${attendState(this).n}일</span> · <span>하루 빠져도 처음으로 돌아가지 않아요 · 7일차마다 달빛 구슬</span></div>${attendHtml(this)}`);
     } else if (tab === 'records') {
       this.records.render(el);
     } else if (tab === 'codex') {

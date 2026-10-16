@@ -17,6 +17,7 @@ import { makeGear, rollGearTier, gearScore, salvageExp, BAG_MAX, GEAR_SLOTS, slo
 import { item, rollDrop, bossDrop, RARITY, itemDesc, WEAPONS, OUTFITS, ULTS } from './items.js';
 import { expNeed, SKILL_LEVEL } from './entities.js';
 import { awayReward, grantAway } from './away.js';
+import { claimAttend, showAttend } from './attend.js';
 import { MAPS, BOSS_TYPES, BOSS_NAME, WIN_LINE, GRADE } from './maps.js';
 import { PROLOGUE, SHARD_LINES, SHARD_MAX, ENDING, CREDITS, fillStory } from './story.js';
 import { clamp, lerp, rand, angleDiff, damp } from './util.js';
@@ -177,7 +178,7 @@ class Game {
     // 앱을 내려 뒀다가 돌아오면(새로 고침 없이) 그동안의 수련 보상
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) { this.save(false); this.hiddenAt = Date.now(); return; }
-      if (this.hiddenAt && this.state === 'play') this.claimAway(Date.now() - this.hiddenAt);
+      if (this.hiddenAt && this.state === 'play') this.welcomeBack(Date.now() - this.hiddenAt);
       this.hiddenAt = 0;
     });
     window.addEventListener('pagehide', () => this.save(false));
@@ -1402,11 +1403,19 @@ class Game {
     };
     const from = this.awayFrom;
     this.awayFrom = 0;
-    if (!this.quest.prologue) this.playStory(PROLOGUE, { moon: true, onDone: () => { this.quest.prologue = true; this.save(false); playScene(this, 'prologue', open); } });
+    if (!this.quest.prologue) this.playStory(PROLOGUE, { moon: true, onDone: () => { this.quest.prologue = true; this.save(false); playScene(this, 'prologue', () => { open(); setTimeout(() => this.state === 'play' && this.welcomeBack(0), 5000); }); } });
     else {
       open();
-      if (from) setTimeout(() => this.state === 'play' && this.claimAway(Date.now() - from), 2500); // 지역 이름 배너가 지나간 뒤
+      setTimeout(() => this.state === 'play' && this.welcomeBack(from ? Date.now() - from : 0), 2500); // 지역 이름 배너가 지나간 뒤
     }
+  }
+
+  // 돌아왔을 때: 오늘 첫 접속이면 출석 보상(src/attend.js) → 닫으면 자리 비운 동안 수련 보상
+  welcomeBack(awayMs) {
+    const a = this.player.dead ? null : claimAttend(this);
+    if (!a) { if (awayMs) this.claimAway(awayMs); return; }
+    this.save(false);
+    showAttend(this, a, () => { if (awayMs && this.state === 'play') this.claimAway(awayMs); });
   }
 
   // 자리 비운 동안 수련 (src/away.js): 10분 넘게 비웠으면 보상을 주고 카드로 보여 줌

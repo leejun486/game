@@ -15,7 +15,7 @@ module.exports = {
       await g.page.reload({ timeout: 180000, waitUntil: 'domcontentloaded' });
       await g.page.waitForFunction(() => window.game && document.getElementById('btn-cont'));
       // 새로 고칠 때 자동 저장이 저장 시각을 지금으로 덮으므로, 불러온 뒤 '마지막 저장 시각'을 과거로
-      const okFrom = await g.page.evaluate(([k, h]) => { const G = window.game, ok = Math.abs(G.awayFrom - JSON.parse(localStorage.getItem(k)).savedAt) < 1000; G.awayFrom = Date.now() - h * 3600000; return ok; }, [KEY, hours]);
+      const okFrom = await g.page.evaluate(([k, h]) => { const G = window.game, ok = Math.abs(G.awayFrom - JSON.parse(localStorage.getItem(k)).savedAt) < 1000; G.awayFrom = Date.now() - h * 3600000; const d = new Date(); G.ext.att = { n: 1, day: `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}` }; return ok; }, [KEY, hours]);
       const before = await g.eval(() => { const G = window.game; return { lv: G.player.level, exp: G.player.exp, coins: G.shop.coins, gear: G.gear.length }; });
       await g.eval(() => document.getElementById('btn-cont').click());
       await g.page.waitForTimeout(4500);
