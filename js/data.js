@@ -211,6 +211,8 @@ D.TELEPORTS = [
 
 // ---------------- items ----------------
 // kind: potion | scroll | ticket | weapon | armor | ring | buff
+// 회복 물약 쿨타임(초): 체력 회복제 셋이 한 쿨타임을 함께 쓰고, 마나 회복제는 따로
+D.POTION_CD = 10;
 D.ITEMS = {
   hp_s: { name: '체력 회복제', icon: 'pot-red', kind: 'potion', heal: 70, price: 30, grade: 0, desc: 'HP를 70 회복합니다.' },
   hp_m: { name: '고급 체력 회복제', icon: 'pot-orange', kind: 'potion', heal: 250, price: 150, grade: 1, desc: 'HP를 250 회복합니다.' },

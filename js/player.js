@@ -16,7 +16,7 @@ class Player extends Hero {
     this.skillCd = {}; this.buffs = [];
     this.mp = save.mp ?? 0;
     this.moveTo = null; this.waypoints = []; this.talkTo = null;
-    this.auto = false; this.combatT = 0; this.potionCd = 0; this.sprintT = 0; this.sprintCd = 0;
+    this.auto = false; this.combatT = 0; this.potionCd = 0; this.hpPotCd = 0; this.mpPotCd = 0; this.sprintT = 0; this.sprintCd = 0;
     this.keys = { x: 0, y: 0 };
     this.navPriority = true; this.ignore = {}; this.lastX = this.x; this.lastY = this.y; this.stuckT = 0;
     this.recalc();
@@ -210,6 +210,9 @@ class Player extends Hero {
     if (this.dead) return;
     if (def.kind === 'potion') {
       if (def.heal && this.hp >= this.maxHp && !def.mana) return UI.toast('HP가 가득 찼습니다.');
+      const cdKey = def.mana ? 'mpPotCd' : 'hpPotCd'; // 회복 물약 쿨타임 (D.POTION_CD초)
+      if (this[cdKey] > 0) return UI.toast(`${def.mana ? '마나' : '체력'} 회복제는 ${Math.ceil(this[cdKey])}초 뒤에 다시 마실 수 있습니다.`);
+      this[cdKey] = D.POTION_CD;
       if (def.heal) { this.hp = Math.min(this.maxHp, this.hp + def.heal); Combat.floatText(game, this, '+' + def.heal, '#6cff7a'); }
       if (def.mana) { this.mp = Math.min(this.maxMp, this.mp + def.mana); Combat.floatText(game, this, '+' + def.mana, '#6cb6ff'); }
       game.fx.push(Combat.makeFx('heal', this.x, this.y, { follow: this, color: def.mana ? '#6cb6ff' : '#7dff8a', small: true }));
@@ -334,7 +337,7 @@ class Player extends Hero {
   move(dt, game) {
     this.s.playTime += dt;
     this.inTown = World.zoneAt(this.x, this.y).safe;
-    this.atkCd -= dt; this.potionCd -= dt; this.combatT -= dt; this.sprintCd -= dt;
+    this.atkCd -= dt; this.potionCd -= dt; this.hpPotCd -= dt; this.mpPotCd -= dt; this.combatT -= dt; this.sprintCd -= dt;
     if (this.sprintT > 0) this.sprintT -= dt;
     for (const k in this.skillCd) if (this.skillCd[k] > 0) this.skillCd[k] -= dt;
     // buffs
@@ -347,7 +350,7 @@ class Player extends Hero {
     const mpBoost = 1 + this.buffs.reduce((a, b) => a + (b.mpRegen || 0), 0) / 100; // 파란 물약
     this.mp = Math.min(this.maxMp, this.mp + (this.maxMp * 0.012 + 0.8) * regenMul * mpBoost * dt);
     // auto potion
-    if (this.s.autoPotion && this.potionCd <= 0 && this.hp < this.maxHp * 0.55) {
+    if (this.s.autoPotion && this.potionCd <= 0 && this.hpPotCd <= 0 && this.hp < this.maxHp * 0.55) {
       const miss = this.maxHp - this.hp;
       const order = miss > 600 ? ['hp_l', 'hp_m', 'hp_s'] : miss > 220 ? ['hp_m', 'hp_s', 'hp_l'] : ['hp_s', 'hp_m', 'hp_l'];
       for (const id of order) {
@@ -355,7 +358,7 @@ class Player extends Hero {
         if (it) { this.useItem(it.uid, game); this.potionCd = 0.7; break; }
       }
     }
-    if (this.s.autoPotion && this.potionCd <= 0 && this.mp < this.maxMp * 0.2 && this.auto) {
+    if (this.s.autoPotion && this.potionCd <= 0 && this.mpPotCd <= 0 && this.mp < this.maxMp * 0.2 && this.auto) {
       const it = this.s.inv.find((i) => i.id === 'mp_s');
       if (it) { this.useItem(it.uid, game); this.potionCd = 0.7; }
     }
