@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
 """Cut a mage (도사) motion sheet into per-direction frames: assets/src/mage_px/<motion>_<dir>_<k>.png.
 Input: a 2x6 sheet on a baked grey checkerboard (6 columns, 2 rows, each row one pose of the motion).
-  python3 tools/extract_mage_px.py <sheet image> [idle|walk|attack]
+  python3 tools/extract_mage_px.py <sheet image> [idle|walk|attack|death]
 idle/walk: row 1 down, down_left, left, up, up_right, up_left; row 2 down, down_left, left, up, up_right,
   down_right. Missing frames are mirrored (right <- left, down_right <- down_left, up_left <- up_right).
 attack: frame 0 = windup, frame 1 = strike. The sheet mixes the order and has real right-facing art:
   row 1 down 0, down_left 0, left 1, up 0, up_right 0, right 1; row 2 down 1, down_left 1, left 0, up 1, right 0,
   down_right 1. down_right 0 <- mirrored down_left 0, up_right 1 <- up_right 0, up_left <- mirrored up_right.
+death: the pose lying on the ground per direction (frame 0; down has 1 = sitting, 0 = still holding the radish):
+  row 1 down 1, down_left, left, up, (unused sit), up_right; row 2 down 0, (unused), (unused), (unused), right,
+  down_right. up_left <- mirrored up_right.
 Frames keep the source resolution; tools/build_mage_px.py scales them into the game sheet."""
 import os
 import sys
@@ -36,10 +39,17 @@ LAYOUT = [['down', 'down_left', 'left', 'up', 'up_right', 'up_left'],
           ['down', 'down_left', 'left', 'up', 'up_right', 'down_right']]
 ATTACK = [[('down', 0), ('down_left', 0), ('left', 1), ('up', 0), ('up_right', 0), ('right', 1)],
           [('down', 1), ('down_left', 1), ('left', 0), ('up', 1), ('right', 0), ('down_right', 1)]]
+DEATH = [[('down', 1), ('down_left', 0), ('left', 0), ('up', 0), None, ('up_right', 0)],
+         [('down', 0), None, None, None, ('right', 0), ('down_right', 0)]]
 got = {}
 for r in range(2):
     for c in range(6):
-        d = ATTACK[r][c] if MOTION == 'attack' else (LAYOUT[r][c], None)
+        if MOTION == 'death':
+            d = DEATH[r][c]
+            if d is None:
+                continue
+        else:
+            d = ATTACK[r][c] if MOTION == 'attack' else (LAYOUT[r][c], None)
         x0, x1, y0, y1 = int(c * W / 6), int((c + 1) * W / 6), int(r * H / 2), int((r + 1) * H / 2)
         ys, xs = np.nonzero(fg[y0:y1, x0:x1])
         crop = rgba.crop((x0 + xs.min(), y0 + ys.min(), x0 + xs.max() + 1, y0 + ys.max() + 1))
@@ -48,7 +58,11 @@ for r in range(2):
         else:
             got.setdefault(d[0], [None, None])[d[1]] = crop
 mir = ImageOps.mirror
-if MOTION == 'attack':
+if MOTION == 'death':
+    for d in got:
+        got[d] = [f for f in got[d] if f is not None]
+    got['up_left'] = [mir(got['up_right'][0])]
+elif MOTION == 'attack':
     got['down_right'][0] = mir(got['down_left'][0])
     got['up_right'] = [got['up_right'][0], got['up_right'][0]]
     got['up_left'] = [mir(f) for f in got['up_right']]

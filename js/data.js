@@ -432,9 +432,10 @@ window.SPRITE_ROWS.elf_px = window.SPRITE_ROWS.elf.concat(window.SPRITE_ROWS.elf
 // 8-direction knight from an attack sheet, 96px cells for the wide slash arcs (tools/build_knight_px.py)
 window.SPRITE_ROWS.knight_px = window.SPRITE_ROWS.elf_px;
 // 도사(마법사): 여우 탈·무 지팡이 도트 그림, 8방향 대기 모션 (tools/extract_mage_px.py → tools/build_mage_px.py)
-window.SPRITE_ROWS.mage_px = window.SPRITE_ROWS.elf_px;
+window.SPRITE_ROWS.mage_px = window.SPRITE_ROWS.elf_px.concat([6, 6, 6, 6, 6, 6, 6, 6]); // + death rows 41-48
 window.SPRITE_FRAME = { knight_px: 96, mage_px: 96 }; // frame size per sheet; everything else is 64
 window.IDLE_COL = { mage_px: 12 }; // standing: alternate walk col 0 with this col (second idle pose)
+window.DEATH_ROWS = { mage_px: 41 }; // first of 8 death rows (up, left, down, right, then the 4 diagonals) — falls the way it faces
 window.WALK_FRAMES = { knight_px: 6 }; // walk cycle length per sheet (cols 1..n); everything else is 8
 // walk column for a step count measured in 8-frame-cycle frames, so every sheet walks at the same pace
 window.walkCol = (sheet, step) => { const n = window.WALK_FRAMES[sheet] || 8; return 1 + (Math.floor(step * n / 8) % n); };

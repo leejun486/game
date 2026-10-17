@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""Build assets/sprites/mage_px.png: LPC-layout sheet with 96px cells (13 cols x 41 rows) for the mage (도사)
-from the idle, walk and attack frames in assets/src/mage_px/<idle|walk|attack>_<dir>_<k>.png (extract_mage_px.py).
+"""Build assets/sprites/mage_px.png: LPC-layout sheet with 96px cells (13 cols x 49 rows) for the mage (도사)
+from the idle, walk, attack and death frames in assets/src/mage_px/<motion>_<dir>_<k>.png (extract_mage_px.py).
 The radish staff is part of the art (no weapon-look layer, see D.BAKED_WEAPON).
   walk col 0 = idle pose 1, walk col 12 = idle pose 2 (the game alternates them while standing, see IDLE_COL;
   same as pose 1 for the directions in STILL),
@@ -8,7 +8,9 @@ The radish staff is part of the art (no weapon-look layer, see D.BAKED_WEAPON).
   spellcast / thrust / slash / shoot = attack windup frames, then the strike frame from just before the game's
   hit frame (the slash arcs and dust are part of the art), row 20 = topple.
 Attack frames are placed by the kimono hem, not the bottom edge (dust and swung radish reach below the feet).
-Rows 0-20 follow LPC (up/left/down/right), rows 21-40 hold the diagonals (up_left, down_left, down_right, up_right)."""
+Rows 0-20 follow LPC (up/left/down/right), rows 21-40 hold the diagonals (up_left, down_left, down_right, up_right).
+Rows 41-48 are a death fall per direction (up, left, down, right, up_left, down_left, down_right, up_right; see
+DEATH_ROWS in js/data.js): standing, tipping over, then lying on the ground (down sits dazed instead)."""
 from PIL import Image
 import numpy as np
 from scipy import ndimage
@@ -64,7 +66,8 @@ for d in DIRS + DIAGS:
     if d in STILL:  # same reason: the second step pose swaps the radish side
         walk[d][1] = walk[d][0]
 atk = {d: [shrink(Image.open(os.path.join(SRC, f'attack_{d}_{k}.png')).convert('RGBA')) for k in range(2)] for d in DIRS + DIAGS}
-sheet = Image.new('RGBA', (13 * F, 41 * F), (0, 0, 0, 0))
+death = {d: [shrink(Image.open(os.path.join(SRC, f'death_{d}_{k}.png')).convert('RGBA')) for k in range(2 if d == 'down' else 1)] for d in DIRS + DIAGS}
+sheet = Image.new('RGBA', (13 * F, 49 * F), (0, 0, 0, 0))
 
 
 def hem_y(img, cx):
@@ -133,5 +136,32 @@ for c, (ang, dy) in enumerate([(0, 0), (8, 0), (25, 1), (50, 3), (75, 6), (90, 9
     cell = Image.new('RGBA', (F, F), (0, 0, 0, 0))
     cell.paste(r, (c * 2, dy), r)
     sheet.paste(cell, (c * F, 20 * F))
+
+
+def put_ground(row, col, img, dy=0):
+    """lying pose: bbox centred, its bottom on the feet line"""
+    x = round((F - img.size[0]) / 2)
+    y = F - 8 - img.size[1] + dy
+    cell = Image.new('RGBA', (F, F), (0, 0, 0, 0))
+    cell.paste(img, (x, y), img)
+    sheet.paste(cell, (col * F, row * F))
+
+
+for i, d in enumerate(DIRS + DIAGS):  # death rows 41-48
+    row = 41 + i
+    a = idle[d][0]
+    if d == 'down':
+        for c, img in enumerate([death['down'][0], death['down'][0], death['down'][1], death['down'][1], death['down'][1], death['down'][1]]):
+            put_ground(row, c, img, dy=-2 if c == 0 else 0)
+        continue
+    fx = fwd(d)[0] or 1
+    put(row, 0, a)
+    tip = Image.new('RGBA', (F, F), (0, 0, 0, 0))  # tipping over toward the facing side
+    tip.paste(a, (round(F / 2 - body_x(a)), F - 8 - a.size[1]), a)
+    tip = tip.rotate(-40 * fx, resample=Image.NEAREST, center=(F / 2, F - 8))
+    sheet.paste(tip, (1 * F, row * F))
+    lie = death[d][0]
+    for c, dy in enumerate([-3, 0, 0, 0], start=2):
+        put_ground(row, c, lie, dy=dy)
 sheet.save(OUT, optimize=True)
 print('wrote', OUT, sheet.size)

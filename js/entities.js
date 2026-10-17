@@ -123,8 +123,10 @@ class Entity {
   }
   frame() {
     if (this.dead) {
-      const a = ANIMS.hurt;
-      return { row: a.row, col: Math.min(a.frames - 1, Math.floor(this.deadT / a.ft)) };
+      const a = ANIMS.hurt, col = Math.min(a.frames - 1, Math.floor(this.deadT / a.ft));
+      const dr = window.DEATH_ROWS[this.sheet]; // 방향마다 쓰러지는 그림이 있는 시트
+      if (dr != null) return { row: dr + (this.diag != null && this.diag >= 0 ? 4 + this.diag : this.dir), col };
+      return { row: a.row, col };
     }
     if (this.action && this.action.seq) {
       const ac = this.action;
