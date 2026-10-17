@@ -62,7 +62,7 @@ const UI = (() => {
   }
 
   // ---------------------------------------------------------------- HUD
-  const SLOT_ITEMS = ['hp_s', 'hp_m', 'mp_s', 'tp_town'];
+  const SLOT_ITEMS = ['hp_s', 'hp_m', 'hp_l', 'tp_town'];
   function buildSlots() {
     const p = game.player;
     const el = $('slots');
@@ -133,7 +133,7 @@ const UI = (() => {
       // 회복 물약 쿨타임
       const cdEl = s.querySelector('.cd');
       if (cdEl) {
-        const cd = Math.max(0, D.ITEMS[id].mana ? p.mpPotCd : p.hpPotCd);
+        const cd = Math.max(0, p.hpPotCd);
         cdEl.style.transform = `scaleY(${Math.min(1, cd / D.POTION_CD)})`;
         s.querySelector('.cdt').textContent = cd > 0 ? Math.ceil(cd) : '';
       }

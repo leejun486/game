@@ -23,7 +23,7 @@ const Admin = (() => {
     ticket10: (p) => { p.addItem('ticket', 10); return '초월 소환권 10장 지급'; },
     ticket100: (p) => { p.addItem('ticket', 100); return '초월 소환권 100장 지급'; },
     scrolls: (p) => { p.addItem('sc_weapon', 10); p.addItem('sc_armor', 10); return '무기/갑옷 마법 주문서 각 10장 지급'; },
-    potions: (p) => { p.addItem('hp_l', 100); p.addItem('hp_m', 200); p.addItem('mp_s', 200); p.addItem('haste', 10); p.addItem('tp_town', 20); return '물약 세트 지급'; },
+    potions: (p) => { p.addItem('hp_l', 100); p.addItem('hp_m', 200); p.addItem('haste', 10); p.addItem('tp_town', 20); return '물약 세트 지급'; },
     gearAll: (p) => {
       for (const id in D.ITEMS) { const it = D.ITEMS[id]; if (D.isEquip(it) && (!it.cls || it.cls === p.cls)) p.addItem(id, 1); }
       return '모든 장비 지급';
