@@ -4,6 +4,7 @@
 //    넘은 보스 수·걸린 시간이 기록되고, 끝나면 넘은 보스 수만큼 엽전·혼석
 //  강함은 플레이어 레벨에 맞춤 (game.tower의 층수를 빌려 씀: mode가 붙은 tower)
 //  기록은 game.ext: { chDay, chUsed, rushBest, rushTime }
+import { lvEq } from './entities.js';
 import { today } from './shop.js';
 import { weeklySet, weekState, weekNo, daysLeft, board, addFriend, myCode, fmtTime, tagName, shareRecord, saveCard } from './weekly.js';
 import { CLASSES } from './classes.js';
@@ -21,7 +22,7 @@ export function rematchLeft(g) {
   return Math.max(0, DAILY_REMATCH - (E.chUsed || 0));
 }
 // 탑 층수로 치면 몇 층쯤인지: 레벨에 맞춘 강함
-const floorFor = (g) => Math.max(3, Math.round(g.player.level * 0.75));
+const floorFor = (g) => Math.max(3, Math.round(lvEq(g.player.level) * 0.75));
 
 export function canChallenge(g) {
   if (g.state !== 'play' || g.player.dead) return '지금은 도전할 수 없어요';

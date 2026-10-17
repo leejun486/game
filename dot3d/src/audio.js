@@ -8,7 +8,7 @@ const NO_DETUNE = new Set(['talk', 'levelup', 'victory', 'bigbell', 'coin', 'bel
 const DEFAULT_VOL = { master: 0.7, music: 0.55, amb: 0.6, sfx: 0.95 };
 
 // 창술사 소리 → 음원이 없을 때 대신 낼 합성음
-const PROC_ALIAS = { thrust: 'swing', spearbeam: 'skill', leap: 'dash', spearslam: 'impact', spearfall: 'arrowhit', spinspear: 'tornado', talisman: 'cast', talisman3: 'cast', talismanhit: 'fire', fall: 'dash', rumble: 'slam', gather: 'charge' };
+const PROC_ALIAS = { fan: 'swing', gust: 'tornado', thrust: 'swing', spearbeam: 'skill', leap: 'dash', spearslam: 'impact', spearfall: 'arrowhit', spinspear: 'tornado', talisman: 'cast', talisman3: 'cast', talismanhit: 'fire', fall: 'dash', rumble: 'slam', gather: 'charge' };
 // 음원이 아직 없을 때 대신 내지 않는 소리 (발소리는 합성음으로 대신하면 시끄러움)
 const NO_PROC = new Set(['step_grass', 'step_stone', 'step_snow', 'step_water', 'step_wood', 'step_sand']);
 

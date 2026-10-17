@@ -179,6 +179,27 @@ export const WEAPONS = {
     { id: 'spB14', name: '뇌공 벼락창', tier: 5, atk: 1.56, from: 'noegong', perk: 'thunderclap', ult: 'skythunder', style: { head: '#e8f8ff', shaft: '#2a3a7a', tassel: '#ffd040', ring: '#ffd040', glow: '#6ab0ff', wings: true, long: 1.3 } },
     { id: 'spB6', name: '염라 판관창', tier: 5, atk: 1.45, from: 'yeomra', perk: 'verdict', ult: 'hellfire', style: { head: '#ff4a5a', shaft: '#2a0a10', tassel: '#ffd040', ring: '#ffd040', glow: '#ff2030', wings: true, long: 1.22, big: 1.35 } },
   ],
+  fan: [
+    { id: 'fn0', name: '수련용 부채', tier: 0, atk: 0, style: {} },
+    { id: 'fn1', name: '대나무 부채', tier: 1, atk: 0.15, style: { rib: '#8a6a3a', silk: '#f4ecd8', edge: '#2a6a4a', flower: '#4a9a5a' } },
+    { id: 'fn2', name: '청학 깃부채', tier: 2, atk: 0.32, style: { rib: '#1e3a4a', silk: '#e8f4ff', edge: '#3a9aff', flower: '#6ab0ff', glow: '#3a9aff' } },
+    { id: 'fn3', name: '자운 비단부채', tier: 3, atk: 0.5, style: { rib: '#2a1a3a', silk: '#efe0ff', edge: '#9a5aff', flower: '#c890ff', glow: '#9a5aff', big: 1.06 } },
+    { id: 'fn4', name: '홍매 태극선', tier: 4, atk: 0.75, style: { rib: '#2a1414', silk: '#fff0f0', edge: '#c8302c', flower: '#ff6a8a', pin: '#ffd040', glow: '#ff3a5a', tassel: '#ffd040', big: 1.12 } },
+    { id: 'fnB1', name: '두억시니 뿔부채', tier: 5, atk: 0.85, from: 'boss', perk: 'quake', ult: 'thunder', style: { rib: '#c8302c', silk: '#e8f8ff', edge: '#3ac8ff', flower: '#ffd040', glow: '#3ac8ff', tassel: '#ffd040', big: 1.15 } },
+    { id: 'fnB2', name: '구미호 꼬리부채', tier: 5, atk: 0.9, from: 'gumiho', perk: 'drain', ult: 'foxtail', style: { rib: '#f0e8e0', silk: '#fff4ec', edge: '#ff7a2a', flower: '#ffb070', glow: '#ff7a2a', tassel: '#ff7a2a', big: 1.12 } },
+    { id: 'fnB3', name: '저승 명부부채', tier: 5, atk: 1.0, from: 'reaper', perk: 'execute', ult: 'judgment', style: { rib: '#14101c', silk: '#2a2036', edge: '#9a4aff', flower: '#c890ff', glow: '#9a4aff', tassel: '#5a3a8a', big: 1.15 } },
+    { id: 'fnB4', name: '이무기 비늘부채', tier: 5, atk: 1.12, from: 'imugi', perk: 'chill', ult: 'tidal', style: { rib: '#1a3a3a', silk: '#dff8f0', edge: '#2affd0', flower: '#7ae8d0', glow: '#2affd0', tassel: '#c8c09a', big: 1.15 } },
+    { id: 'fnB5', name: '불가사리 쇠부채', tier: 5, atk: 1.25, from: 'bulgasari', perk: 'molten', ult: 'meltdown', style: { rib: '#3a3a40', silk: '#ffe0c0', edge: '#ff5a10', flower: '#ffb060', glow: '#ff5a10', tassel: '#8a4a2a', big: 1.2 } },
+    { id: 'fnB7', name: '백호 털부채', tier: 5, atk: 1.32, from: 'baekho', perk: 'hunter', ult: 'tigerclaw', style: { rib: '#1a1a22', silk: '#f4f4ee', edge: '#e08a2a', flower: '#1a1a22', glow: '#ffb060', tassel: '#e08a2a', big: 1.2 } },
+    { id: 'fnB8', name: '용왕 파도부채', tier: 5, atk: 1.38, from: 'dragon', perk: 'storm', ult: 'dragonstorm', style: { rib: '#1e4a9a', silk: '#e0f0ff', edge: '#3a9aff', flower: '#f0c040', glow: '#3a9aff', tassel: '#f0c040', big: 1.24 } },
+    { id: 'fnB9', name: '왕지네 독부채', tier: 5, atk: 1.4, from: 'centipede', perk: 'venom', ult: 'venomrain', style: { rib: '#3a1a1a', silk: '#f0ffe0', edge: '#8aff2a', flower: '#f0a020', glow: '#8aff2a', tassel: '#c8402a', big: 1.22 } },
+    { id: 'fnB10', name: '동장군 눈꽃부채', tier: 5, atk: 1.43, from: 'frostgiant', perk: 'frostbite', ult: 'blizzard', style: { rib: '#2a4a6a', silk: '#f4fbff', edge: '#8ad8ff', flower: '#ffffff', glow: '#8ad8ff', tassel: '#7aa8c8', big: 1.24 } },
+    { id: 'fnB11', name: '어둑시니 그믐부채', tier: 5, atk: 1.47, from: 'eodum', perk: 'shadow', ult: 'eclipse', style: { rib: '#1a1424', silk: '#3a2a4a', edge: '#9a5aff', flower: '#c8a0ff', glow: '#9a5aff', big: 1.26 } },
+    { id: 'fnB12', name: '독각귀 엽전부채', tier: 5, atk: 1.5, from: 'dokgak', perk: 'jackpot', ult: 'goldstorm', style: { rib: '#3a6a8a', silk: '#fff4d0', edge: '#f0c040', flower: '#c8302c', glow: '#ffd040', tassel: '#c8302c', big: 1.24 } },
+    { id: 'fnB13', name: '장산범 갈기부채', tier: 5, atk: 1.53, from: 'jangsan', perk: 'mimic', ult: 'echo', style: { rib: '#3a3438', silk: '#f4f0e8', edge: '#ffb07a', flower: '#ffffff', glow: '#ffb07a', big: 1.26 } },
+    { id: 'fnB14', name: '뇌공 번개부채', tier: 5, atk: 1.56, from: 'noegong', perk: 'thunderclap', ult: 'skythunder', style: { rib: '#2a3a7a', silk: '#e8f8ff', edge: '#ffd040', flower: '#6ab0ff', glow: '#6ab0ff', tassel: '#ffd040', big: 1.28 } },
+    { id: 'fnB6', name: '염라 판관부채', tier: 5, atk: 1.45, from: 'yeomra', perk: 'verdict', ult: 'hellfire', style: { rib: '#2a0a10', silk: '#ffe0e4', edge: '#ff2030', flower: '#ffd040', glow: '#ff2030', tassel: '#ffd040', big: 1.22 } },
+  ],
 };
 
 // 옷: 색 팔레트(main 몸통, accent 띠·깃, trim 장식, dark 바지) + 갑옷 장식
@@ -296,6 +317,16 @@ function drawItemIcon16(g, it) {
     const hd = s.head || '#d4dce6';
     px(12, 3, hd); px(13, 2, hd); px(14, 1, '#ffffff'); px(13, 3, hd); px(12, 2, hd);
     px(11, 4, s.tassel || '#c8302c'); px(10, 4, s.tassel || '#c8302c'); px(11, 5, s.tassel || '#c8302c');
+  } else if (it.kind === 'weapon' && it.cls === 'fan') {
+    // 펼친 부채: 아래 가운데 사북에서 부챗살이 퍼짐
+    for (let y = 2; y <= 13; y++) for (let x = 1; x <= 15; x++) {
+      const dx = x - 8, dy = 13 - y, d = Math.hypot(dx, dy), a = Math.atan2(dy, dx);
+      if (d > 10.5 || d < 3 || a < 0.4 || a > Math.PI - 0.4) continue;
+      const rib = Math.abs(((a - 0.4) / ((Math.PI - 0.8) / 6)) % 1 - 0.5) > 0.42;
+      px(x, y, d > 9.3 ? s.edge || '#c8302c' : rib ? s.rib || '#5a3a28' : s.silk || '#f4ecd8');
+    }
+    px(6, 7, s.flower || '#ff8ab8'); px(10, 6, s.flower || '#ff8ab8'); px(8, 5, s.flower || '#ff8ab8');
+    px(8, 13, s.pin || '#e0b040'); px(8, 14, s.rib || '#5a3a28');
   } else if (it.kind === 'weapon' && it.cls === 'mage') {
     for (let i = 0; i < 11; i++) px(3 + i * 0.8, 14 - i, s.wood || '#5a3e2a');
     g.fillStyle = s.moon || '#e0b040'; g.fillRect(10, 2, 4, 1); g.fillRect(13, 3, 1, 2);

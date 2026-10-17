@@ -51,10 +51,10 @@ export const HAIRS = [
 ];
 const dyeById = Object.fromEntries(DYES.map((d) => [d.id, d]));
 const hairById = Object.fromEntries(HAIRS.map((h) => [h.id, h]));
-export const TYPE = { sword: 'hero', mage: 'mage', elf: 'elf', lancer: 'lancer' };
+export const TYPE = { sword: 'hero', mage: 'mage', elf: 'elf', lancer: 'lancer', fan: 'fan' };
 
 // 쓸 수 있는지: 업적으로 여는 것은 업적, 구슬로 사는 것은 샀는지
-export const unlocked = (game, x) => (x.ach ? !!game.stats?.ach?.[x.ach] : x.cost ? owns(game, x) : true);
+export const unlocked = (game, x) => (x.ach ? !!game.stats?.ach?.[x.ach] : x.cost || x.pass ? owns(game, x) : true);
 
 // 리그를 만들 설정 (입은 장비 + 외형)
 export function rigOptions(game, cls) {

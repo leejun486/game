@@ -16,8 +16,15 @@ import { CAPS } from './gear.js';
 
 // 스킬 해금 레벨
 export const SKILL_LEVEL = { 2: 6, 3: 10 }; // 스킬 2는 죽림에 들어설 즈음, 스킬 3은 구미호를 물리칠 즈음
-// 레벨이 오를수록 가파르게 (Lv.10 약 1.7배, Lv.20 약 2.2배 — 플레이 시간에 맞춤)
-export const expNeed = (lv) => Math.round(50 + lv * 40 + lv * lv * 1.4);
+// 레벨 상한 50. Lv.15까지는 예전 그대로, 그 뒤로는 레벨 하나가 예전 레벨 2개 몫
+//  (예전엔 엔딩까지 Lv.85 남짓 → 이제 엔딩 즈음 Lv.50, 그 뒤 성장은 장비 — growth.js)
+//  힘의 곡선은 그대로: 능력치·적 레벨은 lvEq(예전 기준 레벨, Lv.50 = 예전 85)로 셈
+export const LV_CAP = 50, LV_KNEE = 15, LV_K = 2;
+export const lvEq = (lv) => (lv <= LV_KNEE ? lv : LV_KNEE + (lv - LV_KNEE) * LV_K);
+const expOld = (x) => 50 + x * 40 + x * x * 1.4;
+export const expNeed = (lv) => Math.round(expOld(lvEq(lv)) * (lv < LV_KNEE ? 1 : LV_K));
+// 상한에서 넘치는 경험치: 이만큼 모일 때마다 수련 꾸러미 하나 (주문서 2 · 도깨비 가루 5 · 엽전, 가끔 요괴 혼석)
+export const CAP_BUNDLE = expNeed(LV_CAP);
 import { toon, addRim } from './materials.js';
 import { NAV_R } from './world.js';
 import { clamp, angleDiff, dampAngle, rand, lerp, smooth } from './util.js';
@@ -62,7 +69,7 @@ export class Player {
     this.cfg = C;
     // 직업별 레벨·장비는 game.progress에 보관
     const pr = this.game.progressOf(C.id);
-    this.level = pr.level;
+    this.level = Math.min(LV_CAP, pr.level); // 예전 저장(상한 없던 때)은 50으로
     this.exp = pr.exp;
     this.skillMax = C.skillCd;
     this.cd2 = 0; this.cd3 = 0; this.ultCd = 0;
@@ -106,8 +113,9 @@ export class Player {
     // 무기·갑옷 강화 단계
     const ew = w ? this.game.enh?.[w.id] || 0 : 0, eo = o ? this.game.enh?.[o.id] || 0 : 0;
     const gw = itemGrowMul(this.game, w?.id), go = itemGrowMul(this.game, o?.id); // 초월·각성 (growth.js)
-    this.maxHp = Math.round(this.cfg.hp + (this.level - 1) * 12 + ((o?.hp || 0) + outfitHp(eo)) * go + (gs.hp || 0));
-    this.atkMul = (1 + (this.level - 1) * 0.08) * (1 + ((w?.atk || 0) + weaponBonus(ew)) * gw) * (1 + (gs.atk || 0));
+    const le = lvEq(this.level);
+    this.maxHp = Math.round(this.cfg.hp + (le - 1) * 12 + ((o?.hp || 0) + outfitHp(eo)) * go + (gs.hp || 0));
+    this.atkMul = (1 + (le - 1) * 0.08) * (1 + ((w?.atk || 0) + weaponBonus(ew)) * gw) * (1 + (gs.atk || 0));
     this.def = Math.min(0.7, 1 - (1 - ((o?.def || 0) + outfitDef(eo)) * go) * (1 - (gs.def || 0)) * (1 - (this.cfg.def || 0))); // cfg.def: 직업 기본 방어 (창술사)
     this.perks = perksOf(pr.weapon, pr.outfit);
     // 보스 무기 고유 기술
@@ -133,11 +141,13 @@ export class Player {
 
   addExp(n) {
     this.exp += Math.round(n * (1 + (this.gear?.exp || 0)));
-    let up = 0;
-    while (this.exp >= expNeed(this.level)) { this.exp -= expNeed(this.level); this.level++; up++; }
+    let up = 0, bundles = 0;
+    while (this.level < LV_CAP && this.exp >= expNeed(this.level)) { this.exp -= expNeed(this.level); this.level++; up++; }
+    if (this.level >= LV_CAP) while (this.exp >= CAP_BUNDLE) { this.exp -= CAP_BUNDLE; bundles++; }
     const pr = this.game.progressOf(this.cls);
     pr.level = this.level; pr.exp = this.exp;
     if (up) { this.recalc(true); this.game.onLevelUp(this, up); }
+    if (bundles) this.game.onCapBundle?.(bundles);
   }
 
   reset() {
@@ -148,7 +158,7 @@ export class Player {
     this.rig.deadT = 0;
   }
 
-  aimYaw(input, range = this.cls === 'sword' ? 3.6 : this.cls === 'lancer' ? 5 : 11) {
+  aimYaw(input, range = this.cls === 'sword' ? 3.6 : this.cls === 'lancer' ? 5 : this.cls === 'fan' ? 9 : 11) {
     const g = this.game;
     // 0) 자동 타겟이 잡혀 있으면 그쪽으로
     const t = g.target;
@@ -179,6 +189,17 @@ export class Player {
     if (this.dead || this.dashT > 0) return;
     if (this.attack) {
       if (this.attack.t > 0.4) this.buffered = true;
+      return;
+    }
+    if (this.cls === 'fan') {
+      // 무희: 바람 칼날 → 바람 칼날 → 한 바퀴 돌며 크게 부치기
+      const kind = [40, 41, 42][this.combo % 3];
+      this.combo++;
+      this.yaw = this.aimYaw(input);
+      this.attack = { t: 0, kind, dur: kind === 42 ? 0.5 : 0.34, hit: false, hitAt: kind === 42 ? 0.5 : 0.4 };
+      this.game.audio.play('fan');
+      this.lastCombat = this.game.time;
+      this.sinceAttack = 0;
       return;
     }
     if (this.cls === 'lancer') {
@@ -290,6 +311,7 @@ export class Player {
       mage: { 2: { kind: 13, dur: 0.5, hitAt: 0.45 }, 3: { kind: 14, dur: 0.62, hitAt: 0.5 } },
       elf: { 2: { kind: 23, dur: 0.55, hitAt: 0.5 }, 3: { kind: 24, dur: 0.5, hitAt: 0.47 } },
       lancer: { 2: { kind: 34, dur: 0.85, hitAt: 0.12 }, 3: { kind: 35, dur: 0.6, hitAt: 0.45 } },
+      fan: { 2: { kind: 44, dur: 0.6, hitAt: 0.45 }, 3: { kind: 45, dur: 0.6, hitAt: 0.35 } },
     }[this.cls][slot];
     if (this.cls === 'sword' && this.rig.sheathed) this.drawCut();
     this.attack = { t: 0, kind: T.kind, dur: T.dur, hit: false, hitAt: T.hitAt, skill: true, slot };
@@ -311,7 +333,7 @@ export class Player {
     this.yaw = this.aimYaw(input);
     this.combo = 0;
     this.buffered = false;
-    const kind = { sword: 5, mage: 14, elf: 24, lancer: 35 }[this.cls];
+    const kind = { sword: 5, mage: 14, elf: 24, lancer: 35, fan: 45 }[this.cls];
     if (this.cls === 'sword' && this.rig.sheathed) this.drawCut();
     this.attack = { t: 0, kind, dur: 0.7, hit: true, skill: true };
     this.sinceAttack = 0;
@@ -322,6 +344,15 @@ export class Player {
 
   startSkill(input) {
     if (this.dead || this.skillCd > 0 || this.dashT > 0) return;
+    if (this.cls === 'fan') {
+      this.skillCd = this.skillMax * this.game.skillCdMul(this, 1);
+      this.yaw = this.aimYaw(input);
+      this.combo = 0;
+      this.attack = { t: 0, kind: 43, dur: 0.5, hit: false, hitAt: 0.42, skill: true };
+      this.lastCombat = this.game.time;
+      this.sinceAttack = 0;
+      return;
+    }
     if (this.cls === 'lancer') {
       this.skillCd = this.skillMax * this.game.skillCdMul(this, 1);
       this.yaw = this.aimYaw(input);
@@ -527,6 +558,7 @@ export class Player {
           else if (a.skill) g.playerSkillHit(this, a);
           else if (this.cls === 'sword') g.playerSwingHit(this, a.kind);
           else if (this.cls === 'lancer') g.playerSpearHit(this, a.kind);
+          else if (this.cls === 'fan') g.playerFanHit(this, a.kind);
           else g.playerShoot(this, a.kind);
         }
         if (a.t >= 1) {

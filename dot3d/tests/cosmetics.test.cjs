@@ -29,7 +29,7 @@ module.exports = {
       await new Promise((res) => setTimeout(res, 30)); // 번역은 MutationObserver가 바로 뒤에
       out.failMsg = document.querySelector('#tab-look .enh-msg')?.textContent;
       out.notOwned = !G.ext.cos?.owned?.gold;
-      out.packsOpen = !!document.querySelector('#tab-look [data-pack]');
+      out.packsOpen = !!document.querySelector('#tab-look .lk-free') && !document.querySelector('#tab-look [data-pack]'); // 파는 것 없음: 구슬 얻는 곳 안내만
       // 넉넉하면 삼 → 입혀짐
       G.ext.beads = 1000; G.ui.renderLook();
       act('buy').click();
@@ -53,32 +53,18 @@ module.exports = {
     check(r.owned && r.look === 'gold' && r.left === 700 && r.rigAura, `사기 이상 ${JSON.stringify(r)}`);
     check(r.tryWings && !r.closedWings && r.closedAura && r.tryCleared, `가방 닫으면 벗기 이상 ${JSON.stringify(r)}`);
 
-    // 결제: 연결이 없으면 구슬이 안 생기고, 연결되면 꾸러미만큼
+    // 판매 없음: 결제 꾸러미 단추가 없고, 안내 문구까지 번역됨
     const pay = await g.eval(async () => {
       const G = window.game, out = {};
       G.toggleBag(true); G.ui.tab('look'); G.ui.lookPacks = true; G.ui.renderLook();
-      const b0 = G.ext.beads;
-      document.querySelector('#tab-look [data-pack="beads_300"]').click();
       await new Promise((r) => setTimeout(r, 50));
-      out.noBilling = G.ext.beads === b0;
-      out.noBillingMsg = document.querySelector('#tab-look .enh-msg')?.textContent;
-      const asked = [];
-      window.dot3dBilling = { buy: async (id) => { asked.push(id); return { ok: true }; } };
-      document.querySelector('#tab-look [data-pack="beads_300"]').click();
-      await new Promise((r) => setTimeout(r, 50));
-      out.paid = G.ext.beads - b0; out.asked = asked;
-      window.dot3dBilling = { buy: async () => ({ ok: false }) };
-      document.querySelector('#tab-look [data-pack="beads_60"]').click();
-      await new Promise((r) => setTimeout(r, 50));
-      out.cancel = G.ext.beads - b0;
-      delete window.dot3dBilling;
-      out.missing = [...(window.__i18nMissing || [])].filter((s) => /[가-힣]/.test(s) && /구슬|꾸밈|입어|결제|꾸러미|샀어요/.test(s));
+      out.noPacks = !document.querySelector('#tab-look [data-pack]');
+      out.missing = [...(window.__i18nMissing || [])].filter((s) => /[가-힣]/.test(s) && /구슬|꾸밈|입어|꾸러미|샀어요/.test(s));
       out.hangul = /[가-힣]/.test(document.getElementById('tab-look').innerText);
       G.toggleBag(false);
       return out;
     });
-    check(pay.noBilling && /store/.test(pay.noBillingMsg || ''), `결제 연결 없음 이상 ${JSON.stringify(pay)}`);
-    check(pay.paid === 330 && pay.asked.join() === 'beads_300' && pay.cancel === 330, `결제 이상 ${JSON.stringify(pay)}`);
+    check(pay.noPacks, '결제 꾸러미가 남아 있음');
     check(!pay.missing.length && !pay.hangul, `번역 빠짐 ${JSON.stringify(pay)}`);
 
     // 사지 않은 구슬 염색은 저장값이 있어도 입혀지지 않음 + 저장·불러오기
@@ -88,7 +74,7 @@ module.exports = {
     const loaded = await g.eval(() => { const G = window.game; return JSON.stringify({ b: G.ext.beads, c: G.ext.cos, l: G.progressOf(G.player?.cls || 'sword').look }); });
     check(saved === loaded, `저장·불러오기 이상 ${saved} / ${loaded}`);
     check(!g.errors.length, '페이지 오류: ' + g.errors.slice(0, 3).join(' / '));
-    ctx.log(`업적 ${r.achN}개 → 구슬 ${r.achBeads} · 금빛 기운 300에 사기 · 결제 연결 없음/있음/취소 · 저장`);
+    ctx.log(`업적 ${r.achN}개 → 구슬 ${r.achBeads} · 금빛 기운 300에 사기 · 판매 없음 · 저장`);
     await g.close();
   },
 };

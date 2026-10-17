@@ -3,6 +3,7 @@
 //  도깨비 가루: 방어구·장신구를 분해하면 나옴. 공방에서 옵션을 다시 굴릴 때 씀
 //  혼석은 하루에 정해진 만큼만 살 수 있음 (보스를 잡는 게 여전히 주된 길)
 //  상태는 game.ext (저장됨): { coins, day, bought: {상품: 오늘 산 수} }
+import { lvEq } from './entities.js';
 import { MATS } from './enhance.js';
 import { makeGear, rollGearTier, rerollGear, rarityOf, drawGearIcon, gearLines, SLOT_NAME } from './gear.js';
 import { RARITY } from './items.js';
@@ -65,7 +66,7 @@ export class Shop {
     if (G.dust) g.mats.dust -= G.dust;
     if (G.limit) this.roll()[G.id] = (this.roll()[G.id] || 0) + 1;
     if (G.give) g.gainMats(G.give);
-    if (G.box) g.pickupGear(makeGear(Math.max(1, g.player.level), rollGearTier(0.25, g.round)));
+    if (G.box) g.pickupGear(makeGear(Math.max(1, Math.round(lvEq(g.player.level))), rollGearTier(0.25, g.round)));
     g.stats.bought = (g.stats.bought || 0) + 1;
     g.records?.check?.();
     g.save(false);

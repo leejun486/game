@@ -113,7 +113,7 @@ export class ClassPreview {
       rig.root.rotation.y = c.yaw;
       // 고른 카드는 이따금 공격 동작
       const cyc = c.t % 4;
-      const attack = sel && cyc > 3 ? { t: (cyc - 3), kind: c.cls === 'sword' ? 0 : c.cls === 'mage' ? 10 : c.cls === 'lancer' ? 30 : 20 } : null;
+      const attack = sel && cyc > 3 ? { t: (cyc - 3), kind: c.cls === 'sword' ? 0 : c.cls === 'mage' ? 10 : c.cls === 'lancer' ? 30 : c.cls === 'fan' ? 40 : 20 } : null;
       rig.animate(dt, { speed: 0, attack, sheathing: 0, dash: false, hurt: 0, dead: false });
       r.setRenderTarget(this.target);
       r.clear();

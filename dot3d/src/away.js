@@ -4,7 +4,7 @@
 //  - 직접 하는 것보다 훨씬 적게: 8시간이 지금 레벨 경험치의 약 3배, 엽전·주문서·장비 조금
 //    (방치가 직접 하는 것보다 나으면 게임을 안 하게 되고, 너무 적으면 돌아올 이유가 안 됨)
 //  - 돈으로 늘리는 방법은 없음
-import { expNeed } from './entities.js';
+import { expNeed, lvEq } from './entities.js';
 import { makeGear, rollGearTier } from './gear.js';
 
 export const AWAY_MIN = 10 * 60 * 1000;
@@ -15,7 +15,7 @@ export function awayReward(g, ms) {
   if (!(ms >= AWAY_MIN)) return null;
   const t = Math.min(ms, AWAY_CAP), h = t / 3600000;
   const p = g.player, lv = p.level;
-  const elv = 1 + (g.round || 0) + (g.map?.lvl || 0) + Math.floor((lv - 1) / 3); // 그 지역 몬스터 레벨 (spawnEnemy와 같은 식)
+  const elv = 1 + (g.round || 0) + (g.map?.lvl || 0) + Math.floor((lvEq(lv) - 1) / 3); // 그 지역 몬스터 레벨 (spawnEnemy와 같은 식)
   return {
     ms: t, capped: ms > AWAY_CAP,
     exp: Math.round(expNeed(lv) * 0.4 * h),

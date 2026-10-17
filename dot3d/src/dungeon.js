@@ -5,6 +5,7 @@
 //  시련탑 마당을 빌려 쓰고(game.tower.mode = 'dungeon'), 색감은 던전마다 다른 지역의 것
 //  적은 끊이지 않게 계속 나오고(레벨에 맞춤, 정예 섞임), 4분마다 수호자(보스)가 나옴
 //  기록은 game.ext.dg = { day, used: {던전: 쓴 초}, total }
+import { lvEq } from './entities.js';
 import { today } from './shop.js';
 import { makeGear, rollGearTier, makeSetPiece, SETS } from './gear.js';
 import { rollDrop, item } from './items.js';
@@ -53,7 +54,7 @@ export function startDungeon(g, id) {
   const p = g.player;
   g.towerReturn = p.pos.clone();
   // 적 레벨 = 1 + floor + (내 레벨-1)/3 (spawnEnemy) → 내 레벨보다 4쯤 낮게 (오래 싸우는 곳이라)
-  g.tower = { active: true, mode: 'dungeon', dg: id, floor: Math.max(1, p.level - 7), best: 0, cleared: false, lastT: g.time, kills: 0, loot: {}, guardAt: g.time + GUARD_EVERY, spawnAt: g.time + 2 };
+  g.tower = { active: true, mode: 'dungeon', dg: id, floor: Math.max(1, Math.round(lvEq(p.level)) - 7), best: 0, cleared: false, lastT: g.time, kills: 0, loot: {}, guardAt: g.time + GUARD_EVERY, spawnAt: g.time + 2 };
   g.teleport(0, g.towerZ() + 8);
   addDungeonProps(g, id);
   g.audio.play('portal');

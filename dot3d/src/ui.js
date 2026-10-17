@@ -4,13 +4,12 @@ import { item, itemDesc, drawItemIcon, RARITY, WEAPONS, OUTFITS, ULTS } from './
 import { tr } from './i18n.js';
 import { DYES, HAIRS, unlocked } from './looks.js';
 import { HEADS, BACKS, AURAS, COS_KINDS, beads, buyCos, BEADS_PER_ACH } from './cosmetics.js';
-import { PACKS, buyPack } from './billing.js';
 
 const COS_NAME = { head: '머리 장식', back: '등 장식', aura: '오라' };
 import { ACHIEVEMENTS } from './records.js';
 import { EVOS, RUNES, branchOf, rankOf, runeOf, freePoints, RANK_NAME, MAX_RANK } from './evolve.js';
 import { drawGearIcon, gearLines, gearScore, SLOT_NAME, STATS, BAG_MAX, salvageExp, GEAR_SLOTS, rarityOf, SETS, setBonuses } from './gear.js';
-import { expNeed, SKILL_LEVEL } from './entities.js';
+import { expNeed, SKILL_LEVEL, LV_CAP, CAP_BUNDLE } from './entities.js';
 import { growInfo, doGrow, growOf, growTag, capOf, LB_MAX, STAR_MAX } from './growth.js';
 import { MATS, MAT_ORDER, ENH_MAX, rateOf, soulCost, dropsOnFail, weaponBonus, outfitHp, outfitDef, gearMul, targetInfo, tryEnhance, enhName } from './enhance.js';
 
@@ -215,7 +214,7 @@ export class UI {
     const G = p.gear || {};
     const pct = (v) => `${((v || 0) * 100).toFixed(1)}%`;
     const st = [
-      ['레벨', `Lv.${p.level} (${Math.floor(p.exp)}/${expNeed(p.level)})`], ['최대 체력', p.maxHp], ['공격력', `×${p.atkMul.toFixed(2)}`],
+      ['레벨', p.level >= LV_CAP ? `Lv.${p.level} MAX` : `Lv.${p.level} (${Math.floor(p.exp)}/${expNeed(p.level)})`], ['최대 체력', p.maxHp], ['공격력', `×${p.atkMul.toFixed(2)}`],
       ['받는 피해', `-${Math.round(p.def * 100)}%`], ['치명타 확률', `+${pct(G.crit)}`], ['치명타 피해', `+${Math.round((G.critDmg || 0) * 100)}%`],
       ['이동 속도', `+${pct(G.spd)}`], ['스킬 재사용', `-${pct(G.cdr)}`], ['흡혈', pct(G.ls)], ['체력 회복', `+${(G.regen || 0).toFixed(1)}/초`], ['경험치', `+${Math.round((G.exp || 0) * 100)}%`],
     ];
@@ -432,15 +431,15 @@ export class UI {
     const sw = (k, x, cols) => {
       const open = unlocked(g, x), shop = !open && x.cost;
       const box = cols.map((c) => `<i style="background:${c}"></i>`).join('');
-      const tag = open ? '' : shop ? `<small class="lk-cost">💎 ${x.cost}</small>` : `<small>🔒 ${achName(x.ach)}</small>`;
+      const tag = open ? '' : shop ? `<small class="lk-cost">💎 ${x.cost}</small>` : x.pass ? '<small>🔒 <span>수련 패스 보상</span></small>' : `<small>🔒 ${achName(x.ach)}</small>`;
       return `<button class="lk-sw${isOn(k, x) ? ' on' : ''}${open ? '' : shop ? ' shop' : ' locked'}" data-lk="${k}" data-v="${x.id}"${open || shop ? '' : ' disabled'}><span class="lk-box">${box}</span><span class="lk-n">${x.name}</span>${tag}</button>`;
     };
     const cos = (k, list, cols) => `<div class="bag-sec">${COS_NAME[k]}</div><div class="lk-row">${chip(k, '', '없음', !(T?.k === k ? T.v : L[k]))}${list.map((x) => sw(k, x, cols(x))).join('')}</div>`;
     const outfits = OUTFITS.filter((o) => g.inv.has(o.id));
     const weapons = WEAPONS[p.cls].filter((w) => g.inv.has(w.id));
     const tryX = T && (T.k === 'dye' ? DYES : T.k === 'hair' ? HAIRS : COS_KINDS[T.k]).find((x) => x.id === T.v);
-    const packs = this.lookPacks ? `<div class="lk-packs">${PACKS.map((P) => `<button data-pack="${P.id}"><b>💎 ${P.beads}${P.bonus ? ` <em>+${P.bonus}</em>` : ''}</b><span>₩${P.krw.toLocaleString('ko-KR')}</span></button>`).join('')}</div><div class="pz-note" style="margin:2px 0 6px">달빛 구슬로는 겉모습만 살 수 있어요. 능력치·강화·보상은 돈으로 살 수 없어요.</div>` : '';
-    el.innerHTML = `<div class="lk-wallet"><span>💎 달빛 구슬 <b>${beads(g)}</b></span><button data-act="packs" class="sub">${this.lookPacks ? '닫기' : '구슬 얻기'}</button></div>${packs}
+    const packs = this.lookPacks ? '<div class="pz-note lk-free" style="margin:2px 0 6px">달빛 구슬은 업적(하나에 10개)·출석·수련 패스로 얻어요. 돈으로 파는 것은 없어요.</div>' : ''; // 판매 안 함 (유료 꾸러미 없음)
+    el.innerHTML = `<div class="lk-wallet"><span>💎 달빛 구슬 <b>${beads(g)}</b></span><button data-act="packs" class="sub">${this.lookPacks ? '닫기' : '구슬 얻는 곳'}</button></div>${packs}
       ${tryX ? `<div class="lk-try"><span>입어 보는 중: <b>${tryX.name}</b></span><button data-act="buy">💎 ${tryX.cost} 사기</button><button data-act="untry" class="sub">벗기</button></div>` : ''}
       ${msg ? `<div class="enh-msg">${msg}</div>` : ''}
       <div class="pz-note" style="margin:0 0 6px">겉모습만 바뀌고 능력치·고유 효과는 입은 장비 그대로예요. 직업마다 따로 기억해요.</div>
@@ -456,8 +455,7 @@ export class UI {
     const rebuild = () => { p.buildRig(); g.preview?.rebuild(); };
     el.onclick = (e) => {
       const act = e.target.closest('[data-act]')?.dataset.act;
-      const pk = e.target.closest('[data-pack]')?.dataset.pack;
-      if (act || pk) e.stopPropagation();
+      if (act) e.stopPropagation();
       if (act === 'packs') { this.lookPacks = !this.lookPacks; this.renderLook(); return; }
       if (act === 'untry') { g.lookTry = null; rebuild(); this.renderLook(); return; }
       if (act === 'buy' && tryX) {
@@ -466,10 +464,6 @@ export class UI {
         L[T.k] = T.v; g.lookTry = null;
         g.audio.play('levelup'); this.flash('#bfe8ff', 0.12);
         rebuild(); g.save(false); this.renderLook(`샀어요: ${tryX.name}`);
-        return;
-      }
-      if (pk) {
-        buyPack(g, pk).then((err) => { if (err) g.audio.play('denied'); else g.audio.play('coin'); this.renderLook(err || '구슬을 받았어요!'); });
         return;
       }
       const b = e.target.closest('[data-lk]');
@@ -637,9 +631,9 @@ export class UI {
     el.hpText.textContent = `${Math.ceil(p.hp)} / ${p.maxHp}`;
     el.hpFill.classList.toggle('low', hp < 0.3);
     // 경험치
-    const need = expNeed(p.level);
+    const capped = p.level >= LV_CAP, need = capped ? CAP_BUNDLE : expNeed(p.level); // 상한에서는 다음 수련 꾸러미까지
     document.getElementById('exp-fill').style.width = ((p.exp / need) * 100).toFixed(1) + '%';
-    const et = `EXP ${Math.floor(p.exp)} / ${need}`;
+    const et = `EXP${capped ? ' MAX' : ''} ${Math.floor(p.exp)} / ${need}`;
     const etEl = document.getElementById('exp-text');
     if (etEl.textContent !== et) etEl.textContent = et;
     document.getElementById('bag-dot').classList.toggle('hidden', !this.newItem);
@@ -838,10 +832,36 @@ const PORTRAITS = {
     ],
     col: { h: '#16121a', w: '#f2ece0', R: '#d8283a', s: '#f4d0b0', e: '#3a1a14', W: '#ffffff', p: '#f0a0a0', m: '#b85a50', r: '#7a1e26', g: '#e0b040' },
   },
+  fan: {
+    bg: '#2a6a7a',
+    rows: [
+      '.......hhhhhh.......',
+      '.....hhhhhhhhhh.....',
+      '....hhhhhhhhhhhh....',
+      '...hhhhhhhhhhhhhff..',
+      '...hhhhhhhhhhhhfFf..',
+      '...hhhhhhhhhhhhhff..',
+      '...hhhsssssssshhh...',
+      '...hhsssssssssshh...',
+      '...hssssssssssssh...',
+      '...hsseessssseessh..',
+      '...hsseWsssseeWsh...',
+      '...hsseessssseessh..',
+      '...hspssssssssspsh..',
+      '....ssssssmmsssss...',
+      '.....ssssssssssss...',
+      '......ssssssssss....',
+      '.......wwbwwbww.....',
+      '.....wwwwbbbbwwww...',
+      '....wwwwwrrrrwwwwww.',
+      '...wwwwwrrrrrrwwwwww',
+    ],
+    col: { h: '#1a1418', s: '#fbe0cc', e: '#3a1a24', W: '#ffffff', p: '#f8a8b8', m: '#c86a70', w: '#f4ecf0', b: '#2a8a9a', r: '#d8285a', f: '#ff8ab8', F: '#ffe070' },
+  },
 };
 
 // 어느 직업이든 끼고 있는지
-function CLASS_ORDER_EQ(g, x) { return ['sword', 'mage', 'elf', 'lancer'].some((c) => g.isEquipped(x, c)); }
+function CLASS_ORDER_EQ(g, x) { return ['sword', 'mage', 'elf', 'lancer', 'fan'].some((c) => g.isEquipped(x, c)); }
 
 export function drawPortrait(cv, cls = 'sword') {
   if (!cv) return;

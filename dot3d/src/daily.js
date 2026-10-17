@@ -5,7 +5,7 @@
 //  - 진행은 누적 기록(stats)의 오늘 시작 값과의 차이로 셈 (연속 타격·밤 싸움·시련탑은 따로 셈)
 import { tr } from './i18n.js';
 import { MONSTERS } from './records.js';
-import { expNeed } from './entities.js';
+import { expNeed, lvEq } from './entities.js';
 import { makeGear, rollGearTier } from './gear.js';
 
 const sum = (o) => Object.values(o || {}).reduce((a, b) => a + b, 0);
@@ -51,7 +51,7 @@ export class Daily {
       const G = pool.splice(Math.floor(r() * pool.length), 1)[0];
       const arg = G.pick ? G.pick(g, r) : null;
       if (G.pick && !arg) continue;
-      const lvl = Math.min(2, Math.floor((g.player.level || 1) / 12) + (g.difficulty === 'hard' ? 1 : 0));
+      const lvl = Math.min(2, Math.floor(lvEq(g.player.level || 1) / 12) + (g.difficulty === 'hard' ? 1 : 0));
       goals.push({ id: G.id, arg, n: G.n[lvl], base: G.stat ? G.stat(g.stats, arg) : 0, p: 0, done: false });
     }
     g.daily = { day, goals, bonus: false };
@@ -101,7 +101,7 @@ export class Daily {
       D.bonus = true; changed = true;
       g.stats.daily = (g.stats.daily || 0) + 1;
       g.after(2.6, () => { g.gainMats({ bless: 1, scrollW: 1, scrollA: 1, scrollG: 1 }); g.shop.gain(300); });
-      const lv = Math.max(1, g.player.level) + g.round;
+      const lv = Math.round(lvEq(Math.max(1, g.player.level))) + g.round;
       const gear = makeGear(lv, Math.max(2, rollGearTier(0.6, g.round + 1)));
       g.after(2.4, () => { g.ui.banner('오늘의 목표 모두 달성!', '희귀 장비 보상', 2.4, 'win-banner'); g.pickupGear(gear); });
     }

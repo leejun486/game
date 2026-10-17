@@ -5,6 +5,7 @@ import { ULTS } from '../items.js';
 import { rand, angleDiff } from '../util.js';
 import { drop } from '../dispose.js';
 import { spearHit, lancerSkill1, lancerSkill2, lancerSkill3, updateLancer, clearLancer } from '../lancer.js';
+import { fanHit, fanSkill1, fanSkill2, fanSkill3 } from '../fan.js';
 import { V } from './shared.js';
 
 export class SkillsPart {
@@ -92,10 +93,13 @@ export class SkillsPart {
 
   // 창술사 기본 공격 (lancer.js)
   playerSpearHit(pl, kind) { spearHit(this, pl, kind); }
+  // 무희 기본 공격 (fan.js)
+  playerFanHit(pl, kind) { fanHit(this, pl, kind); }
 
   playerSkillHit(pl, a) {
     this.skillRunes(pl, 1, () => this.playerSkillHit(pl, a));
     if (pl.cls === 'lancer') { lancerSkill1(this, pl); return; }
+    if (pl.cls === 'fan') { fanSkill1(this, pl); return; }
     const br = this.branch(pl, 1), r = this.rank(pl, 1), M = this.rankPow(pl, 1);
     if (pl.cls === 'mage') {
       if (br === 'a') this.castLightning(pl, { mul: M, storm: { dur: r >= 3 ? 6 : 4.2, tick: r >= 3 ? 0.38 : 0.55, hits: r >= 5 ? 2 : 1, R: r >= 5 ? 6 : 4.6 } });
@@ -716,6 +720,10 @@ export class SkillsPart {
       lancerSkill2(this, pl);
     } else if (k === 'lancer3') {
       lancerSkill3(this, pl);
+    } else if (k === 'fan2') {
+      fanSkill2(this, pl);
+    } else if (k === 'fan3') {
+      fanSkill3(this, pl);
     } else if (k === 'elf3') {
       if (br === 'a') {
         const n = r >= 5 ? 4 : r >= 3 ? 3 : 2;

@@ -7,6 +7,7 @@
 // 머리 장식: acc는 리그의 buildAccessory, deco는 buildDeco로 만듦
 export const HEADS = [
   { id: 'flowerPin', name: '꽃비녀', cost: 100, deco: 'flowerPin', a: '#ff9ac0', b: '#ffd040' },
+  { id: 'passPin', name: '옥비녀', pass: 20, deco: 'flowerPin', a: '#7ad8a0', b: '#f4ecd8' }, // 수련 패스 20칸
   { id: 'jokduri', name: '족두리', cost: 120, acc: 'jokduri' },
   { id: 'mask', name: '도깨비 탈', cost: 140, acc: 'mask' },
   { id: 'horns', name: '도깨비 뿔', cost: 150, acc: 'horns' },
@@ -19,6 +20,7 @@ export const BACKS = [
   { id: 'scarf', name: '목도리', cost: 80, deco: 'scarf', a: '#c8302c', b: '#f0c040' },
   { id: 'sash', name: '고름 띠', cost: 80, deco: 'sash', a: '#2e4f8f', b: '#e0b040' },
   { id: 'cape', name: '망토', cost: 120, deco: 'cape', a: '#5a1a2a', b: '#e0b040' },
+  { id: 'passScarf', name: '수련 목도리', pass: 10, deco: 'scarf', a: '#2a8a9a', b: '#f4ecd8' }, // 수련 패스 10칸
   { id: 'ribbon', name: '선녀 피백', cost: 180, deco: 'ribbon', a: '#e8d0ff', glow: '#3a2a6a' },
   { id: 'wings', name: '학 날개', cost: 280, wings: true },
 ];
@@ -30,6 +32,7 @@ export const AURAS = [
   { id: 'maple', name: '단풍 바람', cost: 240, c: '#ff7a2a', c2: '#ffd040', petal: true },
   { id: 'nether', name: '저승 안개', cost: 260, c: '#9a6aff', c2: '#e0c8ff' },
   { id: 'gold', name: '금빛 기운', cost: 300, c: '#ffd040', c2: '#fff6c0' },
+  { id: 'passAura', name: '수련의 기운', pass: 30, c: '#7ad8e0', c2: '#e8fbff' }, // 수련 패스 30칸
 ];
 export const COS_KINDS = { head: HEADS, back: BACKS, aura: AURAS };
 const byId = {};

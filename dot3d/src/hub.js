@@ -4,6 +4,7 @@
 import { MAPS } from './maps.js';
 import { SHARD_MAX } from './story.js';
 import { tr } from './i18n.js';
+import { passReady, passTier, passState, PASS_TIERS } from './pass.js';
 
 // 12×12 도트 그림: 글자 하나가 한 칸 (. 은 빈칸)
 const C = { K: '#1a1420', R: '#c8302c', Y: '#f0c040', O: '#e07a2a', W: '#f4ecd8', B: '#2f5aa8', G: '#3a8a5a', P: '#e8d8b0', D: '#6a4a8a', S: '#a8b4c8' };
@@ -29,6 +30,7 @@ const ICONS = {
   boss: ['.Y........Y.', '.YY......YY.', '..YKKKKKKY..', '..KRRRRRRK..', '.KRRRRRRRRK.', '.KRWWRRWWRK.', '.KRWKRRKWRK.', '.KRRRRRRRRK.', '.KRRWWWWRRK.', '..KRWRRWRK..', '...KRRRRK...', '....KKKK....'],
   gate: ['............', '..KKKKKKKK..', '.KDDDDDDDDK.', '.KDKKKKKKDK.', '.KDKBBBBKDK.', '.KDKBWWBKDK.', '.KDKBWWBKDK.', '.KDKBBBBKDK.', '.KDKBBBBKDK.', '.KDKBBBBKDK.', 'KKKKKKKKKKKK', '............'],
   gem: ['............', '....KKKK....', '...KWSSWK...', '..KWSBBSSK..', '.KSSBBBBSSK.', '.KBBBWWBBBK.', '..KBBWWBBK..', '...KBBBBK...', '....KBBK....', '.....KK.....', '............', '............'],
+  pass: ['..KKKKKKKK..', '..KYYYYYYK..', '..KYRRRRYK..', '..KYRYYRYK..', '..KYRRRRYK..', '..KYYYYYYK..', '..KYRRRRYK..', '..KYYYYYYK..', '..KYYKKYYK..', '..KYK..KYK..', '..KK....KK..', '............'],
   tower: ['.....DD.....', '....DDDD....', '..DDDDDDDD..', '....KYYK....', '...DDDDDD...', '.DDDDDDDDDD.', '...KYYYYK...', '..DDDDDDDD..', 'DDDDDDDDDDDD', '..KYYKKYYK..', '..KYYKKYYK..', 'KKKKKKKKKKKK'],
 };
 
@@ -65,6 +67,7 @@ export class Hub {
       ['여정', [
         ['map', '지도 · 일지', 'V', 'map', close(() => g.minimap.toggle(true))],
         ['daily', '오늘의 목표', '', 'daily', pane('daily'), false, false, dk],
+        ['pass', '수련 패스', '', 'pass', pane('pass'), passReady(g) > 0, false, `${passTier(g, passState(g))}/${PASS_TIERS}`],
         ['dungeon', '시간 던전', '', 'gate', pane('dungeon')],
         ['challenge', '보스 도전', '', 'boss', pane('challenge')],
         ['ach', '업적', 'Y', 'ach', pane('records', 'ach')],

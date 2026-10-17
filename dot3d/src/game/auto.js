@@ -139,7 +139,7 @@ export class AutoPart {
   // 자동 사냥: 가까운 적에게 다가가 공격, 쓸 수 있는 스킬은 바로, 적이 없으면 떨어진 장비 줍기
   autoHuntStep(inp, dt) {
     const p = this.player;
-    const range = { sword: 1.6, mage: 6.5, elf: 7.5, lancer: 2.6 }[p.cls];
+    const range = { sword: 1.6, mage: 6.5, elf: 7.5, lancer: 2.6, fan: 7 }[p.cls];
     let t = this.validTarget(this.target) && !(this.target.huntSkipT > this.time) && Math.hypot(this.target.pos.x - p.pos.x, this.target.pos.z - p.pos.z) < 24 ? this.target : this.nearestEnemy(24) || (this.waveActive || this.tower?.active ? this.nearestEnemy(90, true) : null); // 밤 싸움·시련탑엔 멀리 남은 적도 찾아감
     // 들판에선 퀘스트에 필요한 몬스터부터 (조금 멀어도). 바로 곁에서 때리는 적이 있으면 그것부터
     if (!this.waveActive && !this.tower?.active && !(t && t.isBoss)) {
@@ -167,7 +167,7 @@ export class AutoPart {
       : lv >= SKILL_LEVEL[2] && (p.cd2 || 0) <= 0 ? 2
       : lv >= SKILL_LEVEL[3] && (p.cd3 || 0) <= 0 ? 3 : 0;
     // 기술마다 닿는 거리: 멀리 나가는 기술(검기, 일섬, 창기, 도약, 창비)은 붙지 않고 그 거리에서 바로 씀
-    const reach = ready ? ({ sword: { 1: 6, 2: 6, 3: 2 }, lancer: { 1: 6, 2: 6, 3: 9, ult: 5 } }[p.cls]?.[ready] ?? range) : range;
+    const reach = ready ? ({ sword: { 1: 6, 2: 6, 3: 2 }, lancer: { 1: 6, 2: 6, 3: 9, ult: 5 }, fan: { 1: 6, 2: 8, 3: 3, ult: 5 } }[p.cls]?.[ready] ?? range) : range;
     if (d > Math.max(range, ready ? reach : 0)) {
       this.steerTo(inp, t.pos.x, t.pos.z, 2, 80);
       // 1초 넘게 길을 못 찾으면 그 적은 잠시 쫓지 않음

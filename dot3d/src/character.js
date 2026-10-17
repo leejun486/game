@@ -216,6 +216,16 @@ export class Rig {
       const tie = mesh(rbox(0.04, 0.16, 0.02), belt, 0.06, 0.04, 0.24);
       tie.rotation.z = 0.2; this.hips.add(tie);
       this.tie = tie;
+    } else if (cfg.type === 'fan') {
+      // 무희: 짧은 저고리 + 가슴께에서 내려오는 긴 치마(부채춤 한복) + 고름
+      const top = cloth(cfg.robe, 0.3), skirt = cloth(cfg.skirt, 0.6), belt = mat({ color: C(cfg.belt) });
+      this.hips.add(mesh(pleat(0.15, 0.2, 0.26, 0, 0), top, 0, 0.32, 0));
+      this.skirt = mesh(pleat(0.18, 0.4, 0.6, 16, 0.07), skirt, 0, -0.04, 0); this.skirtH = 0.6;
+      this.hips.add(this.skirt);
+      this.hips.add(mesh(pleat(0.185, 0.19, 0.05, 0, 0), belt, 0, 0.2, 0));
+      const tie = mesh(rbox(0.04, 0.24, 0.02), belt, 0.06, 0.07, 0.2);
+      tie.rotation.z = 0.15; this.hips.add(tie);
+      this.tie = tie;
     } else if (cfg.type === 'lady') {
       const top = mat({ color: C(cfg.robe) });
       const skirt = mat({ color: C(cfg.skirt) });
@@ -257,7 +267,7 @@ export class Rig {
       const elbowB = new THREE.Bone();
       elbowB.position.y = EL;
       shoulderB.add(elbowB);
-      const wide = HDC && ['hero', 'guard', 'mage', 'lady', 'jiangshi', 'reaper'].includes(cfg.type);
+      const wide = HDC && ['hero', 'guard', 'mage', 'lady', 'jiangshi', 'reaper', 'fan'].includes(cfg.type);
       let geo;
       if (wide || (HDC && cfg.type === 'elf')) {
         // 한복 소매: 어깨에서 소맷부리로 넓어지고 끝에 끝동
@@ -512,6 +522,18 @@ export class Rig {
       } else tail.add(mesh(rbox(0.16, 0.6, 0.08), hairM, 0, -0.3, -0.08));
       this.head.add(tail);
       this.tail = tail;
+    } else if (cfg.type === 'fan') {
+      // 무희: 뒤로 낮게 틀어 올린 쪽머리 + 옥비녀 + 머리 옆 꽃 장식, 귀 옆으로 흐르는 가는 머리
+      const bun = mesh(new THREE.SphereGeometry(hr * 0.44, 14, 10), hairM, 0, -hr * 0.32, -hr * 0.92);
+      bun.scale.set(1.3, 0.85, 0.9);
+      this.head.add(bun);
+      this.head.add(mesh(new THREE.CylinderGeometry(0.016, 0.016, hr * 1.7, 6), this.mat({ color: C('#7ad8a0') }), 0, -hr * 0.3, -hr * 1.02, 0, 0, Math.PI / 2)); // 비녀
+      for (const s of [-1, 1]) this.head.add(mesh(new THREE.SphereGeometry(0.032, 6, 5), this.mat({ color: C('#e0b040') }), s * hr * 0.86, -hr * 0.3, -hr * 1.02));
+      const fl = this.mat({ color: C('#ff8ab8') }), flMid = this.mat({ color: C('#ffe070') });
+      for (let k = 0; k < 5; k++) { const a = (k / 5) * Math.PI * 2; this.head.add(mesh(new THREE.SphereGeometry(0.036, 6, 5), fl, hr * 0.62 + Math.cos(a) * 0.045, hr * 0.42 + Math.sin(a) * 0.045, -hr * 0.3)); }
+      this.head.add(mesh(new THREE.SphereGeometry(0.026, 6, 5), flMid, hr * 0.64, hr * 0.42, -hr * 0.27));
+      if (HDC) for (const s of [-1, 1]) this.head.add(mesh(strand([[s * hr * 0.78, hr * 0.4, hr * 0.42], [s * hr * 0.96, 0, hr * 0.38], [s * hr * 0.93, -hr * 0.55, hr * 0.3]], 0.045, 0.012), hairM));
+      else this.head.add(mesh(rbox(0.46, 0.4, 0.12), hairM, 0, -0.12, -0.22));
     } else if (cfg.type === 'mage') {
       // 갓: 넓은 챙 + 높은 대우 + 갓끈 구슬
       const hatM = this.mat({ color: C('#16141c') });
@@ -1038,6 +1060,31 @@ export class Rig {
         w.add(mesh(rbox(0.02, 0.16, 0.02), tassel, Math.cos(a) * 0.04, tipY + 0.12, Math.sin(a) * 0.04, Math.sin(a) * 0.35, 0, -Math.cos(a) * 0.35));
       }
       w.add(mesh(new THREE.SphereGeometry(0.05, 8, 6), tassel, 0, tipY + 0.05, 0));
+    } else if (kind === 'fan') {
+      // 무희의 부채: 사북(손)에서 부챗살이 팔 방향(-y)으로 펼쳐지고, 살 위에 비단 면(테두리 색 + 꽃무늬)
+      const ws = this.cfg.wstyle || {};
+      const big = ws.big || 1;
+      const ribM = this.mat({ color: C(ws.rib || '#3a2418') });
+      const silk = this.mat({ color: C(ws.silk || '#f4ecd8'), side: THREE.DoubleSide, emissive: C('#000000') });
+      const edgeM = this.mat({ color: C(ws.edge || '#c8302c'), side: THREE.DoubleSide, emissive: C('#000000') });
+      const dotM = this.mat({ color: C(ws.flower || '#ff8ab8'), side: THREE.DoubleSide });
+      this.glowColor = ws.glow ? C(ws.glow) : null;
+      this.bladeMat = silk; this.edgeMat = edgeM; // 강화·보스 무기 빛
+      const fw = new THREE.Group(); // 부채 면이 몸 앞쪽(카메라 쪽)을 보게 돌림
+      fw.rotation.y = Math.PI / 2;
+      w.add(fw);
+      const R = 0.42 * big, spread = Math.PI * 0.8, a0 = -Math.PI / 2 - spread / 2;
+      fw.add(mesh(new THREE.RingGeometry(R * 0.36, R * 0.9, 20, 1, a0, spread), silk, 0, 0, 0.004));
+      fw.add(mesh(new THREE.RingGeometry(R * 0.88, R, 20, 1, a0, spread), edgeM, 0, 0, 0.005));
+      for (let i = 0; i <= 10; i++) {
+        const a = a0 + (i / 10) * spread;
+        const rib = mesh(rbox(0.012, R * 0.98, 0.008), ribM, Math.cos(a) * R * 0.49, Math.sin(a) * R * 0.49, 0);
+        rib.rotation.z = a - Math.PI / 2;
+        fw.add(rib);
+      }
+      for (const [k, rr] of [[0.3, 0.66], [0.55, 0.74], [0.75, 0.6]]) { const a = a0 + k * spread; fw.add(mesh(new THREE.CircleGeometry(0.035 * big, 6), dotM, Math.cos(a) * R * rr, Math.sin(a) * R * rr, 0.008)); }
+      fw.add(mesh(new THREE.SphereGeometry(0.03, 8, 6), this.mat({ color: C(ws.pin || '#e0b040') }))); // 사북
+      if (ws.tassel) { const tm = this.mat({ color: C(ws.tassel) }); fw.add(mesh(rbox(0.02, 0.2, 0.02), tm, 0, 0.12, 0)); fw.add(mesh(new THREE.SphereGeometry(0.03, 6, 5), tm, 0, 0.23, 0)); }
     } else if (kind === 'spear') {
       const wood = this.mat({ color: C('#6a4a32') });
       const steel = this.mat({ color: C('#cfd6de') });
@@ -1168,7 +1215,44 @@ export class Rig {
     let bowDraw = 0;
     if (bow) { armLx = -0.3 + sw * 0.3; armLz = -0.08; }
 
-    if (p.attack && lance) {
+    // 무희: 펼친 부채를 가슴 앞에 비스듬히 듦
+    const fanW = this.cfg.weapon === 'fan';
+    if (fanW) { armRx = -0.75 - sw * 0.2; armRz = 0.35; wristX = -0.9; armLx = -0.3 + sw * 0.3; armLz = -0.35; }
+    if (p.attack && fanW) {
+      // 무희: 40·41 부채로 가로 휘두르기(바람 칼날), 42 한 바퀴 돌며 크게 부치기, 43 두 팔로 밀어내기(돌개바람), 44 치켜들어 휘감기(회오리), 45 팔을 벌려 돌기(꽃바람)
+      const t = p.attack.t, k = p.attack.kind;
+      const wind = easeInOut(clamp(t / 0.32, 0, 1)), strike = easeOut(clamp((t - 0.32) / 0.2, 0, 1));
+      const hold = 1 - easeInOut(clamp((t - 0.6) / 0.4, 0, 1));
+      if (k === 40 || k === 41) {
+        const dir = k === 40 ? 1 : -1;
+        chestYaw = lerp(lerp(0, -0.9 * dir, wind), 1.1 * dir, strike) * hold;
+        armRx = lerp(armRx, -1.45, Math.max(wind, strike) * hold);
+        armRz = lerp(0.35, lerp(0.9, 0.1, strike), hold);
+        wristX = lerp(-0.9, -0.2, hold);
+        armLx = lerp(armLx, -0.6, hold); armLz = lerp(armLz, -0.7, hold);
+        legL = 0.3 * hold; legR = -0.2 * hold;
+      } else if (k === 42 || k === 45) {
+        const spin = easeInOut(clamp(t / 0.7, 0, 1));
+        chestYaw = (lerp(0.8, -2.6, spin)) * hold;
+        armRx = lerp(armRx, -1.55, hold); armRz = lerp(armRz, k === 45 ? 1.3 : 1.0, hold); wristX = lerp(-0.9, -0.3, hold);
+        armLx = lerp(armLx, -1.55, hold); armLz = lerp(armLz, k === 45 ? -1.3 : -1.0, hold);
+        legL = 0.35 * Math.sin(spin * Math.PI) * hold; legR = -0.35 * Math.sin(spin * Math.PI) * hold;
+        bob -= 0.05 * Math.sin(spin * Math.PI) * hold;
+      } else if (k === 43) {
+        armRx = lerp(armRx, lerp(-0.6, -1.6, strike), Math.max(wind, strike) * hold); armRz = lerp(0.35, 0.1, hold);
+        armLx = lerp(armLx, lerp(-0.6, -1.6, strike), Math.max(wind, strike) * hold); armLz = lerp(armLz, 0.05, hold);
+        wristX = lerp(-0.9, 0.2, strike * hold);
+        chestPitch = lerp(-0.15 * wind, 0.25, strike) * hold;
+        legL = lerp(0, 0.55, strike) * hold; legR = lerp(0, -0.4, strike) * hold;
+      } else if (k === 44) {
+        armRx = lerp(lerp(armRx, -2.8, wind), -1.2, strike) * hold + armRx * (1 - hold);
+        armRz = lerp(0.35, lerp(0.2, 0.9, strike), hold);
+        wristX = lerp(-0.9, lerp(0.4, -0.4, strike), hold);
+        armLx = lerp(armLx, -0.4, hold); armLz = lerp(armLz, -0.9, hold);
+        chestYaw = lerp(0.4 * wind, -0.8, strike) * hold;
+        chestPitch = lerp(-0.2 * wind, 0.15, strike) * hold;
+      }
+    } else if (p.attack && lance) {
       // 창술사: 30·31 찌르기, 32 휘둘러 베기, 33 용아창(큰 찌르기), 34 낙화창(뛰어올라 내려찍기), 35 천창우(창을 치켜들었다 내던짐)
       const t = p.attack.t, k = p.attack.kind;
       if (k === 30 || k === 31 || k === 33) {
@@ -1322,9 +1406,11 @@ export class Rig {
     if (sword && this.saya && !p.attack) elL = -0.75;
     if (staff) elR = -0.45;
     if (lance && !p.attack) { elR = -0.45 - run * 0.3; elL = -1.0; }
+    if (fanW && !p.attack) { elR = -0.9; elL = -0.6 - run * 0.3; }
     if (p.attack) {
       const t = p.attack.t, k = p.attack.kind;
-      if (lance) {
+      if (fanW) { elR = -0.3; elL = -0.45; }
+      else if (lance) {
         if (k === 34 || k === 35) { elR = -0.25; elL = -0.35; }
         else { const w = clamp(t / 0.3, 0, 1), st = clamp((t - 0.3) / 0.16, 0, 1), rc = clamp((t - 0.6) / 0.4, 0, 1); elR = lerp(lerp(lerp(elR, -1.55, w), -0.05, st), -0.4, rc); elL = lerp(lerp(elL, -1.2, w), -0.15, st); }
       } else if (k >= 20) { const up = clamp(t / 0.25, 0, 1) * (1 - clamp((t - 0.75) / 0.25, 0, 1)); elL = lerp(elL, -0.05, up); elR = lerp(elR, -1.9 + 1.5 * clamp((t - 0.45) / 0.2, 0, 1), up); }
@@ -1493,6 +1579,13 @@ export function makeLancer(o = {}) {
   return new Rig({ ...{
     type: 'lancer', scale: 1.14, skin: '#f4d0b0', robe: '#7a1e26', sleeve: '#7a1e26', cuff: '#2a1a1e', belt: '#1e1a20', collar: '#e0b040',
     pants: '#2a2228', hair: '#16121a', eye: '#3a1a14', weapon: 'lance',
+  }, ...o });
+}
+
+export function makeFan(o = {}) {
+  return new Rig({ ...{
+    type: 'fan', scale: 1.1, skin: '#fbe0cc', robe: '#f4ecf0', sleeve: '#f4ecf0', cuff: '#2a8a9a', skirt: '#d8285a', belt: '#2a8a9a',
+    pants: '#f4ecf0', shoes: '#c8285a', hair: '#1a1418', eye: '#3a1a24', weapon: 'fan',
   }, ...o });
 }
 

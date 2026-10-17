@@ -14,6 +14,7 @@ import { renderChallenge } from '../challenge.js';
 import { DIFF_NOTE } from './shared.js';
 
 import { renderDungeons } from '../dungeon.js';
+import { renderPass } from '../pass.js';
 export class PausePart {
   togglePause(open = !this.pauseOpen) {
     if (open && this.state === 'play') { if (this.ui.bagOpen) this.toggleBag(false); if (this.ui.skillsOpen) this.toggleSkills(false); if (this.mapOpen) this.minimap.toggle(false); if (this.autoMove) this.stopAutoMove(); }
@@ -82,6 +83,8 @@ export class PausePart {
     } else if (tab === 'daily') {
       this.dailyGoals.render(el);
       el.insertAdjacentHTML('beforeend', `<h4 class="cx-h">출석 보상</h4><div class="pz-note" style="margin-top:0"><span>누적 출석 ${attendState(this).n}일</span> · <span>하루 빠져도 처음으로 돌아가지 않아요 · 7일차마다 달빛 구슬</span></div>${attendHtml(this)}`);
+    } else if (tab === 'pass') {
+      renderPass(this, el);
     } else if (tab === 'records') {
       this.records.render(el);
     } else if (tab === 'codex') {

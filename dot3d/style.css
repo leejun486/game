@@ -1190,3 +1190,31 @@ body.native #pz-export { display: none; }
   body:not(.touch) #toast { white-space: normal; width: max-content; max-width: 340px; text-align: center; }
   body:not(.touch) #status .skills { height: 176px; }
 }
+
+/* 수련 패스 (pass.js) */
+.ps-head { display: flex; align-items: center; gap: 10px; margin: 2px 0 6px; flex-wrap: wrap; }
+.ps-tier { font-size: 15px; color: #ffe8a0; }
+.ps-tier b { font-size: 22px; }
+.ps-bar { flex: 1; min-width: 120px; height: 10px; background: #1a1522; border: 1px solid #4a3e58; }
+.ps-bar i { display: block; height: 100%; background: linear-gradient(90deg, #ff9b58, #f3d354); }
+.ps-pt { color: #cfc6da; font-size: 13px; }
+#ps-all { font: inherit; padding: 5px 14px; background: #8a2a20; color: #fff4e0; border: 1px solid #e2b85a; cursor: pointer; }
+#ps-all:disabled { opacity: .4; cursor: default; }
+.ps-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 6px; margin: 6px 0 10px; }
+.ps-cell { font: inherit; position: relative; text-align: left; min-height: 64px; padding: 16px 6px 6px; background: #1a1522; border: 1px solid #3a3048; color: #cfc6da; font-size: 11px; cursor: default; }
+.ps-cell > i { position: absolute; left: 5px; top: 2px; font-style: normal; font-size: 11px; color: #9a8fae; }
+.ps-cell.cos { border-color: #6a5a8a; background: linear-gradient(180deg, #2a2040, #1a1522); }
+.ps-cell.ready { border-color: #f3d354; box-shadow: 0 0 8px rgba(243, 211, 84, .35); cursor: pointer; }
+.ps-cell.got { opacity: .45; }
+.ps-rw { display: flex; flex-direction: column; gap: 1px; }
+.ps-rw span { display: flex; gap: 4px; align-items: baseline; flex-wrap: wrap; }
+.ps-rw em { font-style: normal; }
+.ps-rw b { color: #fff4e0; }
+.ps-cos em { color: #e0c8ff; }
+.ps-cos small { color: #9a8fae; }
+.ps-st { position: absolute; right: 5px; top: 2px; color: #ffe8a0; }
+.ps-list { display: flex; flex-direction: column; gap: 3px; }
+.ps-ms { display: grid; grid-template-columns: 1fr auto 44px; gap: 8px; padding: 4px 8px; background: #1a1522; border: 1px solid #3a3048; font-size: 13px; }
+.ps-ms.done { border-color: #5a8a5a; color: #a8e0a8; }
+.ps-mp { color: #cfc6da; }
+.ps-pts { color: #ffd76a; text-align: right; }

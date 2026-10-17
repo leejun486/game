@@ -15,7 +15,7 @@ import { EVOS, RUNES, branchOf, rankOf, featRank, runeOf, freePoints, rankMul, r
 import { QUESTS, BOUNTIES, KILL_NAME } from './quests.js';
 import { makeGear, rollGearTier, gearScore, salvageExp, BAG_MAX, GEAR_SLOTS, slotKind, rarityOf, makeSetPiece, setFor, SETS } from './gear.js';
 import { item, rollDrop, bossDrop, RARITY, itemDesc, WEAPONS, OUTFITS, ULTS } from './items.js';
-import { expNeed, SKILL_LEVEL } from './entities.js';
+import { expNeed, SKILL_LEVEL, lvEq, LV_CAP } from './entities.js';
 import { awayReward, grantAway } from './away.js';
 import { claimAttend, showAttend } from './attend.js';
 import { MAPS, BOSS_TYPES, BOSS_NAME, WIN_LINE, GRADE } from './maps.js';
@@ -24,6 +24,7 @@ import { clamp, lerp, rand, angleDiff, damp } from './util.js';
 import { initLang, watchDom, tr, LANG, LANGS } from './i18n.js';
 import { DIFFS, DIFF_ORDER, diffOf } from './difficulty.js';
 import { Daily } from './daily.js';
+import { checkPass, passState, passTier, passReady } from './pass.js';
 import { QuestKinds } from './questkinds.js';
 import { playScene } from './scenes.js';
 import { ruleFor, awaken } from './towerrules.js';
@@ -122,7 +123,7 @@ class Game {
     this.applySettings();
     // 직업별 레벨·경험치·착용 장비, 공용 가방
     this.progress = {};
-    this.inv = new Set(['sw0', 'mg0', 'bw0', 'sp0', 'ot0']);
+    this.inv = new Set(['sw0', 'mg0', 'bw0', 'sp0', 'fn0', 'ot0']);
     this.enh = {};     // 무기·갑옷 강화 단계 {아이템 id: +n}
     this.mats = {};    // 강화 재료 (주문서·혼석) 개수
     this.codexReg = {}; // 장신구 도감에 등록한 칸
@@ -584,7 +585,7 @@ class Game {
     const at = qWant.has(type) ? this.world.randomWalkable(p.pos.x, p.pos.z, 9, 15) || this.world.randomWalkable(p.pos.x, p.pos.z, 13, 22) : this.world.randomWalkable(p.pos.x, p.pos.z, 13, 22);
     if (!at || this.world.regionAt(at.x, at.z) !== R) return;
     const n = Math.min(1 + Math.floor(Math.random() * F.pack), F.cap - here());
-    const lv = 1 + MAPS[R.id].lvl + Math.floor((p.level - 1) / 3);
+    const lv = 1 + MAPS[R.id].lvl + Math.floor((lvEq(p.level) - 1) / 3);
     for (let i = 0; i < n; i++) {
       const pos = (i && this.world.randomWalkable(at.x, at.z, 0.8, 2.5)) || at;
       const fe = new Enemy(this, type, pos, lv, { field: true });
@@ -624,7 +625,7 @@ class Game {
     this.marker = { g, ring, ticks, arrow };
   }
 
-  targetRange() { return this.player.cls === 'sword' ? 7 : this.player.cls === 'lancer' ? 8.5 : 12; }
+  targetRange() { return this.player.cls === 'sword' ? 7 : this.player.cls === 'lancer' ? 8.5 : this.player.cls === 'fan' ? 10 : 12; }
 
   validTarget(e) {
     // removed: 지역을 옮기거나 다시 일어설 때 정리된 적 (목록에서 빠졌는데 겨냥이 남지 않게)
@@ -670,6 +671,21 @@ class Game {
   }
 
   // ---------- 성장 ----------
+  // 레벨 상한(50)에서 넘친 경험치 → 수련 꾸러미 (꾸러미마다 주문서 2 · 도깨비 가루 5 · 엽전 250, 30%로 요괴 혼석)
+  onCapBundle(n) {
+    const M = this.mats;
+    let soul = 0;
+    for (let i = 0; i < n; i++) {
+      for (let j = 0; j < 2; j++) { const k = ['scrollW', 'scrollA', 'scrollG'][Math.floor(Math.random() * 3)]; M[k] = (M[k] || 0) + 1; }
+      M.dust = (M.dust || 0) + 5;
+      if (Math.random() < 0.3) { M.soul = (M.soul || 0) + 1; soul++; }
+    }
+    this.shop.gain(250 * n);
+    this.stats.capBundle = (this.stats.capBundle || 0) + n;
+    this.ui.toast(`수련 꾸러미 ×${n} — 강화 주문서 ${2 * n} · 도깨비 가루 ${5 * n} · 엽전 ${250 * n}${soul ? ` · 요괴 혼석 ${soul}` : ''}`, 3);
+    if (!this.ui.bagOpen) this.ui.refreshBag?.();
+  }
+
   onLevelUp(pl, n) {
     const p = V(pl.pos.x, pl.y, pl.pos.z);
     this.audio.play('levelup');
@@ -795,7 +811,7 @@ class Game {
     if (this._echoing || pl.dead) return;
     const el = this.rune(pl, slot, 2), mod = this.rune(pl, slot, 3), use = this.rune(pl, slot, 4), aw = this.rune(pl, slot, 5);
     if (!el && !mod && !use && !aw) return;
-    const pow = this.rankPow(pl, slot) * (1 + pl.level * 0.04);
+    const pow = this.rankPow(pl, slot) * (1 + lvEq(pl.level) * 0.04);
     const c = this.aimPoint(pl, 4, 9);
     if (el === 'fire') this.runeFire(c, pow);
     else if (el === 'ice') this.runeIce(c, pow);
@@ -1028,7 +1044,7 @@ class Game {
       const i = CLASS_ORDER.indexOf(this.selectedCls);
       if (code === 'ArrowLeft' || code === 'KeyA') { this.selectClass(CLASS_ORDER[(i + CLASS_ORDER.length - 1) % CLASS_ORDER.length]); this.audio.unlock(); this.audio.play('talk'); return; }
       if (code === 'ArrowRight' || code === 'KeyD') { this.selectClass(CLASS_ORDER[(i + 1) % CLASS_ORDER.length]); this.audio.unlock(); this.audio.play('talk'); return; }
-      if (code === 'Digit1' || code === 'Digit2' || code === 'Digit3' || code === 'Digit4') { this.selectClass(CLASS_ORDER[+code.slice(-1) - 1]); return; }
+      if (/^Digit[1-5]$/.test(code) && CLASS_ORDER[+code.slice(-1) - 1]) { this.selectClass(CLASS_ORDER[+code.slice(-1) - 1]); return; }
       // Enter: 기록이 있으면 이어하기, 없으면 새로 시작
       if (code === 'Enter' || code === 'Space') { if (this.hasSave) this.start(); else this.newGame(true); }
       return;
@@ -1119,7 +1135,7 @@ class Game {
   resetProgress() {
     clearSave();
     this.kills = 0; this.round = 0; this.stage = 0; this.bestCombo = 0; this.playTime = 0; this.flags = {}; this.stats = newStats(); this.daily = null;
-    this.progress = {}; this.inv = new Set(['sw0', 'mg0', 'bw0', 'sp0', 'ot0']); this.gear = []; this.enh = {}; this.mats = {}; this.codexReg = {}; this.ext = {}; this.codex.dirty();
+    this.progress = {}; this.inv = new Set(['sw0', 'mg0', 'bw0', 'sp0', 'fn0', 'ot0']); this.gear = []; this.enh = {}; this.mats = {}; this.codexReg = {}; this.ext = {}; this.codex.dirty();
     this.cleared = {};
     this.quest = { step: 0, prog: {}, lit: [], bounty: null, shards: [], prologue: false, ended: false, qv: 5 };
     for (const f of this.flames) this.scene.remove(f);
@@ -1840,7 +1856,7 @@ class Game {
     let pos = isBoss ? this.world.randomWalkable(p.x, p.z, 6, 9) : this.world.randomWalkable(p.x, p.z, 5, 10);
     if (!pos) pos = this.world.randomWalkable(p.x, p.z, 2, 14) || V(this.world.spawn.x, 0, this.world.spawn.z - 6);
     // 시련탑은 층수가 곧 강함 (회차와 무관)
-    const lv = this.tower?.active ? 1 + this.tower.floor + Math.floor((this.player.level - 1) / 3) : 1 + this.round + this.map.lvl + Math.floor((this.player.level - 1) / 3);
+    const lv = this.tower?.active ? 1 + this.tower.floor + Math.floor((lvEq(this.player.level) - 1) / 3) : 1 + this.round + this.map.lvl + Math.floor((lvEq(this.player.level) - 1) / 3);
     const e = new Enemy(this, type, pos, lv, { elite: opt.elite });
     this.earlyEase(e);
     const TR = this.tower?.active ? this.tower : null;
@@ -2559,6 +2575,11 @@ class Game {
     this.coach.update(dt);
     this.records.update(dt);
     this.dailyGoals.update(dt);
+    // 수련 패스: 1초마다 과제 확인
+    if (this.state === 'play' && (this.passT = (this.passT || 0) + dt) > 1) {
+      this.passT = 0;
+      for (const M of checkPass(this)) this.ui.toast(`수련 패스 과제 완료: ${M.text(M.n)} (+${M.pts})`, 2.6);
+    }
     this.autoQuality((now - this.last0) / 1000 || 0);
     this.dev.tick((now - this.last0) / 1000 || 0);
     this.last0 = now;

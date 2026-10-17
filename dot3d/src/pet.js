@@ -1,6 +1,7 @@
 // 수호령: 곁을 따라다니며 능력치를 조금 올려 주고, 몇몇은 가까운 적을 함께 공격함 (모든 직업 공통, 하나만 데리고 다님)
 //  얻는 법: 보스를 처음 물리치면 그 보스의 수호령, 장터에서 엽전으로, 보스 연속 도전 기록으로
 //  game.ext.pets = 가진 것 목록, game.ext.pet = 데리고 다니는 것
+import { lvEq } from './entities.js';
 import * as THREE from 'three';
 import { rbox } from './style.js';
 import { fmtStats } from './codex.js';
@@ -112,7 +113,7 @@ export class Pet {
     else for (let i = 0; i < 10; i++) { const s = i / 10; g.fx.add.emit({ x: from.x + (c.x - from.x) * s, y: from.y + (c.y - from.y) * s, z: from.z + (c.z - from.z) * s, life: 0.25 + s * 0.1, size: 3, color: '#ffffff', color2: A.color }); }
     g.fx.spark(c.x, c.y, c.z, 8, A.color, 4);
     const hs = g.hitstop;
-    g.damageEnemy(e, A.dmg * (1 + (pl.level - 1) * 0.04), false, 0, 0);
+    g.damageEnemy(e, A.dmg * (1 + (lvEq(pl.level) - 1) * 0.04), false, 0, 0);
     g.hitstop = hs;
   }
 }
