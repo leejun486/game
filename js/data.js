@@ -35,7 +35,7 @@ D.CLASSES = {
     skills: ['e_triple', 'e_rain', 'e_wind', 'e_energy', 'e_frost', 'e_storm', 'e_phoenix', 'e_starfall', 'e_spirit'],
   },
   mage: {
-    name: '마법사', sheet: 'mage', desc: '원소를 다루는 현자.\n강력한 광역 마법으로 적을 쓸어버린다.',
+    name: '마법사', sheet: 'mage_px', desc: '원소를 다루는 현자.\n강력한 광역 마법으로 적을 쓸어버린다.',
     base: { hp: 115, mp: 140, atk: 15, def: 2 }, grow: { hp: 11, mp: 11, atk: 2.5, def: 0.4 },
     range: 300, attack: 'thrust', atkDelay: 1.05, weapon: 'staff', projectile: 'bolt',
     skills: ['m_fire', 'm_ice', 'm_heal', 'm_meteor', 'm_chain', 'm_blizzard', 'm_thunder', 'm_inferno', 'm_eclipse'],
@@ -431,11 +431,14 @@ D.SUMMON_RATES = [0.60, 0.28, 0.095, 0.022, 0.003];
 window.SPRITE_ROWS.elf_px = window.SPRITE_ROWS.elf.concat(window.SPRITE_ROWS.elf.slice(0, 20)); // + diagonal rows 21-40
 // 8-direction knight from an attack sheet, 96px cells for the wide slash arcs (tools/build_knight_px.py)
 window.SPRITE_ROWS.knight_px = window.SPRITE_ROWS.elf_px;
-window.SPRITE_FRAME = { knight_px: 96 }; // frame size per sheet; everything else is 64
+// 도사(마법사): 여우 탈·무 지팡이 도트 그림, 8방향 대기 모션 (tools/extract_mage_px.py → tools/build_mage_px.py)
+window.SPRITE_ROWS.mage_px = window.SPRITE_ROWS.elf_px;
+window.SPRITE_FRAME = { knight_px: 96, mage_px: 96 }; // frame size per sheet; everything else is 64
+window.IDLE_COL = { mage_px: 12 }; // standing: alternate walk col 0 with this col (second idle pose)
 window.WALK_FRAMES = { knight_px: 6 }; // walk cycle length per sheet (cols 1..n); everything else is 8
 // walk column for a step count measured in 8-frame-cycle frames, so every sheet walks at the same pace
 window.walkCol = (sheet, step) => { const n = window.WALK_FRAMES[sheet] || 8; return 1 + (Math.floor(step * n / 8) % n); };
-D.BAKED_WEAPON = { elf_px: 'elf_nw', knight_px: 'knight_nw' }; // sheet -> LPC body used to show weapon looks in menus
+D.BAKED_WEAPON = { elf_px: 'elf_nw', knight_px: 'knight_nw', mage_px: 'mage_nw' }; // sheet -> LPC body used to show weapon looks in menus
 D.SYNTH_RATES = [0.30, 0.25, 0.20, 0.12];
 D.cardGrowCost = (card, lv) => 1500 * lv * (card.grade + 1);
 D.CARD_MAX_LV = 10;
