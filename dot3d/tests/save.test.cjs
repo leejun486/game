@@ -22,8 +22,9 @@ module.exports = {
       G.quest.step = 8; G.updateGates(true); G.cleared.palace = 1; G.cleared.bamboo = 1;
       G.stats.ruleFloors = 3; G.stats.awakened = 1; G.stats.kills = 77;
       G.records.check(); // 바꾼 값으로 받을 업적은 저장 전에 받아 둠 (불러온 뒤 새로 생기지 않게)
+      G.dailyGoals.roll(); G.dailyGoals.check(); // 오늘의 목표도 (그날 뽑힌 목표에 '적 처치'가 있으면 불러온 뒤 경험치가 들어옴)
     });
-    await g.step(1, { input: {} });
+    await g.step(3, { input: {} }); // 목표를 다 채웠을 때 2.6초 뒤 주는 보상까지
     await g.eval(() => window.game.save(false));
     const a = await read();
     await cont();
