@@ -1,7 +1,7 @@
 // 자동 완주: 새 게임부터 엔딩(메인 퀘스트 → 시련탑 10층 염라대왕)까지 봇이 실제로 싸우며 진행
 //  단계마다 걸린 게임 시간·레벨·쓰러짐을 재고, 오래 막히는 단계를 찾음.
 //  node tools/playthrough.cjs [직업…] [--max=분] [--diff=normal] [--out=파일.json]
-//    직업: sword mage elf lancer (생략하면 넷 모두)
+//    직업: sword mage elf lancer fan (생략하면 다섯 모두)
 //  봇이 하는 일 (사람이 할 법한 것만):
 //   - 자동 이동·자동 사냥으로 진행, 쓰러지면 다시 하기
 //   - 수련점은 기술 1·2·3에 고르게, 각인은 첫 번째 것, 30초마다 장비 자동 착용
@@ -212,7 +212,7 @@ async function runClass(ctx, cls) {
   const srv = await startServer();
   const ctx = { base: `http://127.0.0.1:${srv.address().port}` };
   ctx.browser = await chromium().launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
-  const list = CLASSES.length ? CLASSES : ['sword', 'mage', 'elf', 'lancer'];
+  const list = CLASSES.length ? CLASSES : ['sword', 'mage', 'elf', 'lancer', 'fan'];
   const all = [];
   for (const cls of list) {
     console.log(`▶ ${cls} (난이도 ${DIFF}, 최대 ${MAX_MIN}분)`);

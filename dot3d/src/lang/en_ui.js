@@ -68,7 +68,7 @@ export const dict = {
   '지우고 새로 시작': 'Erase and start over', '취소': 'Cancel', '설정 · 저장 파일': 'Settings · Save File', '3D 액션 · Three.js': '3D Action · Three.js',
   '쓰러졌다…': 'You fell…', '키를 눌러 다시 일어서기': 'to get back up', '무기': 'Weapon', '갑옷': 'Armor',
   // HUD
-  '임무': 'Quest', '퇴치': 'Kills', '최고 연속': 'Best combo', '▶ 눌러서 자동 이동': '▶ Tap to auto-move', '메뉴': 'Menu', '기술': 'Skills', '고유': 'Unique',
+  '임무': 'Quest', '퇴치': 'Kills', '최고 연속': 'Best combo', '▶ 눌러서 자동 이동': '▶ Tap to auto-move', '메뉴': 'Menu', '고유': 'Unique',
   '이동': 'Move', '대화·북': 'Talk / Drum', '타겟 변경': 'Switch target', '낮/밤': 'Day/Night', '휠': 'Wheel', '확대': 'Zoom', '일시정지·설정': 'Pause / Settings', '클릭': 'Click', '우클릭': 'Right-click',
   '◆ 자동 저장됨': '◆ Saved', '가방': 'Bag', 'B / Esc 닫기 · 아이템을 눌러 자세히 보기': 'B / Esc close · tap an item for details', '방어구·장신구': 'Gear', '무기·갑옷': 'Weapons · Armor',
   '일반·고급 모두 분해': 'Salvage all Common/Fine', '자동 착용': 'Auto-equip', '이미 가장 좋은 장비를 끼고 있어요': 'You already have your best gear on', '무기·옷·방어구·장신구를 가진 것 중 가장 좋은 것으로': 'Equip your best weapon, outfit, gear and rings', '분해하면 경험치를 얻어요': 'Salvaging grants EXP',
@@ -98,7 +98,7 @@ export const dict = {
   '「자동 사냥」 버튼을 켜면 가까운 적을 찾아 기술까지 써 가며 싸워요': 'Turn on "Auto-hunt" to fight nearby foes, skills included', '십자키 ↓로 자동 사냥을 켜면 가까운 적을 찾아 기술까지 써 가며 싸워요': 'Turn on auto-hunt with D-pad ↓ to fight nearby foes, skills included',
   // 기록·업적·도감
   '기록': 'Records', '기록 · 업적': 'Records', '업적 달성': 'Achievement unlocked', '통계': 'Stats', '옷': 'Outfits', '보스 처치': 'Bosses defeated', '완벽한 회피': 'Perfect dodges',
-  '쓰러짐': 'Deaths', '최대 한 방': 'Biggest hit', '주운 방어구·장신구': 'Gear found', '전설 장비': 'Legendary gear', '월하궁': 'Wolhagung', '저승 시련탑': 'Tower of Trials',
+  '쓰러짐': 'Deaths', '최대 한 방': 'Biggest hit', '주운 방어구·장신구': 'Gear found', '전설 장비': 'Legendary gear', '저승 시련탑': 'Tower of Trials',
   '첫걸음': 'First Steps', '적을 처음 쓰러뜨리기': 'Defeat your first foe', '배움의 길': 'Student', '튜토리얼 마치기': 'Finish the tutorial',
   '도깨비 사냥꾼': 'Dokkaebi Hunter', '적 100 처치': 'Defeat 100 foes', '백귀야행을 끝낸 자': 'End of the Night Parade', '적 1000 처치': 'Defeat 1000 foes',
   '대왕의 방망이': 'The King\'s Club', '도깨비 대왕 두억시니 물리치기': 'Defeat Dokkaebi King Dueoksini', '여우 사냥': 'Fox Hunt', '천년 구미호 물리치기': 'Defeat the Thousand-Year Gumiho',
@@ -182,7 +182,7 @@ export const dict = {
   '구미호가 분신을 만들었다! 분신은 금방 쓰러진다': 'The Gumiho made clones! Clones fall quickly', '사방이 어두워진다… 저승사자의 영역이다': 'Everything goes dark… this is the Reaper\'s domain',
   '물기둥에 휩쓸렸다!': 'Swept up by a water pillar!', '완벽한 회피!': 'Perfect dodge!',
   '저승 문이 굳게 닫혀 있다 — 불가사리를 물리치면 열린다': 'The underworld gate is sealed — defeat the Bulgasari to open it',
-  '싸우는 중에는 들어갈 수 없어요': 'Can\'t enter during a fight', '아직 울릴 때가 아니다': 'Not yet', '튕겨내기!': 'Parried!', '반격!': 'Counter!',
+  '아직 울릴 때가 아니다': 'Not yet', '튕겨내기!': 'Parried!', '반격!': 'Counter!',
   '보스 무기는 나오지 않았어요… 다시 도전해 보세요': 'No boss weapon this time… try again', '격퇴!': 'Repelled!', '승리': 'Victory', '독에 중독되어 몸이 무겁다!': 'Poisoned! Your body feels heavy!',
   '주변에 적이 없어요': 'No foes nearby', '비늘 막기!': 'Scale block!', '환생': 'Rebirth', '염라의 곤룡포가 목숨을 지켰다': 'Yeomra\'s robe saved your life', '정예': 'Elite',
   '물귀신에게 붙잡혔다!': 'Grabbed by a water ghost!', 'WebGL을 시작할 수 없습니다.': 'Could not start WebGL.',
@@ -392,7 +392,7 @@ export const dict = {
   '먼저 난장을 치는 장난꾸러기 도깨비랑 둔갑 너구리들부터 혼쭐 내 주시오.': 'First, teach a lesson to the prankster dokkaebi and shapeshifting raccoons running riot.',
   '난장판': 'Total Chaos',
   '장터를 어지럽히는 <b>장난꾸러기 도깨비</b>와 <b>둔갑 너구리</b>를 물리치자': 'Defeat the <b>prankster dokkaebi</b> and <b>shapeshifter raccoons</b> wrecking the market',
-  '엽전 꾸러미': 'Coin Pouch',
+  
   '노름꾼 도깨비': 'Gambler Dokkaebi',
   '<b>엽전 꾸러미</b>를 채 간 <b>노름꾼 도깨비</b>를 붙잡자 (구석에 몰거나 기술로 길을 끊자)': 'Catch the <b>gambler dokkaebi</b> who snatched the <b>coin pouch</b> (corner it or cut it off with skills)',
   '덕배: 아이고! 노름꾼 도깨비 놈이 내 엽전 꾸러미를 채 갔소!': 'Deokbae: Oh no! A gambler dokkaebi snatched my coin pouch!',
@@ -443,7 +443,7 @@ export const dict = {
   '새겨진 <b>별(점)이 적은 비석부터</b> 차례로 두드려 칠성의 길을 열자 (비석 앞에서 E)': 'Strike the steles <b>starting with the fewest stars (dots)</b> to open the Seven Star path (E in front of a stele)',
   '연화: 북두칠성 비석을 깨우면 뇌공님의 북에 닿는 길이 열려요.': 'Yeonhwa: Wake the Big Dipper steles and the path to Lord Noegong\'s drum will open.',
   '연화: 별이 적게 새겨진 비석부터 차례로요. 틀리면 천둥 동자들이 몰려와요.': 'Yeonhwa: In order, from the stele with the fewest stars. Get it wrong and the thunder boys swarm in.',
-  '학 깃털': 'Crane Feather',
+  
   '<b>학 요괴</b>를 쓰러뜨려 <b>학 깃털</b>을 모으자': 'Defeat <b>crane demons</b> and collect <b>crane feathers</b>',
   '연화: 학 깃털로 귀마개를 엮으면 천둥소리에도 정신을 잃지 않아요.': 'Yeonhwa: Weave earmuffs from crane feathers and the thunder won\'t knock you senseless.',
   '연화: 다섯 개만 모아 주세요. 학 요괴는 하늘에서 깃털을 부채꼴로 쏘니 조심하고요.': 'Yeonhwa: Just five, please. Crane demons shoot feathers in a fan from the sky, so be careful.',
@@ -695,7 +695,7 @@ export const dict = {
   '오늘 보상은 다 받았어요': 'Today\'s rewards already claimed',
   '격파!': 'Defeated!',
   '체력 30% 회복 · 다음 보스가 온다': '30% HP restored · next boss incoming',
-  '최고 기록!': 'New record!',
+  
   '연속 도전 완주!': 'Boss Rush complete!',
   '격파! 곧 돌아가요': 'Defeated! Returning soon',
   '아직 물리치지 못함': 'Not defeated yet',
@@ -868,7 +868,7 @@ export const dict = {
   '그만두려면 남쪽 홍살문으로': 'Leave by the south gate to quit',
   '보스 연속 도전 · ': 'Boss Rush · ',
   '한 번 더 누르면 게임을 꺼요': 'Press again to quit',
-  '세공': 'Refine',
+  
   '시간 던전': 'Time Dungeons',
   '던전마다 하루 60분이에요. 안에 있는 동안만 시간이 줄고 나왔다가 다시 들어가도 남은 시간에서 이어져요. 적은 끊이지 않고 나오고 4분마다 수호자가 나와요. 날이 바뀌면 다시 60분이에요.': 'Each dungeon gives you 60 minutes a day. Time only runs while you\'re inside, and if you leave and come back you continue from what\'s left. Enemies keep coming and a guardian appears every 4 minutes. A new day gives another 60 minutes.',
   '잠든 서고': 'Sleeping Archive',

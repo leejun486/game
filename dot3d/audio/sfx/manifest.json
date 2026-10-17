@@ -59,5 +59,7 @@
 "step_sand": 4,
 "fall": 1,
 "rumble": 1,
-"gather": 1
+"gather": 1,
+"fan": 3,
+"gust": 1
 }

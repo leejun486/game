@@ -447,6 +447,30 @@ def s_spinspear(v):
     return mix((0, x, 1.0), (0, sweep_noise(d, 1500, 2600, 3) * am * env_bell(n, 0.3), 0.4))
 
 
+# ---------- 무희 ----------
+
+def s_fan(v):
+    # 부채질: 비단 부채가 '촤락' 펴지는 떨림 + 가볍게 '휙' 가르는 바람
+    d = 0.24 + 0.02 * v
+    n = N(d)
+    t = np.arange(n) / SR
+    flutter = 0.45 + 0.55 * np.abs(np.sin(2 * np.pi * (38 + 6 * v) * t)) * np.exp(-t / 0.07)
+    silk = highpass(noise(n), 3000 + 300 * v) * flutter * exp_env(n, 0.06)
+    air = sweep_noise(d, 900 + 120 * v, 4200, 1.6) * env_bell(n, 0.45)
+    return mix((0, air, 0.8), (0, silk, 0.45))
+
+
+def s_gust(v):
+    # 돌개바람: 낮게 밀려오는 바람 덩어리 위로 휘파람 같은 바람 소리가 휘돌아 감
+    d = 0.75
+    n = N(d)
+    t = np.arange(n) / SR
+    body = sweep_noise(d, 260, 900, 1.2) * env_bell(n, 0.25)
+    whistle = sweep_noise(d, 1400, 2600, 9) * (0.6 + 0.4 * np.sin(2 * np.pi * 7 * t)) * env_bell(n, 0.35)
+    rumble = lowpass(noise(n), 300) * env_bell(n, 0.2)
+    return mix((0, body, 1.0), (0.03, whistle, 0.3), (0, rumble, 0.5), (0, s_fan(1), 0.5))
+
+
 # 도사 평타: 부적을 '휙' 던지면 종이가 '탁' 펴지고, 오음 풍경 소리 두 음과 함께 '확' 불이 붙음
 PENTA = [1046.5, 1174.7, 1396.9, 1568.0, 1760.0, 2093.0]
 
@@ -582,6 +606,7 @@ SFX = {
     'victory': (s_victory, 1, -14), 'block': (s_block, 1, -15), 'gong': (s_gong, 1, -13),
     'thrust': (s_thrust, 3, -15), 'spearbeam': (s_spearbeam, 1, -13), 'leap': (s_leap, 1, -17), 'spearslam': (s_spearslam, 1, -11),
     'spearfall': (s_spearfall, 3, -17), 'spinspear': (s_spinspear, 1, -16),
+    'fan': (s_fan, 3, -16), 'gust': (s_gust, 1, -15),
     'talisman': (s_talisman, 4, -16), 'talisman3': (s_talisman3, 2, -15), 'talismanhit': (s_talismanhit, 3, -16),
     'step_grass': (s_step_grass, 4, -27), 'step_stone': (s_step_stone, 4, -27), 'step_snow': (s_step_snow, 4, -26), 'step_water': (s_step_water, 4, -26),
     'step_wood': (s_step_wood, 4, -26), 'step_sand': (s_step_sand, 4, -28),

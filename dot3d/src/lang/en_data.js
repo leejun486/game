@@ -15,7 +15,7 @@ export default {
   '길게 꿰뚫는 찌르기, 용아창, 뛰어올라 내려찍는 낙화창, 하늘에서 창이 쏟아지는 천창우': 'Long piercing thrusts, Dragon Fang, the leaping slam Falling Blossom, and Spear Rain from the sky',
   '찌르기': 'Thrust', '용아창': 'Dragon Fang', '낙화창': 'Falling Blossom', '천창우': 'Spear Rain', '연속 찌르기': 'Thrust Combo',
   '연환창': 'Chain Thrust', '연환': 'Chain', '창기 셋을 눈 깜짝할 새 연달아 내지름.': 'Three spear beams in the blink of an eye.',
-  '네 번 연달아': 'Four in a row', '각성: 금빛 창기 다섯, 끝에서 터짐': 'Awakening: five golden beams that burst at the end',
+  '각성: 금빛 창기 다섯, 끝에서 터짐': 'Awakening: five golden beams that burst at the end',
   '파천창': 'Heaven Piercer', '파천': 'Piercer', '하늘을 꿰뚫는 거대한 창기 하나. 두 배 피해로 멀리 밀어냄.': 'One giant beam that pierces the sky. Double damage and a long knockback.',
   '지나간 자리에 벼락이 떨어짐': 'Lightning strikes along its path', '각성: 거대한 창기 세 줄기': 'Awakening: three giant beams',
   '연화낙': 'Lotus Fall', '연화': 'Lotus', '내려찍은 뒤 꽃잎 충격파가 한 번 더 퍼짐.': 'After the slam, a petal shockwave spreads once more.',
