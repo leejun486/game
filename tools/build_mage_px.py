@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """Build assets/sprites/mage_px.png: LPC-layout sheet with 96px cells (13 cols x 41 rows) for the mage (도사)
-from the idle and walk frames in assets/src/mage_px/<idle|walk>_<dir>_<k>.png (made by extract_mage_px.py).
+from the idle, walk and attack frames in assets/src/mage_px/<idle|walk|attack>_<dir>_<k>.png (extract_mage_px.py).
 The radish staff is part of the art (no weapon-look layer, see D.BAKED_WEAPON).
   walk col 0 = idle pose 1, walk col 12 = idle pose 2 (the game alternates them while standing, see IDLE_COL;
   same as pose 1 for the directions in STILL),
   walk cols 1-8 = step, step, pass (idle pose, one pixel up), pass, other step, step, pass, pass,
-  spellcast = rise and settle, thrust/slash = lunge, shoot = lean (moved idle poses until those frames exist),
-  row 20 = topple.
+  spellcast / thrust / slash / shoot = attack windup frames, then the strike frame from just before the game's
+  hit frame (the slash arcs and dust are part of the art), row 20 = topple.
+Attack frames are placed by the kimono hem, not the bottom edge (dust and swung radish reach below the feet).
 Rows 0-20 follow LPC (up/left/down/right), rows 21-40 hold the diagonals (up_left, down_left, down_right, up_right)."""
 from PIL import Image
 import numpy as np
@@ -62,13 +63,34 @@ for d in DIRS + DIAGS:
     walk[d] = [shrink(Image.open(os.path.join(SRC, f'walk_{d}_{k}.png')).convert('RGBA')) for k in range(2)]
     if d in STILL:  # same reason: the second step pose swaps the radish side
         walk[d][1] = walk[d][0]
+atk = {d: [shrink(Image.open(os.path.join(SRC, f'attack_{d}_{k}.png')).convert('RGBA')) for k in range(2)] for d in DIRS + DIAGS}
 sheet = Image.new('RGBA', (13 * F, 41 * F), (0, 0, 0, 0))
+
+
+def hem_y(img, cx):
+    """lowest kimono-pink row near the body centre"""
+    a = np.array(img).astype(int)
+    r, g, b, al = a[:, :, 0], a[:, :, 1], a[:, :, 2], a[:, :, 3]
+    pink = (al > 0) & (r > 170) & (r - g > 40) & (b > 90) & (b < r)
+    x0, x1 = max(0, int(cx) - 6), int(cx) + 7
+    ys = np.nonzero(pink[:, x0:x1].any(1))[0]
+    return ys.max() if len(ys) else img.size[1] - 4
 
 
 def put(row, col, img, dx=0, dy=0):
     """feet 8px above the cell bottom, body centred"""
     x = round(F / 2 - body_x(img)) + dx
     y = F - 8 - img.size[1] + dy
+    cell = Image.new('RGBA', (F, F), (0, 0, 0, 0))
+    cell.paste(img, (x, y), img)
+    sheet.paste(cell, (col * F, row * F))
+
+
+def put_hem(row, col, img, gap, dx=0):
+    """like put, but the hem sits gap px above the feet line (as in the idle pose)"""
+    cx = body_x(img)
+    x = round(F / 2 - cx) + dx
+    y = F - 8 - gap - hem_y(img, cx)
     cell = Image.new('RGBA', (F, F), (0, 0, 0, 0))
     cell.paste(img, (x, y), img)
     sheet.paste(cell, (col * F, row * F))
@@ -82,19 +104,21 @@ def fwd(d):
 def block(base, i, d):
     a, b = idle[d]
     fx, fy = fwd(d)
-    for c, dy in enumerate([0, -1, -2, -3, -2, -1, 0]):  # spellcast: rise and settle
-        put(base + 0 + i, c, b if 2 <= c <= 4 else a, dy=dy)
-    for c, k in enumerate([0, 0, 1, 2, 3, 2, 1, 0]):  # thrust: lunge
-        put(base + 4 + i, c, a, dx=fx * k, dy=fy * k)
+    up, hit = atk[d]
+    gap = a.size[1] - 1 - hem_y(a, body_x(a))  # hem to feet in the idle pose
+    for c in range(7):  # spellcast (skills): windup, strike from col 4 (hit frame 5)
+        put_hem(base + 0 + i, c, up if c < 4 else hit, gap)
+    for c in range(8):  # thrust (basic attack): windup, strike from col 4 (hit frame 5)
+        put_hem(base + 4 + i, c, up if c < 4 else hit, gap)
     put(base + 8 + i, 0, a)  # walk: standing
     w0, w1 = walk[d]
     for c, (img, dy) in enumerate([(w0, 0), (w0, 0), (a, -1), (a, -1), (w1, 0), (w1, 0), (b, -1), (b, -1)]):  # walk
         put(base + 8 + i, c + 1, img, dy=dy)
     put(base + 8 + i, 12, b)  # second idle pose (IDLE_COL)
-    for c, k in enumerate([0, 1, 2, 3, 1, 0]):  # slash: lunge
-        put(base + 12 + i, c, b if c in (2, 3) else a, dx=fx * k, dy=fy * k)
-    for c, k in enumerate([0, 0, -1, -1, -2, -2, -2, -2, 2, 1, 0, 0, 0]):  # shoot: lean back, then forward
-        put(base + 16 + i, c, a, dx=fx * k, dy=fy * k)
+    for c in range(6):  # slash: strike from col 2 (hit frame 3)
+        put_hem(base + 12 + i, c, up if c < 2 else hit, gap)
+    for c in range(13):  # shoot: strike from col 8 (hit frame 9)
+        put_hem(base + 16 + i, c, up if c < 8 else hit, gap)
 
 
 for i, d in enumerate(DIRS):
