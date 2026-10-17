@@ -2142,7 +2142,12 @@ class Game {
     if (drop) this.spawnDrop(e.pos, drop);
     // 보스는 확률로 전용 장비(고유 기술 무기·옷)를 떨어뜨림
     if (e.isBoss && !inDg) {
-      const bd = bossDrop(e.type, this.player.cls, this.inv, this.round);
+      // 첫 보스 무기 보장: 그 직업의 보스 무기가 아직 없는데 보스를 한 번 잡고도 못 받았으면 이번엔 반드시
+      //  (12%에만 맡기면 무기 없이 저승사자(폐사찰)에 닿은 판은 직업을 가리지 않고 여러 번 쓰러짐 — 자동 완주 봇)
+      const cls = this.player.cls, miss = (this.stats.bossMiss ||= {});
+      const hasBW = [...this.inv].some((id) => { const it = item(id); return it?.kind === 'weapon' && it.cls === cls && it.from; });
+      const bd = bossDrop(e.type, cls, this.inv, this.round, !hasBW && (miss[cls] || 0) >= 1);
+      if (!hasBW) miss[cls] = bd.some((id) => item(id).kind === 'weapon' && item(id).cls === cls) ? 0 : (miss[cls] || 0) + 1;
       for (const id of bd) this.spawnDrop(e.pos, id);
       if (!bd.some((id) => item(id).kind === 'weapon')) this.after(1.2, () => this.ui.toast('보스 무기는 나오지 않았어요… 다시 도전해 보세요', 2.4));
     }

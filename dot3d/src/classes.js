@@ -28,7 +28,7 @@ export const CLASSES = {
   },
   fan: {
     id: 'fan', title: '무희', name: '단아', make: makeFan,
-    hp: 118, skillCd: 3.0, dashCd: 0.5, skill2Cd: 7, skill3Cd: 10, power: 1.15, def: 0.1, // 바람으로 적을 밀고 묶는 제어 직업. 보스전에서 너무 자주 쓰러져서 체력·방어(받는 피해 -10%)·위력을 조금 넉넉히
+    hp: 118, skillCd: 3.0, dashCd: 0.5, skill2Cd: 7, skill3Cd: 10, power: 1.3, def: 0.1, // 바람으로 적을 밀고 묶는 제어 직업. 보스전에서 너무 자주 쓰러져서 체력·방어(받는 피해 -10%)·위력을 넉넉히 (×1.15일 때 보스를 요정보다 30~40% 늦게 잡음 — 자동 완주 봇)
     role: '부채 · 바람 제어', bars: { 체력: 3, 공격: 3, 사거리: 4, 기동: 4, 난이도: 3 }, desc: '바람 칼날을 날리는 부채질, 적을 밀어내는 돌개바람, 끌어모으는 회오리, 몸을 감싸는 꽃바람',
     labels: { atk: '부채질', dash: '바람걸음', skill: '돌개바람', skill2: '회오리', skill3: '꽃바람' }, hitWord: '연속 부채질',
   },

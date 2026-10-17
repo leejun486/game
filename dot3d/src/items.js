@@ -261,15 +261,16 @@ export function perksOf(...ids) {
 
 // 보스 처치 보상: 확률로만 나옴. 무기(고유 기술)와 옷을 따로 굴림
 //  무기는 지금 직업용이 우선(아직 없는 것), 다 있으면 다른 직업용 → 그래도 다 있으면 지금 직업용(중복은 경험치)
-export function bossDrop(type, cls, inv, round = 0) {
+//  pity: 그 직업의 첫 보스 무기 보장 (main.js) — 무조건 지금 직업용
+export function bossDrop(type, cls, inv, round = 0, pity = false) {
   if (!BOSS_SETS[type]) return [];
   const set = [...ALL.values()].filter((it) => it.from === type);
   const out = [];
   const bonus = Math.min(0.1, round * 0.02);
-  if (Math.random() < BOSS_WEAPON_CHANCE + bonus) {
+  if (pity || Math.random() < BOSS_WEAPON_CHANCE + bonus) {
     const mine = set.find((it) => it.kind === 'weapon' && it.cls === cls);
     const others = set.filter((it) => it.kind === 'weapon' && it.cls !== cls && !inv.has(it.id));
-    out.push((!inv.has(mine.id) || !others.length ? mine : others[Math.floor(Math.random() * others.length)]).id);
+    out.push((pity || !inv.has(mine.id) || !others.length ? mine : others[Math.floor(Math.random() * others.length)]).id);
   }
   if (Math.random() < BOSS_OUTFIT_CHANCE + bonus) out.push(set.find((it) => it.kind === 'outfit').id);
   return out;

@@ -106,7 +106,7 @@ export const ACHIEVEMENTS = [
   { id: 'pd50', name: '바람 같은 몸놀림', desc: '완벽한 회피 50번', prog: (g, S) => [S.perfect, 50] },
   { id: 'hit500', name: '일격필살', desc: '한 방에 500 피해', prog: (g, S) => [S.maxHit, 500] },
   { id: 'legend', name: '전설을 손에', desc: '전설 등급 방어구·장신구 줍기', test: (g, S) => (S.gearTier?.[4] || 0) > 0 },
-  { id: 'bossw', name: '보스의 유물', desc: '보스 무기 얻기', test: (g) => [...g.inv].some((id) => /^(sw|mg|bw|sp)B/.test(id)) },
+  { id: 'bossw', name: '보스의 유물', desc: '보스 무기 얻기', test: (g) => [...g.inv].some((id) => /^(sw|mg|bw|sp|fn)B/.test(id)) },
   { id: 'set4', name: '한 벌 차림', desc: '세트 장비 네 부위 모두 착용', test: (g) => CLASS_ORDER.some((c) => Object.values(setBonuses(g.equippedGear(c)).cnt).some((n) => n >= 4)) },
   { id: 'awaken', name: '각성', desc: '기술 하나를 Ⅴ단계까지 수련', test: (g) => CLASS_ORDER.some((c) => Object.values(g.progressOf(c).rank || {}).some((r) => r >= 5)) },
   { id: 'enh10', name: '혼을 담은 쇠', desc: '장비 하나를 +10까지 강화', prog: (g, S) => [S.enhBest || 0, 10] },
