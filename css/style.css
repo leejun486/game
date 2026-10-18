@@ -938,3 +938,21 @@ body.touch #joy { left: 22px; bottom: 22px; }
 .feature-grid button { letter-spacing: .05em; }
 .list-row { border-bottom: 1px dashed rgba(233,215,168,.12); }
 .npc-talk p { font-size: 15px; line-height: 1.75; }
+
+/* 옷장: pose buttons, filter, 코디 세트 list */
+.ward-pose { display: flex; gap: 4px; justify-content: center; }
+.ward-pose button { flex: 1; padding: 5px 0; background: rgba(0,0,0,.35); border: 1px solid #4a3c2a; color: var(--muted); font-family: var(--serif); font-size: 13px; border-radius: 3px; }
+.ward-pose button[data-turn] { flex: 0 0 34px; font-size: 16px; }
+.ward-pose button.on { color: #f2e4c0; border-color: var(--vermilion); background: rgba(184,55,42,.25); }
+.ward-filter { display: flex; gap: 4px; margin: -4px 0 8px; }
+.ward-filter button { padding: 3px 12px; font-size: 12px; background: rgba(0,0,0,.35); border: 1px solid #4a3c2a; color: var(--muted); border-radius: 10px; }
+.ward-filter button.on { color: #f2e4c0; border-color: #8a6d3e; }
+.ward-sub { font-family: var(--serif); color: #e9d7a8; font-size: 13px; margin: 2px 0 6px; }
+.ward-outfits { display: flex; flex-direction: column; gap: 6px; max-height: 42vh; overflow: auto; margin-bottom: 4px; }
+.ward-outfit { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 8px 10px; background: rgba(0,0,0,.3); border: 1px solid #3d3225; border-radius: 3px; font-size: 13px; }
+.ward-outfit.on { border-color: #8ff0a4; box-shadow: inset 0 0 12px rgba(143,240,164,.15); }
+.ward-outfit b { font-family: var(--serif); color: #f2e4c0; }
+.ward-pieces { display: flex; flex-wrap: wrap; gap: 4px 8px; margin: 4px 0; font-size: 12px; }
+.ward-pieces span { cursor: pointer; }
+.ward-pieces .miss { color: #6d6458; text-decoration: line-through; }
+.ward-grid { max-height: 34vh; }

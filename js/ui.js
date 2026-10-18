@@ -631,7 +631,7 @@ const UI = (() => {
     body.innerHTML = `<div style="display:flex;gap:18px;flex-wrap:wrap"><div id="char-cv" style="background:radial-gradient(#3a2a20,#0e0b09);border:1px solid var(--line)"></div>
       <div style="flex:1;min-width:220px"><h2 style="margin:0;color:#e9d7a8">${esc(p.name)} <small style="font-size:14px;color:#a39a88">Lv.${p.s.lv} ${p.classDef.name}</small></h2>
       <div style="margin:6px 0 10px;color:#a39a88">전투력 <b style="color:#ffd76a">${U.fmt(p.power)}</b> · 처치 ${U.fmt(p.s.kills)} · 플레이 ${Math.floor(p.s.playTime / 60)}분</div>
-      <div style="margin-bottom:10px">옷장: ${['set', 'top', 'hat', 'weapon'].map((k) => p.s.ward.eq[k] && Wardrobe.BY_ID[p.s.ward.eq[k]]).filter(Boolean).filter((it, i, a) => !(a[0].slot === 'set' && (it.slot === 'top' || it.slot === 'hat'))).map((it) => `<b class="${D.GRADES[it.grade].cls}">${esc(it.name)}</b>`).join(' · ')}</div>
+      <div style="margin-bottom:10px">옷장: ${(p.s.ward.eq.set ? ['set', 'weapon'] : ['hat', 'top', 'bottom', 'shoes', 'back', 'weapon']).map((k) => p.s.ward.eq[k] && Wardrobe.BY_ID[p.s.ward.eq[k]]).filter(Boolean).map((it) => `<b class="${D.GRADES[it.grade].cls}">${esc(it.name)}</b>`).join(' · ')}</div>
       <div class="stat-list" style="columns:2">
         <div>공격력 <b>${st.atk}</b></div><div>방어력 <b>${st.def}</b></div><div>HP <b>${U.fmt(st.maxHp)}</b></div><div>MP <b>${U.fmt(st.maxMp)}</b></div>
         <div>공격 속도 <b>+${st.atkSpd}%</b></div><div>시전 속도 <b>+${st.castSpd}%</b></div><div>치명타 <b>${st.crit.toFixed(1)}%</b></div><div>회피 <b>${st.eva}</b></div>

@@ -300,7 +300,7 @@ const Game = {
   function resize() {
     dpr = Math.min(2, window.devicePixelRatio || 1);
     canvas.width = Math.floor(innerWidth * dpr); canvas.height = Math.floor(innerHeight * dpr);
-    Game.zoom = Game.userZoom || (innerWidth < 700 ? 0.75 : innerWidth < 1100 ? 0.9 : 1.05);
+    Game.zoom = Game.userZoom || (innerWidth < 700 ? 0.9 : innerWidth < 1100 ? 1.1 : 1.3); // close enough to see the 옷장 outfit
     // HUD scale: the combat pad and bottom bar are laid out for 1280×720 and scaled to the screen
     document.documentElement.style.setProperty('--k', U.clamp(Math.min(innerWidth / 1280, innerHeight / 720), 0.58, 1.35).toFixed(3));
   }
@@ -496,7 +496,7 @@ const Game = {
   });
   canvas.addEventListener('wheel', (e) => {
     e.preventDefault();
-    Game.userZoom = U.clamp((Game.userZoom || Game.zoom) * (e.deltaY > 0 ? 0.9 : 1.1), 0.55, 1.8);
+    Game.userZoom = U.clamp((Game.userZoom || Game.zoom) * (e.deltaY > 0 ? 0.9 : 1.1), 0.55, 2.2);
     Game.zoom = Game.userZoom;
   }, { passive: false });
   canvas.addEventListener('contextmenu', (e) => e.preventDefault());
