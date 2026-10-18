@@ -1,5 +1,5 @@
 'use strict';
-// 소환 (gacha): one summon screen for 초월 / 무기 외형 / 펫 / 탈것, and the slot-machine reveal every
+// 소환 (gacha): one summon screen for 의상 / 펫 / 탈것, and the slot-machine reveal every
 // pull goes through. Reels spin through the pool and stop one by one; a 희귀+ reel keeps spinning,
 // charges up, and a bolt of lightning in its grade colour (blue / red / gold) slams it onto the card.
 // Duplicates can be fused: 4 spare copies of one grade roll D.SYNTH_RATES for a card one grade up,
@@ -8,8 +8,8 @@
 // count(p, item), take(p, item), thumb(canvas96x128, item), view(best), price | pay(p, n) + costLabel(p, n) }.
 const Gacha = (() => {
   const { esc, ico } = UI;
-  const KINDS = ['transcend', 'weaponlook', 'pet', 'mount'];
-  const spec = (k) => ({ transcend: Transcend, weaponlook: Looks, pet: Pets, mount: Mounts })[k].gacha;
+  const KINDS = ['wardrobe', 'pet', 'mount'];
+  const spec = (k) => ({ wardrobe: Wardrobe, pet: Pets, mount: Mounts })[k].gacha;
   const BOLT = { 2: '#4fa3ff', 3: '#ff3b30', 4: '#ffd23a' };
   const TITLE = { 2: '희귀!', 3: '영웅!!', 4: '전설!!!' };
   const CHARGE = { 2: 0.9, 3: 1.4, 4: 2.1 }; // seconds a 희귀+ reel spins alone before the strike
@@ -47,11 +47,16 @@ const Gacha = (() => {
   };
 
   // ---------------------------------------------------------------- pulls
+  function rollGrade(rates = D.SUMMON_RATES) {
+    let r = Math.random();
+    for (let g = rates.length - 1; g >= 0; g--) { r -= rates[g]; if (r < 0) return g; }
+    return 0;
+  }
   function roll(sp, p, n) {
     const pool = sp.pool(p);
     const byGrade = (g) => { const c = pool.filter((x) => x.grade === g); return c.length ? c : pool; };
     const res = [];
-    for (let i = 0; i < n; i++) res.push(U.pick(byGrade(Transcend.rollGrade())));
+    for (let i = 0; i < n; i++) res.push(U.pick(byGrade(rollGrade())));
     if (n === 11 && !res.some((x) => x.grade >= 2)) res[U.randi(0, 10)] = U.pick(byGrade(2));
     return res;
   }
@@ -188,7 +193,6 @@ const Gacha = (() => {
       if (x.grade < 3 || (ok && !ok[i])) return;
       const html = `<b>${esc(p.name)}</b>님이 ${ok ? '합성으로 ' : ''}<em class="${x.grade >= 4 ? 'legend' : ''}">${esc(x.name)}</em> ${sp.noun}을(를) 획득했습니다.`;
       UI.announce(html);
-      if (kind === 'transcend') Game.lastCardNotice = html;
     };
     const land = (r, quiet) => {
       r.state = 'done'; r.pos = r.F; r.v = 0;
@@ -365,7 +369,7 @@ const Gacha = (() => {
   }
 
   // ---------------------------------------------------------------- summon screen
-  let curTab = 'transcend', mode = 'pull', sGrade = 0;
+  let curTab = 'wardrobe', mode = 'pull', sGrade = 0;
   // arg: a kind ('mount') or kind:mode ('mount:synth')
   function open(arg) {
     const [ak, am] = String(arg || '').split(':');
@@ -389,7 +393,7 @@ const Gacha = (() => {
           <div class="summon-box" style="background:linear-gradient(#3a1c16,#140a08)"><h4>${esc(sp.title)} 소환 11회</h4><canvas width="96" height="128"></canvas><p>11회 소환 시 <b style="color:#3f8cff">희귀</b> 이상 1개 확정!</p>
             <button class="gold-btn" data-pull="11">${costLabel(sp, p, 11)}</button></div>
         </div>
-        <div class="rates">보유: 다이아 <b style="color:#9fe0ff">${U.fmt(p.s.dia)}</b>${curTab === 'transcend' ? ` · 소환권 <b style="color:#c79cff">${p.count('ticket')}</b>` : ''}<br>
+        <div class="rates">보유: 다이아 <b style="color:#9fe0ff">${U.fmt(p.s.dia)}</b>${curTab === 'wardrobe' ? ` · 소환권 <b style="color:#c79cff">${p.count('ticket')}</b>` : ''}<br>
         확률 — ${D.GRADES.slice(0, D.SUMMON_RATES.length).map((g, i) => `<span class="${g.cls}">${g.name} ${(D.SUMMON_RATES[i] * 100).toFixed(1)}%</span>`).join(' · ')}</div>`;
       body.querySelectorAll('.summon-box canvas').forEach((cv, i) => { const x = show[i % Math.max(1, show.length)] || pool[0]; if (x) try { sp.thumb(cv, x); } catch (e) { /* preview only */ } });
       body.querySelectorAll('button img').forEach((i) => { i.style.width = '16px'; i.style.verticalAlign = '-3px'; });
@@ -422,5 +426,5 @@ const Gacha = (() => {
   }
 
   UI.OPENERS.summon = open;
-  return { run, open, synth, spare: (kind, p, g) => spare(spec(kind), p, g), KINDS };
+  return { run, open, synth, rollGrade, spare: (kind, p, g) => spare(spec(kind), p, g), KINDS };
 })();

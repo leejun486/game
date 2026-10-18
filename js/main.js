@@ -4,7 +4,7 @@ const SAVE_KEY = 'eclipse_awakening_save_v1';
 
 const Game = {
   player: null, monsters: [], npcs: [], bots: [], projectiles: [], fx: [], floaters: [], respawns: [], drops: [],
-  cam: { x: 0, y: 0 }, zoom: 1, shake: 0, time: 0, started: false, muted: false, lastCardNotice: '',
+  cam: { x: 0, y: 0 }, zoom: 1, shake: 0, time: 0, started: false, muted: false,
 
   fighters() { return this.player && !this.player.dead ? [this.player, ...this.bots] : this.bots; },
   nearestMonster(from, maxD, pred) {
@@ -45,7 +45,7 @@ const Game = {
   },
   interact(npc) {
     Quests.onTalk(this, npc.def.id);
-    if (npc.def.transcend) return UI.open('npc', npc);
+    if (npc.def.wardrobe) return UI.open('npc', npc);
     UI.open('npc', npc);
   },
   scheduleRespawn(mon) {
@@ -380,11 +380,11 @@ const Game = {
       for (const c of cards) {
         const on = c.id === chosen;
         const a = on ? ANIMS[c.cls.attack] : ANIMS.walk;
-        const sheet = window.SPRITE_ROWS[c.cls.sheet + '_nw'] ? c.cls.sheet + '_nw' : c.cls.sheet;
+        const sheet = Wardrobe.sheetFor(c.id, Wardrobe.DEFAULT[c.id]);
         const col = on ? Math.floor(t / a.ft) % a.frames : walkCol(sheet, t / 0.1);
         const g = c.cv.getContext('2d');
         g.clearRect(0, 0, c.cv.width, c.cv.height); g.imageSmoothingEnabled = false;
-        Looks.drawComposite(g, sheet, Looks.DEFAULT[c.id], a.row + 2, col, 64, 120, 2, { t });
+        Looks.drawComposite(g, sheet, Wardrobe.DEFAULT[c.id].weapon, a.row + 2, col, 64, 120, 2, { t });
       }
       requestAnimationFrame(anim);
     })();
@@ -427,6 +427,7 @@ const Game = {
     UI.chat('이클립스: 어웨이크닝에 오신 것을 환영합니다!', 'sys');
     UI.chat('퀘스트 창(오른쪽 위)을 클릭하면 자동으로 이동합니다. AI 모드로 자동 사냥!', 'sys');
     if (!save.mailClaimed) UI.chat('[우편] 오픈 기념 선물이 도착했습니다. (메뉴 → 우편)', 'whisper');
+    if (save.wardRefund) { UI.chat(`[옷장] 초월이 옷장으로 바뀌었습니다. 보유하던 초월 카드는 의상 소환권 ${save.wardRefund}장으로 돌려드렸어요.`, 'whisper'); delete save.wardRefund; }
     setInterval(() => Game.save(), 10000);
     addEventListener('beforeunload', () => Game.save());
     setInterval(serverNews, 45000);
@@ -438,8 +439,8 @@ const Game = {
     const b = U.pick(Game.bots);
     const r = Math.random();
     if (r < 0.45) {
-      const c = Transcend.randomCard(Math.random() < 0.2 ? 4 : 3);
-      UI.announce(`<b>${UI.esc(b.name)}</b>님이 <em class="${c.grade >= 4 ? 'legend' : ''}">${UI.esc(c.name)}</em> 초월을 획득했습니다.`);
+      const c = Wardrobe.randomItem(b.cls, Math.random() < 0.2 ? 4 : 3);
+      UI.announce(`<b>${UI.esc(b.name)}</b>님이 <em class="${c.grade >= 4 ? 'legend' : ''}">${UI.esc(c.name)}</em> 의상을 획득했습니다.`);
     } else if (r < 0.8) {
       const it = D.ITEMS[U.pick(['w_sword4', 'w_bow4', 'w_staff4', 'a_4', 'r_3', 'w_sword5', 'w_staff5'])];
       UI.announce(`<b>${UI.esc(b.name)}</b>님이 <em class="${it.grade >= 4 ? 'legend' : ''}">${UI.esc(it.name)}</em>을(를) 획득했습니다.`);
@@ -529,9 +530,8 @@ const Game = {
     else if (k === 't') UI.open('teleport');
     else if (k === 'm') UI.open('map');
     else if (k === 'b') Game.useTownScroll();
-    else if (k === 'y') UI.open('transcend');
+    else if (k === 'y') UI.open('wardrobe');
     else if (k === 'p') UI.open('pass');
-    else if (k === 'v') UI.open('weaponlook');
     else if (k === 'n') UI.open('pet');
     else if (k === 'r') UI.toggleRide();
     else if (k === 'o') UI.open('bosstime');

@@ -152,7 +152,7 @@ const UI = (() => {
       const icon = b.icon || (b.id === 'rage' ? 'sk_k_rage' : b.id === 'wind' ? 'sk_e_wind' : b.id === 'haste' ? 'pot-green' : b.id === 'shield' ? 'sk_m_heal' : 'star');
       const left = b.t >= 60 ? `${Math.ceil(b.t / 60)}분` : Math.ceil(b.t);
       return `<div class="buff" title="${esc(b.name)}">${ico(icon)}<b>${left}</b></div>`;
-    }).join('') + (st.card ? `<div class="buff" title="초월: ${esc(D.CARD_BY_ID[st.card].name)}" style="background:rgba(60,20,20,.85)">${ico('transcend')}</div>` : '');
+    }).join('');
     if (bEl._h !== buffHtml) { bEl.innerHTML = buffHtml; bEl._h = buffHtml; }
     // zone
     const z = World.zoneAt(p.x, p.y);
@@ -370,7 +370,7 @@ const UI = (() => {
     const dots = Content.menuDots(game.player);
     const top = [['shop', 'shop', '상점'], ['summon', 'summon', '소환'], ['event', 'event', '이벤트'], ['pass', 'pass', '시즌 패스'], ['skills', 'skill', '스킬'], ['inventory', 'inventory', '인벤토리']];
     const grid = [
-      ['character', 'character', '캐릭터'], ['stats', 'star', '잠재력'], ['skills', 'blade', '전투 특성'], ['transcend', 'transcend', '초월', 1], ['weaponlook', 'sword', '무기 외형'], ['skin', 'wings', '스킨'],
+      ['character', 'character', '캐릭터'], ['stats', 'star', '잠재력'], ['skills', 'blade', '전투 특성'], ['wardrobe', 'wings', '옷장', 1],
       ['teleport', 'teleport', '권능'], ['summon', 'summon', '서판 조합'], ['quests', 'quest', '퀘스트', 1], ['event', 'bell', '의뢰'], ['craft', 'craft', '제작'], ['achievement', 'achievement', '업적', 1], ['collection', 'spellbook', '수집', 1],
       ['pet', 'pet', '펫', 1], ['mount', 'mount', '탈것', 1], ['guild', 'guild', '혈맹', 1], ['ranking', 'ranking', '순위'], ['relation', 'trade', '관계'], ['exchange', 'exchange', '거래소'], ['siege', 'crown', '공성전'], ['ranking', 'skull', '원수'], ['auto', 'auto', 'AI 모드'],
       ['map', 'compass', '위치 저장'],
@@ -380,7 +380,7 @@ const UI = (() => {
         <button class="close-x" style="position:absolute;right:10px;top:8px;font-size:34px">×</button></div>
       <div class="banner" id="menu-banner"><div><h4>개발자 노트</h4><small>자세히 보기</small></div></div>
       <div class="feature-grid">
-        <button data-a="transcend" style="background:linear-gradient(90deg,rgba(0,0,0,.6),rgba(0,0,0,.1)),linear-gradient(120deg,#5a4630,#2a2016)">성소<small>초월 · 영혼의 성소</small></button>
+        <button data-a="wardrobe" style="background:linear-gradient(90deg,rgba(0,0,0,.6),rgba(0,0,0,.1)),linear-gradient(120deg,#6a3a3a,#2a1616)">옷장<small>모자 · 상의 · 무기 꾸미기</small></button>
         <button data-a="bosstime" style="background:linear-gradient(90deg,rgba(0,0,0,.5),rgba(0,0,0,.1)),radial-gradient(circle at 70% 60%,#d9a24a,#1a1206 60%)">이클립스 타임<small>보스 출현 정보</small></button>
         <button data-a="dungeon" style="background:linear-gradient(90deg,rgba(0,0,0,.6),rgba(0,0,0,.1)),radial-gradient(circle at 75% 50%,#7a3ad0,#150a24 65%)">던전<small>이클립스 균열 · 일일 3회</small></button>
         <button data-a="siege" style="background:linear-gradient(90deg,rgba(0,0,0,.6),rgba(0,0,0,.1)),linear-gradient(120deg,#6a4a3a,#1d1410)">공성전<small>아스텔라 성 · 혈맹 전쟁</small></button>
@@ -626,11 +626,10 @@ const UI = (() => {
     const p = game.player, st = p.stats;
     const cv = document.createElement('canvas'); cv.width = cv.height = 160;
     { const g = cv.getContext('2d'); g.imageSmoothingEnabled = false; Looks.drawComposite(g, p.sheet, Looks.current(p), 10, 0, 80, 150, 2.4, { t: 0 }); }
-    const card = p.s.card && D.CARD_BY_ID[p.s.card];
     body.innerHTML = `<div style="display:flex;gap:18px;flex-wrap:wrap"><div id="char-cv" style="background:radial-gradient(#3a2a20,#0e0b09);border:1px solid var(--line)"></div>
       <div style="flex:1;min-width:220px"><h2 style="margin:0;color:#e9d7a8">${esc(p.name)} <small style="font-size:14px;color:#a39a88">Lv.${p.s.lv} ${p.classDef.name}</small></h2>
       <div style="margin:6px 0 10px;color:#a39a88">전투력 <b style="color:#ffd76a">${U.fmt(p.power)}</b> · 처치 ${U.fmt(p.s.kills)} · 플레이 ${Math.floor(p.s.playTime / 60)}분</div>
-      ${card ? `<div style="margin-bottom:10px">초월: <b class="${D.GRADES[card.grade].cls}">[${D.GRADES[card.grade].name}] ${esc(card.name)}</b></div>` : '<div style="margin-bottom:10px;color:#777">초월 없음</div>'}
+      <div style="margin-bottom:10px">옷장: ${['set', 'top', 'hat', 'weapon'].map((k) => p.s.ward.eq[k] && Wardrobe.BY_ID[p.s.ward.eq[k]]).filter(Boolean).filter((it, i, a) => !(a[0].slot === 'set' && (it.slot === 'top' || it.slot === 'hat'))).map((it) => `<b class="${D.GRADES[it.grade].cls}">${esc(it.name)}</b>`).join(' · ')}</div>
       <div class="stat-list" style="columns:2">
         <div>공격력 <b>${st.atk}</b></div><div>방어력 <b>${st.def}</b></div><div>HP <b>${U.fmt(st.maxHp)}</b></div><div>MP <b>${U.fmt(st.maxMp)}</b></div>
         <div>공격 속도 <b>+${st.atkSpd}%</b></div><div>시전 속도 <b>+${st.castSpd}%</b></div><div>치명타 <b>${st.crit.toFixed(1)}%</b></div><div>회피 <b>${st.eva}</b></div>
@@ -662,7 +661,7 @@ const UI = (() => {
     body.innerHTML = `<div class="npc-talk"><div id="npc-cv"></div><p>${esc(d.talk)}</p></div><div class="dialog-btns">
       ${d.shop ? `<button class="gold-btn" data-do="shop">거래하기</button>` : ''}
       ${d.teleport ? `<button class="gold-btn" data-do="tp">순간이동</button><button class="dark-btn" data-do="dg">이클립스 균열</button><button class="dark-btn" data-do="boss">보스 정보</button>` : ''}
-      ${d.transcend ? `<button class="gold-btn" data-do="tr">초월</button><button class="dark-btn" data-do="summon">초월 소환</button>` : ''}
+      ${d.wardrobe ? `<button class="gold-btn" data-do="tr">옷장</button><button class="dark-btn" data-do="summon">의상 소환</button>` : ''}
       <button class="dark-btn" data-do="bye">대화 종료</button></div>`;
     body.querySelector('#npc-cv').appendChild(cv);
     body.onclick = (e) => {
@@ -672,8 +671,8 @@ const UI = (() => {
       else if (a === 'tp') open('teleport');
       else if (a === 'dg') open('dungeon');
       else if (a === 'boss') open('bosstime');
-      else if (a === 'tr') open('transcend');
-      else if (a === 'summon') open('summon');
+      else if (a === 'tr') open('wardrobe');
+      else if (a === 'summon') open('summon', 'wardrobe');
       else close();
     };
     return {};
@@ -703,7 +702,7 @@ const UI = (() => {
       <div class="list-row"><span>운영자 모드 (F2)</span><button class="gold-btn" data-do="gm">열기</button></div>
       <div class="list-row"><span>게임 저장</span><button class="dark-btn" data-do="save">저장</button></div>
       <div class="list-row"><span>저장 삭제 후 처음부터</span><button class="red-btn" data-do="reset">초기화</button></div>
-      <p class="sub" style="color:#888;font-size:12px;line-height:1.6">조작: 클릭 이동/공격 · WASD 이동 · 1~4 스킬 · 5~8 아이템 · Space 근처 적 공격 · G AI 모드 · Shift 질주 · I 인벤토리 · K 스킬 · U 상점 · 1~4·Q·E 스킬 · K 스킬 트리 · C 캐릭터 · J 퀘스트 · Y 초월 · V 무기 외형 · N 펫 · R 탈것 탑승 · P 시즌 패스 · O 보스 정보 · T 순간이동 · B 귀환 · M 지도 · Enter 채팅 · 마우스 휠 줌</p>`;
+      <p class="sub" style="color:#888;font-size:12px;line-height:1.6">조작: 클릭 이동/공격 · WASD 이동 · 1~4 스킬 · 5~8 아이템 · Space 근처 적 공격 · G AI 모드 · Shift 질주 · I 인벤토리 · K 스킬 · U 상점 · 1~4·Q·E 스킬 · K 스킬 트리 · C 캐릭터 · J 퀘스트 · Y 옷장 · N 펫 · R 탈것 탑승 · P 시즌 패스 · O 보스 정보 · T 순간이동 · B 귀환 · M 지도 · Enter 채팅 · 마우스 휠 줌</p>`;
     body.oninput = (e) => { if (e.target.matches('[data-bgm-vol]')) Music.set({ vol: e.target.value / 100, on: true }); };
     body.onclick = (e) => {
       const b = e.target.closest('[data-do]'); if (!b) return;
@@ -755,7 +754,7 @@ const UI = (() => {
     const { body } = makePanel('우편', 'center dialog');
     const p = game.player;
     const got = p.s.mailClaimed;
-    body.innerHTML = `<div class="list-row"><div><b>[운영자] 오픈 기념 선물</b><div class="sub">초월 소환권 x5, 다이아 500</div></div>${got ? '<span class="sub">수령 완료</span>' : '<button class="gold-btn" data-do="get">받기</button>'}</div>`;
+    body.innerHTML = `<div class="list-row"><div><b>[운영자] 오픈 기념 선물</b><div class="sub">의상 소환권 x5, 다이아 500</div></div>${got ? '<span class="sub">수령 완료</span>' : '<button class="gold-btn" data-do="get">받기</button>'}</div>`;
     body.onclick = (e) => {
       if (!e.target.closest('[data-do]')) return;
       p.s.mailClaimed = true; p.addItem('ticket', 5); p.s.dia += 500; U.sfx.coin(); toast('선물을 수령했습니다!', '#ffe38a'); refreshHud(); OPENERS.mail();
@@ -763,8 +762,7 @@ const UI = (() => {
     return {};
   };
   OPENERS.stats = OPENERS.character;
-  OPENERS.weaponlook = () => OPENERS.transcend();
-  OPENERS.skin = () => OPENERS.transcend();
+  OPENERS.skin = () => OPENERS.wardrobe();
 
   // Quest tracker click: claim if done, otherwise teleport straight to where the quest happens.
   // Works mid-hunt: the current target is dropped and AI mode resumes on arrival.
@@ -776,7 +774,6 @@ const UI = (() => {
     if (Dungeon.active) return toast('던전에서는 퀘스트 이동을 할 수 없습니다.', '#ff8a80');
     const q = Quests.current(p);
     const dest = Quests.destination(p);
-    if (q.type === 'equipCard') return open('transcend');
     if (q.type === 'enchant') return openEnchant('weapon');
     // no teleport: ride there along the A* path (auto-mount handles the horse)
     if (dest && dest.npc) {

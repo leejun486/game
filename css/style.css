@@ -359,7 +359,7 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
 #death-screen h2 { font-size: 40px; color: #d9453b; margin: 0 0 8px; letter-spacing: 6px; }
 #death-screen p { color: var(--muted); margin: 0 0 20px; }
 
-/* ---------- transcend (초월) ---------- */
+/* ---------- collection screens (펫 · 탈것) ---------- */
 .tr-wrap { position: absolute; inset: 0; display: flex; background: radial-gradient(ellipse at 55% 55%, #2a1414, #0d0b0b 70%); }
 .tr-side { width: 70px; background: rgba(0,0,0,.45); display: flex; flex-direction: column; align-items: center; padding-top: 60px; gap: 20px; }
 .tr-side button { background: none; border: 0; display: flex; flex-direction: column; align-items: center; font-size: 11px; color: var(--muted); gap: 4px; }
@@ -401,6 +401,26 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
 .tr-actions { display: flex; gap: 8px; margin-top: 10px; }
 .tr-actions button { flex: 1; padding: 12px; }
 .tr-close { position: absolute; top: 8px; right: 12px; z-index: 2; }
+
+/* ---------- 옷장 (wardrobe) ---------- */
+.ward-wrap { display: grid; grid-template-columns: 260px 1fr; gap: 16px; min-height: 0; }
+.ward-left { display: flex; flex-direction: column; gap: 10px; }
+.ward-cv { width: 240px; height: 280px; align-self: center; image-rendering: pixelated; border: 1px solid var(--line);
+  background: radial-gradient(ellipse at 50% 70%, #3a2620, #120c0a 72%); }
+.ward-worn { font-size: 13px; line-height: 1.8; padding: 6px 10px; background: rgba(0,0,0,.35); border: 1px solid var(--line); }
+.ward-worn .sub { display: inline-block; width: 34px; }
+.ward-right { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.ward-grid { grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); max-height: 46vh; }
+.ward-detail { margin-top: 10px; padding: 10px 12px; background: rgba(0,0,0,.35); border: 1px solid var(--line); font-size: 14px; line-height: 1.6; min-height: 92px; }
+.ward-detail .sub { font-size: 12.5px; }
+.ward-detail .btns { display: flex; gap: 8px; margin-top: 8px; align-items: center; }
+.ward-detail .btns button { padding: 8px 22px; }
+.ward-left [data-summon] img { width: 22px; height: 22px; vertical-align: middle; margin-right: 4px; }
+@media (max-width: 700px) {
+  .ward-wrap { grid-template-columns: 1fr; }
+  .ward-cv { width: 180px; height: 210px; }
+  .ward-grid { max-height: 34vh; }
+}
 
 /* summon animation */
 .summon-stage { position: absolute; inset: 0; pointer-events: auto; background: radial-gradient(#1c1430, #050408 70%); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 5; }

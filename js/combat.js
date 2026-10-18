@@ -704,7 +704,6 @@ const Quests = {
     }
     switch (q.type) {
       case 'level': return { cur: p.s.lv, need: q.n, done: p.s.lv >= q.n };
-      case 'equipCard': return { cur: p.s.card ? 1 : 0, need: 1, done: !!p.s.card };
       case 'enchant': { const w = p.equipped('weapon'); const en = w ? w.en || 0 : 0; return { cur: Math.min(en, q.n), need: q.n, done: en >= q.n }; }
       case 'talk': return { cur: p.s.qprog, need: 1, done: p.s.qprog >= 1 };
       default: return { cur: Math.min(p.s.qprog, q.n), need: q.n, done: p.s.qprog >= q.n };

@@ -70,7 +70,7 @@ const Dungeon = (() => {
       Content.passXp(p, 40);
       U.sfx.legend();
       UI.toast('던전 클리어!', '#ffe38a');
-      UI.chat(`[던전 보상] 아데나 ${U.fmt(r.gold)}, 다이아 ${r.dia}, 무기 마법 주문서, 초월 소환권, 강력 체력 회복제 x5`, 'sys');
+      UI.chat(`[던전 보상] 아데나 ${U.fmt(r.gold)}, 다이아 ${r.dia}, 무기 마법 주문서, 의상 소환권, 강력 체력 회복제 x5`, 'sys');
       UI.announce(`<b>${UI.esc(p.name)}</b>님이 <em>이클립스 균열</em>을 정복했습니다!`);
     } else {
       U.sfx.fail();

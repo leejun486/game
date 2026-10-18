@@ -1020,8 +1020,7 @@ const Mounts = (() => {
       const bon = (o) => Object.entries(o).map(([k, v]) => `${D.STAT_NAMES[k][0]} <span>+${v}${D.STAT_NAMES[k][1]}</span>`).join(', ');
       el.innerHTML = `<div class="tr-wrap">
         <div class="tr-side">
-          <button data-go="transcend">${ico('transcend')}초월</button>
-          <button data-go="weaponlook">${ico('sword')}무기 외형</button>
+          <button data-go="wardrobe">${ico('wings')}옷장</button>
           <button data-go="pet">${ico('pet')}펫</button>
           <button class="on">${ico('mount')}탈것</button>
         </div>

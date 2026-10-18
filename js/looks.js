@@ -1,5 +1,5 @@
 'use strict';
-// 무기 외형 (weapon looks): data, layered rendering, idle flourishes, collection screen and summon.
+// 무기 외형 (weapon looks): the weapon art worn in the 옷장's 무기 slot — data, layered rendering, idle flourishes.
 const Looks = (() => {
   const ELEM = {
     none: { name: '무속성', color: '#fff3c8' }, fire: { name: '화염', color: '#ff6a2a' }, ice: { name: '냉기', color: '#7fd4ff' },
@@ -37,9 +37,6 @@ const Looks = (() => {
   const BY_ID = {};
   for (const l of LIST) { l.cls = window.WEAPON_META[l.id].cls; BY_ID[l.id] = l; }
   const DEFAULT = { knight: 'ks_steel', elf: 'eb_medium', mage: 'ms_purple' };
-  const EQUIP_BONUS = { atk: [2, 4, 7, 12, 20], crit: [0, 1, 2, 4, 6] };
-  const OWN_BONUS = [5, 10, 20, 40, 80]; // max HP per owned look
-  const PRICE = { one: 150, eleven: 1500 };
   const IMG = {};
 
   // ---------------------------------------------------------------- assets / state
@@ -53,22 +50,7 @@ const Looks = (() => {
       IMG[id + '_' + k] = im;
     }
   }
-  function migrate(p) {
-    p.s.wlooks = p.s.wlooks || {};
-    const def = DEFAULT[p.cls];
-    if (!p.s.wlooks[def]) p.s.wlooks[def] = 1;
-    if (p.s.wlook && (!BY_ID[p.s.wlook] || BY_ID[p.s.wlook].cls !== p.cls)) p.s.wlook = null;
-  }
-  const current = (p) => p.s.wlook || DEFAULT[p.cls];
-  function bonuses(p) {
-    const out = [];
-    const l = BY_ID[current(p)];
-    out.push({ atk: EQUIP_BONUS.atk[l.grade], crit: EQUIP_BONUS.crit[l.grade] });
-    let hp = 0;
-    for (const id in p.s.wlooks || {}) hp += OWN_BONUS[BY_ID[id].grade];
-    out.push({ hp });
-    return out;
-  }
+  const current = (p) => Wardrobe.weapon(p); // what the 옷장 has in the 무기 slot
 
   // ---------------------------------------------------------------- rendering
   // map a body sheet row to a weapon atlas row (-1 = weapon hidden for that pose)
@@ -86,7 +68,6 @@ const Looks = (() => {
   }
   // draw body + weapon layers; (x, y) = feet position, s = scale
   // menus show looks on a body that can wear them
-  const menuSheet = (p) => D.BAKED_WEAPON[p.sheet] || p.sheet;
   function drawComposite(ctx, sheet, id, row, col, x, y, s, opt = {}) {
     const body = Sprites[sheet];
     if (!body) return;
@@ -169,139 +150,5 @@ const Looks = (() => {
     if (f.charge && frame === 16 && !ac.released) { ac.released = true; game.fx.push(Combat.makeFx('burst', tip.cx, tip.cy, { color: el, r: 50 })); }
   }
 
-  // ---------------------------------------------------------------- UI: collection screen
-  const { esc, ico } = UI;
-  let sel = null, raf = 0, filter = -1;
-
-  function previewLoop(canvas, getId, getSheet) {
-    cancelAnimationFrame(raf);
-    const g = canvas.getContext('2d');
-    const t0 = performance.now();
-    const loop = () => {
-      if (!canvas.isConnected) return;
-      const t = (performance.now() - t0) / 1000;
-      const id = getId(), look = BY_ID[id];
-      const W = canvas.width, H = canvas.height;
-      g.clearRect(0, 0, W, H);
-      g.imageSmoothingEnabled = false;
-      const col3 = D.GRADES[look.grade].color, el = ELEM[look.el].color;
-      const rg = g.createRadialGradient(W / 2, H * 0.52, 10, W / 2, H * 0.52, H * 0.5);
-      rg.addColorStop(0, hexA(col3, 0.35)); rg.addColorStop(1, hexA(col3, 0));
-      g.fillStyle = rg; g.fillRect(0, 0, W, H);
-      g.fillStyle = 'rgba(0,0,0,0.5)'; g.beginPath(); g.ellipse(W / 2, H * 0.86, W * 0.16, H * 0.03, 0, 0, Math.PI * 2); g.fill();
-      // cycle: stand -> attack -> flourish -> walk
-      const cls = look.cls, fl = FLOURISH[cls][0];
-      const atk = { knight: [12, 6, 0.08], elf: [16, 13, 0.06], mage: [4, 8, 0.08] }[cls];
-      const cyc = t % 7;
-      let row = 10, col = 0;
-      if (cyc < 1.2) { row = 10; col = 0; }
-      else if (cyc < 2.4) { row = atk[0] + 2; col = Math.min(atk[1] - 1, Math.floor((cyc - 1.2) / atk[2])); }
-      else if (cyc < 2.4 + fl.seq.length * fl.ft) {
-        const i = Math.min(fl.seq.length - 1, Math.floor((cyc - 2.4) / fl.ft));
-        row = ANIMS[fl.anim].row + 2; col = fl.seq[i];
-      } else { row = 10; col = walkCol(getSheet(), t * 10); }
-      const s = H / 88;
-      const pt = drawComposite(g, getSheet(), id, row, col, W / 2, H * 0.86, s, { t });
-      if (pt && look.grade >= 3) {
-        g.globalCompositeOperation = 'lighter';
-        for (let i = 0; i < 6; i++) {
-          const a = t * 2 + i * 1.05, r = 22 + Math.sin(t * 3 + i) * 6;
-          g.fillStyle = hexA(el, 0.8); g.fillRect(pt.cx + Math.cos(a) * r, pt.cy + Math.sin(a) * r * 0.6, 4, 4);
-        }
-        g.globalCompositeOperation = 'source-over';
-      }
-      raf = requestAnimationFrame(loop);
-    };
-    loop();
-  }
-  function thumb(canvas, sheet, id) {
-    const g = canvas.getContext('2d');
-    g.imageSmoothingEnabled = false;
-    g.clearRect(0, 0, canvas.width, canvas.height);
-    // side-facing action pose so the weapon is clearly visible
-    const pose = { knight: [15, 3], elf: [19, 8], mage: [7, 4] }[BY_ID[id].cls];
-    drawComposite(g, sheet, id, pose[0], pose[1], canvas.width * 0.42, canvas.height * 0.8, canvas.height / 90, { t: 0 });
-  }
-
-  function open() {
-    const game = Game, p = game.player;
-    const layer = document.getElementById('panel-layer');
-    layer.innerHTML = '';
-    const el = document.createElement('div');
-    el.className = 'panel full';
-    layer.appendChild(el);
-    const mine = LIST.filter((l) => l.cls === p.cls);
-    if (!sel || BY_ID[sel].cls !== p.cls) sel = current(p);
-    const render = () => {
-      if (el.querySelector('.summon-stage')) return; // a reward popping mid-summon must not wipe the reveal
-      const look = BY_ID[sel], owned = p.s.wlooks[sel] || 0;
-      const eq = current(p) === sel;
-      const list = mine.filter((l) => filter < 0 || l.grade === filter).sort((a, b) => (!!p.s.wlooks[b.id] - !!p.s.wlooks[a.id]) || b.grade - a.grade);
-      let hp = 0; for (const id in p.s.wlooks) hp += OWN_BONUS[BY_ID[id].grade];
-      el.innerHTML = `<div class="tr-wrap">
-        <div class="tr-side">
-          <button data-go="transcend">${ico('transcend')}초월</button>
-          <button class="on">${ico('sword')}무기 외형</button>
-          <button data-soon>${ico('wings')}스킨</button>
-          <button data-go="collection">${ico('collection')}수집</button>
-        </div>
-        <div class="tr-main">
-          <div class="tr-head"><h3>무기 외형</h3>
-            <div style="display:flex;gap:18px;align-items:center"><span class="cur">${ico('diamond', 'dia')}<b>${U.fmt(p.s.dia)}</b></span>
-            <button class="dark-btn" data-pull="1">${ico('diamond', 'dia')} ${PRICE.one} 소환</button><button class="gold-btn" data-pull="11">${ico('diamond', 'dia')} ${U.fmt(PRICE.eleven)} 11회 소환</button><button class="dark-btn" data-go="summon" data-arg="weaponlook:synth">합성</button>
-            <button class="close-x" data-close style="font-size:30px">⇥</button></div></div>
-          <div class="tr-content">
-            <div class="tr-info">
-              <div class="grade ${D.GRADES[look.grade].cls}">${D.GRADES[look.grade].name}</div>
-              <div class="cname" style="color:${D.GRADES[look.grade].color}">${owned ? '' : '🔒 '}${esc(look.name)}</div>
-              <div class="stats"><div>속성 <span style="color:${ELEM[look.el].color}">${ELEM[look.el].name}</span></div>
-                <div>장착 효과: 공격력 <span>+${EQUIP_BONUS.atk[look.grade]}</span>${EQUIP_BONUS.crit[look.grade] ? `, 치명타 <span>+${EQUIP_BONUS.crit[look.grade]}%</span>` : ''}</div>
-                <div>보유 효과: 최대 HP <span>+${OWN_BONUS[look.grade]}</span></div>
-                ${look.grade >= 2 ? '<div style="color:#c9b0e8">✦ 무기 광채 효과</div>' : ''}${look.grade >= 3 ? `<div style="color:${ELEM[look.el].color}">✦ ${ELEM[look.el].name} 오라 · 공격 궤적 효과</div>` : ''}</div>
-              <div class="stats" style="font-size:12.5px;color:#a39a88">보유 ${owned}개 · 수집 ${mine.filter((l) => p.s.wlooks[l.id]).length}/${mine.length}<br>전체 보유 효과: 최대 HP +${hp}</div>
-              <p style="font-size:12px;color:#888;line-height:1.6">캐릭터가 가만히 서 있으면 무기 외형에 맞는 대기 모션을 보여줍니다.</p>
-            </div>
-            <div class="tr-center"><canvas id="wl-cv" width="420" height="440"></canvas></div>
-            <div class="tr-right">
-              <div class="grade-filter">${[-1, 4, 3, 2, 1, 0].map((g) => `<button data-filter="${g}" class="${filter === g ? 'on' : ''}" style="color:${g < 0 ? '#e9d7a8' : D.GRADES[g].color};border-color:${g < 0 ? '' : D.GRADES[g].color}">${g < 0 ? 'All' : D.GRADES[g].name[0]}</button>`).join('')}</div>
-              <div class="card-grid">${list.map((l) => `<div class="card gr${l.grade} ${l.id === sel ? 'sel' : ''} ${p.s.wlooks[l.id] ? '' : 'locked'}" data-look="${l.id}"><canvas width="96" height="128"></canvas>
-                ${p.s.wlooks[l.id] ? `<span class="cnt">${p.s.wlooks[l.id]}</span>` : ''}${current(p) === l.id ? '<span class="eqb">E</span>' : ''}<div class="nm ${D.GRADES[l.grade].cls}">${esc(l.name)}</div></div>`).join('')}</div>
-              <div class="tr-actions">${eq ? '<button class="dark-btn" disabled>장착 중</button>' : `<button class="gold-btn" data-equip ${owned ? '' : 'disabled'}>장착</button>`}</div>
-            </div>
-          </div>
-        </div></div>`;
-      el.querySelectorAll('.tr-head button img').forEach((i) => { i.style.width = '16px'; i.style.verticalAlign = '-3px'; });
-      el.querySelectorAll('[data-look] canvas').forEach((cv) => thumb(cv, menuSheet(p), cv.parentElement.dataset.look));
-      previewLoop(el.querySelector('#wl-cv'), () => sel, () => menuSheet(p));
-    };
-    el.onclick = (e) => {
-      const t = e.target;
-      const c = t.closest('[data-look]'); if (c) { sel = c.dataset.look; U.sfx.ui(); return render(); }
-      const f = t.closest('[data-filter]'); if (f) { filter = +f.dataset.filter; return render(); }
-      if (t.closest('[data-close]')) { cancelAnimationFrame(raf); UI.close(); return; }
-      if (t.closest('[data-soon]')) return UI.toast('업데이트 예정입니다.');
-      const go = t.closest('[data-go]'); if (go) { cancelAnimationFrame(raf); return UI.open(go.dataset.go, go.dataset.arg); }
-      if (t.closest('[data-equip]')) {
-        p.s.wlook = sel; p.recalc(); U.sfx.success();
-        UI.toast(`${BY_ID[sel].name} 외형을 장착했습니다.`, D.GRADES[BY_ID[sel].grade].color);
-        UI.refreshHud(); return render();
-      }
-      const pull = t.closest('[data-pull]'); if (pull) Gacha.run('weaponlook', +pull.dataset.pull, el, render);
-    };
-    render();
-    return { name: 'weaponlook', rerender: render, onClose: () => cancelAnimationFrame(raf) };
-  }
-
-  const gacha = {
-    title: '무기 외형', noun: '무기 외형', icon: 'sword', desc: '내 클래스의 무기 외형을 소환합니다.', price: PRICE,
-    pool: (p) => LIST.filter((l) => l.cls === p.cls),
-    grant: (p, items) => { for (const l of items) p.s.wlooks[l.id] = (p.s.wlooks[l.id] || 0) + 1; p.recalc(); },
-    thumb: (cv, l) => thumb(cv, menuSheet(Game.player), l.id),
-    count: (p, l) => p.s.wlooks[l.id] || 0,
-    take: (p, l) => { p.s.wlooks[l.id]--; },
-    view: (best) => { sel = best.id; UI.open('weaponlook'); },
-  };
-
-  UI.OPENERS.weaponlook = open;
-  return { LIST, BY_ID, ELEM, DEFAULT, load, migrate, current, bonuses, drawComposite, atlasRow, point, startFlourish, tickFlourish, FLOURISH, hexA, gacha };
+  return { LIST, BY_ID, ELEM, DEFAULT, load, current, drawComposite, atlasRow, point, startFlourish, tickFlourish, FLOURISH, hexA };
 })();

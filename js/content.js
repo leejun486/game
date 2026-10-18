@@ -8,11 +8,11 @@ const Content = (() => {
   const ATTEND = [
     { items: { hp_s: 50 }, label: '체력 회복제 50' },
     { gold: 10000, label: '아데나 10,000' },
-    { items: { ticket: 1 }, label: '초월 소환권 1' },
+    { items: { ticket: 1 }, label: '의상 소환권 1' },
     { items: { sc_armor: 1 }, label: '갑옷 마법 주문서 1' },
     { dia: 150, label: '다이아 150' },
     { items: { sc_weapon: 1 }, label: '무기 마법 주문서 1' },
-    { items: { ticket: 5 }, label: '초월 소환권 5' },
+    { items: { ticket: 5 }, label: '의상 소환권 5' },
   ];
   const PASS_TIERS = 30, PASS_STEP = 25, PASS_PRICE = 1000;
   const passReward = (i, prem) => {
@@ -23,7 +23,7 @@ const Content = (() => {
       if (n % 2 === 0) return { items: { hp_m: 10 }, label: '고급 물약 10', icon: 'pot-orange' };
       return { gold: 2000 * n, label: `아데나 ${U.fmt(2000 * n)}`, icon: 'gold' };
     }
-    if (n === PASS_TIERS) return { legend: true, label: '전설 초월 카드', icon: 'transcend' };
+    if (n === PASS_TIERS) return { legend: true, label: '전설 의상', icon: 'wings' };
     if (n % 10 === 0) return { items: { ticket: 5 }, label: '소환권 5', icon: 'ticket' };
     if (n % 5 === 0) return { items: { sc_weapon: 1 }, label: '무기 주문서', icon: 'scroll-weapon' };
     if (n % 3 === 0) return { items: { ticket: 1 }, label: '소환권 1', icon: 'ticket' };
@@ -40,8 +40,8 @@ const Content = (() => {
     { id: 'lv40', name: '영웅', desc: '레벨 40 달성', need: 40, cur: (p) => p.s.lv, dia: 400 },
     { id: 'en7', name: '강화의 달인', desc: '무기 +7 강화 성공', need: 7, cur: wpnEn, dia: 150 },
     { id: 'en9', name: '신의 손', desc: '무기 +9 강화 성공', need: 9, cur: wpnEn, dia: 500 },
-    { id: 'card5', name: '수집가', desc: '초월 카드 5종 보유', need: 5, cur: (p) => Object.keys(p.s.cards).length, dia: 50 },
-    { id: 'card15', name: '영혼의 수집가', desc: '초월 카드 15종 보유', need: 15, cur: (p) => Object.keys(p.s.cards).length, dia: 300 },
+    { id: 'card5', name: '멋쟁이', desc: '의상 5종 보유', need: 5, cur: (p) => Object.keys(p.s.ward.own).length, dia: 50 },
+    { id: 'card15', name: '옷장의 주인', desc: '의상 15종 보유', need: 15, cur: (p) => Object.keys(p.s.ward.own).length, dia: 300 },
     { id: 'boss1', name: '보스 사냥꾼', desc: '필드 보스 처치', need: 1, cur: (p) => p.s.bossKills, dia: 100 },
     { id: 'boss10', name: '보스 학살자', desc: '필드 보스 10회 처치', need: 10, cur: (p) => p.s.bossKills, dia: 500 },
     { id: 'dg1', name: '균열 돌파', desc: '이클립스 균열 클리어', need: 1, cur: (p) => p.s.dungeon.clears || 0, dia: 100 },
@@ -87,7 +87,7 @@ const Content = (() => {
     { id: 'm1', cat: 'misc', name: '회복의 달인', items: ['hp_l', 'hp_l', 'hp_l', 'hp_l', 'hp_l'], bonus: { hp: 150, mp: 50 } },
     { id: 'm2', cat: 'misc', name: '강화 재료 창고', items: ['sc_weapon', 'sc_weapon', 'sc_armor', 'sc_armor'], bonus: { atk: 4, def: 4 } },
     { id: 'm3', cat: 'misc', name: '여행자의 가방', items: ['tp_town', 'tp_town', 'tp_town', 'haste', 'haste'], bonus: { moveSpd: 5, eva: 20 } },
-    { id: 'm4', cat: 'misc', name: '초월의 인장', items: ['ticket', 'ticket', 'ticket'], bonus: { expPct: 5 } },
+    { id: 'm4', cat: 'misc', name: '의상의 인장', items: ['ticket', 'ticket', 'ticket'], bonus: { expPct: 5 } },
     { id: 'b1', cat: 'boss', name: '뱀파이어 군주의 유산', items: ['w_sword4', 'a_4', 'r_3'], bonus: { atk: 8, dmgRed: 2 } },
     { id: 'b2', cat: 'boss', name: '미노타우르스의 보물', items: ['w_sword5', 'a_4', 'r_h'], bonus: { hp: 300, def: 6 } },
     { id: 'b3', cat: 'boss', name: '서리 거인의 결정', items: ['w_sword_h2', 'a_h2', 'r_h'], bonus: { atk: 12, hp: 250, eva: 30 } },
@@ -186,8 +186,8 @@ const Content = (() => {
     if (r.dia) { p.s.dia += r.dia; parts.push(`다이아 ${r.dia}`); }
     if (r.items) for (const id in r.items) { p.addItem(id, r.items[id]); parts.push(`${D.ITEMS[id].name} ${r.items[id]}`); }
     if (r.legend) {
-      const c = Transcend.randomCard(4); Transcend.addCard(p, c.id); parts.push(`[전설] ${c.name}`);
-      UI.announce(`<b>${esc(p.name)}</b>님이 <em class="legend">${esc(c.name)}</em> 초월을 획득했습니다.`);
+      const it = Wardrobe.randomItem(p.cls, 4); Wardrobe.give(p, it); parts.push(`[전설] ${it.name}`);
+      UI.announce(`<b>${esc(p.name)}</b>님이 <em class="legend">${esc(it.name)}</em> 의상을 획득했습니다.`);
     }
     U.sfx.coin();
     UI.toast('획득: ' + parts.join(', '), '#ffe38a');
@@ -224,7 +224,7 @@ const Content = (() => {
       pass: passReady(p),
       skills: Skills.anyChoice(p),
       collection: equipReg,
-      transcend: !p.s.card && Object.keys(p.s.cards || {}).length > 0,
+      wardrobe: Wardrobe.hasUpgrade(p),
       pet: !p.s.pet && Object.keys(p.s.pets || {}).length > 0,
       mount: !p.s.mount && Object.keys(p.s.mounts || {}).length > 0,
       guild: Siege.isOwner(p) && Siege.castle(p).taxDay !== today(),
@@ -502,7 +502,7 @@ const Content = (() => {
           <div>참여 조건 <b>혈맹 소속 · Lv.${Siege.MIN_LV} 이상</b></div><div>선전포고 비용 <b>${U.fmt(Siege.COST)} 아데나</b></div>
           <div>제한 시간 <b>${Siege.TIME / 60}분</b></div><div>목표 <b>성문 → 수호탑 파괴</b></div>
           <div>수비 <b>수비대 · 궁수 · 성주 혈맹 용사 4명</b></div><div>아군 <b>우리 혈맹원 최대 8명 합류</b></div></div>
-        <p class="sub" style="color:#a39a88;font-size:12px;line-height:1.6">승리하면 우리 혈맹이 성주가 됩니다: 매일 세금(아데나·다이아·초월 소환권), 성주 버프(공격력 +12, HP +400, 방어력 +6), 성 깃발이 우리 혈맹 색으로 바뀝니다. 적의 레벨은 캐릭터 레벨에 맞춰집니다. 공성 중 사망하면 여기서 전장으로 복귀할 수 있습니다.</p>
+        <p class="sub" style="color:#a39a88;font-size:12px;line-height:1.6">승리하면 우리 혈맹이 성주가 됩니다: 매일 세금(아데나·다이아·의상 소환권), 성주 버프(공격력 +12, HP +400, 방어력 +6), 성 깃발이 우리 혈맹 색으로 바뀝니다. 적의 레벨은 캐릭터 레벨에 맞춰집니다. 공성 중 사망하면 여기서 전장으로 복귀할 수 있습니다.</p>
         <div class="dialog-btns">
           ${Siege.active ? '<button class="gold-btn" data-rejoin>전장 복귀</button>' : own ? `<button class="gold-btn" data-tax ${taxed ? 'disabled' : ''}>${taxed ? '오늘 세금 수령 완료' : '세금 걷기'}</button>` : `<button class="gold-btn" data-declare ${p.s.guild ? '' : 'disabled'}>선전포고</button>`}
           ${p.s.guild ? '' : '<button class="dark-btn" data-guild>혈맹 가입하기</button>'}
@@ -528,7 +528,7 @@ const Content = (() => {
       <div class="stat-list">
         <div>입장 조건 <b>Lv.5 이상</b></div><div>제한 시간 <b>5분</b></div><div>구성 <b>4 웨이브 + 보스</b></div>
         <div>몬스터 레벨 <b>캐릭터 레벨에 맞춰 조정</b></div><div>오늘 남은 입장 <b>${left} / ${Dungeon.DAILY}</b></div><div>클리어 횟수 <b>${p.s.dungeon.clears || 0}</b></div></div>
-      <p class="sub" style="color:#a39a88;font-size:12px">보상: 아데나, 다이아, 무기 마법 주문서, 초월 소환권, 강력 체력 회복제 (+ 확률로 갑옷 마법 주문서)</p>
+      <p class="sub" style="color:#a39a88;font-size:12px">보상: 아데나, 다이아, 무기 마법 주문서, 의상 소환권, 강력 체력 회복제 (+ 확률로 갑옷 마법 주문서)</p>
       <div class="dialog-btns"><button class="gold-btn" data-enter ${left > 0 ? '' : 'disabled'}>입장하기</button><button class="dark-btn" data-x>닫기</button></div>`;
     body.onclick = (e) => {
       if (e.target.closest('[data-enter]')) Dungeon.enter(Game);
@@ -550,7 +550,7 @@ const Content = (() => {
         return `<div class="list-row"><div style="display:flex;gap:12px;align-items:center"><div id="boss-cv-${i}" style="background:radial-gradient(#4a1414,#0e0808);border:1px solid #6a2a2a"></div>
           <div><b style="color:#ff8a80">Lv.${def.lv} ${def.name}</b><div class="sub">${World.zoneAt(s.x * 64, s.y * 64).name} · 재출현 ${Math.round(s.respawn / 60)}분</div><div>${status}</div></div></div>
           <button class="dark-btn" data-go="${i}">이동 (3,000 아데나)</button></div>`;
-      }).join('') + '<p class="sub" style="color:#888;font-size:12px">보스는 처치 후 일정 시간이 지나면 다시 출현합니다. 보스 처치 시 초월 소환권과 희귀 장비를 획득할 수 있습니다.</p>';
+      }).join('') + '<p class="sub" style="color:#888;font-size:12px">보스는 처치 후 일정 시간이 지나면 다시 출현합니다. 보스 처치 시 의상 소환권과 희귀 장비를 획득할 수 있습니다.</p>';
       bosses.forEach((s, i) => body.querySelector('#boss-cv-' + i).appendChild(UI.spriteCanvas(D.MONSTERS[s.m].sheet, 64, 10, 0, 0.8)));
     };
     body.onclick = (e) => {

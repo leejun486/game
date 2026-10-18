@@ -64,7 +64,7 @@ const BotChat = (() => {
     const b = bossInfo().map((x) => `${x.name}(Lv.${x.lv}, ${x.zone}): ${x.alive ? '지금 출현 중' : `${mmss(x.left)} 후 출현`}`).join('; ');
     const hunts = [...new Set(D.SPAWNS.filter((s) => !D.MONSTERS[s.m].boss).map((s) => `${D.MONSTERS[s.m].name} Lv.${D.MONSTERS[s.m].lv} @${World.zoneAt(s.x * 64, s.y * 64).name}`))].join(', ');
     return `게임: '이클립스: 어웨이크닝' (리니지 같은 한국 MMORPG). 마을: 라스카노. 사냥터: ${hunts}. 보스 현황: ${b}. ` +
-      `플레이어 '${p.name}' (${CLS[p.cls]}, Lv.${p.s.lv}, 현재 위치 ${zoneOf(p)}). 게임 요소: 무기 강화(+9 이상은 증발 위험), 초월 카드 소환, 탈것, 펫, 혈맹, 던전 '이클립스 균열'.`;
+      `플레이어 '${p.name}' (${CLS[p.cls]}, Lv.${p.s.lv}, 현재 위치 ${zoneOf(p)}). 게임 요소: 무기 강화(+9 이상은 증발 위험), 옷장 의상 소환, 탈것, 펫, 혈맹, 던전 '이클립스 균열'.`;
   }
   const botLine = (b) => `${b.name} (${CLS[b.cls]} Lv.${b.lv}${b.guild ? `, 혈맹 ${b.guild}` : ''}, ${b.state === 'hunt' ? '사냥 중' : '마을'} ${zoneOf(b)}, 성격: ${persona(b)})`;
 
@@ -148,7 +148,7 @@ const BotChat = (() => {
       scene(c, lines);
     },
     trade(c) {
-      const it = pick(['강력 체력 회복제', '무기 마법 주문서', '갑옷 마법 주문서', '초월 소환권', '속도 향상 물약']);
+      const it = pick(['강력 체력 회복제', '무기 마법 주문서', '갑옷 마법 주문서', '의상 소환권', '속도 향상 물약']);
       const price = U.randi(2, 40) * 1000;
       const haggle = Math.random() < 0.5;
       scene(c, [[0, `${it} 팝니다 개당 ${U.fmt(price)}`],

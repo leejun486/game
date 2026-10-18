@@ -387,13 +387,13 @@ class NPC extends Entity {
     if (this.def.title) drawLabel(ctx, this.def.name.split(' ').pop(), x, y - 4, '#ffffff', '12px sans-serif');
     if (this.def.title) drawLabel(ctx, this.def.title, x, y - 18, '#f7d27a', 'bold 12px sans-serif');
     else drawLabel(ctx, this.def.name, x, y - 4, '#bfe3ff');
-    if (this.def.shop || this.def.teleport || this.def.transcend) {
+    if (this.def.shop || this.def.teleport || this.def.wardrobe) {
       // floating marker like the merchant bubbles in the reference
       const t = performance.now() / 1000;
       const by = y - 44 + Math.sin(t * 2 + this.id) * 3;
       ctx.fillStyle = 'rgba(20,24,30,0.85)'; ctx.strokeStyle = 'rgba(233,215,168,0.7)'; ctx.lineWidth = 1.5;
       ctx.beginPath(); ctx.arc(x, by, 13, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-      const ic = UI.iconImg(this.def.shop ? 'gold' : this.def.teleport ? 'teleport' : 'transcend');
+      const ic = UI.iconImg(this.def.shop ? 'gold' : this.def.teleport ? 'teleport' : 'wings');
       if (ic.complete) ctx.drawImage(ic, x - 9, by - 9, 18, 18);
     }
   }

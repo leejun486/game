@@ -6,7 +6,7 @@ class Player extends Hero {
     super({ x: save.x || D.TOWN.x, y: save.y || D.TOWN.y + 120, sheet: D.CLASSES[cls].sheet, cls, name: save.name });
     Content.migrate(save);
     this.s = save; // persistent data
-    Looks.migrate(this);
+    Wardrobe.migrate(this); Wardrobe.preload(cls);
     Pets.migrate(this);
     Mounts.migrate(this);
     this.mountId = save.mount; this.rideFace = 1;
@@ -35,7 +35,6 @@ class Player extends Hero {
         { uid: 3, id: 'hp_s', n: 50 }, { uid: 4, id: 'hp_m', n: 10 }, { uid: 5, id: 'tp_town', n: 5 }, { uid: 6, id: 'ticket', n: 3 },
       ],
       equip: { weapon: 1, armor: 2, ring: null },
-      cards: {}, card: null,
       quest: 0, qprog: 0, qv: 3, daily: { day: '', prog: 0, done: false },
       autoPotion: true, kills: 0, playTime: 0,
     };
@@ -150,15 +149,10 @@ class Player extends Hero {
     // 6-8 ending title
     const end = this.s.ending && D.ENDINGS[this.s.ending];
     if (end) { const { atkPct: ep = 0, ...rest } = end.bonus; add(rest); setAtkPct += ep; }
-    // transcend card
-    const card = this.s.card && D.CARD_BY_ID[this.s.card];
-    if (card) add(D.cardStats(card, (this.s.cards[card.id] || { lv: 1 }).lv));
-    // collection bonus
-    for (const id in this.s.cards) add(D.COLLECT_BONUS[D.CARD_BY_ID[id].grade]);
     // item collections + guild buff
     for (const b of Content.bonuses(this)) add(b);
-    // weapon look: equip + collection bonus
-    for (const b of Looks.bonuses(this)) add(b);
+    // 옷장: worn parts + every owned part
+    for (const b of Wardrobe.bonuses(this)) add(b);
     for (const b of Pets.bonuses(this)) add(b);
     for (const b of Mounts.bonuses(this)) add(b);
     // buffs
@@ -173,9 +167,8 @@ class Player extends Hero {
     this.maxHp = st.maxHp; this.maxMp = st.maxMp;
     if (this.hp > this.maxHp) this.hp = this.maxHp;
     if (this.mp > this.maxMp) this.mp = this.maxMp;
-    // bodies are drawn without their baked weapon; the weapon look is a separate layer
-    const base = card ? card.sheet : c.sheet;
-    this.sheet = window.SPRITE_ROWS[base + '_nw'] ? base + '_nw' : base;
+    // the body is the 옷장 outfit (base + top + hat, or a set); the weapon look is a separate layer
+    this.sheet = Wardrobe.playerSheet(this);
     this.power = Math.round(st.atk * 10 + st.def * 8 + st.maxHp + st.atkSpd * 15 + st.eva * 2 + lv * 50);
   }
   addBuff(b) {
@@ -475,10 +468,6 @@ class Player extends Hero {
     drawLabel(ctx, (cheat ? '[GM] ' : '') + this.name, x, y - 8, cheat ? '#ffd76a' : '#ffffff', 'bold 12px sans-serif');
     if (this.s.guild) drawLabel(ctx, this.s.guild, x - ctx.measureText(this.name).width / 2 - 16, y - 8, '#ffe08a', '11px sans-serif');
     drawHpBar(ctx, x, y - 6, 46, this.hp / this.maxHp);
-    if (this.s.card) {
-      const g = D.CARD_BY_ID[this.s.card].grade;
-      drawLabel(ctx, '초월', x, y - 22, D.GRADES[g].color, 'bold 11px sans-serif');
-    }
     if (this.bubble && this.bubble.t > 0) drawBubble(ctx, this.bubble.text, x, y - 36);
   }
   // standing still: breathe, and every few seconds show off the weapon look
@@ -554,8 +543,7 @@ class Player extends Hero {
   }
   get headY() { return this.mounted ? this.y - (this.rideTop || 90) : this.y - 58 * this.scale; }
   aura(ctx, x, y) {
-    if (!this.s.card) return;
-    const g = D.CARD_BY_ID[this.s.card].grade;
+    const g = Wardrobe.auraGrade(this);
     if (g < 3) return;
     const t = performance.now() / 1000;
     ctx.save();

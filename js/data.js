@@ -1,5 +1,5 @@
 'use strict';
-// Static game data: classes, skills, monsters, zones, items, transcend cards, quests.
+// Static game data: classes, skills, monsters, zones, items, quests.
 const D = {};
 
 D.TILE = 64;
@@ -229,7 +229,7 @@ D.ITEMS = {
   tp_town: { name: '마을 귀환 주문서', icon: 'scroll-town', kind: 'scroll', price: 60, grade: 0, desc: '라스카노 마을로 귀환합니다.' },
   sc_weapon: { name: '무기 마법 주문서', icon: 'scroll-weapon', kind: 'enchant', target: 'weapon', price: 3000, grade: 2, desc: '무기를 강화합니다. 안전 강화 +6, 실패 시 증발할 수 있습니다.' },
   sc_armor: { name: '갑옷 마법 주문서', icon: 'scroll-armor', kind: 'enchant', target: 'armor', price: 2000, grade: 2, desc: '갑옷을 강화합니다. 안전 강화 +4, 실패 시 증발할 수 있습니다.' },
-  ticket: { name: '초월 소환권', icon: 'ticket', kind: 'ticket', price: 0, grade: 3, desc: '초월 카드를 1회 소환합니다.' },
+  ticket: { name: '의상 소환권', icon: 'ticket', kind: 'ticket', price: 0, grade: 3, desc: '옷장의 의상(모자·상의·무기)을 1회 소환합니다.' },
 
   // weapons (cls restricts use)
   w_sword1: { name: '낡은 장검', icon: 'w_sword1', kind: 'weapon', cls: 'knight', atk: 3, lv: 1, price: 200, grade: 0 },
@@ -377,55 +377,11 @@ D.SHOPS = {
   book: { title: '스킬북 상점', items: ['sb_k_aura', 'sb_e_phoenix', 'sb_m_thunder', 'sb_k_judge', 'sb_e_starfall', 'sb_m_inferno', 'sb_k_avatar', 'sb_e_spirit', 'sb_m_eclipse'] },
 };
 
-// ---------------- transcend (초월) cards ----------------
-// style → which stats scale with grade
-D.CARD_STYLE = {
-  war: ['atkSpd', 'atk', 'eva'],
-  cast: ['castSpd', 'def', 'dmgRed'],
-  tank: ['def', 'hp', 'dmgRed'],
-  swift: ['moveSpd', 'atkSpd', 'eva'],
-  hybrid: ['atkSpd', 'castSpd', 'atk', 'def'],
-};
-D.CARD_STAT_BY_GRADE = {
-  atkSpd: [6, 12, 20, 30, 42], castSpd: [6, 12, 20, 30, 42], atk: [2, 5, 10, 18, 30], def: [1, 3, 6, 10, 16],
-  eva: [10, 25, 50, 90, 140], dmgRed: [1, 2, 4, 8, 12], moveSpd: [5, 9, 13, 18, 24], hp: [20, 60, 120, 220, 380],
-};
+// stat labels: [name, unit]
 D.STAT_NAMES = {
   atkSpd: ['공격 속도', '%'], castSpd: ['시전 속도', '%'], atk: ['공격력', ''], def: ['방어력', ''], eva: ['회피', ''],
   dmgRed: ['피해 감소', ''], expPct: ['획득 경험치', '%'], moveSpd: ['이동 속도', '%'], hp: ['최대 HP', ''], mp: ['최대 MP', ''], crit: ['치명타', '%'],
 };
-D.CARDS = [
-  { id: 'c_leonic', name: '황금 기사 레오닉', sheet: 'knight_gold', grade: 4, style: 'war' },
-  { id: 'c_dracul', name: '뱀파이어 군주 드라큘', sheet: 'vampire', grade: 4, style: 'hybrid' },
-  { id: 'c_minos', name: '미궁의 왕 미노스', sheet: 'minotaur', grade: 4, style: 'tank' },
-  { id: 'c_seranis', name: '냉철한 전술가 세라니스', sheet: 'mage', grade: 3, style: 'hybrid' },
-  { id: 'c_kain', name: '암흑 기사 카인', sheet: 'knight_dark', grade: 3, style: 'war' },
-  { id: 'c_elena', name: '빛의 성녀 엘레나', sheet: 'mage_white', grade: 3, style: 'cast' },
-  { id: 'c_rien', name: '붉은 궁수 리엔', sheet: 'elf_red', grade: 2, style: 'swift' },
-  { id: 'c_silva', name: '숲의 수호자 실바', sheet: 'elf', grade: 2, style: 'swift' },
-  { id: 'c_arcane', name: '대현자 아르케인', sheet: 'npc_sage', grade: 2, style: 'cast' },
-  { id: 'c_troll', name: '동굴 트롤', sheet: 'troll', grade: 2, style: 'tank' },
-  { id: 'c_lizard', name: '리자드맨 투사', sheet: 'lizardman', grade: 2, style: 'war' },
-  { id: 'c_guard', name: '왕실 근위병', sheet: 'npc_guard', grade: 1, style: 'tank' },
-  { id: 'c_orc', name: '오크 전사', sheet: 'orc', grade: 1, style: 'war' },
-  { id: 'c_skel', name: '해골 전사', sheet: 'skeleton', grade: 1, style: 'war' },
-  { id: 'c_boar', name: '멧돼지 전사', sheet: 'boarman', grade: 1, style: 'tank' },
-  { id: 'c_wolf', name: '늑대인간', sheet: 'wolfman', grade: 1, style: 'swift' },
-  { id: 'c_goblin', name: '고블린', sheet: 'goblin', grade: 0, style: 'swift' },
-  { id: 'c_zombie', name: '좀비', sheet: 'zombie', grade: 0, style: 'tank' },
-  { id: 'c_trader', name: '떠돌이 상인', sheet: 'npc_merchant', grade: 0, style: 'cast' },
-  { id: 'c_maid', name: '마을 처녀', sheet: 'npc_woman', grade: 0, style: 'swift' },
-  { id: 'c_squire', name: '견습 기사', sheet: 'knight', grade: 0, style: 'war' },
-];
-D.CARD_BY_ID = {};
-for (const c of D.CARDS) D.CARD_BY_ID[c.id] = c;
-D.cardStats = (card, lv = 1) => {
-  const out = {};
-  for (const s of D.CARD_STYLE[card.style]) out[s] = Math.round(D.CARD_STAT_BY_GRADE[s][card.grade] * (1 + 0.12 * (lv - 1)));
-  out.moveSpd = (out.moveSpd || 0) + [2, 4, 6, 8, 10][card.grade];
-  return out;
-};
-D.COLLECT_BONUS = [{ hp: 5 }, { atk: 1 }, { def: 1, hp: 10 }, { atk: 2, dmgRed: 1 }, { atk: 3, def: 2, dmgRed: 2 }];
 D.SUMMON_RATES = [0.60, 0.28, 0.095, 0.022, 0.003];
 // PixelLab elf: LPC-layout sheet with the bow drawn into the art (tools/build_elf_px.py)
 window.SPRITE_ROWS.elf_px = window.SPRITE_ROWS.elf.concat(window.SPRITE_ROWS.elf.slice(0, 20)); // + diagonal rows 21-40
@@ -441,11 +397,9 @@ window.WALK_FRAMES = { knight_px: 6 }; // walk cycle length per sheet (cols 1..n
 window.walkCol = (sheet, step) => { const n = window.WALK_FRAMES[sheet] || 8; return 1 + (Math.floor(step * n / 8) % n); };
 D.BAKED_WEAPON = { elf_px: 'elf_nw', knight_px: 'knight_nw', mage_px: 'mage_nw' }; // sheet -> LPC body used to show weapon looks in menus
 D.SYNTH_RATES = [0.30, 0.25, 0.20, 0.12];
-D.cardGrowCost = (card, lv) => 1500 * lv * (card.grade + 1);
-D.CARD_MAX_LV = 10;
 
 // ---------------- quests ----------------
-// type: talk(npc) | kill(monster,n) | level(n) | equipCard | enchant(n) | killAny(n)
+// type: talk(npc) | kill(monster,n) | level(n) | enchant(n) | killAny(n)
 // ---------------- story ----------------
 // 대륙 아스텔라. 천 년 전 어둠의 군주 녹스는 네 개의 봉인(피·미궁·서리·화염)에 갇혔고, 봉인마다 수호자가 섰다.
 // 해와 달이 겹치는 '이클립스'가 오면 봉인이 약해진다. 이번 이클립스에 네 수호자가 검은 빛에 타락했고,
@@ -638,7 +592,7 @@ D.NPCS = [
   { id: 'zaid', name: '무기 상인 자이드', title: '무기 상인', sheet: 'npc_guard', dx: 10, dy: 5, dir: 1, shop: 'weapon', talk: '좋은 무기가 곧 생명이지. 둘러보게나.' },
   { id: 'levin', name: '모험 상인 레빈', title: '방어구 상인', sheet: 'npc_merchant', dx: 9, dy: -4, dir: 1, shop: 'armor', talk: '튼튼한 갑옷 없이 묘지에 가는 건 자살 행위라네.' },
   { id: 'kasim', name: '순간이동사 카심', title: '순간이동', sheet: 'npc_sage', dx: -2, dy: -6, dir: 2, teleport: true, talk: '어디로 보내줄까? 비용은 거리에 따라 다르다네.' },
-  { id: 'damon', name: '초월 관리인 테이먼', title: '초월', sheet: 'npc_woman', dx: -9, dy: -3, dir: 3, transcend: true, talk: '영웅들의 영혼이 깃든 카드... 그 힘을 빌려 초월해 보세요.' },
+  { id: 'damon', name: '옷장 관리인 다몬', title: '옷장', sheet: 'npc_woman', dx: -9, dy: -3, dir: 3, wardrobe: true, talk: '갓 지은 옷이 들어왔어요. 모자, 저고리, 무기까지... 마음에 드는 대로 맞춰 입어 보세요.' },
   { id: 'guard1', name: '경비병', sheet: 'npc_guard', dx: -1.5, dy: -15.5, dir: 2, talk: '북쪽은 바람의 초원이다. 고블린부터 상대하도록.' },
   { id: 'guard2', name: '경비병', sheet: 'npc_guard', dx: 15.5, dy: -1.5, dir: 1, talk: '동쪽은 망자의 묘지... 밤이 되면 뱀파이어가 나타난다더군.' },
   { id: 'guard3', name: '경비병', sheet: 'npc_guard', dx: 1.5, dy: 15.5, dir: 2, talk: '남쪽 오크 요새는 레벨 20 이상만 가도록.' },
@@ -656,5 +610,5 @@ D.BOT_SHEETS = [
 ];
 D.BOT_CHAT = ['파티 구해요~ 묘지 가실분', '오크 요새 트롤 자리 있나요?', '강화 +7 떴다!!', 'ㅊㅋㅊㅋ', '미노 몇시 젠이에요?',
   '세라니스 뽑았다 ㄷㄷ', '물약 싸게 팝니다 귓주세요', '혈맹원 모집합니다 (매일 보스레이드)', '렉 왜이럼', 'ㅋㅋㅋㅋㅋ',
-  '뱀파 잡으러 가실분?', '초월 11연차 망했어요ㅠㅠ', '무기 +9 증발... 접습니다', '안녕하세요~', '자동사냥 최고', '전설 카드 어떻게 뽑음?',
+  '뱀파 잡으러 가실분?', '의상 11연차 망했어요ㅠㅠ', '무기 +9 증발... 접습니다', '안녕하세요~', '자동사냥 최고', '용린 금갑 어떻게 뽑음?',
   '고블린 자리 비었나요', '레벨 30 달성!', '오늘 드랍 운 좋네', 'ㄱㄱ'];

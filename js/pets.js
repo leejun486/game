@@ -355,8 +355,7 @@ const Pets = (() => {
       const bon = (o) => Object.entries(o).map(([k, v]) => `${D.STAT_NAMES[k][0]} <span>+${v}${D.STAT_NAMES[k][1]}</span>`).join(', ');
       el.innerHTML = `<div class="tr-wrap pet-wrap">
         <div class="tr-side">
-          <button data-go="transcend">${ico('transcend')}초월</button>
-          <button data-go="weaponlook">${ico('sword')}무기 외형</button>
+          <button data-go="wardrobe">${ico('wings')}옷장</button>
           <button class="on">${ico('pet')}펫</button>
           <button data-go="collection">${ico('collection')}수집</button>
         </div>
