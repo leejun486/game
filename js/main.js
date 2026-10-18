@@ -301,6 +301,8 @@ const Game = {
     dpr = Math.min(2, window.devicePixelRatio || 1);
     canvas.width = Math.floor(innerWidth * dpr); canvas.height = Math.floor(innerHeight * dpr);
     Game.zoom = Game.userZoom || (innerWidth < 700 ? 0.75 : innerWidth < 1100 ? 0.9 : 1.05);
+    // HUD scale: the combat pad and bottom bar are laid out for 1280×720 and scaled to the screen
+    document.documentElement.style.setProperty('--k', U.clamp(Math.min(innerWidth / 1280, innerHeight / 720), 0.58, 1.35).toFixed(3));
   }
   addEventListener('resize', resize);
   resize();
@@ -545,8 +547,6 @@ const Game = {
   if (matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window) {
     document.body.classList.add('touch');
     // keyboard hints mean nothing on a phone
-    document.querySelector('#btn-sprint span').textContent = '질주';
-    document.querySelector('#btn-ride span').textContent = '탑승';
   }
   let joyId = null;
   const joyMove = (e) => {

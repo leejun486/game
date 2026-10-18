@@ -63,26 +63,31 @@
     </div>
     <div id="announce"></div>
 
-    <!-- bottom bar -->
+    <!-- bottom centre: auto-hunt pill, player bars, item quick slots -->
     <div id="bottom">
       <div id="buffs"></div>
+      <button id="btn-auto" title="AI 모드: 자동 사냥 (G)"><img src="assets/icons/auto.svg"><span class="lbl">자동 사냥</span><span class="key">G</span></button>
       <div id="bars">
-        <div class="bar hp"><i id="hp-fill"></i><span id="hp-text"></span></div>
-        <div id="level-orb"><b id="lvl">1</b><small>LEVEL</small></div>
-        <div class="bar mp"><i id="mp-fill"></i><span id="mp-text"></span></div>
+        <div id="level-orb"><b id="lvl">1</b><small>LV</small></div>
+        <div class="bar-stack">
+          <div class="bar hp"><i id="hp-fill"></i><span id="hp-text"></span></div>
+          <div class="bar mp"><i id="mp-fill"></i><span id="mp-text"></span></div>
+        </div>
       </div>
-      <div id="slots"></div>
+      <div class="quickrow">
+        <div id="potion-auto"><button id="auto-potion" class="potion-orb" title="자동 물약 (클릭하여 전환)"><img src="assets/icons/hp-potion.svg"><b id="auto-potion-count">0</b><i class="gear">⚙</i></button></div>
+        <div id="slots"></div>
+      </div>
     </div>
 
-    <div id="potion-auto">
-      <button id="auto-potion" class="potion-orb" title="자동 물약 (클릭하여 전환)"><img src="assets/icons/hp-potion.svg"><b id="auto-potion-count">0</b><i class="gear">⚙</i></button>
-    </div>
-
-    <div id="action-buttons">
-      <button class="act-btn" id="btn-target" title="가까운 적 공격 (Space)"><img src="assets/icons/pvp.svg"><span>공격</span></button>
-      <button class="act-btn" id="btn-auto" title="AI 모드: 자동 사냥 (G)"><img src="assets/icons/auto.svg"><span>AI 모드</span></button>
- <button class="act-btn" id="btn-ride" title="탈것 탑승 (R)"><img src="assets/icons/mount.svg"><span>탑승 R</span></button>
-      <button class="act-btn" id="btn-sprint" title="질주 (L.Shift)"><img src="assets/icons/sprint.svg"><span>L.Shift</span></button>
+    <!-- bottom right: combat pad (skills 5 + 3, ultimate, attack, dodge) -->
+    <div id="combat-pad">
+      <div id="sk-row1" class="sk-row"></div>
+      <div id="sk-row2" class="sk-row"></div>
+      <div id="ult"></div>
+      <button class="act-btn" id="btn-target" title="가까운 적 공격 (Space)"><img src="assets/icons/pvp.svg"><span>공격</span><span class="key">Space</span></button>
+      <button class="act-btn" id="btn-sprint" title="회피 (Shift)"><img src="assets/icons/sprint.svg"><span>회피</span><span class="key">Shift</span><div class="cd"></div></button>
+      <button class="act-btn" id="btn-ride" title="탈것 탑승 (R)"><img src="assets/icons/mount.svg"><span>탑승</span><span class="key">R</span></button>
     </div>
 
     <div id="exp-bar"><i id="exp-fill"></i><span id="exp-text"></span></div>

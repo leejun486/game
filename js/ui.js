@@ -63,26 +63,30 @@ const UI = (() => {
 
   // ---------------------------------------------------------------- HUD
   const SLOT_ITEMS = ['hp_s', 'hp_m', 'mp_s', 'tp_town'];
+  // skills go to the combat pad (row 1: 1 2 3 4 Q · row 2: E Z X · the 9th is the big ultimate F),
+  // potions and scrolls to the quick slots under the HP bar
+  let skillEls = [], itemEls = [];
   function buildSlots() {
     const p = game.player;
-    const el = $('slots');
-    el.innerHTML = '';
     const KEYS = ['1', '2', '3', '4', 'Q', 'E', 'Z', 'X', 'F'];
-    p.classDef.skills.forEach((id, i) => {
+    for (const id of ['sk-row1', 'sk-row2', 'ult', 'slots']) $(id).innerHTML = '';
+    skillEls = p.classDef.skills.map((id, i) => {
       const sk = D.SKILLS[id];
       const s = document.createElement('div');
-      s.className = 'slot skill' + (sk.grade ? ' bg' + sk.grade : ''); s.title = `${sk.name}\n${sk.desc}`;
+      s.className = 'slot skill' + (sk.grade ? ' bg' + sk.grade : '') + (i === 8 ? ' ult' : ''); s.title = `${sk.name}\n${sk.desc}`;
       s.innerHTML = `${ico(sk.icon)}<span class="n">${KEYS[i]}</span><span class="mp-cost">${sk.mp}</span><div class="cd" style="transform:scaleY(0)"></div><div class="cdt"></div><span class="lockv"></span>`;
       s.onclick = () => p.castSkill(i, game);
-      el.appendChild(s);
+      $(i === 8 ? 'ult' : i < 5 ? 'sk-row1' : 'sk-row2').appendChild(s);
+      return s;
     });
-    SLOT_ITEMS.forEach((id, i) => {
+    itemEls = SLOT_ITEMS.map((id, i) => {
       const it = D.ITEMS[id];
       const s = document.createElement('div');
       s.className = 'slot'; s.title = `${it.name}\n${it.desc}`;
       s.innerHTML = `${ico(it.icon)}<span class="n">${i + 5}</span><span class="c"></span>`;
       s.onclick = () => useSlotItem(i);
-      el.appendChild(s);
+      $('slots').appendChild(s);
+      return s;
     });
   }
   function useSlotItem(i) {
@@ -93,7 +97,7 @@ const UI = (() => {
     flashSlot(game.player.classDef.skills.length + i);
   }
   function flashSlot(i) {
-    const s = $('slots').children[i];
+    const nSk = skillEls.length, s = i < nSk ? skillEls[i] : itemEls[i - nSk];
     if (!s) return;
     s.classList.remove('flash'); void s.offsetWidth; s.classList.add('flash');
   }
@@ -113,10 +117,8 @@ const UI = (() => {
     $('exp-fill').style.width = pct + '%';
     $('exp-text').textContent = `Exp ${pct.toFixed(4)}%   ⚔ 전투력 ${U.fmt(p.power)}   ☠ ${U.fmt(st.kills)}`;
     // slots
-    const slots = $('slots').children;
-    const nSk = p.classDef.skills.length;
     p.classDef.skills.forEach((id, i) => {
-      const s = slots[i]; if (!s) return;
+      const s = skillEls[i]; if (!s) return;
       const cd = p.skillCd[id] || 0, sk = Skills.eff(p, id), lock = !Skills.unlocked(p, id);
       s.querySelector('.cd').style.transform = `scaleY(${lock ? 1 : cd > 0 ? Math.min(1, cd / sk.cd) : 0})`;
       s.querySelector('.cdt').textContent = lock ? '' : cd > 0 ? Math.ceil(cd) : '';
@@ -126,7 +128,7 @@ const UI = (() => {
       s.title = `${Skills.displayName(p, id)} (MP ${sk.mp}, 쿨타임 ${sk.cd}초)\n${sk.desc}${lock ? `\n${Skills.lockText(p, id)}` : ''}`;
     });
     SLOT_ITEMS.forEach((id, i) => {
-      const s = slots[nSk + i]; if (!s) return;
+      const s = itemEls[i]; if (!s) return;
       const n = p.count(id);
       s.querySelector('.c').textContent = n;
       s.classList.toggle('empty', n === 0);
@@ -136,6 +138,7 @@ const UI = (() => {
     $('auto-potion').classList.toggle('on', !!st.autoPotion);
     $('btn-auto').classList.toggle('on', p.auto);
     $('btn-ride').classList.toggle('on', !!p.mounted);
+    const dcd = $('btn-sprint').querySelector('.cd'); if (dcd) dcd.style.transform = `scaleY(${p.sprintCd > 0 ? Math.min(1, p.sprintCd / p.DODGE_CD) : 0})`;
     // buffs
     const bEl = $('buffs');
     const buffHtml = p.buffs.map((b) => {

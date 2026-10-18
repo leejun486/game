@@ -136,7 +136,6 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
 @keyframes ann { 0% { opacity: 0; transform: translateY(-6px); } 8% { opacity: 1; transform: none; } 85% { opacity: 1; } 100% { opacity: 0; } }
 
 /* ---------- bottom bar ---------- */
-#bottom { position: absolute; left: 50%; bottom: 16px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; }
 #buffs { display: flex; gap: 3px; margin-bottom: 4px; min-height: 26px; }
 .buff {
   position: relative; width: 26px; height: 26px; padding: 3px; border: 1px solid rgba(233,215,168,.5);
@@ -162,7 +161,6 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
 }
 #level-orb b { font-size: 17px; line-height: 17px; color: var(--gold); }
 #level-orb small { font-size: 7px; letter-spacing: 1px; color: var(--muted); }
-#slots { display: flex; gap: 4px; margin-top: 6px; }
 .slot {
   position: relative; width: 56px; height: 56px; border: 1px solid rgba(233,215,168,.35);
   background: linear-gradient(145deg, rgba(55,50,42,.92), rgba(15,14,12,.92)); padding: 7px; border-radius: 2px;
@@ -180,7 +178,6 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
 .slot.flash { animation: flash .25s; }
 @keyframes flash { from { box-shadow: 0 0 14px 4px rgba(255,230,160,.9); } to { box-shadow: none; } }
 
-#potion-auto { position: absolute; bottom: 30px; left: calc(50% - 390px); }
 .potion-orb {
   position: relative; width: 58px; height: 58px; border-radius: 50%; padding: 10px; border: 2px solid var(--gold-dark);
   background: radial-gradient(circle at 40% 35%, #4b2020, #120707);
@@ -192,7 +189,6 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
 .potion-orb.on .gear { color: #ffcf6e; animation: spin 3s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-#action-buttons { position: absolute; right: 14px; bottom: 40px; display: flex; flex-direction: column; gap: 10px; align-items: flex-end; }
 .act-btn {
   width: 62px; height: 62px; border-radius: 50%; padding: 9px 9px 4px; border: 2px solid rgba(233,215,168,.45);
   background: radial-gradient(circle at 40% 35%, rgba(60,55,48,.95), rgba(10,9,8,.95));
@@ -451,10 +447,7 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
   #level-orb { width: 42px; height: 42px; }
   .slot { width: 40px; height: 40px; padding: 5px; }
   .slot .mp-cost { display: none; }
-  #bottom { bottom: 14px; }
-  #potion-auto { left: 8px; bottom: 112px; }
   .potion-orb { width: 48px; height: 48px; padding: 8px; }
-  #action-buttons { right: 8px; bottom: 112px; gap: 8px; }
   .act-btn { width: 52px; height: 52px; padding: 7px 7px 3px; }
   .act-btn img { width: 24px; height: 24px; }
   #chat { width: 58vw; bottom: 176px; }
@@ -528,7 +521,6 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
 #joy-knob { position: absolute; left: 50%; top: 50%; width: 50px; height: 50px; margin: -25px 0 0 -25px; border-radius: 50%;
   background: radial-gradient(circle at 40% 35%, rgba(233,215,168,.7), rgba(120,100,60,.6)); pointer-events: none; }
 body.touch #joy { display: block; }
-body.touch #potion-auto { left: auto; right: 84px; bottom: 112px; }
 body.touch #chat { bottom: 250px; }
 @media (max-width: 900px) {
   .attend-grid { grid-template-columns: repeat(4, 1fr); }
@@ -585,7 +577,6 @@ body.touch #chat { bottom: 250px; }
 .sk-state.dim { color: var(--muted); font-weight: 400; }
 @media (max-width: 900px) { .sk-wrap { grid-template-columns: 1fr; } .sk-list { flex-direction: row; overflow-x: auto; } .sk-item { min-width: 170px; } .sk-opts { grid-template-columns: 1fr; } .sk-or { display: none; } }
 
-@media (max-width: 900px) { #slots { gap: 2px; } #slots .slot { width: 34px; height: 34px; padding: 4px; } #slots .slot .n { font-size: 9px; } }
 
 .ride-opt { display: flex; gap: 6px; align-items: center; font-size: 13px; margin: 8px 0; color: var(--text); cursor: pointer; }
 @media (max-width: 900px) { #right-buttons { gap: 6px; } }
@@ -692,22 +683,6 @@ body.touch #right-buttons { top: 50px; right: 206px; flex-direction: row; gap: 6
 body.touch #right-buttons .round-btn { width: 40px; height: 40px; padding: 7px; }
 body.touch #quest-tracker { top: 50px; }
 body.touch #joy { display: block; left: 18px; bottom: 18px; width: 124px; height: 124px; }
-body.touch #action-buttons { right: 0; bottom: 0; width: 200px; height: 190px; display: block; gap: 0; }
-body.touch #action-buttons .act-btn { position: absolute; width: 56px; height: 56px; padding: 7px 7px 3px; }
-body.touch #action-buttons .act-btn img { width: 26px; height: 26px; }
-body.touch #btn-target { right: 16px; bottom: 18px; width: 84px !important; height: 84px !important; padding: 14px 14px 4px !important; border-width: 3px; }
-body.touch #btn-target img { width: 40px !important; height: 40px !important; }
-body.touch #btn-auto { right: 112px; bottom: 16px; }
-body.touch #btn-ride { right: 104px; bottom: 84px; }
-body.touch #btn-sprint { right: 36px; bottom: 112px; }
-body.touch #action-buttons .act-btn:active { transform: scale(.92); filter: brightness(1.3); }
-body.touch #potion-auto { left: 18px; right: auto; bottom: 150px; }
-body.touch #potion-auto .potion-orb { width: 50px; height: 50px; padding: 8px; }
-body.touch #bottom { bottom: 12px; }
-body.touch #slots { gap: 4px; }
-body.touch #slots .slot { width: 46px; height: 46px; padding: 5px; }
-body.touch #slots .slot .n { display: none; }
-body.touch #slots .slot:active { transform: scale(.9); }
 body.touch #left-buttons { flex-direction: row; left: auto; right: auto; }
 body.touch #chat { bottom: 150px; }
 
@@ -734,9 +709,6 @@ body.touch #chat { bottom: 150px; }
   body.touch #chat { bottom: 290px; width: 62vw; }
   body.touch #chat-log { max-height: 90px; }
   body.touch #story-box { bottom: 290px; }
-  body.touch #bottom { bottom: 178px; }
-  body.touch #slots { flex-wrap: wrap; justify-content: center; width: 250px; }
-  body.touch #potion-auto { left: 18px; bottom: 150px; }
   body.touch #top-menu { transform: scale(.62); }
   body.touch #zone-box { top: 52px; }
   body.touch #currency { top: 176px; }
@@ -765,8 +737,6 @@ body.touch #chat { bottom: 150px; }
 #ask-box .ask-msg { color: #f0e8d8; font-size: 14px; line-height: 1.7; margin-bottom: 14px; }
 #ask-box .ask-btns { display: flex; gap: 8px; justify-content: flex-end; }
 /* 9 skills + 4 items: on touch screens the bar wraps into two rows */
-body.touch #slots { flex-wrap: wrap; justify-content: center; max-width: 380px; }
-@media (orientation: portrait) { body.touch #slots { width: 346px; max-width: 346px; } }
 
 /* inventory: sort / auto-equip bar and upgrade arrows */
 .inv-tools { display: flex; gap: 6px; align-items: center; margin-bottom: 8px; flex-wrap: wrap; }
@@ -778,3 +748,62 @@ body.touch #slots { flex-wrap: wrap; justify-content: center; max-width: 380px; 
 @keyframes upBob { 50% { transform: translateY(-2px); } }
 .item-detail .cmp { margin-top: 4px; font-size: 12px; }
 .item-detail .cmp .up { color: #5dff7a; } .item-detail .cmp .down { color: #ff7a6a; }
+
+/* ================= action HUD (mobile-RPG style, scaled by --k from 1280×720) =================
+   bottom right: combat pad · bottom centre: auto-hunt pill, HP/MP, quick slots · bottom left: chat */
+:root { --k: 1; }
+#hud #combat-pad { position: absolute; right: 14px; bottom: 18px; width: 470px; height: 280px; transform: scale(var(--k)); transform-origin: bottom right; pointer-events: none; }
+#hud #combat-pad > * { pointer-events: auto; }
+#hud .sk-row { position: absolute; display: flex; gap: 7px; }
+#hud #sk-row1 { right: 108px; bottom: 2px; }
+#hud #sk-row2 { right: 226px; bottom: 76px; }
+#hud .sk-row .slot { width: 62px; height: 62px; padding: 8px; border-radius: 12px; }
+#hud #ult { position: absolute; right: 112px; bottom: 84px; }
+#hud #ult .slot { width: 100px; height: 100px; padding: 16px; border-radius: 50%; border-width: 2px; box-shadow: 0 0 18px rgba(243,181,58,.35); }
+#hud #ult .slot .cd { border-radius: 50%; }
+#hud #ult .slot .n { top: auto; bottom: 8px; left: 50%; transform: translateX(-50%); }
+#hud #combat-pad .act-btn { position: absolute; border-radius: 50%; }
+#hud #btn-target { right: 0; bottom: 0; width: 96px; height: 96px; padding: 16px 16px 4px; border-width: 3px; border-color: rgba(255,190,110,.7); }
+#hud #btn-target img { width: 42px; height: 42px; }
+#hud #btn-sprint { right: 16px; bottom: 112px; width: 74px; height: 74px; padding: 11px 11px 3px; overflow: hidden; }
+#hud #btn-sprint img { width: 30px; height: 30px; }
+#hud #btn-sprint .cd { position: absolute; inset: 0; background: rgba(0,0,0,.65); transform-origin: bottom; transform: scaleY(0); pointer-events: none; }
+#hud #btn-ride { right: 128px; bottom: 196px; width: 56px; height: 56px; padding: 8px 8px 2px; }
+#hud #btn-ride img { width: 24px; height: 24px; }
+#hud #combat-pad .act-btn .key { position: absolute; top: -6px; right: -4px; }
+#hud #combat-pad .act-btn:active, #hud .sk-row .slot:active, #hud #ult .slot:active { transform: scale(.92); filter: brightness(1.3); }
+
+#hud #bottom { position: absolute; left: calc(50% - 60px * var(--k)); bottom: 16px; transform: translateX(-50%) scale(var(--k)); transform-origin: bottom center; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+#hud #btn-auto { display: flex; align-items: center; gap: 8px; padding: 6px 18px 6px 12px; border-radius: 30px; border: 1px solid rgba(233,215,168,.45); background: linear-gradient(rgba(40,36,30,.92), rgba(12,11,10,.92)); color: #f2e7cf; font-size: 14px; font-weight: 600; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,.6); }
+#hud #btn-auto img { width: 22px; height: 22px; }
+#hud #btn-auto.on { border-color: #6fe3ff; color: #bff3ff; box-shadow: 0 0 16px rgba(80,210,255,.6); }
+#hud #btn-auto.on .lbl::after { content: ' 중'; }
+#hud #bars { display: flex; align-items: center; gap: 8px; }
+#hud #level-orb { width: 46px; height: 46px; margin: 0; }
+#hud #level-orb b { font-size: 18px; }
+#hud .bar-stack { display: flex; flex-direction: column; gap: 3px; }
+#hud .bar { transform: none; width: 300px; border-radius: 3px; }
+#hud .bar span { transform: none; }
+#hud .bar.hp { height: 18px; }
+#hud .bar.hp span { line-height: 17px; font-size: 11.5px; }
+#hud .bar.mp { height: 10px; }
+#hud .bar.mp span { font-size: 9px; line-height: 9px; }
+#hud .quickrow { display: flex; align-items: center; gap: 8px; }
+#hud #potion-auto { position: static; }
+#hud #potion-auto .potion-orb { width: 52px; height: 52px; padding: 8px; }
+#hud #slots { display: flex; gap: 5px; margin: 0; flex-wrap: nowrap; width: auto; max-width: none; }
+#hud #slots .slot { width: 52px; height: 52px; padding: 6px; border-radius: 8px; }
+#hud #buffs { min-height: 0; }
+
+/* touch: joystick bottom-left, chat lifted above it; key hints hidden */
+body.touch #hud #combat-pad .act-btn .key, body.touch #hud #btn-auto .key { display: none; }
+body.touch #hud .sk-row .slot .n { display: none; }
+body.touch #joy { left: 22px; bottom: 22px; }
+@media (orientation: portrait) {
+  #hud #bottom { left: 50%; bottom: calc(300px * var(--k)); }
+  #hud #combat-pad { right: 6px; }
+  body.touch #joy { left: 10px; bottom: 16px; width: 100px; height: 100px; }
+}
+@media (max-height: 520px) {
+  body.touch #hud #bottom { left: calc(50% - 90px * var(--k)); }
+}

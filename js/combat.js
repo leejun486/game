@@ -61,6 +61,7 @@ const Combat = (() => {
     if (target === game.player) {
       const p = target, st = p.stats;
       if (p.s.gm && p.s.gm.god) { floatText(game, p, 'IMMUNE', '#ffd76a'); return; }
+      if (p.invulnT > 0) { floatText(game, p, '회피', '#bfe8ff'); return; }
       if (Math.random() < st.eva / (st.eva + 320)) { floatText(game, p, 'MISS', '#b0d8ff'); return; }
       let raw = mon.atk * U.rand(0.85, 1.15) * (heavy ? 1.8 : 1);
       const dmg = Math.max(1, Math.round(raw - st.def * 0.6 - st.dmgRed));

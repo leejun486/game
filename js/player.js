@@ -269,10 +269,23 @@ class Player extends Hero {
     return true;
   }
   skillRange(sk) { return sk.range || (sk.type === 'aoe_target' ? Math.max(this.classDef.range, 300) : this.classDef.range); }
+  // 회피 (Shift / the dodge button): a quick dash with a moment of invulnerability. It goes the way you are
+  // moving, else away from the target, else the way you face; a short burst of speed follows
+  get DODGE_CD() { return 4; }
   sprint() {
-    if (this.sprintCd > 0) return;
-    this.sprintT = 3; this.sprintCd = 12;
-    UI.toast('질주!', '#9fe0ff');
+    if (this.sprintCd > 0 || this.dead || this.teleporting || this.dashT > 0) return;
+    if (this.mounted) Mounts.dismount(this, Game);
+    let vx = this.keys.x, vy = this.keys.y;
+    const t = this.target && !this.target.dead ? this.target : null;
+    if (!vx && !vy && t) { vx = this.x - t.x; vy = this.y - t.y; }
+    if (!vx && !vy) [vx, vy] = [[0, -1], [-1, 0], [0, 1], [1, 0]][this.dir] || [0, 1];
+    const l = Math.hypot(vx, vy) || 1;
+    this.dashV = { x: (vx / l) * 760, y: (vy / l) * 760 };
+    this.dashT = 0.26; this.invulnT = 0.45; this.sprintCd = this.DODGE_CD; this.sprintT = 1.5;
+    this.action = null; this.pendingSkill = null;
+    this.dir = dirFromVec(vx, vy);
+    Game.fx.push(Combat.makeFx('dash', this.x, this.y, { to: [this.x + this.dashV.x * 0.26, this.y + this.dashV.y * 0.26], color: '#bfe8ff' }));
+    U.sfx.swing();
   }
   // go to a far point, routing via the nearest town gate if needed
   // go to a far point; A* routes around walls, water and buildings (gate logic kept as a fallback)
@@ -336,6 +349,7 @@ class Player extends Hero {
     this.inTown = World.zoneAt(this.x, this.y).safe;
     this.atkCd -= dt; this.potionCd -= dt; this.combatT -= dt; this.sprintCd -= dt;
     if (this.sprintT > 0) this.sprintT -= dt;
+    if (this.invulnT > 0) this.invulnT -= dt;
     for (const k in this.skillCd) if (this.skillCd[k] > 0) this.skillCd[k] -= dt;
     // buffs
     let changed = false;
@@ -358,6 +372,12 @@ class Player extends Hero {
     if (this.s.autoPotion && this.potionCd <= 0 && this.mp < this.maxMp * 0.2 && this.auto) {
       const it = this.s.inv.find((i) => i.id === 'mp_s');
       if (it) { this.useItem(it.uid, game); this.potionCd = 0.7; }
+    }
+    if (this.dashT > 0) { // mid-dodge: nothing else moves the player
+      this.dashT -= dt; this.moving = true;
+      this.tryMove(this.dashV.x * dt, this.dashV.y * dt);
+      if (Math.random() < dt * 30) VFX.sparkle && VFX.sparkle(this.x, this.y - 20, 30, '#bfe8ff');
+      return;
     }
     if (this.action) return;
 
