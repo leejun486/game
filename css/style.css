@@ -827,3 +827,32 @@ body.touch #joy { left: 22px; bottom: 22px; }
 @media (max-height: 520px) {
   body.touch #hud #bottom { left: calc(50% - 90px * var(--k)); }
 }
+
+/* ---------- 성장: 한계돌파 · 각성 ---------- */
+#exp-bar.capped #exp-fill { background: linear-gradient(90deg, #b8862b, #ffd76a, #b8862b); animation: capGlow 1.6s ease-in-out infinite; }
+@keyframes capGlow { 50% { filter: brightness(1.35); } }
+.gr-wrap { display: grid; grid-template-columns: 250px 1fr; gap: 18px; align-items: start; }
+.gr-stage { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 12px 0; }
+.gr-emblem { --c: #ffd76a; width: 150px; height: 150px; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  border: 3px solid var(--c); box-shadow: 0 0 24px color-mix(in srgb, var(--c) 45%, transparent), inset 0 0 30px rgba(0,0,0,.6);
+  background: radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--c) 28%, #1a1410), #0b0907 72%); }
+.gr-emblem span { font-size: 54px; font-weight: 800; color: var(--c); line-height: 1; text-shadow: 0 2px 8px #000; }
+.gr-emblem small { color: #d8ccb0; font-size: 13px; margin-top: 4px; }
+.gr-emblem.brk { --c: #ffd76a; }
+.gr-pips { display: flex; align-items: center; flex-wrap: wrap; justify-content: center; gap: 2px; }
+.gr-pip { --c: #ffd76a; display: flex; flex-direction: column; align-items: center; min-width: 38px; padding: 4px 3px; border: 1px solid #4a3f32; background: rgba(0,0,0,.35); color: #8a8070; font-size: 11px; }
+.gr-pip b { font-size: 12px; }
+.gr-pip.on { border-color: var(--c); color: var(--c); box-shadow: 0 0 8px color-mix(in srgb, var(--c) 50%, transparent); }
+.gr-link { width: 6px; height: 2px; background: #4a3f32; }
+.gr-info { display: flex; flex-direction: column; gap: 8px; font-size: 14px; line-height: 1.6; }
+.gr-info b { color: #ffe9b0; }
+.gr-warn { color: #ffb36b; font-style: normal; font-size: 13px; }
+.gr-costs { display: flex; flex-direction: column; gap: 6px; margin: 4px 0; }
+.gr-cost { display: grid; grid-template-columns: 28px 1fr auto; align-items: center; gap: 8px; padding: 6px 10px; background: rgba(0,0,0,.35); border: 1px solid var(--line); }
+.gr-cost img { width: 26px; height: 26px; }
+.gr-cost.ok b { color: #8ff0a4; } .gr-cost.no b { color: #ff8a80; }
+.gr-go { padding: 12px; font-size: 16px; }
+.gr-go:disabled { filter: grayscale(.8); opacity: .6; cursor: not-allowed; }
+.gr-done { color: #ffd76a; font-weight: 700; padding: 10px 0; }
+.tabs button .dot { position: relative; display: inline-block; margin-left: 4px; top: -6px; }
+@media (max-width: 700px) { .gr-wrap { grid-template-columns: 1fr; } .gr-emblem { width: 110px; height: 110px; } .gr-emblem span { font-size: 40px; } }

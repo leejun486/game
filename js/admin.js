@@ -10,7 +10,9 @@ const Admin = (() => {
     Quests.check(Game); UI.refreshAll();
   }
   function setLevel(p, lv) {
-    p.s.lv = U.clamp(lv, 1, D.MAX_LV); p.s.exp = 0; p.recalc(); p.hp = p.maxHp; p.mp = p.maxMp;
+    p.s.lv = U.clamp(lv, 1, D.MAX_LV); p.s.exp = 0;
+    p.s.lb = Math.max(p.s.lb, Growth.LIMITS.filter((l) => p.s.lv > l.lv).length); // skipped caps count as broken
+    p.recalc(); p.hp = p.maxHp; p.mp = p.maxMp;
     Game.fx.push(Combat.makeFx('levelup', p.x, p.y, { follow: p })); U.sfx.level();
   }
 
@@ -38,6 +40,7 @@ const Admin = (() => {
     lv10: (p) => { setLevel(p, p.s.lv + 10); return `레벨 ${p.s.lv}`; },
     lvMax: (p) => { setLevel(p, D.MAX_LV); return `최대 레벨 ${p.s.lv}`; },
     heal: (p) => { p.hp = p.maxHp; p.mp = p.maxMp; p.skillCd = {}; p.sprintCd = 0; return 'HP/MP 회복, 쿨타임 초기화'; },
+    growMats: (p) => { p.addItem('breakstone', 50); p.addItem('awakegem', 50); return '돌파석 50, 각성의 여의주 50 지급'; },
     wardAll: (p) => { for (const it of Wardrobe.ITEMS) if (!it.cls || it.cls === p.cls) Wardrobe.give(p, it); return '내 직업 의상 전부 지급'; },
     mountsAll: (p) => { for (const x of Mounts.LIST) p.s.mounts[x.id] = (p.s.mounts[x.id] || 0) + 1; return '탈것 전부 지급'; },
     petsAll: (p) => { for (const x of Pets.LIST) p.s.pets[x.id] = (p.s.pets[x.id] || 0) + 1; return '펫 전부 지급'; },
@@ -74,7 +77,7 @@ const Admin = (() => {
     ['재화', [['dia1k', '다이아 +1,000'], ['dia10k', '다이아 +10,000'], ['dia100k', '다이아 +100,000'], ['gold1m', '아데나 +100만'], ['gold100m', '아데나 +1억'], ['ticket10', '소환권 +10'], ['ticket100', '소환권 +100']]],
     ['아이템', [['scrolls', '강화 주문서 x10'], ['potions', '물약 세트'], ['gearAll', '모든 장비'], ['legendWpn', '+9 전설 무기']]],
     ['캐릭터', [['lv1', '레벨 +1'], ['lv10', '레벨 +10'], ['lvMax', '최대 레벨'], ['heal', '회복 · 쿨 초기화'], ['questSkip', '현재 퀘스트 완료']]],
-    ['수집', [['wardAll', '의상 전부'], ['wardLegend', '전설 의상 1벌'], ['petsAll', '펫 전부'], ['mountsAll', '탈것 전부']]],
+    ['수집', [['growMats', '돌파석·여의주 50'], ['wardAll', '의상 전부'], ['wardLegend', '전설 의상 1벌'], ['petsAll', '펫 전부'], ['mountsAll', '탈것 전부']]],
     ['치트', [['god', '무적', 'god'], ['oneHit', '원킬', 'oneHit'], ['speed', '이동속도 2배', 'speed'], ['gmOff', '치트 모두 해제']]],
     ['월드', [['bosses', '보스 즉시 소환'], ['dungeon', '던전 횟수 초기화'], ['dayNight', '낮/밤 전환'], ['passMax', '시즌 패스 만렙'], ['attend', '출석 초기화']]],
   ];

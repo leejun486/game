@@ -225,6 +225,7 @@ const Content = (() => {
       skills: Skills.anyChoice(p),
       collection: equipReg,
       wardrobe: Wardrobe.hasUpgrade(p),
+      growth: Growth.ready(p),
       pet: !p.s.pet && Object.keys(p.s.pets || {}).length > 0,
       mount: !p.s.mount && Object.keys(p.s.mounts || {}).length > 0,
       guild: Siege.isOwner(p) && Siege.castle(p).taxDay !== today(),

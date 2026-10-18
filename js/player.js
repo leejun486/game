@@ -5,6 +5,7 @@ class Player extends Hero {
     const cls = save.cls;
     super({ x: save.x || D.TOWN.x, y: save.y || D.TOWN.y + 120, sheet: D.CLASSES[cls].sheet, cls, name: save.name });
     Content.migrate(save);
+    Growth.migrate(save);
     this.s = save; // persistent data
     Wardrobe.migrate(this); Wardrobe.preload(cls);
     Pets.migrate(this);
@@ -149,6 +150,8 @@ class Player extends Hero {
     // 6-8 ending title
     const end = this.s.ending && D.ENDINGS[this.s.ending];
     if (end) { const { atkPct: ep = 0, ...rest } = end.bonus; add(rest); setAtkPct += ep; }
+    // 한계돌파 · 각성
+    for (const { atkPct: gp = 0, ...rest } of Growth.bonuses(this)) { add(rest); setAtkPct += gp; }
     // item collections + guild buff
     for (const b of Content.bonuses(this)) add(b);
     // 옷장: worn parts + every owned part
@@ -183,7 +186,8 @@ class Player extends Hero {
     n = Math.round(n * (1 + this.stats.expPct / 100));
     this.s.exp += n;
     let need = D.expToNext(this.s.lv);
-    while (this.s.exp >= need && this.s.lv < D.MAX_LV) {
+    const cap = Growth.cap(this); // 한계돌파: the level waits at the cap, exp fills up to it
+    while (this.s.exp >= need && this.s.lv < cap) {
       this.s.exp -= need; this.s.lv++;
       need = D.expToNext(this.s.lv);
       this.recalc(); this.hp = this.maxHp; this.mp = this.maxMp;
@@ -196,6 +200,14 @@ class Player extends Hero {
       this.autoEquipBest();
       Quests.check(game);
     }
+    if (this.s.lv >= cap && this.s.lv < D.MAX_LV && this.s.exp >= need) {
+      this.s.exp = need;
+      if (!this.capNote) {
+        this.capNote = true;
+        UI.toast(`한계 도달! Lv.${cap} — 메뉴 → 성장에서 한계돌파하세요`, '#ffd76a');
+        UI.chat(`[한계돌파] Lv.${cap} 한계에 도달했습니다. 돌파석과 아데나로 한계를 돌파하면 경험치가 이어집니다. (메뉴 → 성장)`, 'sys');
+      }
+    }
   }
   expPct() { return this.s.lv >= D.MAX_LV ? 100 : (this.s.exp / D.expToNext(this.s.lv)) * 100; }
 
@@ -204,6 +216,7 @@ class Player extends Hero {
     const it = this.item(uid); if (!it) return;
     const def = D.ITEMS[it.id];
     if (this.dead) return;
+    if (def.kind === 'mat') return UI.open('growth', it.id === 'awakegem' ? 'awaken' : 'break');
     if (def.kind === 'potion') {
       if (def.heal && this.hp >= this.maxHp && !def.mana) return UI.toast('HP가 가득 찼습니다.');
       // 회복 물약 쿨타임 (D.POTION_CD초)
@@ -468,6 +481,8 @@ class Player extends Hero {
     drawLabel(ctx, (cheat ? '[GM] ' : '') + this.name, x, y - 8, cheat ? '#ffd76a' : '#ffffff', 'bold 12px sans-serif');
     if (this.s.guild) drawLabel(ctx, this.s.guild, x - ctx.measureText(this.name).width / 2 - 16, y - 8, '#ffe08a', '11px sans-serif');
     drawHpBar(ctx, x, y - 6, 46, this.hp / this.maxHp);
+    const tg = Growth.tag(this);
+    if (tg) drawLabel(ctx, tg.text, x, y - 22, tg.color, 'bold 11px sans-serif');
     if (this.bubble && this.bubble.t > 0) drawBubble(ctx, this.bubble.text, x, y - 36);
   }
   // standing still: breathe, and every few seconds show off the weapon look
@@ -500,6 +515,7 @@ class Player extends Hero {
     const bob = !this.action && !this.moving && this.idleT > 0.6 ? Math.round(Math.sin(now * 2.4) * 1.2) : 0;
     const y = this.y - cam.y + bob;
     ctx.globalAlpha = alpha;
+    Growth.drawAura(ctx, this, x, y);
     this.aura(ctx, x, y);
     const id = Looks.current(this), look = Looks.BY_ID[id];
     if (this.mounted) {

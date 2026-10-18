@@ -64,13 +64,15 @@ const Dungeon = (() => {
       const L = p.s.lv;
       const r = { gold: L * 800, dia: 60 + Math.floor(L * 1.5), items: { sc_weapon: 1, ticket: 1, hp_l: 5 } };
       if (Math.random() < 0.3) r.items.sc_armor = 1;
+      r.items.breakstone = 2;
+      if (L >= 50) r.items.awakegem = 1;
       p.s.gold += r.gold; p.s.dia += r.dia;
       for (const id in r.items) p.addItem(id, r.items[id]);
       p.s.dungeon.clears = (p.s.dungeon.clears || 0) + 1;
       Content.passXp(p, 40);
       U.sfx.legend();
       UI.toast('던전 클리어!', '#ffe38a');
-      UI.chat(`[던전 보상] 아데나 ${U.fmt(r.gold)}, 다이아 ${r.dia}, 무기 마법 주문서, 의상 소환권, 강력 체력 회복제 x5`, 'sys');
+      UI.chat(`[던전 보상] 아데나 ${U.fmt(r.gold)}, 다이아 ${r.dia}, 무기 마법 주문서, 의상 소환권, 강력 체력 회복제 x5, 돌파석 x2${r.items.awakegem ? ', 각성의 여의주' : ''}`, 'sys');
       UI.announce(`<b>${UI.esc(p.name)}</b>님이 <em>이클립스 균열</em>을 정복했습니다!`);
     } else {
       U.sfx.fail();

@@ -115,7 +115,8 @@ const UI = (() => {
     $('lvl').textContent = st.lv;
     const pct = p.expPct();
     $('exp-fill').style.width = pct + '%';
-    $('exp-text').textContent = `Exp ${pct.toFixed(4)}%   ⚔ 전투력 ${U.fmt(p.power)}   ☠ ${U.fmt(st.kills)}`;
+    $('exp-text').textContent = Growth.capped(p) ? `한계 도달 Lv.${Growth.cap(p)} — 메뉴 → 성장에서 한계돌파   ⚔ 전투력 ${U.fmt(p.power)}` : `Exp ${pct.toFixed(4)}%   ⚔ 전투력 ${U.fmt(p.power)}   ☠ ${U.fmt(st.kills)}`;
+    $('exp-bar').classList.toggle('capped', Growth.capped(p));
     // slots
     p.classDef.skills.forEach((id, i) => {
       const s = skillEls[i]; if (!s) return;
@@ -370,7 +371,7 @@ const UI = (() => {
     const dots = Content.menuDots(game.player);
     const top = [['shop', 'shop', '상점'], ['summon', 'summon', '소환'], ['event', 'event', '이벤트'], ['pass', 'pass', '시즌 패스'], ['skills', 'skill', '스킬'], ['inventory', 'inventory', '인벤토리']];
     const grid = [
-      ['character', 'character', '캐릭터'], ['stats', 'star', '잠재력'], ['skills', 'blade', '전투 특성'], ['wardrobe', 'wings', '옷장', 1],
+      ['character', 'character', '캐릭터'], ['stats', 'star', '잠재력'], ['skills', 'blade', '전투 특성'], ['growth', 'upgrade', '성장', 1], ['wardrobe', 'wings', '옷장', 1],
       ['teleport', 'teleport', '권능'], ['summon', 'summon', '서판 조합'], ['quests', 'quest', '퀘스트', 1], ['event', 'bell', '의뢰'], ['craft', 'craft', '제작'], ['achievement', 'achievement', '업적', 1], ['collection', 'spellbook', '수집', 1],
       ['pet', 'pet', '펫', 1], ['mount', 'mount', '탈것', 1], ['guild', 'guild', '혈맹', 1], ['ranking', 'ranking', '순위'], ['relation', 'trade', '관계'], ['exchange', 'exchange', '거래소'], ['siege', 'crown', '공성전'], ['ranking', 'skull', '원수'], ['auto', 'auto', 'AI 모드'],
       ['map', 'compass', '위치 저장'],
@@ -474,13 +475,14 @@ const UI = (() => {
         ${why ? `<div class="req-msg">⚠ ${esc(why)} (현재 Lv.${p.s.lv} ${esc(p.classDef.name)})</div>` : ''}
         <div class="btns">
           ${D.isEquip(def) ? (eq ? `<button class="dark-btn" data-do="unequip">해제</button>` : `<button class="gold-btn" data-do="use" ${why ? 'disabled' : ''}>장착</button>`) : ''}
-          ${!D.isEquip(def) && def.kind !== 'enchant' && def.kind !== 'ticket' ? `<button class="gold-btn" data-do="use">사용</button>` : ''}
+          ${!D.isEquip(def) && def.kind !== 'enchant' && def.kind !== 'ticket' && def.kind !== 'mat' ? `<button class="gold-btn" data-do="use">사용</button>` : ''}
+          ${def.kind === 'mat' ? `<button class="gold-btn" data-do="use">${it.id === 'awakegem' ? '각성하기' : '한계돌파'}</button>` : ''}
           ${def.kind === 'ticket' ? `<button class="gold-btn" data-do="use">소환하기</button>` : ''}
           ${(def.kind === 'weapon' || def.kind === 'armor') ? `<button class="dark-btn" data-do="enchant">강화</button>` : ''}
           ${!eq && def.kind !== 'ticket' ? `<button class="red-btn" data-do="sell">판매 (${U.fmt(sell)} 아데나${it.n > 1 ? ' x' + it.n : ''})</button>` : ''}
         </div>`;
     };
-    const KIND_ORDER = ['weapon', 'armor', 'ring', 'potion', 'buff', 'scroll', 'enchant', 'ticket', 'skillbook'];
+    const KIND_ORDER = ['weapon', 'armor', 'ring', 'potion', 'buff', 'scroll', 'enchant', 'mat', 'ticket', 'skillbook'];
     body.onclick = (e) => {
       const p = game.player;
       const so = e.target.closest('[data-sort]');
