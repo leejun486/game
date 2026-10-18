@@ -82,7 +82,7 @@ const Content = (() => {
     { id: 's3', cat: 'set', name: '핏빛 군단의 깃발', items: ['w_sword_h1', 'a_h1'], bonus: { atk: 10, hp: 300 } },
     { id: 's4', cat: 'set', name: '심연의 문장', items: ['w_sword_h2', 'a_h2'], bonus: { def: 10, dmgRed: 3 } },
     { id: 's5', cat: 'set', name: '천상의 심판 성물', items: ['w_sword_l1', 'a_l1', 'r_l'], bonus: { atk: 25, hp: 800, crit: 5 } },
-    { id: 'c3', cat: 'misc', name: '연금술사의 선반', items: ['hp_s', 'hp_m', 'hp_l', 'mp_s', 'haste'], bonus: { hp: 50, mp: 30 } },
+    { id: 'c3', cat: 'misc', name: '연금술사의 선반', items: ['hp_s', 'hp_m', 'hp_l', 'pot_blue', 'haste'], bonus: { hp: 50, mp: 30 } },
     { id: 'c4', cat: 'misc', name: '주문서 수집가', items: ['tp_town', 'sc_weapon', 'sc_armor'], bonus: { crit: 2 } },
     { id: 'm1', cat: 'misc', name: '회복의 달인', items: ['hp_l', 'hp_l', 'hp_l', 'hp_l', 'hp_l'], bonus: { hp: 150, mp: 50 } },
     { id: 'm2', cat: 'misc', name: '강화 재료 창고', items: ['sc_weapon', 'sc_weapon', 'sc_armor', 'sc_armor'], bonus: { atk: 4, def: 4 } },

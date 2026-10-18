@@ -123,8 +123,10 @@ class Entity {
   }
   frame() {
     if (this.dead) {
-      const a = ANIMS.hurt;
-      return { row: a.row, col: Math.min(a.frames - 1, Math.floor(this.deadT / a.ft)) };
+      const a = ANIMS.hurt, col = Math.min(a.frames - 1, Math.floor(this.deadT / a.ft));
+      const dr = window.DEATH_ROWS[this.sheet]; // 방향마다 쓰러지는 그림이 있는 시트
+      if (dr != null) return { row: dr + (this.diag != null && this.diag >= 0 ? 4 + this.diag : this.dir), col };
+      return { row: a.row, col };
     }
     if (this.action && this.action.seq) {
       const ac = this.action;
@@ -137,7 +139,9 @@ class Entity {
     }
     const w = ANIMS.walk;
     if (this.moving) return { row: w.row + this.dir, col: walkCol(this.sheet, this.walkT / w.ft) };
-    return { row: w.row + this.dir, col: 0 };
+    // 대기 모션이 있는 시트: 두 자세를 번갈아
+    const ic = window.IDLE_COL[this.sheet];
+    return { row: w.row + this.dir, col: ic && Math.floor(performance.now() / 600) % 2 ? ic : 0 };
   }
   update(dt) {
     this.clock = (this.clock || 0) + dt;

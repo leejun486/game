@@ -35,7 +35,7 @@ D.CLASSES = {
     skills: ['e_triple', 'e_rain', 'e_wind', 'e_energy', 'e_frost', 'e_storm', 'e_phoenix', 'e_starfall', 'e_spirit'],
   },
   mage: {
-    name: '마법사', sheet: 'mage', desc: '원소를 다루는 현자.\n강력한 광역 마법으로 적을 쓸어버린다.',
+    name: '마법사', sheet: 'mage_px', desc: '원소를 다루는 현자.\n강력한 광역 마법으로 적을 쓸어버린다.',
     base: { hp: 115, mp: 140, atk: 15, def: 2 }, grow: { hp: 11, mp: 11, atk: 2.5, def: 0.4 },
     range: 300, attack: 'thrust', atkDelay: 1.05, weapon: 'staff', projectile: 'bolt',
     skills: ['m_fire', 'm_ice', 'm_heal', 'm_meteor', 'm_chain', 'm_blizzard', 'm_thunder', 'm_inferno', 'm_eclipse'],
@@ -211,11 +211,12 @@ D.TELEPORTS = [
 
 // ---------------- items ----------------
 // kind: potion | scroll | ticket | weapon | armor | ring | buff
+// 회복 물약 쿨타임(초): 체력 회복제 셋이 한 쿨타임을 함께 씀. 마나 회복제는 없음 (MP는 자연 회복·파란 물약·스킬로)
+D.POTION_CD = 10;
 D.ITEMS = {
   hp_s: { name: '체력 회복제', icon: 'pot-red', kind: 'potion', heal: 70, price: 30, grade: 0, desc: 'HP를 70 회복합니다.' },
   hp_m: { name: '고급 체력 회복제', icon: 'pot-orange', kind: 'potion', heal: 250, price: 150, grade: 1, desc: 'HP를 250 회복합니다.' },
   hp_l: { name: '강력 체력 회복제', icon: 'pot-purple', kind: 'potion', heal: 700, price: 500, grade: 2, desc: 'HP를 700 회복합니다.' },
-  mp_s: { name: '마나 회복제', icon: 'pot-blue', kind: 'potion', mana: 80, price: 80, grade: 0, desc: 'MP를 80 회복합니다.' },
   // buff potions: 5 minutes each; drinking the same potion again refreshes its timer, different potions stack
   haste: { name: '초록 물약', icon: 'pot-green', kind: 'buff', buff: { id: 'haste', name: '초록 물약', icon: 'pot-green', atkSpd: 25, dur: 300 }, price: 400, grade: 1, desc: '5분간 공격 속도 +25%' },
   pot_blue: { name: '파란 물약', icon: 'pot-mana', kind: 'buff', buff: { id: 'blue', name: '파란 물약', icon: 'pot-mana', mpRegen: 200, castSpd: 10, dur: 300 }, price: 400, grade: 1, desc: '5분간 MP 회복 속도 +200%, 시전 속도 +10%' },
@@ -341,7 +342,7 @@ D.enchantRate = (cur) => [0.5, 0.4, 0.33, 0.25, 0.18, 0.12, 0.08, 0.05, 0.03][Ma
 
 // drop tables: [itemId, chance]
 D.DROPS = {
-  common: [['hp_s', 0.18], ['mp_s', 0.06], ['tp_town', 0.02]],
+  common: [['hp_s', 0.18], ['tp_town', 0.02]],
   goblin: [['w_sword1', 0.01], ['w_bow1', 0.01], ['w_staff1', 0.01], ['a_1', 0.01]],
   wolfman: [['r_1', 0.004], ['sc_armor', 0.003]],
   boarman: [['hp_m', 0.05], ['sc_armor', 0.005], ['sc_weapon', 0.003]],
@@ -370,7 +371,7 @@ D.DROPS = {
 };
 
 D.SHOPS = {
-  general: { title: '잡화 상점', items: ['hp_s', 'hp_m', 'hp_l', 'mp_s', 'haste', 'pot_blue', 'pot_brave', 'pot_wise', 'pot_iron', 'pot_life', 'pot_wind', 'pot_exp', 'tp_town', 'sc_weapon', 'sc_armor'] },
+  general: { title: '잡화 상점', items: ['hp_s', 'hp_m', 'hp_l', 'haste', 'pot_blue', 'pot_brave', 'pot_wise', 'pot_iron', 'pot_life', 'pot_wind', 'pot_exp', 'tp_town', 'sc_weapon', 'sc_armor'] },
   weapon: { title: '무기 상점', items: ['w_sword1', 'w_sword2', 'w_sword3', 'w_bow1', 'w_bow2', 'w_bow3', 'w_staff1', 'w_staff2', 'w_staff3'] },
   armor: { title: '방어구 상점', items: ['a_1', 'a_2', 'a_3', 'r_1', 'r_2'] },
   book: { title: '스킬북 상점', items: ['sb_k_aura', 'sb_e_phoenix', 'sb_m_thunder', 'sb_k_judge', 'sb_e_starfall', 'sb_m_inferno', 'sb_k_avatar', 'sb_e_spirit', 'sb_m_eclipse'] },
@@ -430,11 +431,15 @@ D.SUMMON_RATES = [0.60, 0.28, 0.095, 0.022, 0.003];
 window.SPRITE_ROWS.elf_px = window.SPRITE_ROWS.elf.concat(window.SPRITE_ROWS.elf.slice(0, 20)); // + diagonal rows 21-40
 // 8-direction knight from an attack sheet, 96px cells for the wide slash arcs (tools/build_knight_px.py)
 window.SPRITE_ROWS.knight_px = window.SPRITE_ROWS.elf_px;
-window.SPRITE_FRAME = { knight_px: 96 }; // frame size per sheet; everything else is 64
+// 도사(마법사): 여우 탈·무 지팡이 도트 그림, 8방향 대기 모션 (tools/extract_mage_px.py → tools/build_mage_px.py)
+window.SPRITE_ROWS.mage_px = window.SPRITE_ROWS.elf_px.concat([6, 6, 6, 6, 6, 6, 6, 6]); // + death rows 41-48
+window.SPRITE_FRAME = { knight_px: 96, mage_px: 96 }; // frame size per sheet; everything else is 64
+window.IDLE_COL = { mage_px: 12 }; // standing: alternate walk col 0 with this col (second idle pose)
+window.DEATH_ROWS = { mage_px: 41 }; // first of 8 death rows (up, left, down, right, then the 4 diagonals) — falls the way it faces
 window.WALK_FRAMES = { knight_px: 6 }; // walk cycle length per sheet (cols 1..n); everything else is 8
 // walk column for a step count measured in 8-frame-cycle frames, so every sheet walks at the same pace
 window.walkCol = (sheet, step) => { const n = window.WALK_FRAMES[sheet] || 8; return 1 + (Math.floor(step * n / 8) % n); };
-D.BAKED_WEAPON = { elf_px: 'elf_nw', knight_px: 'knight_nw' }; // sheet -> LPC body used to show weapon looks in menus
+D.BAKED_WEAPON = { elf_px: 'elf_nw', knight_px: 'knight_nw', mage_px: 'mage_nw' }; // sheet -> LPC body used to show weapon looks in menus
 D.SYNTH_RATES = [0.30, 0.25, 0.20, 0.12];
 D.cardGrowCost = (card, lv) => 1500 * lv * (card.grade + 1);
 D.CARD_MAX_LV = 10;

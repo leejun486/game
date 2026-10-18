@@ -62,7 +62,7 @@ const UI = (() => {
   }
 
   // ---------------------------------------------------------------- HUD
-  const SLOT_ITEMS = ['hp_s', 'hp_m', 'mp_s', 'tp_town'];
+  const SLOT_ITEMS = ['hp_s', 'hp_m', 'hp_l', 'tp_town'];
   // skills go to the combat pad (row 1: 1 2 3 4 Q · row 2: E Z X · the 9th is the big ultimate F),
   // potions and scrolls to the quick slots under the HP bar
   let skillEls = [], itemEls = [];
@@ -83,7 +83,7 @@ const UI = (() => {
       const it = D.ITEMS[id];
       const s = document.createElement('div');
       s.className = 'slot'; s.title = `${it.name}\n${it.desc}`;
-      s.innerHTML = `${ico(it.icon)}<span class="n">${i + 5}</span><span class="c"></span>`;
+      s.innerHTML = `${ico(it.icon)}<span class="n">${i + 5}</span><span class="c"></span>${it.kind === 'potion' ? '<div class="cd" style="transform:scaleY(0)"></div><div class="cdt"></div>' : ''}`;
       s.onclick = () => useSlotItem(i);
       $('slots').appendChild(s);
       return s;
@@ -132,6 +132,13 @@ const UI = (() => {
       const n = p.count(id);
       s.querySelector('.c').textContent = n;
       s.classList.toggle('empty', n === 0);
+      // 회복 물약 쿨타임
+      const cdEl = s.querySelector('.cd');
+      if (cdEl) {
+        const cd = Math.max(0, p.hpPotCd);
+        cdEl.style.transform = `scaleY(${Math.min(1, cd / D.POTION_CD)})`;
+        s.querySelector('.cdt').textContent = cd > 0 ? Math.ceil(cd) : '';
+      }
     });
     const hpTotal = p.count('hp_s') + p.count('hp_m') + p.count('hp_l');
     $('auto-potion-count').textContent = U.fmt(hpTotal);

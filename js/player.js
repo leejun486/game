@@ -16,9 +16,12 @@ class Player extends Hero {
     this.skillCd = {}; this.buffs = [];
     this.mp = save.mp ?? 0;
     this.moveTo = null; this.waypoints = []; this.talkTo = null;
-    this.auto = false; this.combatT = 0; this.potionCd = 0; this.sprintT = 0; this.sprintCd = 0;
+    this.auto = false; this.combatT = 0; this.potionCd = 0; this.hpPotCd = 0; this.sprintT = 0; this.sprintCd = 0;
     this.keys = { x: 0, y: 0 };
     this.navPriority = true; this.ignore = {}; this.lastX = this.x; this.lastY = this.y; this.stuckT = 0;
+    // 예전 저장의 마나 회복제(없어진 아이템)는 산 값만큼 아데나로 돌려줌
+    const oldMp = (save.inv || []).filter((i) => i.id === 'mp_s');
+    if (oldMp.length) { save.gold = (save.gold || 0) + oldMp.reduce((a, i) => a + (i.n || 1) * 80, 0); save.inv = save.inv.filter((i) => i.id !== 'mp_s'); }
     this.recalc();
     this.hp = save.hp ? Math.min(save.hp, this.maxHp) : this.maxHp;
     this.mp = save.mp ? Math.min(save.mp, this.maxMp) : this.maxMp;
@@ -29,7 +32,7 @@ class Player extends Hero {
       v: 1, name, cls, lv: 1, exp: 0, gold: 5000, dia: 1066, uid: 10,
       inv: [
         { uid: 1, id: wpn, n: 1, en: 0 }, { uid: 2, id: 'a_1', n: 1, en: 0 },
-        { uid: 3, id: 'hp_s', n: 50 }, { uid: 4, id: 'mp_s', n: 20 }, { uid: 5, id: 'tp_town', n: 5 }, { uid: 6, id: 'ticket', n: 3 },
+        { uid: 3, id: 'hp_s', n: 50 }, { uid: 4, id: 'hp_m', n: 10 }, { uid: 5, id: 'tp_town', n: 5 }, { uid: 6, id: 'ticket', n: 3 },
       ],
       equip: { weapon: 1, armor: 2, ring: null },
       cards: {}, card: null,
@@ -210,6 +213,9 @@ class Player extends Hero {
     if (this.dead) return;
     if (def.kind === 'potion') {
       if (def.heal && this.hp >= this.maxHp && !def.mana) return UI.toast('HP가 가득 찼습니다.');
+      // 회복 물약 쿨타임 (D.POTION_CD초)
+      if (this.hpPotCd > 0) return UI.toast(`체력 회복제는 ${Math.ceil(this.hpPotCd)}초 뒤에 다시 마실 수 있습니다.`);
+      this.hpPotCd = D.POTION_CD;
       if (def.heal) { this.hp = Math.min(this.maxHp, this.hp + def.heal); Combat.floatText(game, this, '+' + def.heal, '#6cff7a'); }
       if (def.mana) { this.mp = Math.min(this.maxMp, this.mp + def.mana); Combat.floatText(game, this, '+' + def.mana, '#6cb6ff'); }
       game.fx.push(Combat.makeFx('heal', this.x, this.y, { follow: this, color: def.mana ? '#6cb6ff' : '#7dff8a', small: true }));
@@ -347,7 +353,7 @@ class Player extends Hero {
   move(dt, game) {
     this.s.playTime += dt;
     this.inTown = World.zoneAt(this.x, this.y).safe;
-    this.atkCd -= dt; this.potionCd -= dt; this.combatT -= dt; this.sprintCd -= dt;
+    this.atkCd -= dt; this.potionCd -= dt; this.hpPotCd -= dt; this.combatT -= dt; this.sprintCd -= dt;
     if (this.sprintT > 0) this.sprintT -= dt;
     if (this.invulnT > 0) this.invulnT -= dt;
     for (const k in this.skillCd) if (this.skillCd[k] > 0) this.skillCd[k] -= dt;
@@ -359,19 +365,17 @@ class Player extends Hero {
     const regenMul = this.inTown ? 5 : this.combatT > 0 ? 0.4 : 1.5;
     this.hp = Math.min(this.maxHp, this.hp + (this.maxHp * 0.006 + 0.5) * regenMul * dt);
     const mpBoost = 1 + this.buffs.reduce((a, b) => a + (b.mpRegen || 0), 0) / 100; // 파란 물약
-    this.mp = Math.min(this.maxMp, this.mp + (this.maxMp * 0.012 + 0.8) * regenMul * mpBoost * dt);
+    // 마나 회복제가 없으니 싸우는 중에도 MP는 꾸준히 참 (체력보다 덜 깎음)
+    const mpMul = this.inTown ? 5 : this.combatT > 0 ? 0.8 : 1.5;
+    this.mp = Math.min(this.maxMp, this.mp + (this.maxMp * 0.012 + 0.8) * mpMul * mpBoost * dt);
     // auto potion
-    if (this.s.autoPotion && this.potionCd <= 0 && this.hp < this.maxHp * 0.55) {
+    if (this.s.autoPotion && this.potionCd <= 0 && this.hpPotCd <= 0 && this.hp < this.maxHp * 0.55) {
       const miss = this.maxHp - this.hp;
       const order = miss > 600 ? ['hp_l', 'hp_m', 'hp_s'] : miss > 220 ? ['hp_m', 'hp_s', 'hp_l'] : ['hp_s', 'hp_m', 'hp_l'];
       for (const id of order) {
         const it = this.s.inv.find((i) => i.id === id);
         if (it) { this.useItem(it.uid, game); this.potionCd = 0.7; break; }
       }
-    }
-    if (this.s.autoPotion && this.potionCd <= 0 && this.mp < this.maxMp * 0.2 && this.auto) {
-      const it = this.s.inv.find((i) => i.id === 'mp_s');
-      if (it) { this.useItem(it.uid, game); this.potionCd = 0.7; }
     }
     if (this.dashT > 0) { // mid-dodge: nothing else moves the player
       this.dashT -= dt; this.moving = true;
