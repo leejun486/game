@@ -78,7 +78,7 @@ const Game = {
   returnToTown() {
     this.teleportPlayer(D.TOWN.x + U.rand(-120, 120), D.TOWN.y + 160 + U.rand(-40, 40));
     this.player.auto = false;
-    UI.toast('라스카노 마을로 귀환했습니다.', '#9fe0ff');
+    UI.toast('하늘재 마을로 귀환했습니다.', '#9fe0ff');
   },
   useTownScroll() {
     const p = this.player;

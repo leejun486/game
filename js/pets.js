@@ -179,7 +179,7 @@ const Pets = (() => {
     { id: 'p_fox', name: '세꼬리 여우 호야', grade: 2, art: 'fox', ranged: false, el: 'fire', size: 32, voice: ['캥!', '호야~'] },
     { id: 'p_frostwolf', name: '서리 늑대 펜리르', grade: 3, art: 'frostwolf', ranged: false, el: 'ice', size: 64, voice: ['아우우—!'] },
     { id: 'p_raven', name: '그림자 까마귀 모르가', grade: 3, art: 'raven', ranged: true, el: 'shadow', size: 60, fly: true, voice: ['까악—!'] },
-    { id: 'p_phoenix', name: '불사조 이그니스', grade: 4, art: 'phoenix', ranged: true, el: 'fire', size: 72, fly: true, voice: ['끼이이—!'] },
+    { id: 'p_phoenix', name: '불사조 주작', grade: 4, art: 'phoenix', ranged: true, el: 'fire', size: 72, fly: true, voice: ['끼이이—!'] },
     { id: 'p_dragon', name: '흑룡 칼리고', grade: 4, art: 'dragon', ranged: true, el: 'fire', size: 80, fly: true, voice: ['크아아앙!'] },
   ];
   const BY_ID = {};

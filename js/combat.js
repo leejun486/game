@@ -765,7 +765,7 @@ const Quests = {
       UI.ending(k, () => {
         UI.announce(`<b>${UI.esc(p.name)}</b>님이 칭호 <em class="mythic">「${D.ENDINGS[k].title}」</em>을(를) 얻었습니다!`);
         UI.story(q.by, D.ENDINGS[k].after);
-        UI.story('', ['— 이클립스: 어웨이크닝 · 완 —', '이클립스 균열과 녹스의 성채는 계속 열려 있습니다. 신화 장비 「일식의 각성자」를 모아 보세요.']);
+        UI.story('', ['— 이클립스: 어웨이크닝 · 완 —', '이클립스 균열과 어둑시니의 궁은 계속 열려 있습니다. 신화 장비 「일식의 각성자」를 모아 보세요.']);
       });
     }));
   },

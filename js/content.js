@@ -88,8 +88,8 @@ const Content = (() => {
     { id: 'm2', cat: 'misc', name: '강화 재료 창고', items: ['sc_weapon', 'sc_weapon', 'sc_armor', 'sc_armor'], bonus: { atk: 4, def: 4 } },
     { id: 'm3', cat: 'misc', name: '여행자의 가방', items: ['tp_town', 'tp_town', 'tp_town', 'haste', 'haste'], bonus: { moveSpd: 5, eva: 20 } },
     { id: 'm4', cat: 'misc', name: '의상의 인장', items: ['ticket', 'ticket', 'ticket'], bonus: { expPct: 5 } },
-    { id: 'b1', cat: 'boss', name: '뱀파이어 군주의 유산', items: ['w_sword4', 'a_4', 'r_3'], bonus: { atk: 8, dmgRed: 2 } },
-    { id: 'b2', cat: 'boss', name: '미노타우르스의 보물', items: ['w_sword5', 'a_4', 'r_h'], bonus: { hp: 300, def: 6 } },
+    { id: 'b1', cat: 'boss', name: '저승차사 강림의 유산', items: ['w_sword4', 'a_4', 'r_3'], bonus: { atk: 8, dmgRed: 2 } },
+    { id: 'b2', cat: 'boss', name: '우두귀왕의 보물', items: ['w_sword5', 'a_4', 'r_h'], bonus: { hp: 300, def: 6 } },
     { id: 'b3', cat: 'boss', name: '서리 거인의 결정', items: ['w_sword_h2', 'a_h2', 'r_h'], bonus: { atk: 12, hp: 250, eva: 30 } },
     { id: 'b4', cat: 'boss', name: '화염 군주의 전리품', items: ['w_sword6', 'a_5', 'r_l'], bonus: { atk: 20, hp: 400, crit: 3 } },
   ];
@@ -141,7 +141,7 @@ const Content = (() => {
   }
   // ---------------------------------------------------------------- clans
   // clan level (1~10) grows from kills, bosses, donations and sieges; each level adds attack and HP.
-  // A founded clan has its own name and colour and recruits bots; holding 아스텔라 성 adds the castle buff.
+  // A founded clan has its own name and colour and recruits bots; holding 청구성 adds the castle buff.
   const CLAN_MAX = 10, DONATE = { gold: 10000, xp: 150, perDay: 5 }, FOUND = { gold: 100000, lv: 20 };
   const clanNeed = (lv) => 300 * lv * lv;
   const CASTLE_BONUS = { atk: 12, hp: 400, def: 6 };
@@ -427,7 +427,7 @@ const Content = (() => {
         const castle = Siege.isOwner(p);
         html += `<div class="clan-card"><div style="display:flex;gap:12px;align-items:center">
             <div class="castle-card" style="margin:0;padding:0;border:0;background:none"><div class="flag" style="background:${Siege.colorOf(cur.name)}"></div></div>
-            <div style="flex:1"><b style="font-size:17px;color:var(--gold)">[${esc(cur.name)}]</b> <span class="sub">Lv.${c.lv}${castle ? ' · 🏰 아스텔라 성주' : ''} · 멤버 ${mem.length + 1}명</span>
+            <div style="flex:1"><b style="font-size:17px;color:var(--gold)">[${esc(cur.name)}]</b> <span class="sub">Lv.${c.lv}${castle ? ' · 🏰 청구성주' : ''} · 멤버 ${mem.length + 1}명</span>
               <div class="xp"><i style="width:${c.lv >= CLAN_MAX ? 100 : Math.round((c.xp / need) * 100)}%"></i></div>
               <div class="sub">${c.lv >= CLAN_MAX ? '최대 레벨' : `혈맹 경험치 ${U.fmt(c.xp)} / ${U.fmt(need)} (사냥 1, 보스 60, 기부 ${DONATE.xp}, 공성 승리 800)`}</div>
               <div class="sub" style="color:#7ee07e">혈맹 버프: ${cur.label}${c.lv > 1 ? `, 레벨 보너스 공격력 +${lb.atk} · HP +${lb.hp}` : ''}${castle ? `, 성주 버프 공격력 +${CASTLE_BONUS.atk} · HP +${CASTLE_BONUS.hp} · 방어력 +${CASTLE_BONUS.def}` : ''}</div></div></div>
@@ -491,13 +491,13 @@ const Content = (() => {
   };
 
   O.siege = () => {
-    const { body } = UI.makePanel('공성전 · 아스텔라 성', 'center dialog');
+    const { body } = UI.makePanel('공성전 · 청구성', 'center dialog');
     const render = () => {
       const p = Game.player, cs = Siege.castle(p), own = Siege.isOwner(p);
       const taxed = cs.taxDay === new Date().toDateString();
       body.innerHTML = `<div class="castle-card"><div class="flag" style="background:${Siege.ownerColor()}"></div>
-          <div><h4>아스텔라 성</h4><div>성주 혈맹 <b style="color:#ffd76a">[${esc(cs.owner)}]</b>${own ? ' <span style="color:#7ee07e">(우리 혈맹)</span>' : ''}</div>
-          <div class="sub">바람의 초원 북동쪽 성채 · 우리 혈맹 공성 승리 ${cs.wins}회</div></div></div>
+          <div><h4>청구성</h4><div>성주 혈맹 <b style="color:#ffd76a">[${esc(cs.owner)}]</b>${own ? ' <span style="color:#7ee07e">(우리 혈맹)</span>' : ''}</div>
+          <div class="sub">갈대 들녘 북동쪽 성채 · 우리 혈맹 공성 승리 ${cs.wins}회</div></div></div>
         <div class="stat-list">
           <div>참여 조건 <b>혈맹 소속 · Lv.${Siege.MIN_LV} 이상</b></div><div>선전포고 비용 <b>${U.fmt(Siege.COST)} 아데나</b></div>
           <div>제한 시간 <b>${Siege.TIME / 60}분</b></div><div>목표 <b>성문 → 수호탑 파괴</b></div>

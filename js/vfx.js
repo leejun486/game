@@ -100,7 +100,7 @@ const VFX = (() => {
     decal('frost', x, y, r * 0.9, 4);
     flash(x, y, r * 1.8, '#9fdcff', 0.4);
   }
-  // 녹스: violet flare with black smoke
+  // 어둑시니: violet flare with black smoke
   function voidBurst(x, y, r = 90, strength = 1) {
     const n = Math.round(22 * strength + r * 0.2);
     for (let i = 0; i < n; i++) {

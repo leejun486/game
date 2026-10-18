@@ -1,5 +1,5 @@
 'use strict';
-// 공성전: a clan declares war on 아스텔라 성 (D.CASTLE), breaks the gate, then the guardian tower inside the keep.
+// 공성전: a clan declares war on 청구성 (D.CASTLE), breaks the gate, then the guardian tower inside the keep.
 // The owning clan's guards, archers and named champions defend; bots of the player's clan join the attack.
 // Winning makes the player's clan the castle owner: a daily tax, a castle buff (Content.bonuses) and its banners.
 const Siege = (() => {
@@ -41,7 +41,7 @@ const Siege = (() => {
     const p = game.player, L = Math.max(20, p.s.lv), own = owner();
     const guard = mk('siege_guard', L, { name: `${own} 수비대`, sheet: 'npc_guard', hp: 60 * L + 800, atk: Math.round(2.7 * L + 22), scale: 1.05, def: Math.round(0.8 * L) });
     const archer = mk('siege_archer', L, { name: `${own} 궁수`, sheet: 'elf_red', hp: 38 * L + 500, atk: Math.round(2.3 * L + 14), ranged: true, range: 290, def: Math.round(0.4 * L) });
-    const gate = mk('castle_gate', L, { name: '아스텔라 성문', structure: 'gate', hp: 750 * L + 10000, atk: 0, aggro: false, radius: 64, height: 150, expMul: 20 });
+    const gate = mk('castle_gate', L, { name: '청구성문', structure: 'gate', hp: 750 * L + 10000, atk: 0, aggro: false, radius: 64, height: 150, expMul: 20 });
     const tower = mk('castle_tower', L, { name: '수호탑', structure: 'tower', hp: 1100 * L + 15000, atk: Math.round(2.6 * L + 20), aggro: false, radius: 44, height: 200, range: 380, expMul: 30 });
     st.gate = place(game, gate, (C.gate[0] + C.gate[1]) / 2 + 0.5, C.y1 + 0.55);
     st.tower = place(game, tower, C.tower.x + 0.5, C.tower.y + 0.5);
@@ -71,7 +71,7 @@ const Siege = (() => {
     st = { phase: 'prep', t: PREP, left: TIME, mobs: [], allies: [] };
     UI.close();
     game.teleportPlayer(128 * T + 32, (C.y1 + 8) * T);
-    UI.announce(`<b>[${UI.esc(p.s.guild)}]</b> 혈맹이 <em>[${UI.esc(owner())}]</em> 혈맹의 아스텔라 성에 선전포고했습니다!`);
+    UI.announce(`<b>[${UI.esc(p.s.guild)}]</b> 혈맹이 <em>[${UI.esc(owner())}]</em> 혈맹의 청구성에 선전포고했습니다!`);
     UI.chat(`[공성전] ${PREP}초 후 공성전이 시작됩니다. 성문을 부수고 성 안의 수호탑을 파괴하세요.`, 'sys');
     BotChat.onEvent(`${p.s.guild} 혈맹이 ${owner()} 혈맹 성에 선전포고`, ['공성 가즈아', `${owner()} 긴장해라 ㅋㅋ`, '성문 부수러 갑니다']);
     hud(true);
@@ -97,7 +97,7 @@ const Siege = (() => {
       gateSolid(false); st.phase = 'tower';
       game.shake = 18; U.sfx.boom();
       VFX.debris(mon.x, mon.y, 30); VFX.fireBurst(mon.x, mon.y, 120, 1.2);
-      UI.announce('<em>아스텔라 성문</em>이 무너졌습니다! 수호탑으로 진격하세요!');
+      UI.announce('<em>청구성문</em>이 무너졌습니다! 수호탑으로 진격하세요!');
       for (const m of st.mobs) if (!m.dead && !m.def.structure) m.aggroOn(game.player);
     } else if (mon === st.tower) finish(game, true);
   }
@@ -116,12 +116,12 @@ const Siege = (() => {
       Content.clanXp(p, 800);
       U.sfx.legend(); game.shake = 14;
       VFX.fireBurst(st.tower.x, st.tower.y, 200, 2);
-      UI.announce(`<b>[${UI.esc(p.s.guild)}]</b> 혈맹이 <em class="legend">아스텔라 성</em>을 점령했습니다! (${UI.esc(prev)} → ${UI.esc(p.s.guild)})`);
-      BotChat.onEvent(`${p.s.guild} 혈맹이 아스텔라 성을 점령`, ['성주님 ㅊㅋㅊㅋ', `${p.s.guild} 미쳤다`, '세금 얼마 걷어요?']);
+      UI.announce(`<b>[${UI.esc(p.s.guild)}]</b> 혈맹이 <em class="legend">청구성</em>을 점령했습니다! (${UI.esc(prev)} → ${UI.esc(p.s.guild)})`);
+      BotChat.onEvent(`${p.s.guild} 혈맹이 청구성을 점령`, ['성주님 ㅊㅋㅊㅋ', `${p.s.guild} 미쳤다`, '세금 얼마 걷어요?']);
       p.recalc(); UI.refreshAll();
     } else {
       U.sfx.fail();
-      UI.announce(`<em>[${UI.esc(cs.owner)}]</em> 혈맹이 아스텔라 성을 지켜냈습니다.`);
+      UI.announce(`<em>[${UI.esc(cs.owner)}]</em> 혈맹이 청구성을 지켜냈습니다.`);
     }
     game.save();
     setTimeout(() => { st = null; hud(false); }, 4000);

@@ -74,7 +74,7 @@ const World = (() => {
       }
     };
     lavaPool(155, 128, 5, 3); lavaPool(174, 150, 4, 6); lavaPool(132, 140, 3, 4); lavaPool(150, 172, 6, 3); lavaPool(176, 176, 4, 3);
-    // 녹스의 성채: bottomless chasms (impassable) torn through the black stone, clear of the camps and arenas
+    // 어둑시니의 궁: bottomless chasms (impassable) torn through the black stone, clear of the camps and arenas
     const chasm = (cx, cy, rx, ry) => {
       for (let ty = cy - ry - 3; ty <= cy + ry + 3; ty++) for (let tx = cx - rx - 3; tx <= cx + rx + 3; tx++) {
         const d = Math.hypot((tx - cx) / rx, (ty - cy) / ry) + (U.fbm(tx * 0.3, ty * 0.3, SEED + 23, 2) - 0.5) * 0.7;
@@ -259,7 +259,7 @@ const World = (() => {
     for (const [dx, dy] of [[-8, -6], [8, -6], [-8, 6], [8, 6], [-12, 0], [12, 0]]) addProp('pillar', cx + dx * T, cy + dy * T, 22);
     for (const [dx, dy] of [[-12, -10], [12, -10], [-12, 10], [12, 10]]) addProp('brazier', cx + dx * T, cy + dy * T, 16);
   }
-  // 아스텔라 성: outer walls with a gate gap in the south wall, corner towers, an inner keep open to the south
+  // 청구성: outer walls with a gate gap in the south wall, corner towers, an inner keep open to the south
   function buildCastle() {
     const c = D.CASTLE, k = c.keep;
     for (let i = props.length - 1; i >= 0; i--) {
@@ -554,18 +554,29 @@ const World = (() => {
         const cols = ['#f2e36b', '#f08fb0', '#ffffff', '#b894ff'];
         for (let i = 0; i < 7; i++) blob(g, 6 + rr() * 28, 6 + rr() * 14, 2.2, cols[(v + i) % 4]);
       });
-      art['tomb' + v] = mk(50, 64, (g, w, h) => {
-        shadow(g, w / 2 + 3, h - 6, 20, 6, 0.4);
-        g.fillStyle = '#5d5a57'; g.fillRect(w / 2 - 15, h - 12, 30, 7);
-        g.fillStyle = v % 2 ? '#8a8680' : '#7a7772';
-        g.beginPath(); g.moveTo(w / 2 - 12, h - 10); g.lineTo(w / 2 - 12, h - 40); g.arc(w / 2, h - 40, 12, Math.PI, 0); g.lineTo(w / 2 + 12, h - 10); g.fill();
-        g.fillStyle = 'rgba(0,0,0,0.35)'; g.fillRect(w / 2 - 1.5, h - 42, 3, 18); g.fillRect(w / 2 - 6, h - 36, 12, 3);
-        g.fillStyle = 'rgba(80,110,60,0.6)'; g.fillRect(w / 2 - 12, h - 16, 10 + v * 3, 5);
+      // 봉분: a grassy burial mound with a small stone 비석 in front
+      art['tomb' + v] = mk(56, 64, (g, w, h) => {
+        shadow(g, w / 2 + 3, h - 6, 24, 7, 0.4);
+        const gr = g.createRadialGradient(w / 2 - 6, h - 30, 3, w / 2, h - 20, 26);
+        gr.addColorStop(0, v % 2 ? '#7f9a55' : '#71894a'); gr.addColorStop(1, '#3f5229');
+        g.fillStyle = gr; g.beginPath(); g.ellipse(w / 2, h - 16, 25, 17, 0, Math.PI, 0); g.lineTo(w / 2 + 25, h - 10); g.lineTo(w / 2 - 25, h - 10); g.fill();
+        g.fillStyle = 'rgba(30,40,20,0.35)'; for (let k = 0; k < 6; k++) g.fillRect(w / 2 - 18 + rr() * 34, h - 28 + rr() * 14, 2, 3);
+        g.fillStyle = '#6d6a64'; g.fillRect(w / 2 - 7, h - 24, 14, 16);
+        g.fillStyle = '#8c8880'; g.fillRect(w / 2 - 7, h - 24, 14, 3);
+        g.fillStyle = 'rgba(0,0,0,0.4)'; g.fillRect(w / 2 - 1, h - 20, 2, 9);
+        g.fillStyle = '#55524c'; g.fillRect(w / 2 - 10, h - 9, 20, 4);
       });
     }
-    art.cross = mk(40, 70, (g, w, h) => {
+    // 장승: a carved wooden guardian post (천하대장군), red-faced with a black hat
+    art.cross = mk(40, 76, (g, w, h) => {
       shadow(g, w / 2, h - 5, 12, 4, 0.35);
-      g.fillStyle = '#5b4330'; g.fillRect(w / 2 - 3, h - 56, 6, 52); g.fillRect(w / 2 - 14, h - 46, 28, 6);
+      g.fillStyle = '#6b4a2e'; g.fillRect(w / 2 - 7, h - 52, 14, 48);
+      g.fillStyle = '#8a6440'; g.fillRect(w / 2 - 7, h - 52, 4, 48);
+      g.fillStyle = '#1f1a17'; g.fillRect(w / 2 - 9, h - 66, 18, 14); g.fillRect(w / 2 - 12, h - 54, 24, 3);
+      g.fillStyle = '#b8402e'; g.fillRect(w / 2 - 7, h - 51, 14, 16);
+      g.fillStyle = '#1b1310'; g.fillRect(w / 2 - 5, h - 47, 4, 2); g.fillRect(w / 2 + 1, h - 47, 4, 2); g.fillRect(w / 2 - 4, h - 40, 8, 2);
+      g.fillStyle = '#f2e9d4'; g.fillRect(w / 2 - 3, h - 39, 2, 2); g.fillRect(w / 2 + 1, h - 39, 2, 2);
+      g.fillStyle = '#2a1d14'; for (let k = 0; k < 4; k++) g.fillRect(w / 2 - 1, h - 31 + k * 6, 2, 4);
     });
     art.bones = mk(40, 20, (g) => {
       g.fillStyle = '#d8d0bc'; g.fillRect(6, 10, 18, 3); g.fillRect(14, 4, 3, 13); blob(g, 30, 10, 5, '#e2dccb');

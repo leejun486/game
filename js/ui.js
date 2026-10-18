@@ -383,7 +383,7 @@ const UI = (() => {
         <button data-a="wardrobe" style="background:linear-gradient(90deg,rgba(0,0,0,.6),rgba(0,0,0,.1)),linear-gradient(120deg,#6a3a3a,#2a1616)">옷장<small>모자 · 상의 · 무기 꾸미기</small></button>
         <button data-a="bosstime" style="background:linear-gradient(90deg,rgba(0,0,0,.5),rgba(0,0,0,.1)),radial-gradient(circle at 70% 60%,#d9a24a,#1a1206 60%)">이클립스 타임<small>보스 출현 정보</small></button>
         <button data-a="dungeon" style="background:linear-gradient(90deg,rgba(0,0,0,.6),rgba(0,0,0,.1)),radial-gradient(circle at 75% 50%,#7a3ad0,#150a24 65%)">던전<small>이클립스 균열 · 일일 3회</small></button>
-        <button data-a="siege" style="background:linear-gradient(90deg,rgba(0,0,0,.6),rgba(0,0,0,.1)),linear-gradient(120deg,#6a4a3a,#1d1410)">공성전<small>아스텔라 성 · 혈맹 전쟁</small></button>
+        <button data-a="siege" style="background:linear-gradient(90deg,rgba(0,0,0,.6),rgba(0,0,0,.1)),linear-gradient(120deg,#6a4a3a,#1d1410)">공성전<small>청구성 · 혈맹 전쟁</small></button>
       </div>
       <div class="icon-grid">${grid.map(([a, i, t]) => `<button data-a="${a}">${ico(i)}<span>${t}</span>${dots[a] ? '<i class="dot"></i>' : ''}</button>`).join('')}</div>
       <div class="menu-side">
@@ -731,9 +731,9 @@ const UI = (() => {
       g.drawImage(World.mini, 0, 0, c.width, c.height);
       g.font = 'bold 22px sans-serif'; g.textAlign = 'center'; g.lineWidth = 4; g.strokeStyle = '#000';
       const lbl = (t, x, y, col = '#fff') => { g.strokeText(t, x * S, y * S); g.fillStyle = col; g.fillText(t, x * S, y * S); };
-      lbl('라스카노 마을', 90, 86, '#9fe0ff'); lbl('바람의 초원', 90, 40); lbl('망자의 묘지', 145, 70); lbl('오크 요새', 90, 128); lbl('고요한 숲', 30, 120);
+      lbl('하늘재 마을', 90, 86, '#9fe0ff'); lbl('갈대 들녘', 90, 40); lbl('북망산 무덤골', 145, 70); lbl('도깨비 소굴', 90, 128); lbl('고요한 대숲', 30, 120);
       g.font = 'bold 16px sans-serif';
-      lbl('☠ 뱀파이어 군주', 165, 80, '#ff6b5e'); lbl('☠ 미노타우르스 킹', 90, 162, '#ff6b5e'); lbl('☠ 서리 거인', 22, 4, '#8fd8ff'); lbl('☠ 화염 군주', 164, 164, '#ff9a4a');
+      lbl('☠ 저승차사 강림', 165, 80, '#ff6b5e'); lbl('☠ 우두귀왕', 90, 162, '#ff6b5e'); lbl('☠ 동장군', 22, 4, '#8fd8ff'); lbl('☠ 불가사리', 164, 164, '#ff9a4a');
       const p = game.player;
       g.fillStyle = '#fff'; g.beginPath(); g.arc(p.x / D.TILE * S, p.y / D.TILE * S, 7, 0, Math.PI * 2); g.fill();
       g.strokeStyle = '#e33'; g.lineWidth = 3; g.stroke();

@@ -292,7 +292,7 @@ class Monster extends Entity {
     }
   }
   // boss skills: every few seconds a telegraphed stomp (big ring, then damage); below half health each boss
-  // calls its pack once. 녹스 also wakes into a second phase there: bigger, harder, faster, and it alternates
+  // calls its pack once. 어둑시니 also wakes into a second phase there: bigger, harder, faster, and it alternates
   // the stomp with a rain of darkness (several small rings around the target)
   bossSkill(dt, game) {
     const sk = this.def.skill, fire = sk === 'fireStomp', dark = sk === 'voidNova' || sk === 'nox';
@@ -334,7 +334,7 @@ class Monster extends Entity {
     game.shake = 22; U.sfx.boom();
     VFX.voidBurst(this.x, this.y, 260, 2.5);
     game.fx.push(Combat.makeFx('shock', this.x, this.y, { r: 320, color: '#c78bff', dur: 0.8 }));
-    UI.announce('<em>어둠의 군주 녹스</em>가 진정한 모습을 드러냅니다! 하늘에서 어둠이 쏟아집니다!');
+    UI.announce('<em>어둠의 군주 어둑시니</em>가 진정한 모습을 드러냅니다! 하늘에서 어둠이 쏟아집니다!');
   }
   shadowRain(game) {
     const t = this.target, spots = [[t.x, t.y]];
