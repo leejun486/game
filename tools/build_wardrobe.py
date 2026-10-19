@@ -108,6 +108,34 @@ PARTS = {
     "hat_gat_white": both(("gat", (226, 224, 214))),
     "hat_satgat": both(("satgat",)),
     "hat_hwagwan": both("hat/formal/tiara/adult/tiara_gold.png"),
+    "hat_tteoljam": both("hat/formal/tiara/adult/tiara_silver.png"),
+    "hat_daenggi": both("hat/headband/hairtie/adult/red.png"),
+    "hat_horns_small": both("hat/accessory/horns_short/bg/adult/yellow.png", "hat/accessory/horns_short/fg/adult/yellow.png"),
+    "hat_jurip": both(("gat", (150, 34, 30))),
+    "hat_jokduri": both(("jokduri",)),
+    "hat_samo": both(("samo", False)),
+    "hat_ikseon": both(("samo", True)),
+    # ---- more 상의
+    "top_dangui": {"female": kimono("green", "forest", sleeves="green", sash="green") + [("goreum", (190, 30, 44))], "male": ["torso/clothes/longsleeve/longsleeve/male/green.png", "torso/jacket/tabard/male/yellow.png", "torso/waist/sash/male/red.png"]},
+    "top_gonryong": {"female": kimono("red", "yellow", oversize="red", sash="yellow"), "male": ["torso/clothes/longsleeve/longsleeve/male/red.png", "torso/jacket/tabard/male/red.png", "torso/waist/obi/male/yellow.png", "torso/waist/obi/knot/left/male/yellow.png"]},
+    "top_hakchang": {"female": kimono("white", "black", oversize="white", sash="white"), "male": ["torso/clothes/longsleeve/longsleeve/male/white.png", "torso/jacket/tabard/male/white.png", "torso/waist/sash/male/black.png", "torso/waist/obi/knot/right/male/black.png"]},
+    "top_nangja": {"female": kimono("navy", "white", sleeves="navy") + [("goreum", (236, 232, 220))], "male": ["torso/clothes/longsleeve/longsleeve/male/navy.png", "torso/clothes/vest/male/white.png", ("goreum", (196, 36, 52))]},
+    "top_jagaek": {"female": kimono("black", "black", split=True, sash="charcoal"), "male": ["torso/clothes/longsleeve/longsleeve/male/black.png", "torso/clothes/vest/male/black.png", "torso/waist/obi/male/black.png", "torso/waist/obi/knot/left/male/charcoal.png"]},
+    "top_sanyang": {"female": kimono("forest", "tan", split=True, sash="brown"), "male": ["torso/clothes/longsleeve/longsleeve/male/forest.png", "torso/clothes/vest/male/brown.png", "torso/waist/obi/male/brown.png"]},
+    "top_dujeong": both("torso/armour/legion/{sex}/copper.png", "torso/waist/sash/{sex}/red.png"),
+    # ---- more 하의 · 신발 · 장식
+    "bottom_chima_navy": both("legs/skirts/plain/{sex}/navy.png"),
+    "bottom_chima_yellow": both("legs/skirts/plain/{sex}/yellow.png"),
+    "bottom_chima_green": both("legs/skirts/plain/{sex}/green.png"),
+    "bottom_baji_red": both("legs/pantaloons/{leg}/red.png"),
+    "bottom_baji_brown": both("legs/pantaloons/{leg}/brown.png"),
+    "shoes_kkotsin": both("feet/slippers/{sex}/pink.png"),
+    "shoes_hwa_red": both("feet/boots/{sex}/red.png"),
+    "shoes_tabi_black": both("feet/socks/tabi/{leg}/black.png"),
+    "back_cape_blue": both(("bg", "cape/solid_behind/blue.png"), "cape/solid/{sex}/blue.png"),
+    "back_cape_purple": both(("bg", "cape/solid_behind/maroon.png"), "cape/solid/{sex}/maroon.png"),
+    "back_scarf_black": both("neck/scarf/black.png"),
+    "back_jige": both(("bg", "backpack/basket/bg/square.png"), ("bg", "backpack/basket_contents/wood/bg/9_logs.png"), "backpack/basket/fg/square.png", "backpack/basket_contents/wood/fg/9_logs.png"),
 }
 SEXES = sorted({s for s, _, _ in CLASSES.values()})
 
@@ -204,6 +232,46 @@ def draw_satgat(sheet, head):
         d.line((cx - 14, by + 1, cx + 14, by + 1), fill=(80, 60, 34, 160))
 
 
+def draw_jokduri(sheet, head):
+    """족두리: a small black crown on the crown of the head, jewels on top and a dangling ornament"""
+    d = ImageDraw.Draw(sheet)
+    for (r, c), (x0, y0, x1, y1) in boxes(head).items():
+        cx = (x0 + x1) / 2 + {1: 2, 3: -2}.get(facing(r), 0)
+        by = y0 + 3
+        d.polygon([(cx - 5, by), (cx + 5, by), (cx + 4, by - 6), (cx - 4, by - 6)], fill=(22, 18, 26, 255), outline=(70, 56, 90, 255))
+        d.line((cx - 4, by - 3, cx + 4, by - 3), fill=(214, 170, 60, 255))
+        for k, col in ((-3, (220, 50, 50)), (0, (70, 140, 230)), (3, (70, 190, 110))):
+            d.point((cx + k, by - 7), fill=col + (255,))
+        d.rectangle((cx - 1, by - 9, cx, by - 8), fill=(240, 200, 80, 255))
+        if facing(r) in (1, 3):  # the 떨잠 pendant swings at the side
+            sx = cx + (5 if facing(r) == 1 else -5)
+            d.line((sx, by - 2, sx, by + 3), fill=(214, 170, 60, 255))
+            d.point((sx, by + 4), fill=(220, 50, 50, 255))
+
+
+def draw_samo(sheet, head, upright):
+    """사모 (wings out to the sides) or 익선관 (wings standing up at the back): a black rounded official's cap"""
+    d = ImageDraw.Draw(sheet)
+    for (r, c), (x0, y0, x1, y1) in boxes(head).items():
+        f = facing(r)
+        cx = (x0 + x1) / 2 + {1: 1, 3: -1}.get(f, 0)
+        by = y0 + 4
+        black, rim = (14, 14, 18, 255), (58, 58, 70, 255)
+        if upright:  # 익선관: two small ears at the back, seen behind the crown
+            for k in ((-4, 4) if f in (0, 2) else ((3,) if f == 1 else (-3,))):
+                d.ellipse((cx + k - 2, by - 13, cx + k + 2, by - 6), fill=black, outline=rim)
+        elif f in (0, 2):  # 사모 wings straight out to the sides
+            d.ellipse((cx - 16, by - 9, cx - 7, by - 5), fill=black, outline=rim)
+            d.ellipse((cx + 7, by - 9, cx + 16, by - 5), fill=black, outline=rim)
+        else:  # seen from the side the wings are edge on
+            d.line((cx - 3, by - 7, cx + 3, by - 7), fill=rim)
+        d.chord((cx - 7, by - 12, cx + 7, by + 2), 180, 360, fill=black, outline=rim)
+        d.rectangle((cx - 7, by - 5, cx + 7, by), fill=black)
+        d.line((cx - 7, by, cx + 7, by), fill=rim)
+        if upright:
+            d.line((cx - 5, by - 3, cx + 5, by - 3), fill=(190, 150, 60, 255))
+
+
 def build_part(root, layers, sex, missing, name):
     front, back = Image.new("RGBA", (W, H)), None
     head = None
@@ -225,6 +293,10 @@ def build_part(root, layers, sex, missing, name):
                 draw_gat(front, head, l[1])
             elif l[0] == "satgat":
                 draw_satgat(front, head)
+            elif l[0] == "jokduri":
+                draw_jokduri(front, head)
+            elif l[0] == "samo":
+                draw_samo(front, head, l[1])
     return front, back
 
 
