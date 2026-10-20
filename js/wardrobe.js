@@ -218,20 +218,30 @@ const Wardrobe = (() => {
   // card art: the piece on the character, framed on the part of the body it covers:
   // [first, last] row of the 64px cell to show (the big LPC head spans about 14-38, the body 38-52, the legs 52-62)
   const FRAME = { hat: [5, 36], top: [24, 54], bottom: [38, 64], shoes: [46, 64], back: [9, 64], set: [9, 64] };
-  function thumb(cv, it) {
+  // full: the whole figure at a whole-number zoom (summon reels and other big cards), otherwise the worn part
+  function thumb(cv, it, full = false) {
     const p = Game.player, g = cv.getContext('2d');
     g.imageSmoothingEnabled = false; g.clearRect(0, 0, cv.width, cv.height);
     const e = Object.assign({}, eq(p));
     if (it.slot === 'set') e.set = it.id; else wear(e, it);
-    if (it.slot === 'weapon') return Looks.drawComposite(g, sheetFor(p.cls, Object.assign({}, e, { set: null })), it.id, { knight: 15, elf: 19, mage: 7 }[p.cls], { knight: 3, elf: 8, mage: 4 }[p.cls], cv.width * 0.42, cv.height * 0.8, cv.height / 90, { t: 0 });
-    const [r0, r1] = FRAME[it.slot];
-    const sheet = sheetFor(p.cls, e), F = window.SPRITE_FRAME[sheet] || 64, k = F / 64;
-    // the name label covers the bottom fifth of the card: fit the rows into the part above it.
-    // drawComposite puts the cell's bottom 8px under the feet point, so solve for where row r1 lands
-    const z = (cv.height * 0.78) / ((r1 - r0) * k);
-    const y = cv.height * 0.82 + (F - 8 - r1 * k) * z;
+    // layers still loading: draw again once the outfit sheet can be built
+    const redraw = () => { if (cv.isConnected || full) thumb(cv, it, full); };
+    if (it.slot === 'weapon') return Looks.drawComposite(g, sheetFor(p.cls, Object.assign({}, e, { set: null }), redraw), it.id, { knight: 15, elf: 19, mage: 7 }[p.cls], { knight: 3, elf: 8, mage: 4 }[p.cls], cv.width * 0.42, cv.height * 0.8, cv.height / 90, { t: 0 });
+    const sheet = sheetFor(p.cls, e, redraw), F = window.SPRITE_FRAME[sheet] || 64, k = F / 64;
+    let z, y;
+    if (full) {
+      // rows 9-64 hold the figure; an integer zoom keeps every sprite pixel square and sharp
+      z = Math.max(1, Math.floor((cv.height * 0.94) / (55 * k)));
+      y = cv.height * 0.97 + (F - 8 - 64 * k) * z;
+    } else {
+      // the name label covers the bottom fifth of the card: fit the part's rows into the space above it.
+      // drawComposite puts the cell's bottom 8px under the feet point, so solve for where row r1 lands
+      const [r0, r1] = FRAME[it.slot];
+      z = (cv.height * 0.78) / ((r1 - r0) * k);
+      y = cv.height * 0.82 + (F - 8 - r1 * k) * z;
+    }
     // capes are shown from behind
-    Looks.drawComposite(g, sheet, e.weapon || DEFAULT[p.cls].weapon, it.slot === 'back' ? 8 : 10, 0, cv.width / 2, y, z, { t: 0 });
+    Looks.drawComposite(g, sheet, e.weapon || DEFAULT[p.cls].weapon, it.slot === 'back' ? 8 : 10, 0, Math.round(cv.width / 2), Math.round(y), z, { t: 0 });
   }
 
   // ---------------------------------------------------------------- 옷장 panel
@@ -353,7 +363,7 @@ const Wardrobe = (() => {
       p.s.dia -= dia; return true;
     },
     grant: (p, items) => { for (const it of items) p.s.ward.own[it.id] = (p.s.ward.own[it.id] || 0) + 1; p.recalc(); Quests.check(Game); },
-    thumb: (cv, it) => thumb(cv, it),
+    thumb: (cv, it) => thumb(cv, it, true),
     count: (p, it) => p.s.ward.own[it.id] || 0,
     take: (p, it) => { p.s.ward.own[it.id]--; if (!p.s.ward.own[it.id]) delete p.s.ward.own[it.id]; },
     view: (best) => { sel = best.id; tab = best.slot; UI.open('wardrobe'); },
