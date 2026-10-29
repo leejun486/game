@@ -110,7 +110,7 @@ const PASSIVES = {
   dur: { name: '인내의 탕약', icon: 'pot-green', desc: '효과 지속 시간 +12%', max: 5 },
   velocity: { name: '질풍의 탕약', icon: 'pot-mana', desc: '투사체 속도 +12%', max: 5 },
 };
-const SLOT_MAX = 6;
+const SLOT_W = 7, SLOT_P = 7; // weapon / tonic slots
 
 const META = {
   might: { name: '공격 수련', icon: 'sword', desc: '공격력 +5%', max: 5, cost: 60 },
@@ -121,6 +121,8 @@ const META = {
   greed: { name: '보부상 인연', icon: 'gold', desc: '엽전 +15%', max: 5, cost: 60 },
   revive: { name: '환생 부적', icon: 'heal', desc: '쓰러지면 한 번 되살아난다', max: 1, cost: 400 },
   luck: { name: '길몽', icon: 'star', desc: '레벨업 선택지 +1', max: 1, cost: 500 },
+  reroll: { name: '점괘', icon: 'hourglass', desc: '판마다 다시 뽑기 +1', max: 3, cost: 80 },
+  banish: { name: '봉인술', icon: 'scroll-armor', desc: '판마다 봉인 +1', max: 2, cost: 90 },
 };
 
 // foes: hp/spd/dmg at minute 0; hp scales with time. tint = rgba glaze laid over the sprite
@@ -380,7 +382,7 @@ function newRun(heroId) {
     weapons: [], passives: {}, S: {},
     foes: [], shots: [], fx: [], gems: [], nums: [], ebul: [], timers: [], zones: [], decals: [],
     spawnAcc: 0, evIdx: 0, eliteNext: 40, boss: null, shake: 0, revive: mlv('revive') > 0, won: false,
-    dmgBy: {}, banner: null, gemCount: 0,
+    dmgBy: {}, banner: null, gemCount: 0, rerolls: 3 + mlv('reroll'), banishes: 2 + mlv('banish'), banned: new Set(), sealing: false,
     hitstop: 0, zpunch: 0, cam: { x: 0, y: 0 }, warned: {}, edgeWarn: null, blood: 0, bloodIdx: 0,
     combo: 0, comboT: 0, comboBest: 0, comboNext: 100, heartT: 0, flashT: 0,
   };
@@ -778,10 +780,10 @@ function nearFoes(x, y, r) {
 }
 
 function spawnFoe(id, x, y, opt = {}) {
-  const d = FOES[id], mult = d.boss ? 1 : 1 + G.t / 180;
+  const d = FOES[id], mult = d.boss ? 1 : 1 + G.t / 200;
   const elite = !!opt.elite;
   const e = {
-    id, d, x, y, hp: d.hp * mult * (elite ? 14 : 1), maxhp: 0, spd: d.spd * (d.boss ? 1.1 : 1.15 + G.t / 1500) * (elite ? 1.1 : 1) * (opt.spdMul || 1), dmg: d.dmg * (1 + G.t / 600) * (elite ? 1.5 : 1),
+    id, d, x, y, hp: d.hp * mult * (elite ? 14 : 1), maxhp: 0, spd: d.spd * (d.boss ? 1.05 : 1.05 + G.t / 2200) * (elite ? 1.1 : 1) * (opt.spdMul || 1), dmg: d.dmg * (1 + G.t / 600) * (elite ? 1.5 : 1),
     r: d.r * (elite ? 1.35 : 1), s: d.s * (elite ? 1.4 : 1), dir: 2, walkT: Math.random() * 10, flash: 0, kx: 0, ky: 0, slow: 0, slowAmt: 0, frozen: 0,
     elite, boss: !!d.boss, dead: false, vx: opt.vx || 0, vy: opt.vy || 0, rush: opt.rush || 0, skillT: 3, state: '', stT: 0, atk: null, atkCd: Math.random() * 0.5,
     cast: null, chg: '', chgT: 0, chgCd: rand(1, 3),
@@ -811,8 +813,8 @@ function wavePool() {
 }
 function updateSpawns(dt) {
   const t = G.t, blood = G.blood > 0;
-  const target = Math.min(60 + t * 0.55, t >= RUN_LEN ? 160 : 420) * (blood ? 1.4 : 1);
-  const rate = (4 + t / 20) * (blood ? 2.2 : 1);
+  const target = Math.min(45 + t * 0.42, t >= RUN_LEN ? 140 : 330) * (blood ? 1.25 : 1);
+  const rate = (3 + t / 26) * (blood ? 1.7 : 1);
   G.spawnAcc += dt * rate;
   while (G.spawnAcc >= 1) {
     G.spawnAcc -= 1;
@@ -837,7 +839,7 @@ function updateSpawns(dt) {
     SND.horn();
   }
   if (t >= G.eliteNext) {
-    G.eliteNext += 45;
+    G.eliteNext += 50;
     const pt = edgePoint();
     spawnFoe(pick(wavePool()), pt.x, pt.y, { elite: true });
   }
@@ -870,7 +872,7 @@ function updateFoes(dt) {
     if (e.slow > 0) e.slow -= dt;
     let dx = p.x - e.x, dy = p.y - e.y;
     const dist = Math.hypot(dx, dy) || 1;
-    let spd = e.spd * (e.slow > 0 ? 1 - e.slowAmt : 1) * (G.blood > 0 ? 1.25 : 1);
+    let spd = e.spd * (e.slow > 0 ? 1 - e.slowAmt : 1) * (G.blood > 0 ? 1.15 : 1);
     let mx, my;
     if (e.rush > 0) { e.rush -= dt; mx = e.vx; my = e.vy; }
     else { mx = dx / dist; my = dy / dist; }
@@ -883,10 +885,10 @@ function updateFoes(dt) {
       } else if (e.chg === 'go') {
         e.chgT -= dt; mx = e.dx; my = e.dy; spd = e.spd * 4.2;
         if (Math.random() < 0.5) G.fx.push({ k: 'spark', x: e.x, y: e.y, vx: -e.dx * 60, vy: -30, t: 0, dur: 0.4, col: '#8a7058', sz: 4 });
-        if (e.chgT <= 0) { e.chg = ''; e.chgCd = rand(3, 5); }
+        if (e.chgT <= 0) { e.chg = ''; e.chgCd = rand(4, 6.5); }
       } else if (e.chgCd <= 0 && dist > 110 && dist < 300) {
-        e.chg = 'wind'; e.chgT = 0.6; e.dx = dx / dist; e.dy = dy / dist;
-        G.fx.push({ k: 'dashLine', e, t: 0, dur: 0.6, len: 4.2 * e.spd * 0.55 });
+        e.chg = 'wind'; e.chgT = 0.8; e.dx = dx / dist; e.dy = dy / dist;
+        G.fx.push({ k: 'dashLine', e, t: 0, dur: 0.8, len: 4.2 * e.spd * 0.55 });
       }
     }
     if (e.boss) {
@@ -909,7 +911,7 @@ function updateFoes(dt) {
         }
         if (f >= CAST.frames) e.cast = null;
       } else if (dist < 300 && e.atkCd <= 0) {
-        e.cast = { t: 0, hit: false }; e.atkCd = rand(2.2, 3.2); e.dir = dir4(dx, dy); mx = 0; my = 0;
+        e.cast = { t: 0, hit: false }; e.atkCd = rand(3, 4.2); e.dir = dir4(dx, dy); mx = 0; my = 0;
       } else if (dist < 170) { mx = -mx; my = -my; }
       else if (dist < 240) { mx = 0; my = 0; e.dir = dir4(dx, dy); }
     } else if (e.chg) { /* charging: no club */ } else if (e.atk) {
@@ -1012,7 +1014,7 @@ function killFoe(e) {
   dropGem(e.x, e.y, e.d.xp * (e.elite ? 6 : 1));
   const greed = G.S.greed;
   if (Math.random() < 0.025 * greed) G.gems.push(pickup('gold', e.x + 8, e.y, randi(1, 3)));
-  if (Math.random() < 0.006) G.gems.push(pickup('heal', e.x - 8, e.y, 30));
+  if (Math.random() < 0.01) G.gems.push(pickup('heal', e.x - 8, e.y, 30));
   if (Math.random() < 0.0015) G.gems.push(pickup('vacuum', e.x, e.y + 8, 0));
   if (e.elite || e.boss) G.gems.push(pickup('chest', e.x, e.y, e.boss ? 3 : 1));
   if (e.boss) {
@@ -1047,9 +1049,9 @@ function hurtPlayer(dmg) {
   const p = G.p;
   if (p.inv > 0 || G.won) return;
   const d = Math.max(1, Math.round(dmg - G.S.armor));
-  p.hp -= d; p.inv = 0.45; p.hurtT = 0.25;
+  p.hp -= d; p.inv = 0.6; p.hurtT = 0.25;
   G.shake = Math.max(G.shake, 6); hitstop(0.05);
-  G.combo = Math.floor(G.combo / 2); // getting hit costs half the chain
+  G.combo = Math.floor(G.combo * 0.7); // getting hit costs part of the chain
   SND.hurt();
   if (G.nums.length < 90) G.nums.push({ x: p.x, y: p.y - 50, v: d, t: 0, crit: false, mine: true });
   if (p.hp <= 0) {
@@ -1151,9 +1153,27 @@ function gainXp(v) {
 }
 
 // ---------------------------------------------------------------- upgrades
+const optKey = (o) => o.type + ':' + o.id;
+// level-up hand: always offer a mix (something to grow, something new, a tonic) before filling at random
+function dealChoices(n) {
+  const pool = shuffle(upgradeOptions().filter((o) => !G.banned.has(optKey(o))));
+  const hand = [], take = (pred) => { const i = pool.findIndex(pred); if (i >= 0) hand.push(pool.splice(i, 1)[0]); };
+  take((o) => evoHint(o));
+  take((o) => o.type === 'w' && !o.isNew);
+  take((o) => o.type === 'w' && o.isNew);
+  take((o) => o.type === 'p');
+  while (hand.length < n && pool.length) hand.push(pool.shift());
+  return shuffle(hand.slice(0, n));
+}
+// true when taking this card brings a weapon to its evolution (Lv.8 + its tonic)
+function evoHint(o) {
+  if (o.type === 'w' && !o.isNew) { const w = wget(o.id); return !w.evo && w.lv === W_MAX - 1 && (G.passives[WEAPONS[o.id].pair] || 0) > 0; }
+  if (o.type === 'p' && o.isNew) return G.weapons.some((w) => !w.evo && w.lv >= W_MAX - 1 && WEAPONS[w.id].pair === o.id);
+  return false;
+}
 function upgradeOptions() {
   const opts = [];
-  const full = G.weapons.length >= SLOT_MAX, pfull = Object.keys(G.passives).length >= SLOT_MAX;
+  const full = G.weapons.length >= SLOT_W, pfull = Object.keys(G.passives).length >= SLOT_P;
   for (const w of G.weapons) if (w.lv < W_MAX) opts.push({ type: 'w', id: w.id });
   if (!full) for (const id of Object.keys(WEAPONS)) if (!wget(id)) opts.push({ type: 'w', id, isNew: true });
   for (const [id, d] of Object.entries(PASSIVES)) {
@@ -1174,11 +1194,13 @@ function applyOption(o) {
 function optionView(o) {
   if (o.type === 'w') {
     const d = WEAPONS[o.id], w = wget(o.id), lv = w ? w.lv + 1 : 1;
-    return { icon: d.icon, name: d.name, lv: `Lv.${lv}`, isNew: !w, desc: d.desc[lv - 1] };
+    const pairName = PASSIVES[d.pair].name;
+    return { icon: d.icon, name: d.name, lv: `Lv.${lv}`, isNew: !w, desc: d.desc[lv - 1] + (lv === 1 ? ` <span class="pair">진화: Lv.8 + ${pairName}</span>` : ''), evoHint: evoHint(o) };
   }
   if (o.type === 'p') {
     const d = PASSIVES[o.id], lv = (G.passives[o.id] || 0) + 1;
-    return { icon: d.icon, name: d.name, lv: `Lv.${lv}`, isNew: lv === 1, desc: d.desc };
+    const pairs = Object.entries(WEAPONS).filter(([, w]) => w.pair === o.id).map(([, w]) => w.name).join('·');
+    return { icon: d.icon, name: d.name, lv: `Lv.${lv}`, isNew: lv === 1, desc: d.desc + (lv === 1 && pairs ? ` <span class="pair">진화 짝: ${pairs}</span>` : ''), evoHint: evoHint(o) };
   }
   if (o.type === 'evo') { const d = WEAPONS[o.id]; return { icon: d.evoIcon, name: d.evoName, lv: '진화', evo: true, desc: d.evoDesc }; }
   if (o.type === 'heal') return { icon: 'hp-potion', name: '약과', lv: '', desc: '체력 40 회복' };
@@ -1192,31 +1214,73 @@ const screens = ['title', 'select', 'shop', 'levelup', 'pause', 'result'];
 function show(id) { for (const s of screens) $(s).hidden = s !== id; $('pauseBtn').hidden = $('dashBtn').hidden = !(id === null && mode === 'play'); }
 
 function cardHTML(v) {
-  return `<img src="${ICON(v.icon)}" alt=""><div class="nm">${v.name} <span class="lv">${v.lv}</span>${v.evo ? '<span class="new evo">진화</span>' : v.isNew ? '<span class="new">새로움</span>' : ''}</div><div class="ds">${v.desc}</div>`;
+  const tag = v.evo ? '<span class="new evo">진화</span>' : v.evoHint ? '<span class="new evo">진화 가능</span>' : v.isNew ? '<span class="new">새로움</span>' : '';
+  return `<img src="${ICON(v.icon)}" alt=""><div class="nm">${v.name} <span class="lv">${v.lv}</span>${tag}</div><div class="ds">${v.desc}</div>`;
 }
 function openLevelUp() {
   mode = 'levelup';
   SND.level();
-  const all = shuffle(upgradeOptions());
-  // weight toward what the player already carries so builds grow instead of sprawling
-  all.sort((a, b) => (a.isNew ? 1 : 0) + Math.random() * 1.4 - ((b.isNew ? 1 : 0) + Math.random() * 1.4));
-  let opts = all.slice(0, 3 + mlv('luck'));
-  if (!opts.length) opts = [{ type: 'heal' }, { type: 'gold' }];
+  G.sealing = false;
+  G.hand = dealChoices(4 + mlv('luck'));
   $('luEyebrow').textContent = `깨달음 · Lv.${G.lvl - G.pendingLv + 1}`;
-  $('luTitle').textContent = '하나를 고른다';
+  renderHand();
+  show('levelup');
+}
+function renderHand() {
+  let opts = G.hand;
+  if (!opts.length) opts = [{ type: 'heal' }, { type: 'gold' }];
+  $('luTitle').textContent = G.sealing ? '봉인할 것을 고른다' : '하나를 고른다';
   const box = $('luCards'); box.innerHTML = '';
+  box.classList.toggle('sealing', G.sealing);
   opts.forEach((o, i) => {
     const b = document.createElement('button'); b.className = 'card'; b.innerHTML = cardHTML(optionView(o));
-    b.onclick = () => { applyOption(o); G.pendingLv--; levelNova(); closeModal(); };
+    b.onclick = () => {
+      if (G.sealing && (o.type === 'w' || o.type === 'p')) { // seal: never offered again this run; deal a replacement
+        G.banned.add(optKey(o)); G.banishes--; G.sealing = false;
+        const fresh = dealChoices(8).filter((x) => !G.hand.some((h) => optKey(h) === optKey(x)));
+        G.hand.splice(i, 1, ...(fresh.length ? [fresh[0]] : []));
+        SND.glass(); renderHand(); return;
+      }
+      applyOption(o); G.pendingLv--; levelNova(); closeModal();
+    };
     box.appendChild(b);
     if (i === 0) setTimeout(() => b.focus(), 30);
   });
-  $('luFoot').innerHTML = '<span class="sub">숫자 키 1~4로도 고를 수 있다</span>';
-  show('levelup');
+  const foot = $('luFoot'); foot.innerHTML = '';
+  const mk = (label, title, on, fn, cls = 'btn') => { const b = document.createElement('button'); b.className = cls; b.textContent = label; b.title = title; b.disabled = !on; b.onclick = fn; foot.appendChild(b); };
+  mk(`다시 뽑기 ${G.rerolls}`, '선택지를 모두 새로 뽑는다 (R)', G.rerolls > 0, rerollHand);
+  mk(G.sealing ? '봉인 취소' : `봉인 ${G.banishes}`, '고른 항목을 이번 판에서 다시 나오지 않게 한다', G.banishes > 0 || G.sealing, () => { G.sealing = !G.sealing; renderHand(); }, G.sealing ? 'btn primary' : 'btn');
+  mk('건너뛰기', '체력 25 회복 · 엽전 10냥', true, () => { G.p.hp = Math.min(G.p.maxhp, G.p.hp + 25); G.gold += 10; G.pendingLv--; closeModal(); }, 'btn ghost');
+  const hint = document.createElement('span'); hint.className = 'sub'; hint.textContent = `숫자 키 1~${opts.length} 선택 · R 다시 뽑기`; foot.appendChild(hint);
+}
+function rerollHand() {
+  if (G.rerolls <= 0) return;
+  G.rerolls--; G.sealing = false;
+  G.hand = dealChoices(4 + mlv('luck'));
+  SND.gem(); renderHand();
 }
 function openChest(n) {
   mode = 'levelup';
   SND.chest();
+  if (n === 1 && !evoReady().length) {
+    const owned = shuffle(upgradeOptions().filter((x) => !x.isNew && !G.banned.has(optKey(x)))).slice(0, 3);
+    if (owned.length > 1) {
+      const coins = Math.round(randi(10, 25) * G.S.greed);
+      G.gold += coins;
+      $('luEyebrow').textContent = `보물 상자 · 엽전 ${coins}냥`;
+      $('luTitle').textContent = '상자 속 비급 하나를 고른다';
+      const box = $('luCards'); box.innerHTML = ''; box.classList.remove('sealing');
+      owned.forEach((o, i) => {
+        const b = document.createElement('button'); b.className = 'card'; b.innerHTML = cardHTML(optionView(o));
+        b.onclick = () => { applyOption(o); closeModal(); };
+        box.appendChild(b);
+        if (i === 0) setTimeout(() => b.focus(), 30);
+      });
+      $('luFoot').innerHTML = '<span class="sub">숫자 키로도 고를 수 있다</span>';
+      show('levelup');
+      return;
+    }
+  }
   const got = [];
   for (let i = 0; i < n; i++) {
     const evo = evoReady();
@@ -2253,7 +2317,8 @@ $('dashBtn').addEventListener('pointerdown', (e) => { e.preventDefault(); if (mo
 window.addEventListener('keydown', (e) => {
   keys[e.code] = true;
   if (e.code === 'Escape' || e.code === 'KeyP') { if (mode === 'play') pauseGame(); else if (mode === 'pause') $('resume').click(); }
-  if (mode === 'levelup' && /^Digit[1-4]$/.test(e.code)) { const b = $('luCards').querySelectorAll('button.card')[+e.code.slice(5) - 1]; if (b) b.click(); }
+  if (mode === 'levelup' && /^Digit[1-6]$/.test(e.code)) { const b = $('luCards').querySelectorAll('button.card')[+e.code.slice(5) - 1]; if (b) b.click(); }
+  if (mode === 'levelup' && e.code === 'KeyR' && G && G.hand && $('luTitle').textContent !== '상자 속 비급 하나를 고른다') rerollHand();
   if (mode === 'play' && e.code.startsWith('Arrow')) e.preventDefault();
   if (mode === 'play' && (e.code === 'Space' || e.code === 'ShiftLeft' || e.code === 'ShiftRight') && !e.repeat) { G.wantDash = true; e.preventDefault(); }
 });
