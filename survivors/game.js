@@ -23,10 +23,23 @@ const ICON = (n) => `${BASE}assets/icons/${n}.svg`;
 
 // ---------------------------------------------------------------- data
 // sheet layout (LPC): walk rows 8..11 = up, left, down, right. F = cell size, foot = px from cell bottom to the feet
+// atk = the hero's own attack motion: first LPC row, frame count, seconds per frame, frame the blow lands / the shot leaves.
+// hero sheets also carry diagonal rows 21-40 (row 21 + floor(row/4)*4 + diag)
 const SHEETS = {
-  knight_px: { F: 96, foot: 8, walk: 6, hero: 1.25 }, mage_px: { F: 96, foot: 8, walk: 8, hero: 1.05 }, elf_px: { F: 64, foot: 5, walk: 8, hero: 1.15 },
+  knight_px: { F: 96, foot: 8, walk: 6, hero: 1.25, diag: true, atk: { row: 12, frames: 6, ft: 0.055, hit: 3 } },
+  mage_px: { F: 96, foot: 8, walk: 8, hero: 1.05, diag: true, atk: { row: 4, frames: 8, ft: 0.05, hit: 4 } },
+  elf_px: { F: 64, foot: 5, walk: 8, hero: 1.15, diag: true, atk: { row: 16, frames: 13, ft: 0.03, hit: 9 } },
 };
 const sheetInfo = (s) => SHEETS[s] || { F: 64, foot: 3, walk: 8 };
+const FOE_ATK = { row: 12, frames: 6, ft: 0.075, hit: 3 }; // LPC slash: every foe sheet swings a club or claws
+// 0 up, 1 left, 2 down, 3 right
+const dir4 = (x, y) => (Math.abs(x) > Math.abs(y) ? (x < 0 ? 1 : 3) : (y < 0 ? 0 : 2));
+// 0 up-left, 1 down-left, 2 down-right, 3 up-right, -1 when the heading is close to a cardinal direction
+function diag4(x, y) {
+  const ax = Math.abs(x), ay = Math.abs(y);
+  if (ax < 0.45 * ay || ay < 0.45 * ax) return -1;
+  return x < 0 ? (y < 0 ? 0 : 1) : (y < 0 ? 3 : 2);
+}
 
 const HEROES = [
   { id: 'knight', name: '강철 기사', sheet: 'knight_px', weapon: 'sword', hp: 130, spd: 1, armor: 1, might: 0, area: 0, cd: 0,
@@ -198,7 +211,10 @@ const SND = (() => {
     },
     gold() { tone(1320, 0.08, 'triangle', 0.06, 1.2, 'gold', 0.05); tone(1760, 0.1, 'triangle', 0.04, 1, null); },
     hurt() { tone(120, 0.18, 'sawtooth', 0.09, 0.5, 'hurt', 0.15); },
-    slash() { noise(0.12, 0.07, 2600, 'slash', 0.08); },
+    slash() { noise(0.12, 0.07, 2600, 'slash', 0.08); tone(900, 0.1, 'sine', 0.025, 0.4, null); },
+    twang() { tone(330, 0.12, 'triangle', 0.06, 0.6, 'twang', 0.06); noise(0.06, 0.04, 4000, null); },
+    whoosh() { noise(0.25, 0.06, 1200, 'whoosh', 0.1); },
+    club() { tone(140, 0.08, 'square', 0.03, 0.6, 'club', 0.09); },
     zap() { noise(0.18, 0.09, 5000, 'zap', 0.06); tone(90, 0.2, 'square', 0.05, 0.4, null); },
     boom() { noise(0.35, 0.14, 500, 'boom', 0.08); tone(70, 0.3, 'sine', 0.12, 0.5, null); },
     level() { [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => tone(f, 0.18, 'triangle', 0.08, 1, null), i * 70)); },
@@ -290,7 +306,7 @@ function newRun(heroId) {
   const hero = HEROES.find((h) => h.id === heroId) || HEROES[0];
   G = {
     hero, t: 0, kills: 0, gold: 0, lvl: 1, xp: 0, next: xpNeed(1), pendingLv: 0,
-    p: { x: 0, y: 0, hp: 1, maxhp: 1, dir: 2, face: 1, moving: false, walkT: 0, inv: 0, hurtT: 0, ax: 1, ay: 0 },
+    p: { x: 0, y: 0, hp: 1, maxhp: 1, dir: 2, diag: -1, face: 1, moving: false, walkT: 0, inv: 0, hurtT: 0, ax: 1, ay: 0, act: null, queue: [] },
     weapons: [], passives: {}, S: {},
     foes: [], shots: [], fx: [], gems: [], nums: [], ebul: [], timers: [], zones: [],
     spawnAcc: 0, evIdx: 0, eliteNext: 50, boss: null, shake: 0, revive: mlv('revive') > 0, won: false,
@@ -345,6 +361,27 @@ function wstats(w) {
   return {};
 }
 function later(t, fn) { G.timers.push({ t, fn }); }
+// the hero's own weapon plays the body's attack motion and lands on its hit frame; borrowed weapons just fire
+function act(w, ax, ay, onHit, delay = 0) {
+  if (w.id !== G.hero.weapon || !sheetInfo(G.hero.sheet).atk) { later(delay, onHit); return; }
+  G.p.queue.push({ ax, ay, onHit });
+}
+function updateAct(dt) {
+  const p = G.p;
+  if (!p.act && p.queue.length) {
+    const q = p.queue.shift();
+    p.act = { t: 0, fired: false, ax: q.ax, ay: q.ay, onHit: q.onHit };
+    p.dir = dir4(q.ax, q.ay); p.diag = diag4(q.ax, q.ay);
+    if (Math.abs(q.ax) > 0.2) p.face = q.ax < 0 ? -1 : 1;
+  }
+  const a = p.act;
+  if (!a) return;
+  const A = sheetInfo(G.hero.sheet).atk;
+  a.t += dt * (1 + 0.7 * p.queue.length); // a backlog of swings plays faster instead of piling up
+  const f = Math.floor(a.t / A.ft);
+  if (!a.fired && f >= A.hit) { a.fired = true; a.onHit(); }
+  if (f >= A.frames) p.act = null;
+}
 
 function nearestFoes(x, y, n, range = 9999) {
   const arr = [];
@@ -361,35 +398,41 @@ function fireWeapon(w) {
   const p = G.p, st = wstats(w);
   switch (w.id) {
     case 'sword': {
-      if (w.evo) {
-        const R = 120 * st.area;
-        G.fx.push({ k: 'ring', x: p.x, y: p.y - 14, r: R, t: 0, dur: 0.3, follow: true, col: '255,235,190' });
-        hitArea(p.x, p.y - 14, R, st.dmg, w.id, 160);
+      const tg = nearestFoes(p.x, p.y, 1, 260)[0];
+      const a = tg ? Math.atan2(tg.y - p.y, tg.x - p.x) : Math.atan2(p.ay, p.ax);
+      const swing = (dirA, n) => {
+        const R = (w.evo ? 128 : 96) * st.area, half = w.evo ? Math.PI : 1.15, side = n % 2 ? -1 : 1;
+        G.fx.push({ k: 'swing', a: dirA, R, half, side, t: 0, dur: w.evo ? 0.32 : 0.24, evo: w.evo });
+        for (const e of G.foes) {
+          const dx = e.x - G.p.x, dy = e.y - G.p.y, d = Math.hypot(dx, dy) || 1;
+          if (d > R + e.r) continue;
+          let da = Math.atan2(dy, dx) - dirA; while (da > Math.PI) da -= TAU; while (da < -Math.PI) da += TAU;
+          if (Math.abs(da) <= half + 0.3 || d < e.r + 16) hurt(e, st.dmg, w.id, (dx / d) * 150, (dy / d) * 150);
+        }
         SND.slash();
-        break;
-      }
-      for (let i = 0; i < st.amount; i++) {
-        const side = i % 2 === 0 ? p.face : -p.face;
-        later(i * 0.12, () => {
-          const wdt = 116 * st.area, hgt = 56 * st.area, cx = G.p.x + side * wdt * 0.48, cy = G.p.y - 16;
-          G.fx.push({ k: 'slash', side, t: 0, dur: 0.22, w: wdt, h: hgt, ox: side * wdt * 0.48, oy: -16, follow: true });
-          for (const e of G.foes) {
-            const dx = (e.x - cx) / (wdt / 2 + e.r), dy = (e.y - 14 - cy) / (hgt / 2 + e.r);
-            if (dx * dx + dy * dy <= 1) hurt(e, st.dmg, w.id, side * 140, 0);
-          }
-          SND.slash();
-        });
+      };
+      // each blow is a full swing of the sword; the second (Lv.3+) turns round and cuts behind
+      for (let i = 0; i < (w.evo ? 1 : st.amount); i++) {
+        const dirA = a + (i % 2 ? Math.PI : 0) + (i >= 2 ? (i - 1) * 0.5 : 0);
+        act(w, Math.cos(dirA), Math.sin(dirA), () => swing(dirA, i), i * 0.16);
       }
       break;
     }
     case 'arrow': {
       const targets = nearestFoes(p.x, p.y, st.amount, 560);
-      for (let i = 0; i < st.amount; i++) {
-        const tg = targets[i % Math.max(1, targets.length)];
-        let a = tg ? Math.atan2(tg.y - 14 - (p.y - 18), tg.x - p.x) : Math.atan2(p.ay, p.ax);
-        if (!tg || i >= targets.length) a += (i - st.amount / 2) * 0.18;
-        later(i * 0.06, () => shoot({ k: 'arrow', x: G.p.x, y: G.p.y - 18, a, spd: 600, dmg: st.dmg, pierce: st.pierce, life: 1.2, r: 6, wid: w.id, kb: 60 }));
-      }
+      const lead = targets[0], a0 = lead ? Math.atan2(lead.y - p.y, lead.x - p.x) : Math.atan2(p.ay, p.ax);
+      // the bow is drawn toward the nearest foe; every arrow in the volley leaves the string on the release frame
+      act(w, Math.cos(a0), Math.sin(a0), () => {
+        const P = G.p, ox = P.x + Math.cos(a0) * 16, oy = P.y - 26 + Math.sin(a0) * 6;
+        for (let i = 0; i < st.amount; i++) {
+          const tg = targets[i];
+          let a = tg && !tg.dead ? Math.atan2(tg.y - 18 - oy, tg.x - ox) : a0 + (i - (st.amount - 1) / 2) * 0.16;
+          if (tg && i > 0 && Math.abs(a - a0) < 0.05) a += (i % 2 ? 1 : -1) * 0.06;
+          shoot({ k: 'arrow', x: ox, y: oy, a, spd: 640, dmg: st.dmg, pierce: st.pierce, life: 1.2, r: 6, wid: w.id, kb: 60 });
+        }
+        G.fx.push({ k: 'twang', x: ox, y: oy, a: a0, t: 0, dur: 0.18 });
+        SND.twang();
+      });
       if (w.evo) {
         for (let i = 0; i < 6; i++) {
           later(0.1 + i * 0.05, () => {
@@ -403,11 +446,18 @@ function fireWeapon(w) {
     }
     case 'foxfire': {
       const pool = nearestFoes(p.x, p.y, 10, 600);
-      for (let i = 0; i < st.amount; i++) {
-        const a = w.evo ? (i / st.amount) * TAU : Math.atan2(p.ay, p.ax) + rand(-0.7, 0.7);
-        later(i * 0.08, () => shoot({ k: 'fox', x: G.p.x, y: G.p.y - 20, a, spd: 250, dmg: st.dmg, pierce: 1, life: 2.6, r: 8, wid: w.id, kb: 0,
-          home: pool.length ? pick(pool) : null, blast: 48 * st.area, burn: w.evo }));
-      }
+      const lead = pool[0], a0 = lead ? Math.atan2(lead.y - p.y, lead.x - p.x) : Math.atan2(p.ay, p.ax);
+      // the staff sweeps toward the foe and the flames peel off its tip, fanning out before they home in
+      act(w, Math.cos(a0), Math.sin(a0), () => {
+        const P = G.p, tx = P.x + Math.cos(a0) * 22, ty = P.y - 30 + Math.sin(a0) * 8;
+        G.fx.push({ k: 'boom', x: tx, y: ty, r: 18, t: 0, dur: 0.2, col: w.evo ? '255,100,190' : '255,150,60' });
+        for (let i = 0; i < st.amount; i++) {
+          const spread = w.evo ? (i / st.amount) * TAU : (i - (st.amount - 1) / 2) * 0.45;
+          shoot({ k: 'fox', x: tx, y: ty, a: a0 + spread, spd: 250, dmg: st.dmg, pierce: 1, life: 2.6, r: 8, wid: w.id, kb: 0,
+            home: pool.length ? pool[i % pool.length] : null, blast: 48 * st.area, burn: w.evo });
+        }
+        SND.whoosh();
+      });
       break;
     }
     case 'talisman':
@@ -543,7 +593,7 @@ function spawnFoe(id, x, y, opt = {}) {
   const e = {
     id, d, x, y, hp: d.hp * mult * (elite ? 14 : 1), maxhp: 0, spd: d.spd * (elite ? 1.1 : 1) * (opt.spdMul || 1), dmg: d.dmg * (1 + G.t / 600) * (elite ? 1.5 : 1),
     r: d.r * (elite ? 1.35 : 1), s: d.s * (elite ? 1.4 : 1), dir: 2, walkT: Math.random() * 10, flash: 0, kx: 0, ky: 0, slow: 0, slowAmt: 0, frozen: 0,
-    elite, boss: !!d.boss, dead: false, vx: opt.vx || 0, vy: opt.vy || 0, rush: opt.rush || 0, skillT: 3, state: '', stT: 0,
+    elite, boss: !!d.boss, dead: false, vx: opt.vx || 0, vy: opt.vy || 0, rush: opt.rush || 0, skillT: 3, state: '', stT: 0, atk: null, atkCd: Math.random() * 0.5,
   };
   e.maxhp = e.hp;
   G.foes.push(e);
@@ -619,6 +669,26 @@ function updateFoes(dt) {
       const r = bossAI(e, dt, dx / dist, dy / dist);
       if (r) { mx = r.mx; my = r.my; spd = r.spd; }
     }
+    // melee: walk up, stop, wind up the club and land the blow on the swing's hit frame
+    e.atkCd -= dt;
+    const reach = e.r + 20;
+    if (e.atk) {
+      e.atk.t += dt;
+      const f = Math.floor(e.atk.t / FOE_ATK.ft);
+      if (!e.atk.hit && f >= FOE_ATK.hit) {
+        e.atk.hit = true;
+        G.fx.push({ k: 'claw', x: e.x + Math.cos(e.atk.a) * e.r * 1.2, y: e.y - 18 * e.s + Math.sin(e.atk.a) * e.r * 0.6, a: e.atk.a, s: e.s, t: 0, dur: 0.16 });
+        if (dist < reach + 16) hurtPlayer(e.dmg);
+        SND.club();
+      }
+      if (f >= FOE_ATK.frames) e.atk = null;
+      mx = 0; my = 0;
+    } else if (e.rush <= 0 && dist < reach && e.atkCd <= 0 && (!e.boss || !e.state)) {
+      e.atk = { t: 0, hit: false, a: Math.atan2(dy, dx) };
+      e.atkCd = e.boss ? 1.3 : rand(0.9, 1.3);
+      e.dir = dir4(dx, dy);
+      mx = 0; my = 0;
+    } else if (e.rush <= 0 && dist < reach * 0.85 && (!e.boss || !e.state)) { mx = 0; my = 0; e.dir = dir4(dx, dy); }
     // separation from close neighbours
     let sx = 0, sy = 0, n = 0;
     for (const o of nearFoes(e.x, e.y, e.r + 14)) {
@@ -630,10 +700,11 @@ function updateFoes(dt) {
     e.x += (mx * spd + sx * 60 + e.kx) * dt;
     e.y += (my * spd + sy * 60 + e.ky) * dt;
     const kd = Math.pow(0.0005, dt); e.kx *= kd; e.ky *= kd;
-    if (Math.abs(mx) > 0.01 || Math.abs(my) > 0.01) e.dir = Math.abs(mx) > Math.abs(my) ? (mx < 0 ? 1 : 3) : (my < 0 ? 0 : 2);
-    e.walkT += dt * (spd / 60);
-    // contact
-    if (dist < e.r + 12 && p.inv <= 0) hurtPlayer(e.dmg);
+    const moving = Math.abs(mx) > 0.01 || Math.abs(my) > 0.01;
+    if (moving) { e.dir = dir4(mx, my); e.walkT += (dt * spd) / (7 * e.s); } // stride: ~7px of ground per frame
+    e.moving = moving;
+    // charging packs and a dashing reaper hit on contact
+    if ((e.rush > 0 || e.state === 'dash') && dist < e.r + 12 && p.inv <= 0) hurtPlayer(e.dmg);
     // stragglers left far behind come back from the side the player is heading toward
     if (dist > far && !e.boss) {
       if (e.rush > 0) { e.dead = true; e.gone = true; continue; }
@@ -742,12 +813,16 @@ function updatePlayer(dt) {
   if (l > 1) { mx /= l; my /= l; }
   p.moving = l > 0.05;
   if (p.moving) {
-    p.x += mx * G.S.speed * dt; p.y += my * G.S.speed * dt;
+    const slow = p.act ? 0.7 : 1; // planting the feet for a swing or a shot
+    p.x += mx * G.S.speed * slow * dt; p.y += my * G.S.speed * slow * dt;
     const n = Math.hypot(mx, my); p.ax = mx / n; p.ay = my / n;
-    if (Math.abs(mx) > 0.2) p.face = mx < 0 ? -1 : 1;
-    p.dir = Math.abs(mx) > Math.abs(my) * 1.2 ? (mx < 0 ? 1 : 3) : (my < 0 ? 0 : 2);
-    p.walkT += dt;
+    if (!p.act) {
+      if (Math.abs(mx) > 0.2) p.face = mx < 0 ? -1 : 1;
+      p.dir = dir4(mx, my); p.diag = diag4(mx, my);
+    }
+    p.walkT += dt * (G.S.speed / 118);
   }
+  updateAct(dt);
   p.inv = Math.max(0, p.inv - dt); p.hurtT = Math.max(0, p.hurtT - dt);
   if (G.S.regen) p.hp = Math.min(p.maxhp, p.hp + G.S.regen * dt);
 }
@@ -1037,7 +1112,7 @@ function drawSprite(sheet, x, y, s, row, col, img) {
 }
 function walkFrame(sheet, t, moving) {
   const n = sheetInfo(sheet).walk;
-  return moving ? 1 + (Math.floor(t * 10) % n) : 0;
+  return moving ? 1 + (Math.floor(t * 11) % n) : 0;
 }
 function shadow(x, y, w) { ctx.fillStyle = 'rgba(0,0,0,0.32)'; ctx.beginPath(); ctx.ellipse(x, y, w, w * 0.38, 0, 0, TAU); ctx.fill(); }
 
@@ -1147,7 +1222,11 @@ function drawPlayer() {
   const p = G.p, sh = G.hero.sheet;
   shadow(p.x, p.y, 14);
   if (p.inv > 0 && Math.floor(p.inv * 20) % 2 === 0) ctx.globalAlpha = 0.5;
-  drawSprite(sh, p.x, p.y, sheetInfo(sh).hero || 1, 8 + p.dir, walkFrame(sh, p.walkT, p.moving));
+  const info = sheetInfo(sh);
+  let row = 8 + p.dir, col = walkFrame(sh, p.walkT, p.moving);
+  if (p.act && info.atk) { row = info.atk.row + p.dir; col = Math.min(info.atk.frames - 1, Math.floor(p.act.t / info.atk.ft)); }
+  if (info.diag && p.diag >= 0) row = 21 + Math.floor(row / 4) * 4 + p.diag;
+  drawSprite(sh, p.x, p.y, info.hero || 1, row, col);
   ctx.globalAlpha = 1;
   // hp bar under the feet
   const w = 36, pct = clamp(p.hp / p.maxhp, 0, 1);
@@ -1161,7 +1240,8 @@ function drawFoe(e) {
   if (e.d.tint) img = variant(sh, e.d.tint) || img;
   if (e.elite) img = variant(sh, 'rgba(255,200,80,0.35)') || img;
   if (e.frozen > 0) img = variant(sh, 'rgba(170,220,255,0.6)') || img;
-  const col = e.frozen > 0 ? 0 : 1 + (Math.floor(e.walkT * 1.6) % 8);
+  let col = e.frozen > 0 || !e.moving ? 0 : 1 + (Math.floor(e.walkT) % 8), row = 8 + e.dir;
+  if (e.atk && !(e.frozen > 0)) { row = FOE_ATK.row + e.dir; col = Math.min(FOE_ATK.frames - 1, Math.floor(e.atk.t / FOE_ATK.ft)); }
   if (e.elite || e.boss) {
     ctx.globalCompositeOperation = 'lighter';
     const gr = ctx.createRadialGradient(e.x, e.y - 20 * e.s, 2, e.x, e.y - 20 * e.s, 34 * e.s);
@@ -1169,8 +1249,8 @@ function drawFoe(e) {
     ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(e.x, e.y - 20 * e.s, 34 * e.s, 0, TAU); ctx.fill();
     ctx.globalCompositeOperation = 'source-over';
   }
-  drawSprite(sh, e.x, e.y, e.s, 8 + e.dir, col, img);
-  if (e.flash > 0) { ctx.globalAlpha = Math.min(1, e.flash * 8) * 0.8; drawSprite(sh, e.x, e.y, e.s, 8 + e.dir, col, variant(sh, 'rgba(255,255,255,1)')); ctx.globalAlpha = 1; }
+  drawSprite(sh, e.x, e.y, e.s, row, col, img);
+  if (e.flash > 0) { ctx.globalAlpha = Math.min(1, e.flash * 8) * 0.8; drawSprite(sh, e.x, e.y, e.s, row, col, variant(sh, 'rgba(255,255,255,1)')); ctx.globalAlpha = 1; }
   if (e.elite && e.hp < e.maxhp) {
     const w = 40; ctx.fillStyle = 'rgba(0,0,0,0.7)'; ctx.fillRect(e.x - w / 2, e.y + 6, w, 4);
     ctx.fillStyle = '#ffcf7a'; ctx.fillRect(e.x - w / 2, e.y + 6, w * clamp(e.hp / e.maxhp, 0, 1), 4);
@@ -1252,17 +1332,44 @@ function drawTalismans() {
 function drawFx(f) {
   const p = G.p, k = f.t / f.dur;
   switch (f.k) {
-    case 'slash': {
-      const cx = p.x + f.ox, cy = p.y + f.oy;
-      ctx.save(); ctx.translate(cx, cy); ctx.scale(f.side, 1);
+    case 'swing': { // sword trail: a crescent that sweeps around the body, thick at the blade, thin at the tail
+      const cx = p.x, cy = p.y - 20, sq = 0.78, sweepEnd = 0.55;
+      const u = Math.min(1, f.t / (f.dur * sweepEnd)), ease = 1 - (1 - u) * (1 - u) * (1 - u);
+      const fade = f.t < f.dur * sweepEnd ? 1 : 1 - (f.t - f.dur * sweepEnd) / (f.dur * (1 - sweepEnd));
+      const sgn = f.side, a0 = f.a - f.half * sgn, head = a0 + 2 * f.half * sgn * ease;
+      const trail = Math.min(Math.abs(head - a0), f.evo ? 4.2 : 1.9);
+      const N = 18, R = f.R * 0.82, col = f.evo ? '255,215,140' : '255,96,52';
+      const pt = (s, r) => { const th = head - sgn * trail * (1 - s); return [cx + Math.cos(th) * r, cy + Math.sin(th) * r * sq]; };
+      const outer = (s) => R * (0.9 + 0.1 * s), inner = (s) => R * (0.9 - 0.3 * Math.pow(s, 1.6));
       ctx.globalCompositeOperation = 'lighter';
-      const a0 = -1.25 + k * 0.4;
-      for (let i = 0; i < 3; i++) {
-        ctx.strokeStyle = `rgba(255,${235 - i * 40},${200 - i * 60},${(1 - k) * (0.9 - i * 0.25)})`;
-        ctx.lineWidth = 12 - i * 3;
-        ctx.beginPath(); ctx.ellipse(-f.w * 0.2, 0, f.w * (0.6 - i * 0.05), f.h * (0.55 - i * 0.05), 0, a0, a0 + 2.5 * Math.min(1, k * 3)); ctx.stroke();
+      for (let i = 0; i < N; i++) {
+        const s0 = i / N, s1 = (i + 1) / N;
+        ctx.fillStyle = `rgba(${col},${fade * s1 * s1 * 0.7})`;
+        const [x0, y0] = pt(s0, outer(s0)), [x1, y1] = pt(s1, outer(s1)), [x2, y2] = pt(s1, inner(s1)), [x3, y3] = pt(s0, inner(s0));
+        ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.lineTo(x2, y2); ctx.lineTo(x3, y3); ctx.closePath(); ctx.fill();
       }
-      ctx.restore(); ctx.globalCompositeOperation = 'source-over';
+      ctx.strokeStyle = `rgba(255,244,220,${fade * 0.95})`; ctx.lineWidth = 2.5; ctx.lineCap = 'round';
+      ctx.beginPath();
+      for (let i = 0; i <= N; i++) { const s = i / N; if (s < 0.35) continue; const [x, y] = pt(s, outer(s)); if (s < 0.36) ctx.moveTo(x, y); else ctx.lineTo(x, y); }
+      ctx.stroke();
+      ctx.globalCompositeOperation = 'source-over';
+      break;
+    }
+    case 'twang': { // bowstring snap at the release point
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.strokeStyle = `rgba(200,255,230,${1 - k})`; ctx.lineWidth = 2;
+      for (const d of [-0.5, 0, 0.5]) {
+        const a = f.a + Math.PI + d, r0 = 4 + 10 * k, r1 = 10 + 14 * k;
+        ctx.beginPath(); ctx.moveTo(f.x + Math.cos(a) * r0, f.y + Math.sin(a) * r0); ctx.lineTo(f.x + Math.cos(a) * r1, f.y + Math.sin(a) * r1); ctx.stroke();
+      }
+      ctx.globalCompositeOperation = 'source-over';
+      break;
+    }
+    case 'claw': { // a foe's club/claw connecting
+      ctx.save(); ctx.translate(f.x, f.y); ctx.rotate(f.a); ctx.scale(f.s, f.s);
+      ctx.strokeStyle = `rgba(255,235,220,${0.85 * (1 - k)})`; ctx.lineWidth = 2; ctx.lineCap = 'round';
+      for (let i = -1; i <= 1; i++) { ctx.beginPath(); ctx.arc(-6, i * 5, 12 + 4 * k, -0.7, 0.7); ctx.stroke(); }
+      ctx.restore();
       break;
     }
     case 'ring': {
