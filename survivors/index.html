@@ -135,6 +135,14 @@ h2 { font-size: clamp(22px, 4vw, 30px); }
   position: fixed; z-index: 4; top: calc(26px + env(safe-area-inset-top, 0px)); right: calc(10px + env(safe-area-inset-right, 0px));
   width: 38px; height: 38px; border-radius: 3px; border: 1px solid var(--line); background: rgba(10, 8, 12, 0.6); color: var(--gold); font-size: 15px;
 }
+#dashBtn {
+  position: fixed; z-index: 4; right: calc(22px + env(safe-area-inset-right, 0px)); bottom: calc(28px + env(safe-area-inset-bottom, 0px));
+  width: 74px; height: 74px; border-radius: 50%; border: 2px solid rgba(138, 212, 255, 0.6);
+  background: radial-gradient(circle, rgba(60, 110, 160, 0.55), rgba(10, 8, 12, 0.6)); color: #dff2ff;
+  font-family: var(--f-display); font-weight: 700; font-size: 17px; touch-action: none;
+}
+#dashBtn:active { transform: scale(0.94); }
+@media (hover: hover) and (pointer: fine) { #dashBtn { display: none; } }
 #banner {
   position: fixed; left: 0; right: 0; top: 30%; text-align: center; z-index: 3; pointer-events: none;
   font-family: var(--f-display); font-weight: 700; font-size: clamp(26px, 6vw, 46px); color: var(--corona);
@@ -149,6 +157,7 @@ h2 { font-size: clamp(22px, 4vw, 30px); }
 <canvas id="cv"></canvas>
 <div id="banner"></div>
 <button id="pauseBtn" hidden aria-label="일시 정지">❚❚</button>
+<button id="dashBtn" hidden>회피</button>
 <div id="loading">불러오는 중</div>
 
 <section class="screen" id="title" hidden>
@@ -162,7 +171,7 @@ h2 { font-size: clamp(22px, 4vw, 30px); }
       <button class="btn ghost" id="sndBtn">소리 켜짐</button>
     </div>
     <div class="purse"><span>보유 엽전 <b id="tGold">0</b></span><span>최고 기록 <b id="tBest">—</b></span></div>
-    <div class="keys"><kbd>WASD</kbd>·<kbd>방향키</kbd> 이동 · 공격은 자동 · <kbd>Esc</kbd> 일시 정지 · 휴대폰은 화면을 끌어서 이동</div>
+    <div class="keys"><kbd>WASD</kbd>·<kbd>방향키</kbd> 이동 · <kbd>Space</kbd> 회피 · 공격은 자동 · <kbd>Esc</kbd> 일시 정지 · 휴대폰은 화면을 끌어서 이동, 오른쪽 아래 버튼으로 회피</div>
   </div>
 </section>
 
