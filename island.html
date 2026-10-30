@@ -1,0 +1,482 @@
+<meta charset="utf-8">
+<title>말하는섬</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@700&family=Noto+Sans+KR:wght@400;500;700&display=swap">
+<style>
+/* Layout: full-bleed world canvas; HUD pinned to the corners (portrait top-left, minimap top-right, zone banner centre, controls bottom) */
+:root {
+  --night: #0f0d0c;
+  --plate: rgba(20, 16, 12, 0.86);
+  --rule: rgba(214, 186, 128, 0.35);
+  --ink: #ece2cc;
+  --dim: #a89c86;
+  --brass: #d6b26a;
+  --safe: #8fd18a;
+  --display: "Gowun Batang", "Noto Serif KR", serif;
+  --body: "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+body { margin: 0; background: var(--night); color: var(--ink); font-family: var(--body); font-size: 14px; overflow: hidden; }
+#game { position: fixed; inset: 0; width: 100%; height: 100%; display: block; cursor: pointer; touch-action: none; }
+
+.hud { position: fixed; pointer-events: none; }
+.hud > * { pointer-events: auto; }
+.me {
+  top: calc(12px + env(safe-area-inset-top, 0px)); left: max(12px, env(safe-area-inset-left, 0px));
+  display: flex; gap: 10px; align-items: center; background: var(--plate); border: 1px solid var(--rule);
+  border-radius: 8px; padding: 6px 12px 6px 6px;
+}
+.me img { width: 44px; height: 44px; border-radius: 6px; object-fit: cover; border: 1px solid var(--rule); }
+.me b { display: block; font-family: var(--display); font-size: 16px; }
+.me span { font-size: 12px; color: var(--dim); }
+.me button { margin-left: 6px; }
+
+.mini {
+  top: calc(12px + env(safe-area-inset-top, 0px)); right: max(12px, env(safe-area-inset-right, 0px));
+  background: var(--plate); border: 1px solid var(--rule); border-radius: 8px; padding: 6px; display: grid; gap: 4px;
+}
+.mini canvas { display: block; width: 210px; height: 140px; border-radius: 4px; cursor: crosshair; }
+.mini .where { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; }
+.mini .where b { font-weight: 500; }
+.mini .where span { color: var(--dim); font-variant-numeric: tabular-nums; }
+
+.banner {
+  top: 18%; left: 50%; transform: translateX(-50%); text-align: center; opacity: 0; transition: opacity .6s;
+  text-shadow: 0 2px 10px #000, 0 0 2px #000; pointer-events: none;
+}
+.banner.on { opacity: 1; }
+.banner strong { display: block; font-family: var(--display); font-size: 34px; color: var(--ink); letter-spacing: .04em; }
+.banner span { font-size: 14px; color: var(--brass); letter-spacing: .1em; }
+.banner span.safe { color: var(--safe); }
+
+.bar {
+  bottom: calc(14px + env(safe-area-inset-bottom, 0px)); left: 50%; transform: translateX(-50%);
+  display: flex; gap: 6px; background: var(--plate); border: 1px solid var(--rule); border-radius: 999px; padding: 6px;
+}
+.btn {
+  font: inherit; font-size: 13px; color: var(--ink); background: rgba(255, 255, 255, 0.04); border: 1px solid var(--rule);
+  border-radius: 999px; padding: 7px 14px; cursor: pointer; white-space: nowrap;
+}
+.btn:hover { border-color: var(--brass); }
+.btn:focus-visible, .pick:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }
+.btn kbd { font: inherit; font-size: 11px; color: var(--dim); margin-left: 4px; }
+
+.panel {
+  position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(440px, calc(100% - 32px));
+  max-height: calc(100% - 40px); overflow: auto; background: #17130f; border: 1px solid var(--rule); border-radius: 10px;
+  padding: 18px; display: grid; gap: 12px; box-shadow: 0 20px 60px rgba(0,0,0,.6); z-index: 5;
+}
+.panel h2 { margin: 0; font-family: var(--display); font-size: 22px; color: var(--brass); }
+.panel p { margin: 0; line-height: 1.65; }
+.panel .row { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.tp { display: grid; gap: 6px; }
+.tp button { display: flex; justify-content: space-between; align-items: center; text-align: left; border-radius: 8px; padding: 10px 12px; }
+.tp button span { color: var(--dim); font-size: 12px; font-variant-numeric: tabular-nums; }
+.classes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.pick { font: inherit; color: var(--ink); background: rgba(255,255,255,.03); border: 1px solid var(--rule); border-radius: 8px; padding: 6px; cursor: pointer; display: grid; gap: 4px; justify-items: center; }
+.pick img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 6px; }
+.pick[aria-pressed="true"] { border-color: var(--brass); background: rgba(214,178,106,.12); }
+
+.bigmap { position: fixed; inset: 0; background: rgba(8, 6, 4, 0.9); display: grid; place-items: center; z-index: 4; padding: 16px; }
+.bigmap canvas { max-width: 100%; max-height: 100%; border: 1px solid var(--rule); border-radius: 8px; cursor: crosshair; }
+.bigmap .close { position: absolute; top: calc(14px + env(safe-area-inset-top, 0px)); right: max(14px, env(safe-area-inset-right, 0px)); }
+
+@media (max-width: 640px) {
+  .mini canvas { width: 132px; height: 88px; }
+  .me b { font-size: 14px; }
+  .me img { width: 36px; height: 36px; }
+  .bar .btn kbd { display: none; }
+  .banner strong { font-size: 26px; }
+}
+@media (prefers-reduced-motion: reduce) { .banner { transition: none; } }
+</style>
+
+<canvas id="game" aria-label="말하는섬 맵. 클릭하거나 WASD로 이동"></canvas>
+
+<div class="hud me">
+  <img id="face" alt="">
+  <div><b id="pname"></b><span id="pclass"></span></div>
+  <button class="btn" type="button" id="change">직업 변경</button>
+</div>
+
+<div class="hud mini">
+  <canvas id="mini" width="420" height="280" aria-label="미니맵. 누르면 그곳으로 이동"></canvas>
+  <div class="where"><b id="zname"></b><span id="coord"></span></div>
+</div>
+
+<div class="hud banner" id="banner"><strong id="bname"></strong><span id="blv"></span></div>
+
+<div class="hud bar">
+  <button class="btn" type="button" id="home">마을로 <kbd>B</kbd></button>
+  <button class="btn" type="button" id="tpbtn">순간이동 <kbd>T</kbd></button>
+  <button class="btn" type="button" id="mapbtn">전체 지도 <kbd>M</kbd></button>
+</div>
+
+<div class="panel" id="dialog" hidden></div>
+<div class="bigmap" id="bigmap" hidden><canvas id="big" width="1536" height="1024" aria-label="전체 지도. 누르면 그곳으로 이동"></canvas><button class="btn close" type="button" id="closemap">닫기 <kbd>Esc</kbd></button></div>
+
+<script>
+// ---- data (all positions are in map pixels of assets/maps/talking_island.jpg, 1536 x 1024) ----
+const MAP_W = 1536, MAP_H = 1024, CELL = 8;
+// x, y, w, h: name plate, laid over the place name painted on the source map; cx, cy, r: area used for the zone banner
+const ZONES = [
+  { id: 'village', name: '말하는섬 마을', safe: true, x: 608, y: 348, w: 140, h: 36, cx: 640, cy: 410, r: 190 },
+  { id: 'port', name: '말하는섬 항구', safe: true, x: 262, y: 771, w: 150, h: 38, cx: 230, cy: 790, r: 150 },
+  { id: 'beach', name: '해안가', lv: [5, 12], x: 565, y: 784, w: 110, h: 56, cx: 560, cy: 810, r: 160 },
+  { id: 'wolf', name: '늑대의 숲', lv: [10, 18], x: 286, y: 569, w: 112, h: 58, cx: 270, cy: 560, r: 200 },
+  { id: 'hill', name: '바람의 언덕', lv: [12, 20], x: 793, y: 600, w: 118, h: 56, cx: 800, cy: 640, r: 200 },
+  { id: 'gludio', name: '글루디오 평원', lv: [15, 22], x: 1026, y: 320, w: 140, h: 56, cx: 1040, cy: 330, r: 220 },
+  { id: 'orc', name: '오크 숲', lv: [20, 28], x: 341, y: 262, w: 98, h: 54, cx: 320, cy: 300, r: 200 },
+  { id: 'south', name: '남부 해안가', lv: [25, 32], x: 1169, y: 710, w: 122, h: 60, cx: 1160, cy: 700, r: 220 },
+  { id: 'ruins', name: '북부 유적지', lv: [28, 35], x: 717, y: 112, w: 120, h: 58, cx: 700, cy: 150, r: 200 },
+  { id: 'giant', name: '거인의 무덤', lv: [33, 40], x: 1362, y: 452, w: 116, h: 64, cx: 1360, cy: 470, r: 200 },
+  { id: 'skull', name: '해골 해안가', lv: [35, 40], x: 1230, y: 126, w: 124, h: 60, cx: 1260, cy: 160, r: 200 },
+];
+// icon sits where the source map drew it; lw = width of the name plate to its right (covers the painted name)
+const NPCS = [
+  { name: '잡화상인', icon: '🧪', x: 500, y: 423, lw: 72, talk: '물약과 귀환 주문서를 팝니다. 사냥 나가기 전에 넉넉히 챙겨 가세요.' },
+  { name: '무기상인', icon: '⚔', x: 748, y: 386, lw: 78, talk: '검, 활, 지팡이, 총까지 다 있습니다. 직업에 맞는 무기를 골라 보세요.' },
+  { name: '방어구상인', icon: '🛡', x: 761, y: 433, lw: 82, talk: '갑옷 하나가 목숨을 살립니다. 바람의 언덕부터는 방어구를 꼭 갖추세요.' },
+  { name: '창고지기', icon: '⌂', x: 537, y: 485, lw: 70, talk: '맡기실 물건이 있으면 언제든 오세요. 혈맹 창고도 여기서 씁니다.' },
+  { name: '텔레포트', icon: '✦', x: 665, y: 471, lw: 72, tp: true, talk: '어디로 보내 드릴까요? 사냥터 입구까지 바로 이동합니다.' },
+  { name: '뱃사공', icon: '⚓', x: 300, y: 828, lw: 54, talk: '본토 글루디오행 배는 아직 준비 중입니다. 섬을 먼저 둘러보세요.' },
+];
+const CLASSES = [
+  { id: 'knight', name: '기사' }, { id: 'darkelf', name: '다크엘프' }, { id: 'elf', name: '요정' },
+  { id: 'mage', name: '마법사' }, { id: 'lord', name: '군주' }, { id: 'gunner', name: '총사' },
+];
+const FRAMES = { idle: 4, move: 4, front: 4, back: 4, side: 4 };
+const SPRITE_K = 0.9;      // sprite px -> map px, so a hero stands about half a house tall
+const SPEED = 62;          // map px per second
+
+const $ = id => document.getElementById(id);
+const store = {
+  get(k) { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} },
+};
+
+// ---- assets ----
+const mapImg = new Image(); mapImg.src = 'assets/maps/talking_island.jpg';
+const walkImg = new Image(); walkImg.src = 'assets/maps/talking_island_walk.png';
+const cache = {};
+function img(src) { if (!cache[src]) { const i = new Image(); i.src = src; cache[src] = i; } return cache[src]; }
+let walk = null, GW = MAP_W / CELL, GH = MAP_H / CELL;
+
+// ---- player ----
+const roster = store.get('eclipse.cc.roster') || [];
+const saved = store.get('eclipse.island') || {};
+const P = {
+  cls: saved.cls || (roster[0] && roster[0].cls) || 'knight',
+  name: saved.name || (roster[0] && roster[0].name) || '여행자',
+  x: saved.x || 640, y: saved.y || 440, face: 'down', moving: false, path: [], t: 0, target: null,
+};
+function setClass(id) {
+  P.cls = id;
+  const k = CLASSES.find(c => c.id === id);
+  $('face').src = `assets/classes/${id}/face.png`;
+  $('pname').textContent = P.name; $('pclass').textContent = k.name;
+  for (const a in FRAMES) for (let i = 0; i < FRAMES[a]; i++) img(`assets/classes/${id}/${a}_${i}.png`);
+  persist();
+}
+function persist() { store.set('eclipse.island', { cls: P.cls, name: P.name, x: Math.round(P.x), y: Math.round(P.y) }); }
+
+// ---- walk grid + A* ----
+function ok(gx, gy) { return gx >= 0 && gy >= 0 && gx < GW && gy < GH && walk[gy * GW + gx] === 1; }
+function okAt(x, y) { return walk ? ok(Math.floor(x / CELL), Math.floor(y / CELL)) : true; }
+function nearestOk(x, y) {
+  let gx = Math.floor(x / CELL), gy = Math.floor(y / CELL);
+  for (let r = 0; r < 40; r++) for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
+    if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
+    if (ok(gx + dx, gy + dy)) return [(gx + dx + .5) * CELL, (gy + dy + .5) * CELL];
+  }
+  return [x, y];
+}
+function los(ax, ay, bx, by) {
+  const d = Math.hypot(bx - ax, by - ay), n = Math.ceil(d / (CELL / 2));
+  for (let i = 1; i <= n; i++) if (!okAt(ax + (bx - ax) * i / n, ay + (by - ay) * i / n)) return false;
+  return true;
+}
+function findPath(sx, sy, tx, ty) {
+  const s = Math.floor(sy / CELL) * GW + Math.floor(sx / CELL);
+  const tgx = Math.floor(tx / CELL), tgy = Math.floor(ty / CELL), t = tgy * GW + tgx;
+  if (s === t) return [[tx, ty]];
+  const g = new Float32Array(GW * GH).fill(Infinity), from = new Int32Array(GW * GH).fill(-1);
+  const heap = [[0, s]]; g[s] = 0;
+  const push = (f, i) => { heap.push([f, i]); let k = heap.length - 1; while (k > 0) { const p = (k - 1) >> 1; if (heap[p][0] <= heap[k][0]) break; [heap[p], heap[k]] = [heap[k], heap[p]]; k = p; } };
+  const pop = () => { const top = heap[0], last = heap.pop(); if (heap.length) { heap[0] = last; let k = 0; for (;;) { const l = 2 * k + 1, r = l + 1; let m = k; if (l < heap.length && heap[l][0] < heap[m][0]) m = l; if (r < heap.length && heap[r][0] < heap[m][0]) m = r; if (m === k) break; [heap[m], heap[k]] = [heap[k], heap[m]]; k = m; } } return top; };
+  let found = false, guard = 0;
+  while (heap.length && guard++ < 60000) {
+    const [, i] = pop();
+    if (i === t) { found = true; break; }
+    const x = i % GW, y = (i / GW) | 0;
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+      if (!dx && !dy) continue;
+      const nx = x + dx, ny = y + dy;
+      if (!ok(nx, ny) || (dx && dy && (!ok(x + dx, y) || !ok(x, y + dy)))) continue;
+      const j = ny * GW + nx, ng = g[i] + (dx && dy ? 1.414 : 1);
+      if (ng < g[j]) { g[j] = ng; from[j] = i; push(ng + Math.hypot(nx - tgx, ny - tgy), j); }
+    }
+  }
+  if (!found) return null;
+  const pts = [];
+  for (let i = t; i !== s && i >= 0; i = from[i]) pts.push([(i % GW + .5) * CELL, (((i / GW) | 0) + .5) * CELL]);
+  pts.reverse(); pts[pts.length - 1] = [tx, ty];
+  // string-pull: skip waypoints we can see past
+  const out = []; let cx = sx, cy = sy, k = 0;
+  while (k < pts.length) {
+    let far = k;
+    for (let j = pts.length - 1; j > k; j--) if (los(cx, cy, pts[j][0], pts[j][1])) { far = j; break; }
+    out.push(pts[far]); [cx, cy] = pts[far]; k = far + 1;
+  }
+  return out;
+}
+function goTo(x, y, then) {
+  if (!walk) return;
+  [x, y] = okAt(x, y) ? [x, y] : nearestOk(x, y);
+  const p = findPath(P.x, P.y, x, y);
+  if (p) { P.path = p; P.target = then || null; }
+}
+
+// ---- zones ----
+function zoneAt(x, y) {
+  let best = null, bd = Infinity;
+  for (const z of ZONES) { const d = Math.hypot(x - z.cx, y - z.cy) / z.r; if (d < bd) { bd = d; best = z; } }
+  return bd < 1.25 ? best : null;
+}
+let curZone = undefined, bannerT = 0;
+function showZone(z) {
+  $('bname').textContent = z ? z.name : '말하는섬 들판';
+  const lv = $('blv');
+  lv.className = z && z.safe ? 'safe' : '';
+  lv.textContent = z ? (z.safe ? '안전 지역' : `적정 레벨 ${z.lv[0]} ~ ${z.lv[1]}`) : '사냥터 사이의 길';
+  $('banner').classList.add('on'); bannerT = 2.8;
+  $('zname').textContent = z ? z.name : '말하는섬 들판';
+}
+
+// ---- input ----
+const cv = $('game'), cx = cv.getContext('2d');
+let zoom = 1.9, cam = { x: P.x, y: P.y }, keys = {};
+function toWorld(sx, sy) { const r = cv.getBoundingClientRect(); return [cam.x + (sx - r.left - r.width / 2) / zoom, cam.y + (sy - r.top - r.height / 2) / zoom]; }
+cv.addEventListener('pointerdown', e => {
+  if (!$('dialog').hidden) { closeDialog(); return; }
+  const [x, y] = toWorld(e.clientX, e.clientY);
+  const npc = NPCS.find(n => Math.hypot(n.x - x, n.y - y) < 16 || (x > n.x && x < n.x + n.lw + 12 && Math.abs(y - n.y) < 11));
+  if (npc) goTo(npc.x, npc.y + 14, () => talk(npc)); else goTo(x, y);
+});
+cv.addEventListener('wheel', e => { e.preventDefault(); zoom = Math.min(4, Math.max(1, zoom * (e.deltaY < 0 ? 1.12 : 1 / 1.12))); }, { passive: false });
+addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT') return;
+  const k = e.key.toLowerCase();
+  keys[k] = true;
+  if (k === 'escape') { closeDialog(); $('bigmap').hidden = true; }
+  if (k === 'm') toggleMap();
+  if (k === 't') teleportPanel();
+  if (k === 'b') teleport(ZONES[0]);
+  if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' '].includes(k)) e.preventDefault();
+});
+addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
+addEventListener('blur', () => { keys = {}; });
+
+// ---- dialogs ----
+function openDialog(html) { const d = $('dialog'); d.innerHTML = html; d.hidden = false; const b = d.querySelector('button'); if (b) b.focus(); }
+function closeDialog() { $('dialog').hidden = true; }
+function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+function talk(n) {
+  if (n.tp) return teleportPanel(n.talk);
+  openDialog(`<h2>${n.name}</h2><p>${n.talk}</p><div class="row"><button class="btn" type="button" onclick="closeDialog()">닫기</button></div>`);
+}
+function teleportPanel(msg) {
+  openDialog(`<h2>순간이동</h2><p>${msg || '이동할 곳을 고르세요.'}</p><div class="tp">${ZONES.map((z, i) =>
+    `<button class="btn" type="button" data-z="${i}">${z.name}<span>${z.safe ? '안전 지역' : `Lv.${z.lv[0]}~${z.lv[1]}`}</span></button>`).join('')}</div>
+    <div class="row"><button class="btn" type="button" onclick="closeDialog()">닫기</button></div>`);
+  $('dialog').querySelectorAll('[data-z]').forEach(b => b.onclick = () => { closeDialog(); teleport(ZONES[+b.dataset.z]); });
+}
+let fx = [];
+function teleport(z) {
+  const [x, y] = nearestOk(z.x, z.y + z.h / 2 + 46);  // just below the name plate
+  fx.push({ x: P.x, y: P.y, t: 0 });
+  P.x = x; P.y = y; P.path = []; P.target = null; cam.x = x; cam.y = y;
+  fx.push({ x, y, t: 0 });
+  persist();
+}
+function choosePanel() {
+  openDialog(`<h2>직업 선택</h2><div class="classes">${CLASSES.map(c =>
+    `<button class="pick" type="button" data-c="${c.id}" aria-pressed="${c.id === P.cls}"><img src="assets/classes/${c.id}/face.png" alt="">${c.name}</button>`).join('')}</div>
+    <div class="row"><button class="btn" type="button" onclick="closeDialog()">닫기</button></div>`);
+  $('dialog').querySelectorAll('[data-c]').forEach(b => b.onclick = () => { setClass(b.dataset.c); closeDialog(); });
+}
+$('change').onclick = choosePanel;
+$('home').onclick = () => teleport(ZONES[0]);
+$('tpbtn').onclick = () => teleportPanel();
+$('mapbtn').onclick = toggleMap;
+$('closemap').onclick = () => { $('bigmap').hidden = true; };
+
+// ---- minimap and full map ----
+const mini = $('mini'), mx = mini.getContext('2d'), big = $('big'), bx = big.getContext('2d');
+function pointTo(canvas, e) { const r = canvas.getBoundingClientRect(); return [(e.clientX - r.left) / r.width * MAP_W, (e.clientY - r.top) / r.height * MAP_H]; }
+mini.addEventListener('pointerdown', e => goTo(...pointTo(mini, e)));
+big.addEventListener('pointerdown', e => { goTo(...pointTo(big, e)); $('bigmap').hidden = true; });
+function toggleMap() { const m = $('bigmap'); m.hidden = !m.hidden; if (!m.hidden) drawBig(); }
+function drawBig() {
+  bx.drawImage(mapImg, 0, 0, MAP_W, MAP_H);
+  for (const z of ZONES) plate(bx, z, 1);
+  for (const n of NPCS) npcBadge(bx, n, 0);
+  dot(bx, P.x, P.y, 9);
+}
+function dot(c, x, y, r) {
+  c.fillStyle = '#fff'; c.beginPath(); c.arc(x, y, r + 2, 0, 7); c.fill();
+  c.fillStyle = '#e8423a'; c.beginPath(); c.arc(x, y, r, 0, 7); c.fill();
+}
+
+// zone name plates, drawn in map space so they sit over the painted names
+function plate(c, z, k) {
+  const w = z.w, h = z.h;
+  c.save(); c.translate(z.x, z.y);
+  const g = c.createLinearGradient(0, -h / 2, 0, h / 2);
+  g.addColorStop(0, 'rgba(34,26,18,.92)'); g.addColorStop(1, 'rgba(14,11,8,.92)');
+  c.fillStyle = g; c.strokeStyle = 'rgba(214,178,106,.85)'; c.lineWidth = 1.4 / Math.max(1, k * 0.6);
+  c.beginPath(); c.roundRect(-w / 2, -h / 2, w, h, 7); c.fill(); c.stroke();
+  c.textAlign = 'center'; c.textBaseline = 'middle';
+  c.fillStyle = '#f1e4c2'; c.font = '700 16px "Gowun Batang", serif';
+  c.fillText(z.name, 0, z.safe ? 1 : -8);
+  if (!z.safe) { c.fillStyle = '#d6b26a'; c.font = '500 11px "Noto Sans KR", sans-serif'; c.fillText(`Lv. ${z.lv[0]} ~ ${z.lv[1]}`, 0, 11); }
+  c.restore();
+}
+function npcBadge(c, n, t) {
+  c.save(); c.translate(n.x, n.y);
+  // name plate to the right, then the round icon on top of its left end
+  c.fillStyle = 'rgba(16,12,9,.88)'; c.strokeStyle = 'rgba(214,178,106,.6)'; c.lineWidth = 0.8;
+  c.beginPath(); c.roundRect(4, -10, n.lw + 8, 20, 10); c.fill(); c.stroke();
+  c.font = '700 10px "Noto Sans KR", sans-serif'; c.textAlign = 'left'; c.textBaseline = 'middle';
+  c.fillStyle = '#f6ecd2'; c.fillText(n.name, 18, 0.5);
+  const pulse = 1 + Math.sin(t * 2.4 + n.x) * 0.06;
+  c.fillStyle = '#1d1712'; c.strokeStyle = '#d6b26a'; c.lineWidth = 1.4;
+  c.beginPath(); c.arc(0, 0, 12 * pulse, 0, 7); c.fill(); c.stroke();
+  c.fillStyle = '#f4dc9a'; c.font = '12px sans-serif'; c.textAlign = 'center';
+  c.fillText(n.icon, 0, 0.5);
+  c.restore();
+}
+
+// ---- loop ----
+let last = performance.now();
+function frame(now) {
+  const dt = Math.min(0.05, (now - last) / 1000); last = now;
+  update(dt); draw(now / 1000);
+  requestAnimationFrame(frame);
+}
+function update(dt) {
+  let vx = (keys.d || keys.arrowright ? 1 : 0) - (keys.a || keys.arrowleft ? 1 : 0);
+  let vy = (keys.s || keys.arrowdown ? 1 : 0) - (keys.w || keys.arrowup ? 1 : 0);
+  if (vx || vy) { P.path = []; P.target = null; }
+  else if (P.path.length) {
+    const [tx, ty] = P.path[0], d = Math.hypot(tx - P.x, ty - P.y);
+    if (d < 2) { P.path.shift(); if (!P.path.length && P.target) { const f = P.target; P.target = null; f(); } }
+    else { vx = (tx - P.x) / d; vy = (ty - P.y) / d; }
+  }
+  const len = Math.hypot(vx, vy);
+  P.moving = len > 0;
+  if (P.moving) {
+    vx /= len; vy /= len;
+    const step = SPEED * (keys.shift ? 1.6 : 1) * dt;
+    const nx = P.x + vx * step, ny = P.y + vy * step;
+    if (okAt(nx, ny)) { P.x = nx; P.y = ny; }
+    else if (okAt(nx, P.y)) P.x = nx;
+    else if (okAt(P.x, ny)) P.y = ny;
+    P.face = Math.abs(vx) > Math.abs(vy) * 0.7 ? (vx > 0 ? 'right' : 'left') : (vy > 0 ? 'down' : 'up');
+    P.t += dt;
+  } else P.t += dt * 0.6;
+  cam.x += (P.x - cam.x) * Math.min(1, dt * 6); cam.y += (P.y - cam.y) * Math.min(1, dt * 6);
+  const z = zoneAt(P.x, P.y);
+  if (z !== curZone) { curZone = z; showZone(z); }
+  if (bannerT > 0 && (bannerT -= dt) <= 0) $('banner').classList.remove('on');
+  $('coord').textContent = `${Math.round(P.x)}, ${Math.round(P.y)}`;
+  fx = fx.filter(f => (f.t += dt) < 1.1);
+  if (Math.random() < dt) persist();
+}
+function spriteFor() {
+  let a, flip = false;
+  if (P.moving) {
+    if (P.face === 'left' || P.face === 'right') { a = 'move'; flip = P.face === 'left'; }
+    else a = P.face === 'down' ? 'front' : 'back';
+    return [a, Math.floor(P.t * 8) % FRAMES[a], flip];
+  }
+  if (P.face === 'up') return ['back', 0, false];
+  if (P.face === 'left' || P.face === 'right') return ['side', 0, P.face === 'left'];
+  return ['idle', Math.floor(P.t * 4) % FRAMES.idle, false];
+}
+function draw(t) {
+  const dpr = Math.min(2, devicePixelRatio || 1), W = cv.clientWidth, H = cv.clientHeight;
+  if (cv.width !== Math.round(W * dpr) || cv.height !== Math.round(H * dpr)) { cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); }
+  // keep the camera inside the map when the view is smaller than it
+  const hw = W / 2 / zoom, hh = H / 2 / zoom;
+  const camX = MAP_W > hw * 2 ? Math.min(MAP_W - hw, Math.max(hw, cam.x)) : MAP_W / 2;
+  const camY = MAP_H > hh * 2 ? Math.min(MAP_H - hh, Math.max(hh, cam.y)) : MAP_H / 2;
+  cam.x = camX; cam.y = camY;
+  cx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  cx.fillStyle = '#0b2a3a'; cx.fillRect(0, 0, W, H);
+  cx.setTransform(dpr * zoom, 0, 0, dpr * zoom, dpr * (W / 2 - camX * zoom), dpr * (H / 2 - camY * zoom));
+  cx.imageSmoothingEnabled = true;
+  if (mapImg.complete) cx.drawImage(mapImg, 0, 0);
+  for (const z of ZONES) plate(cx, z, zoom);
+  for (const n of NPCS) npcBadge(cx, n, t);
+  // path hint
+  if (P.path.length) {
+    const [ex, ey] = P.path[P.path.length - 1];
+    cx.strokeStyle = 'rgba(244,220,154,.9)'; cx.lineWidth = 1.2;
+    cx.beginPath(); cx.ellipse(ex, ey, 6 + Math.sin(t * 6), 3 + Math.sin(t * 6) * .5, 0, 0, 7); cx.stroke();
+  }
+  // teleport light
+  for (const f of fx) {
+    const a = 1 - f.t / 1.1;
+    const g = cx.createLinearGradient(0, f.y - 70, 0, f.y);
+    g.addColorStop(0, 'rgba(140,200,255,0)'); g.addColorStop(1, `rgba(170,220,255,${0.75 * a})`);
+    cx.fillStyle = g; cx.fillRect(f.x - 9, f.y - 70, 18, 70);
+    cx.strokeStyle = `rgba(170,220,255,${a})`; cx.lineWidth = 1.2;
+    cx.beginPath(); cx.ellipse(f.x, f.y, 10 + f.t * 14, 5 + f.t * 7, 0, 0, 7); cx.stroke();
+  }
+  // hero
+  const [a, f, flip] = spriteFor();
+  const im = img(`assets/classes/${P.cls}/${a}_${f}.png`);
+  cx.fillStyle = 'rgba(0,0,0,.4)'; cx.beginPath(); cx.ellipse(P.x, P.y, 7, 3, 0, 0, 7); cx.fill();
+  if (im.complete && im.naturalWidth) {
+    const w = im.naturalWidth * SPRITE_K, h = im.naturalHeight * SPRITE_K;
+    cx.save(); cx.translate(P.x, P.y); if (flip) cx.scale(-1, 1);
+    cx.imageSmoothingEnabled = zoom * SPRITE_K < 1.2;
+    cx.drawImage(im, -w / 2, -h + 2, w, h);
+    cx.restore();
+  }
+  cx.font = '700 7px "Noto Sans KR", sans-serif'; cx.textAlign = 'center'; cx.lineWidth = 2.2; cx.strokeStyle = 'rgba(0,0,0,.8)';
+  const ny = P.y - (im.naturalHeight ? im.naturalHeight * SPRITE_K : 36) - 2; cx.strokeText(P.name, P.x, ny); cx.fillStyle = '#9fe08f'; cx.fillText(P.name, P.x, ny);
+  // vignette
+  cx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const v = cx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.35, W / 2, H / 2, Math.max(W, H) * 0.75);
+  v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(0,0,0,.45)');
+  cx.fillStyle = v; cx.fillRect(0, 0, W, H);
+  // minimap
+  if (mapImg.complete) {
+    mx.drawImage(mapImg, 0, 0, mini.width, mini.height);
+    const k = mini.width / MAP_W;
+    mx.strokeStyle = 'rgba(255,255,255,.8)'; mx.lineWidth = 1.5;
+    mx.strokeRect((camX - hw) * k, (camY - hh) * k, hw * 2 * k, hh * 2 * k);
+    dot(mx, P.x * k, P.y * k, 4);
+  }
+}
+
+// ---- boot ----
+walkImg.onload = () => {
+  const c = document.createElement('canvas'); c.width = GW; c.height = GH;
+  const g = c.getContext('2d'); g.drawImage(walkImg, 0, 0);
+  const d = g.getImageData(0, 0, GW, GH).data;
+  walk = new Uint8Array(GW * GH);
+  for (let i = 0; i < GW * GH; i++) walk[i] = d[i * 4] > 127 ? 1 : 0;
+  if (!okAt(P.x, P.y)) [P.x, P.y] = nearestOk(640, 440);
+  cam.x = P.x; cam.y = P.y;
+};
+setClass(P.cls);
+if (!saved.cls && !roster.length) choosePanel();
+requestAnimationFrame(frame);
+</script>
