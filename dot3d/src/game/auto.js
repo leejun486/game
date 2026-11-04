@@ -11,26 +11,30 @@ export class AutoPart {
     this.startAutoMove();
   }
 
-  startAutoMove() {
-    if (this.waveActive) { this.ui.toast('싸우는 중에는 자동 이동을 할 수 없어요', 2); return; }
+  // hunt: 자동 사냥이 퀘스트 쪽으로 데려갈 때 — 알림 없이, 갈 곳이 없으면 false
+  startAutoMove(hunt = false) {
+    const say = (m, t) => { if (!hunt) this.ui.toast(m, t); return false; };
+    if (this.waveActive) return say('싸우는 중에는 자동 이동을 할 수 없어요', 2);
     const T = this.questTargets();
     const p = this.player.pos;
-    if (!T.length) { this.ui.toast('지금은 갈 곳이 없어요', 2); return; }
+    if (!T.length) return say('지금은 갈 곳이 없어요', 2);
     let best = null, bd = Infinity;
     for (const t of T) {
       if (t.hidden) continue;
       // 찾기 퀘스트: 그 지역 안에서는 직접 찾게 함
-      if (t.search && this.world.regionAt(p.x, p.z).id === t.area) { this.ui.toast('여기서부터는 직접 찾아보세요 — 가까이 가면 소리가 나요', 3); return; }
+      if (t.search && this.world.regionAt(p.x, p.z).id === t.area) return say('여기서부터는 직접 찾아보세요 — 가까이 가면 소리가 나요', 3);
       // 사냥 지역 안에 이미 있으면 알려만 줌 (이동은 이동만, 사냥은 직접 켬)
-      if (t.area && this.world.regionAt(p.x, p.z).id === t.area) { this.ui.toast(this.autoHunt ? '이미 사냥터예요' : '이미 사냥터예요 — 싸우려면 자동 사냥을 켜세요', 2.6); return; }
+      if (t.area && this.world.regionAt(p.x, p.z).id === t.area) return say(this.autoHunt ? '이미 사냥터예요' : '이미 사냥터예요 — 싸우려면 자동 사냥을 켜세요', 2.6);
       const d = Math.hypot(t.pos.x - p.x, t.pos.z - p.z);
       if (d < bd) { bd = d; best = t; }
     }
-    this.autoMove = { pos: V(best.pos.x, 0, best.pos.z), area: best.area, search: best.search, obj: best.obj, stuck: 0, last: p.clone() };
+    if (!best) return false;
+    this.autoMove = { pos: V(best.pos.x, 0, best.pos.z), area: best.area, search: best.search, obj: best.obj, stuck: 0, last: p.clone(), hunt };
     this.world.updateFlow(best.pos.x, best.pos.z, 0, 2, 4000);
-    if (bd > 3 && !this.world.navDir(p, 0, 2)) { this.autoMove = null; this.ui.toast('길이 막혀 있어요 (닫힌 문이 있나 봐요)', 2.4); return; }
+    if (bd > 3 && !this.world.navDir(p, 0, 2)) { this.autoMove = null; if (hunt) this.huntQuestT = this.time + 20; return say('길이 막혀 있어요 (닫힌 문이 있나 봐요)', 2.4); }
     document.getElementById('quest').classList.add('moving');
-    this.ui.toast(`자동 이동: ${this.curQuest()?.title || '현상수배'}`, 1.8);
+    if (!hunt) this.ui.toast(`자동 이동: ${this.curQuest()?.title || '현상수배'}`, 1.8);
+    return true;
   }
 
   stopAutoMove(msg) {
@@ -49,6 +53,10 @@ export class AutoPart {
   autoControl(inp, dt) {
     if (inp.moveLen > 0.1) { if (this.autoMove) this.stopAutoMove('자동 이동을 멈췄어요'); return inp; }
     if (this.ui.inDialog || this.player.dead) return inp;
+    if (this.autoMove?.hunt) {
+      // 자동 사냥이 퀘스트로 데려가는 중: 사냥을 끄면 멈추고, 곁에서 덤비는 적이 있으면 그것부터
+      if (!this.autoHunt || this.waveActive || this.nearestEnemy(5, true, (e) => !e.field || e.aggro)) this.stopAutoMove();
+    }
     if (this.autoMove) return this.autoMoveStep(inp, dt);
     if (this.autoHunt) return this.autoHuntStep(inp, dt);
     return inp;
@@ -110,7 +118,7 @@ export class AutoPart {
     // 오래 제자리면 포기
     A.stuck = Math.hypot(p.pos.x - A.last.x, p.pos.z - A.last.z) < dt * 0.6 ? A.stuck + dt : 0;
     A.last.copy(p.pos);
-    if (A.stuck > 2.5) { this.stopAutoMove('길을 찾지 못했어요'); return inp; }
+    if (A.stuck > 2.5) { if (A.hunt) { this.huntQuestT = this.time + 20; this.stopAutoMove(); } else this.stopAutoMove('길을 찾지 못했어요'); return inp; }
     return this.steerTo(inp, A.pos.x, A.pos.z, 2, 4000, d > 3.6);
   }
 
@@ -136,9 +144,27 @@ export class AutoPart {
     return best;
   }
 
-  // 자동 사냥: 가까운 적에게 다가가 공격, 쓸 수 있는 스킬은 바로, 적이 없으면 떨어진 장비 줍기
+  // 자동 사냥이 붙어 있어야 할 퀘스트: 호위(NPC 곁), 버티기(원 안), 도둑 쫓기(도둑만)
+  questFocus() {
+    const Q = this.curQuest(), K = this.qk;
+    if (!Q || K.Q !== Q) return null;
+    if (Q.type === 'escort' && K.escort) return { at: K.escort.npc.pos, fight: 7, stay: 2.2 };
+    if (Q.type === 'hold' && this.quest.prog?.c) { const r = Q.radius || 4.5, [x, z] = this.quest.prog.c; return { at: V(x, 0, z), fight: r + 2.5, stay: r - 1.2, hold: r }; }
+    if (Q.type === 'chase' && K.thief && !K.thief.dead && !K.thief.removed) return { only: K.thief };
+    return null;
+  }
+
+  // 자동 사냥: 퀘스트가 먼저 — 호위·버티기·도둑은 그 일에 붙어 있고, 다른 곳에 퀘스트가 있으면 덤비는 적만 상대하며 그리로 감
+  //  사냥터(사냥·모으기 퀘스트의 지역)에서는 가까운 적에게 다가가 공격, 쓸 수 있는 스킬은 바로, 적이 없으면 떨어진 장비 줍기
   autoHuntStep(inp, dt) {
     const p = this.player;
+    const free = !this.waveActive && !this.tower?.active;
+    const F = free ? this.questFocus() : null;
+    if (F) return this.focusHuntStep(inp, dt, F);
+    if (free && this.curQuest() && (this.huntQuestT || 0) <= this.time && !this.nearestEnemy(5, true, (e) => !e.field || e.aggro)) {
+      this.huntQuestT = this.time + 3;
+      if (this.startAutoMove(true)) return inp;
+    }
     const range = { sword: 1.6, mage: 6.5, elf: 7.5, lancer: 2.6, fan: 7 }[p.cls];
     let t = this.validTarget(this.target) && !(this.target.huntSkipT > this.time) && Math.hypot(this.target.pos.x - p.pos.x, this.target.pos.z - p.pos.z) < 24 ? this.target : this.nearestEnemy(24) || (this.waveActive || this.tower?.active ? this.nearestEnemy(90, true) : null); // 밤 싸움·시련탑엔 멀리 남은 적도 찾아감
     // 들판에선 퀘스트에 필요한 몬스터부터 (조금 멀어도). 바로 곁에서 때리는 적이 있으면 그것부터
@@ -156,6 +182,33 @@ export class AutoPart {
       if (dr && dd > 1.2) return this.steerTo(inp, dr.g.position.x, dr.g.position.z, 2, 60);
       return inp;
     }
+    return this.huntTarget(inp, dt, t);
+  }
+
+  // 호위·버티기·도둑: 지킬 곳(NPC·원) 둘레에서 덤비는 적만, 없으면 그 곁으로
+  focusHuntStep(inp, dt, F) {
+    const p = this.player;
+    let t = F.only || null;
+    if (!t) {
+      let bd = Infinity;
+      for (const e of this.enemies) {
+        if (e.dead || e.spawning || Math.hypot(e.pos.x - F.at.x, e.pos.z - F.at.z) > F.fight) continue;
+        if (e.field && !e.aggro && !e.questMob) continue; // 가만히 있는 들판 몬스터는 건드리지 않음
+        const d = Math.hypot(e.pos.x - p.pos.x, e.pos.z - p.pos.z);
+        if (d < bd) { bd = d; t = e; }
+      }
+    }
+    if (!t) {
+      this.target = null;
+      if (Math.hypot(F.at.x - p.pos.x, F.at.z - p.pos.z) > F.stay) return this.steerTo(inp, F.at.x, F.at.z, 2, 4000);
+      return inp;
+    }
+    return this.huntTarget(inp, dt, t, F);
+  }
+
+  huntTarget(inp, dt, t, F = null) {
+    const p = this.player;
+    const range = { sword: 1.6, mage: 6.5, elf: 7.5, lancer: 2.6, fan: 7 }[p.cls];
     this.target = t;
     const d = Math.hypot(t.pos.x - p.pos.x, t.pos.z - p.pos.z);
     const crowd = this.enemiesIn(p.pos, 5).length;
@@ -167,8 +220,16 @@ export class AutoPart {
       : lv >= SKILL_LEVEL[2] && (p.cd2 || 0) <= 0 ? 2
       : lv >= SKILL_LEVEL[3] && (p.cd3 || 0) <= 0 ? 3 : 0;
     // 기술마다 닿는 거리: 멀리 나가는 기술(검기, 일섬, 창기, 도약, 창비)은 붙지 않고 그 거리에서 바로 씀
-    const reach = ready ? ({ sword: { 1: 6, 2: 6, 3: 2 }, lancer: { 1: 6, 2: 6, 3: 9, ult: 5 }, fan: { 1: 6, 2: 8, 3: 3, ult: 5 } }[p.cls]?.[ready] ?? range) : range;
+    // 버티기: 원 밖의 적에게는 몸이 튀어 나가는 기술(일섬·도약 등)을 쓰지 않고 사거리 안에서만
+    const outside = F?.hold && Math.hypot(t.pos.x - F.at.x, t.pos.z - F.at.z) > F.hold - 0.5;
+    const reach = ready && !outside ? ({ sword: { 1: 6, 2: 6, 3: 2 }, lancer: { 1: 6, 2: 6, 3: 9, ult: 5 }, fan: { 1: 6, 2: 8, 3: 3, ult: 5 } }[p.cls]?.[ready] ?? range) : range;
     if (d > Math.max(range, ready ? reach : 0)) {
+      // 버티기: 원 밖의 적을 쫓아 나가지 않음 (몰려오니 원 안에서 기다림)
+      if (outside) {
+        if (Math.hypot(F.at.x - p.pos.x, F.at.z - p.pos.z) > F.stay) return this.steerTo(inp, F.at.x, F.at.z, 2, 4000);
+        p.yaw = Math.atan2(t.pos.x - p.pos.x, t.pos.z - p.pos.z);
+        return inp;
+      }
       this.steerTo(inp, t.pos.x, t.pos.z, 2, 80);
       // 1초 넘게 길을 못 찾으면 그 적은 잠시 쫓지 않음
       t.noPathT = this.steerNoPath ? (t.noPathT || 0) + dt : 0;
@@ -178,7 +239,7 @@ export class AutoPart {
     // 사거리 안: 적을 바라보고 (마우스 방향 말고) 공격
     p.yaw = Math.atan2(t.pos.x - p.pos.x, t.pos.z - p.pos.z);
     inp.mouseRecent = false; inp.mouseWorld = null;
-    if (ready && d <= reach) {
+    if (ready && d <= reach && !outside) {
       if (p.attack && p.attack.t < 0.6) return inp;
       if (ready === 'ult') p.startUlt(inp);
       else if (ready === 1) p.startSkill(inp);
