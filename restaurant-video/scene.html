@@ -1,0 +1,699 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>식당 OVA 영상</title>
+<style>
+  html,body{margin:0;height:100%;background:#000;overflow:hidden;color:#eee8f6;
+    font-family:"NanumSquareRound","Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif}
+  #cv{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+    width:min(100vw,56.25vh);height:min(177.78vw,100vh);display:block;background:#000;cursor:pointer}
+  #ov{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.55)}
+  #ov.hide{display:none}
+  button{font:inherit;font-size:17px;color:#fff;background:rgba(255,190,120,.16);border:1px solid rgba(255,210,160,.6);
+    border-radius:999px;padding:12px 30px;cursor:pointer}
+  #bar{position:absolute;left:0;right:0;bottom:0;height:3px}
+  #bar i{display:block;height:100%;width:0;background:#ffcf8a}
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+<div id="ov"><button id="go">▶ 재생 (소리 켜짐)</button></div>
+<div id="bar"><i></i></div>
+<script src="place.js"></script>
+<script>
+'use strict';
+/* =====================================================================
+   식당 소개 OVA 셀 애니메이션 템플릿 (세로 9:16, 30초)
+   window.PLACE (place.js, fetch_place.py 가 만든다) 의 정보로 장면을 그린다.
+   그림·움직임·소리 모두 코드. render.js 가 이 페이지로 MP4 를 만든다.
+   ===================================================================== */
+const W = 720, H = 1280, DUR = 30, INK = '#0b0918', TAU = Math.PI * 2;
+const FD = '"NanumMyeongjo","Nanum Myeongjo","Noto Serif KR","AppleMyungjo","Batang",serif';
+const FB = '"NanumSquareRound","Nanum Gothic","Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif';
+const cv = document.getElementById('cv'); cv.width = W; cv.height = H;
+const ctx = cv.getContext('2d');
+function mk(w, h) { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; }
+const scratch = mk(W, H), sctx = scratch.getContext('2d');
+let BASE = null;
+
+/* ---------- 데이터 ---------- */
+const SAMPLE = { sample: true, name: '달빛 라멘', category: '라멘', area: '연남동', rating: 4.6, reviews: 1284, address: '서울 마포구 연남로 00 (예시 주소)', hours: '매일 11:30 – 23:00', menu: [{ name: '돈코츠 라멘', price: 11000 }, { name: '매운 미소 라멘', price: 12000 }, { name: '군만두 교자', price: 6000 }], quote: '국물이 진하고 밤늦게까지 열어서, 비 오는 날이면 생각나는 집이에요.', source: '예시 데이터' };
+function normalize(r) {
+  const s = v => (v == null ? '' : String(v)).trim();
+  const p = {};
+  p.sample = !!r.sample; p.name = s(r.name) || '이름 없는 식당'; p.category = s(r.category); p.area = s(r.area);
+  p.rating = isFinite(+r.rating) && +r.rating > 0 ? Math.min(5, +r.rating) : null;
+  p.reviews = isFinite(+r.reviews) && +r.reviews > 0 ? Math.round(+r.reviews) : null;
+  p.address = s(r.address); p.hours = s(r.hours); p.source = s(r.source);
+  p.menu = (Array.isArray(r.menu) ? r.menu : []).filter(m => m && s(m.name)).slice(0, 3).map(m => ({ name: s(m.name), price: m.price }));
+  if (!p.menu.length) p.menu = [{ name: p.category || '오늘의 메뉴', price: '' }];
+  p.quote = s(r.quote).slice(0, 90);
+  return p;
+}
+const P = normalize(window.PLACE_OVERRIDE || window.PLACE || SAMPLE);
+const fmtPrice = v => (typeof v === 'number' || /^\d+$/.test(String(v))) ? Number(v).toLocaleString('ko-KR') + '원' : String(v || '');
+const T_SIGN = 7.0, T_MENU = 11, HAS_RATE = !!(P.rating || P.quote), MENU_END = HAS_RATE ? 20 : 25, T_OUT = 25;
+
+/* ---------- 수학 / 색 ---------- */
+const clamp = (x, a = 0, b = 1) => x < a ? a : x > b ? b : x;
+const lerp = (a, b, t) => a + (b - a) * t;
+const ss = (a, b, x) => { const t = clamp((x - a) / (b - a)); return t * t * (3 - 2 * t); };
+const eo = t => 1 - Math.pow(1 - clamp(t), 3);
+const eob = t => { t = clamp(t); const c1 = 1.70158, c3 = c1 + 1; return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2); };
+const fr = x => x - Math.floor(x);
+const hash = n => fr(Math.sin(n * 127.1 + 311.7) * 43758.5453123);
+function rng(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const SEED = [...P.name].reduce((a, ch) => (a * 31 + ch.codePointAt(0)) | 0, 7);
+const _hc = new Map();
+function hex(c) { let v = _hc.get(c); if (v) return v; const n = parseInt(c.slice(1), 16); v = [n >> 16 & 255, n >> 8 & 255, n & 255]; _hc.set(c, v); return v; }
+function mix(a, b, t) { const A = hex(a), B = hex(b); return `rgb(${A[0] + (B[0] - A[0]) * t | 0},${A[1] + (B[1] - A[1]) * t | 0},${A[2] + (B[2] - A[2]) * t | 0})`; }
+function rgba(c, a) { const A = hex(c); return `rgba(${A[0]},${A[1]},${A[2]},${clamp(a)})`; }
+const ACCENTS = [['#d8432f', '#ffcf8a'], ['#2f6bd8', '#ffd98a'], ['#2a9d7a', '#ffe0a0'], ['#8a3fc2', '#ffc8a0']];
+const [NOREN, WARM] = ACCENTS[Math.abs(SEED) % ACCENTS.length];
+
+/* ---------- 그리기 도우미 ---------- */
+function rrp(c, x, y, w, h, r) {
+  c.beginPath(); c.moveTo(x + r, y); c.lineTo(x + w - r, y); c.quadraticCurveTo(x + w, y, x + w, y + r); c.lineTo(x + w, y + h - r);
+  c.quadraticCurveTo(x + w, y + h, x + w - r, y + h); c.lineTo(x + r, y + h); c.quadraticCurveTo(x, y + h, x, y + h - r); c.lineTo(x, y + r); c.quadraticCurveTo(x, y, x + r, y); c.closePath();
+}
+function glow(c, x, y, r, col, a) {
+  if (r <= 1 || a <= 0.002) return;
+  const g = c.createRadialGradient(x, y, 0, x, y, r);
+  g.addColorStop(0, rgba(col, a)); g.addColorStop(0.3, rgba(col, a * 0.4)); g.addColorStop(1, rgba(col, 0));
+  const o = c.globalCompositeOperation; c.globalCompositeOperation = 'lighter'; c.fillStyle = g; c.fillRect(x - r, y - r, r * 2, r * 2); c.globalCompositeOperation = o;
+}
+function star4(c, x, y, r, col, a) {
+  if (a <= 0.01) return;
+  c.save(); c.globalCompositeOperation = 'lighter'; c.translate(x, y); c.globalAlpha = clamp(a); c.fillStyle = col; c.beginPath();
+  for (let i = 0; i < 8; i++) { const an = i * Math.PI / 4, rr = i % 2 ? r * 0.13 : r; c.lineTo(Math.cos(an) * rr, Math.sin(an) * rr); }
+  c.closePath(); c.fill(); c.restore(); glow(c, x, y, r * 0.9, col, a * 0.5);
+}
+function fullFill(c, st) { c.fillStyle = st; c.fillRect(-40, -40, W + 80, H + 80); }
+function fitFont(c, text, maxW, size, fam, weight = '700', min = 18) {
+  let s = size; c.font = `${weight} ${s}px ${fam}`;
+  while (s > min && c.measureText(text).width > maxW) { s -= 2; c.font = `${weight} ${s}px ${fam}`; }
+  return s;
+}
+function wrap(c, text, maxW) {
+  const lines = []; let cur = '';
+  for (const word of text.split(/(\s+)/)) {
+    if (c.measureText(cur + word).width <= maxW) { cur += word; continue; }
+    if (cur.trim()) { lines.push(cur.trim()); cur = ''; }
+    for (const ch of word) { if (c.measureText(cur + ch).width > maxW) { lines.push(cur); cur = ''; } cur += ch; }
+  }
+  if (cur.trim()) lines.push(cur.trim());
+  return lines;
+}
+function animeText(c, text, x, y, size, fam, fill, a = 1, weight = '700', align = 'center') {
+  if (a <= 0.01) return;
+  c.save(); c.globalAlpha = clamp(a); c.font = `${weight} ${size}px ${fam}`; c.textAlign = align; c.textBaseline = 'middle';
+  c.lineJoin = 'round'; c.strokeStyle = INK; c.lineWidth = Math.max(4, size * 0.16); c.strokeText(text, x, y);
+  c.fillStyle = fill; c.fillText(text, x, y); c.restore();
+}
+function rain(c, t, o) {
+  const vx = o.vx, vy = o.vy, sp = Math.hypot(vx, vy), ux = vx / sp, uy = vy / sp, Wd = W + 240, Hd = H + 160;
+  c.save(); c.strokeStyle = rgba(o.col, o.a); c.lineWidth = o.lw; c.lineCap = 'round'; c.beginPath();
+  for (let i = 0; i < o.n; i++) {
+    const s = o.seed * 1000 + i, k = 0.75 + hash(s + .5) * 0.5;
+    let x = hash(s) * Wd + vx * k * t, y = hash(s + .25) * Hd + vy * k * t;
+    x = -120 + ((x % Wd) + Wd) % Wd; y = -80 + ((y % Hd) + Hd) % Hd;
+    c.moveTo(x, y); c.lineTo(x - ux * o.len * k, y - uy * o.len * k);
+  }
+  c.stroke(); c.restore();
+}
+function ripples(c, t, y0, y1, a, n = 30) {
+  c.save(); c.strokeStyle = '#b8c6ff'; c.lineWidth = 1.2;
+  for (let i = 0; i < n; i++) {
+    const per = 0.7 + hash(7 + i) * 0.6, ph = t / per + hash(i * 3.1), cyc = Math.floor(ph), age = fr(ph);
+    const x = hash(i * 7.7 + cyc * 1.3) * W, y = lerp(y0, y1, hash(i * 5.3 + cyc * 2.1)), k = 0.3 + 0.7 * clamp((y - y0) / (y1 - y0)), r = (5 + age * 30) * k;
+    c.globalAlpha = a * (1 - age); c.beginPath(); c.ellipse(x, y, r, r * 0.28, 0, 0, TAU); c.stroke();
+  }
+  c.restore();
+}
+function reflect(c, axis, t, alpha, top, bot) {
+  if (axis >= H) return;
+  sctx.setTransform(1, 0, 0, 1, 0, 0); sctx.clearRect(0, 0, W, H); sctx.drawImage(c.canvas, 0, 0);
+  c.save(); c.setTransform(BASE);
+  const g = c.createLinearGradient(0, axis, 0, H); g.addColorStop(0, top); g.addColorStop(1, bot); c.fillStyle = g; c.fillRect(-40, axis, W + 80, H - axis + 40);
+  c.setTransform(1, 0, 0, 1, 0, 0); c.globalAlpha = alpha;
+  const ax = axis + BASE.f;
+  for (let y = Math.max(0, Math.floor(ax)); y < H; y += 2) {
+    const d = y - ax, sy = ax - d - 2; if (sy < 0) break;
+    c.drawImage(scratch, 0, sy, W, 2, Math.sin(y * 0.13 + t * 4) * (0.6 + d * 0.015), y, W, 2);
+  }
+  c.restore();
+}
+function steam(c, x, y, w, t, a) {
+  c.save(); c.lineCap = 'round';
+  for (let i = 0; i < 5; i++) {
+    const ph = fr(t * 0.35 + i * 0.21), yy = y - ph * 170, xx = x + (i - 2) * w * 0.22;
+    c.strokeStyle = `rgba(255,255,255,${a * Math.sin(ph * Math.PI) * 0.45})`; c.lineWidth = 7 - ph * 3;
+    c.beginPath(); for (let k = 0; k <= 10; k++) { const yk = yy + k * 9; c.lineTo(xx + Math.sin(yk * 0.05 + t * 2 + i) * 9, yk); } c.stroke();
+  }
+  c.restore();
+}
+
+/* ---------- 미리 그리는 배경 ---------- */
+let FAR, LWALL, RWALL, GRAINS, VIG;
+function makeFar() {
+  const cv = mk(860, 520), c = cv.getContext('2d'), R = rng(SEED + 11); let x = 0;
+  while (x < 860) {
+    const bw = 40 + R() * 90, bh = 120 + R() * 360, top = 520 - bh;
+    c.fillStyle = ['#12153a', '#161a42', '#101333'][(R() * 3) | 0]; c.fillRect(x, top, bw, bh);
+    c.fillStyle = 'rgba(110,90,170,0.25)'; c.fillRect(x, top, bw, 2);
+    for (let wy = top + 10; wy < 510; wy += 14) for (let wx = x + 6; wx < x + bw - 8; wx += 12) if (R() < 0.12) { c.fillStyle = ['#ffcf7a', '#9fe3ff', '#ffa070'][(R() * 3) | 0]; c.globalAlpha = 0.5 + R() * 0.5; c.fillRect(wx, wy, 5, 7); c.globalAlpha = 1; }
+    if (R() < 0.3) { c.strokeStyle = '#0d1028'; c.lineWidth = 2; c.beginPath(); c.moveTo(x + bw / 2, top); c.lineTo(x + bw / 2, top - 30 - R() * 40); c.stroke(); }
+    x += bw;
+  }
+  const g = c.createLinearGradient(0, 380, 0, 520); g.addColorStop(0, 'rgba(160,70,140,0)'); g.addColorStop(1, 'rgba(180,80,140,0.4)');
+  c.globalCompositeOperation = 'lighter'; c.fillStyle = g; c.fillRect(0, 380, 860, 140);
+  return cv;
+}
+function makeWall(side) {
+  const w = 190, h = 820, cv = mk(w, h), c = cv.getContext('2d'), R = rng(SEED + (side ? 21 : 31));
+  c.fillStyle = '#121430'; c.fillRect(0, 0, w, h);
+  c.fillStyle = side ? 'rgba(90,80,160,0.22)' : 'rgba(0,0,10,0.3)'; c.fillRect(side ? 0 : w - 14, 0, 14, h);
+  for (let i = 0; i < 7; i++) { const y = 30 + i * 110; c.fillStyle = R() < 0.35 ? '#ffcf7a' : '#1c2048'; c.globalAlpha = 0.85; c.fillRect(side ? 60 : 30, y, 70, 50); c.globalAlpha = 1; c.strokeStyle = INK; c.lineWidth = 3; c.strokeRect(side ? 60 : 30, y, 70, 50); }
+  c.fillStyle = '#2a2d44'; for (let i = 0; i < 2; i++) { const y = 200 + i * 300; c.fillRect(side ? 10 : w - 70, y, 60, 40); c.strokeStyle = INK; c.lineWidth = 3; c.strokeRect(side ? 10 : w - 70, y, 60, 40); c.beginPath(); c.arc(side ? 40 : w - 40, y + 20, 13, 0, TAU); c.stroke(); }
+  c.strokeStyle = '#2a2d44'; c.lineWidth = 6; c.beginPath(); c.moveTo(side ? 150 : 40, 0); c.lineTo(side ? 150 : 40, h); c.stroke();
+  const signs = side ? ['노래방', '세탁'] : ['호프', '약국'], cols = side ? ['#ff4fa8', '#4ff0ff'] : ['#ffb03d', '#6dff9a'];
+  signs.forEach((txt, k) => {
+    const x = side ? 120 : 70, y = 120 + k * 330, n = [...txt].length;
+    c.fillStyle = '#07081a'; c.fillRect(x - 22, y - 10, 44, n * 40 + 16); c.strokeStyle = INK; c.lineWidth = 3; c.strokeRect(x - 22, y - 10, 44, n * 40 + 16);
+    c.save(); c.shadowColor = cols[k]; c.shadowBlur = 16; c.fillStyle = cols[k]; c.font = `700 30px ${FB}`; c.textAlign = 'center'; c.textBaseline = 'top';
+    [...txt].forEach((ch, i) => c.fillText(ch, x, y + i * 40)); c.restore();
+  });
+  return cv;
+}
+function prerender() {
+  FAR = makeFar(); LWALL = makeWall(0); RWALL = makeWall(1);
+  GRAINS = [0, 1, 2, 3].map(() => {
+    const g = mk(360, 640), gc = g.getContext('2d'), id = gc.createImageData(360, 640), d = id.data;
+    for (let p = 0; p < d.length; p += 4) { const v = Math.random() * 255; d[p] = d[p + 1] = d[p + 2] = v; d[p + 3] = 255; }
+    gc.putImageData(id, 0, 0); return g;
+  });
+  VIG = mk(W, H); const vc = VIG.getContext('2d'), vg = vc.createRadialGradient(W / 2, H / 2, H * 0.25, W / 2, H / 2, H * 0.75);
+  vg.addColorStop(0, 'rgba(0,0,8,0)'); vg.addColorStop(1, 'rgba(0,0,8,0.7)'); vc.fillStyle = vg; vc.fillRect(0, 0, W, H);
+}
+
+/* =====================================================================
+   골목과 가게 앞모습
+   ===================================================================== */
+const signOn = t => t < T_SIGN ? 0 : t < T_SIGN + 0.7 ? (hash(Math.floor(t * 16) * 0.77) > 0.45 ? 1 : 0.15) : 1;
+const lanternOn = t => ss(T_SIGN + 0.5, T_SIGN + 0.9, t);
+function shopFront(c, t, sg, ln) {
+  c.lineJoin = 'round'; c.strokeStyle = INK; c.lineWidth = 3;
+  // 벽과 기둥
+  c.fillStyle = '#2a2234'; c.fillRect(160, 570, 400, 360); c.strokeRect(160, 570, 400, 360);
+  c.fillStyle = '#3d2c24'; for (const x of [160, 286, 420, 544]) { c.fillRect(x, 570, 16, 360); c.strokeRect(x, 570, 16, 360); }
+  // 처마
+  c.fillStyle = '#1b1d32'; c.beginPath(); c.moveTo(120, 588); c.lineTo(600, 588); c.lineTo(566, 520); c.lineTo(154, 520); c.closePath(); c.fill(); c.stroke();
+  c.strokeStyle = '#2c3050'; c.lineWidth = 2; for (let x = 140; x < 590; x += 22) { c.beginPath(); c.moveTo(x, 586); c.lineTo(x + 8, 524); c.stroke(); }
+  c.strokeStyle = INK; c.lineWidth = 3; c.fillStyle = '#5a6290'; c.fillRect(120, 584, 480, 6);
+  // 간판
+  c.fillStyle = mix('#2b1f1a', '#f7ead0', sg); rrp(c, 188, 598, 344, 76, 6); c.fill(); c.stroke();
+  if (sg > 0) glow(c, 360, 636, 300, WARM, 0.32 * sg);
+  const fs = fitFont(c, P.name, 300, 50, FD, '800', 20);
+  c.font = `800 ${fs}px ${FD}`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillStyle = mix('#463830', '#26140c', sg); c.fillText(P.name, 360, 638);
+  // 창문 (안쪽 손님 실루엣)
+  for (const [wx, guests] of [[182, 2], [436, 1]]) {
+    const ww = 104, wy = 694, wh = 176;
+    const g = c.createLinearGradient(0, wy, 0, wy + wh); g.addColorStop(0, '#ffe2a6'); g.addColorStop(1, '#e8924a');
+    c.fillStyle = g; c.fillRect(wx, wy, ww, wh);
+    c.fillStyle = '#5a3020'; for (let k = 0; k < guests; k++) { const gx = wx + 30 + k * 46, gy = wy + 110 + Math.sin(t * 1.3 + k * 2) * 2; c.beginPath(); c.arc(gx, gy, 14, 0, TAU); c.fill(); c.beginPath(); c.ellipse(gx, gy + 40, 24, 22, 0, Math.PI, 0); c.fill(); }
+    c.fillStyle = '#4a2a1c'; c.fillRect(wx, wy + wh - 30, ww, 30);
+    c.strokeStyle = '#3a2a22'; c.lineWidth = 4; c.beginPath();
+    for (let k = 1; k < 3; k++) { c.moveTo(wx + ww * k / 3, wy); c.lineTo(wx + ww * k / 3, wy + wh); }
+    for (let k = 1; k < 4; k++) { c.moveTo(wx, wy + wh * k / 4); c.lineTo(wx + ww, wy + wh * k / 4); }
+    c.stroke(); c.strokeStyle = INK; c.lineWidth = 3; c.strokeRect(wx, wy, ww, wh);
+    glow(c, wx + ww / 2, wy + wh / 2, 130, '#ffb860', 0.28);
+  }
+  // 문과 노렌
+  const dg = c.createLinearGradient(0, 690, 0, 930); dg.addColorStop(0, '#fff0c4'); dg.addColorStop(1, '#f0a050');
+  c.fillStyle = dg; c.fillRect(302, 690, 118, 240); c.strokeRect(302, 690, 118, 240);
+  glow(c, 361, 860, 160, '#ffb860', 0.3);
+  const sway = Math.sin(Math.floor(t * 12) / 12 * 1.7) * 3;
+  for (let k = 0; k < 3; k++) {
+    const x0 = 298 + k * 42;
+    c.fillStyle = NOREN; c.beginPath(); c.moveTo(x0, 688); c.lineTo(x0 + 40, 688); c.lineTo(x0 + 40 + sway, 790); c.lineTo(x0 + sway * 0.6, 790); c.closePath(); c.fill(); c.stroke();
+    c.fillStyle = 'rgba(0,0,20,0.25)'; c.fillRect(x0 + 30, 690, 8, 98);
+  }
+  c.fillStyle = '#f4eee0'; c.beginPath(); c.arc(361 + sway * 0.5, 738, 30, 0, TAU); c.fill(); c.stroke();
+  c.fillStyle = NOREN; c.font = `800 34px ${FD}`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText([...P.name][0], 361 + sway * 0.5, 740);
+  // 화분
+  for (const px of [272, 452]) { c.fillStyle = '#3a2a3a'; c.beginPath(); c.moveTo(px - 18, 900); c.lineTo(px + 18, 900); c.lineTo(px + 13, 930); c.lineTo(px - 13, 930); c.closePath(); c.fill(); c.stroke(); c.fillStyle = '#1f4a3a'; for (let k = -2; k <= 2; k++) { c.beginPath(); c.ellipse(px + k * 8, 884 - Math.abs(k) * -4, 7, 20, k * 0.35, 0, TAU); c.fill(); } }
+  // 등롱
+  c.strokeStyle = INK; c.lineWidth = 2; c.beginPath(); c.moveTo(150, 590); c.lineTo(150, 640); c.stroke();
+  const lsw = Math.sin(t * 1.4) * 0.05;
+  c.save(); c.translate(150, 640); c.rotate(lsw);
+  c.fillStyle = mix('#5a2020', '#ff6a4a', ln); c.beginPath(); c.ellipse(0, 50, 34, 48, 0, 0, TAU); c.fill(); c.lineWidth = 3; c.stroke();
+  c.strokeStyle = rgba('#2a0a0a', 0.6); c.lineWidth = 1.5; for (let k = 1; k < 6; k++) { const yy = 2 + k * 16; const hw = 34 * Math.sqrt(1 - Math.pow((yy - 50) / 48, 2)); c.beginPath(); c.moveTo(-hw, yy); c.lineTo(hw, yy); c.stroke(); }
+  c.fillStyle = '#1a1010'; c.fillRect(-14, -2, 28, 8); c.fillRect(-14, 94, 28, 8);
+  c.fillStyle = mix('#2a0a0a', '#3a0606', ln); c.font = `800 30px ${FD}`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText([...(P.category || P.name)][0], 0, 52);
+  c.restore();
+  if (ln > 0) { glow(c, 150, 690, 150, '#ff7040', 0.45 * ln); glow(c, 150, 690, 40, '#ffd0a0', 0.6 * ln); }
+  // 환풍구 김
+  c.fillStyle = '#2a2d44'; c.fillRect(522, 470, 16, 54); c.strokeStyle = INK; c.lineWidth = 3; c.strokeRect(522, 470, 16, 54);
+  steam(c, 530, 470, 60, t, 0.7);
+}
+function walker(c, t) {
+  const u = (t - 0.4) / 6.2; if (u < 0 || u > 1) return;
+  const x = lerp(-90, 820, u), y = 1050, ph = Math.floor(t * 8) % 2;
+  c.save(); c.translate(x, y); c.lineJoin = 'round';
+  c.fillStyle = '#0d0c18';
+  c.fillRect(-10, -60, 8, 60 - (ph ? 8 : 0)); c.fillRect(4, -60, 8, 60 - (ph ? 0 : 8));
+  c.beginPath(); c.moveTo(-22, -60); c.lineTo(22, -60); c.lineTo(16, -150); c.lineTo(-16, -150); c.closePath(); c.fill();
+  c.beginPath(); c.arc(0, -166, 16, 0, TAU); c.fill();
+  c.strokeStyle = '#0d0c18'; c.lineWidth = 4; c.beginPath(); c.moveTo(4, -130); c.lineTo(4, -205); c.stroke();
+  c.fillStyle = '#7a2a3a'; c.beginPath(); c.moveTo(-78, -190); c.quadraticCurveTo(4, -270, 86, -190); c.closePath(); c.fill();
+  c.strokeStyle = INK; c.lineWidth = 3; c.stroke();
+  c.strokeStyle = 'rgba(255,200,180,0.5)'; c.lineWidth = 2; c.beginPath(); c.moveTo(-60, -205); c.quadraticCurveTo(0, -255, 40, -238); c.stroke();
+  c.restore();
+  c.fillStyle = 'rgba(10,10,25,0.45)'; c.beginPath(); c.ellipse(x, y + 6, 40, 7, 0, 0, TAU); c.fill();
+}
+function alley(c, t, z, fy, rainA = 1) {
+  const g = c.createLinearGradient(0, 0, 0, H * 0.6); g.addColorStop(0, '#05071a'); g.addColorStop(1, '#251d4a'); fullFill(c, g);
+  const sg = signOn(t), ln = lanternOn(t);
+  const toS = y => H * 0.5 + (y - fy) * z;
+  c.save(); c.translate(W / 2, H * 0.5); c.scale(z, z); c.translate(-360, -fy);
+  c.drawImage(FAR, -70, 930 - FAR.height);
+  c.strokeStyle = '#05040c'; c.lineWidth = 2;
+  for (let k = 0; k < 3; k++) { c.beginPath(); c.moveTo(-60, 300 + k * 50); c.quadraticCurveTo(360, 360 + k * 50, 780, 280 + k * 60); c.stroke(); }
+  c.drawImage(LWALL, -40, 110); c.drawImage(RWALL, 570, 110);
+  shopFront(c, t, sg, ln);
+  c.restore();
+  reflect(c, toS(930), t, 0.45, '#100f24', '#05060d');
+  c.save(); c.translate(W / 2, H * 0.5); c.scale(z, z); c.translate(-360, -fy);
+  c.fillStyle = '#1c1b30'; c.fillRect(-60, 930, 840, 10); c.fillStyle = 'rgba(160,170,230,0.35)'; c.fillRect(-60, 930, 840, 2);
+  c.save(); c.globalCompositeOperation = 'lighter'; c.translate(361, 960); c.scale(1, 0.16); glow(c, 0, 0, 260, '#ffb060', 0.4); c.restore();
+  if (ln > 0) { c.save(); c.globalCompositeOperation = 'lighter'; c.translate(150, 1000); c.scale(1, 0.25); glow(c, 0, 0, 120, '#ff6040', 0.35 * ln); c.restore(); }
+  walker(c, t);
+  c.restore();
+  ripples(c, t, toS(945), H, 0.45);
+  rain(c, t, { n: 230, seed: 1, vx: -150, vy: 1350, len: 30, col: '#a3b4e6', a: 0.3 * rainA, lw: 1.3 });
+  rain(c, t, { n: 50, seed: 2, vx: -220, vy: 1900, len: 60, col: '#c8d4ff', a: 0.4 * rainA, lw: 2 });
+  c.save(); c.beginPath(); c.arc(W / 2, toS(640), 340 * z, 0, TAU); c.clip(); c.globalCompositeOperation = 'lighter';
+  rain(c, t, { n: 140, seed: 3, vx: -150, vy: 1350, len: 32, col: '#ffd6a0', a: 0.4 * sg * rainA, lw: 1.4 }); c.restore();
+}
+
+/* =====================================================================
+   음식 그림 (메뉴 이름으로 종류를 고른다)
+   ===================================================================== */
+function kindOf(name) {
+  if (/커피|라떼|아메리카노|차$|티$|맥주|하이볼|에이드|주스|음료|소주|막걸리|와인|칵테일|스무디/.test(name)) return 'cup';
+  if (/면|라멘|라면|국수|우동|소바|짬뽕|짜장|탕|국$|찌개|전골|쌀국수|파스타|냉면|칼국수|수프|스프/.test(name)) return 'bowl';
+  if (/교자|만두|딤섬|샤오롱/.test(name)) return 'dumpling';
+  if (/까스|카츠|튀김|치킨|가라아게|텐동|크로켓/.test(name)) return 'fried';
+  if (/밥|덮밥|동$|돈부리|비빔|리조또|카레|오므/.test(name)) return 'rice';
+  return 'steak';
+}
+function plateBase(c) {
+  c.fillStyle = 'rgba(0,0,0,0.35)'; c.beginPath(); c.ellipse(0, 40, 230, 50, 0, 0, TAU); c.fill();
+  c.fillStyle = '#e9e6f0'; c.strokeStyle = INK; c.lineWidth = 4; c.beginPath(); c.ellipse(0, 20, 220, 62, 0, 0, TAU); c.fill(); c.stroke();
+  c.strokeStyle = '#b8b4c8'; c.lineWidth = 3; c.beginPath(); c.ellipse(0, 18, 168, 44, 0, 0, TAU); c.stroke();
+  c.strokeStyle = 'rgba(255,255,255,0.9)'; c.lineWidth = 3; c.beginPath(); c.ellipse(0, 20, 210, 56, 0, Math.PI * 1.1, Math.PI * 1.45); c.stroke();
+}
+function drawFood(c, name, t) {
+  const kind = kindOf(name);
+  c.lineJoin = 'round'; c.lineCap = 'round';
+  if (kind === 'bowl') {
+    const spicy = /매운|짬뽕|김치|마라|육개장|불|탄탄/.test(name), miso = /미소|된장|카레|짜장/.test(name);
+    const broth = spicy ? '#cc4a2c' : miso ? '#c48a45' : '#ecd8ac', brothS = spicy ? '#9e2e1d' : miso ? '#946632' : '#cdb684';
+    c.fillStyle = 'rgba(0,0,0,0.35)'; c.beginPath(); c.ellipse(0, 150, 170, 30, 0, 0, TAU); c.fill();
+    c.fillStyle = '#20182c'; c.strokeStyle = INK; c.lineWidth = 4; rrp(c, -62, 118, 124, 26, 6); c.fill(); c.stroke();
+    c.beginPath(); c.moveTo(-190, 0); c.bezierCurveTo(-182, 160, 182, 160, 190, 0); c.closePath(); c.fill(); c.stroke();
+    c.save(); c.clip(); c.fillStyle = NOREN; c.fillRect(-200, 46, 400, 16);
+    c.fillStyle = '#f4eee0'; for (let x = -180; x < 190; x += 30) { c.beginPath(); c.arc(x, 54, 4, 0, TAU); c.fill(); }
+    c.fillStyle = 'rgba(0,0,0,0.3)'; c.fillRect(90, 0, 120, 160); c.fillStyle = 'rgba(255,255,255,0.18)'; c.fillRect(-150, 10, 14, 90); c.restore();
+    c.fillStyle = '#ece6d8'; c.beginPath(); c.ellipse(0, 0, 190, 58, 0, 0, TAU); c.fill(); c.stroke();
+    c.save(); c.beginPath(); c.ellipse(0, 4, 172, 47, 0, 0, TAU); c.fillStyle = broth; c.fill(); c.clip();
+    c.fillStyle = brothS; c.beginPath(); c.ellipse(0, -30, 190, 30, 0, 0, TAU); c.fill();
+    for (let k = 0; k < 9; k++) { const y = -20 + k * 6; c.strokeStyle = '#7a5a20'; c.lineWidth = 6; c.beginPath(); for (let x = -150; x <= 150; x += 10) c.lineTo(x, y + Math.sin(x * 0.08 + k * 1.7) * 5); c.stroke(); c.strokeStyle = '#f5dc8c'; c.lineWidth = 3.5; c.stroke(); }
+    c.fillStyle = 'rgba(255,240,200,0.5)'; for (let k = 0; k < 14; k++) { c.beginPath(); c.arc(-140 + hash(k) * 280, -24 + hash(k + 3) * 48, 2 + hash(k + 5) * 4, 0, TAU); c.fill(); }
+    c.save(); c.translate(-108, -16); c.rotate(-0.25); c.fillStyle = '#1d2a22'; c.fillRect(-26, -40, 52, 54); c.strokeStyle = INK; c.lineWidth = 3; c.strokeRect(-26, -40, 52, 54); c.restore();
+    c.fillStyle = '#d49a7a'; c.strokeStyle = INK; c.lineWidth = 3; c.beginPath(); c.ellipse(70, -4, 46, 30, 0.1, 0, TAU); c.fill(); c.stroke();
+    c.strokeStyle = '#8a4a32'; c.lineWidth = 3; c.beginPath(); c.ellipse(70, -4, 38, 23, 0.1, 0, TAU); c.stroke(); c.strokeStyle = '#f2d8c8'; c.lineWidth = 2; c.beginPath(); c.arc(64, -6, 12, 0.5, 4.5); c.stroke();
+    c.fillStyle = '#f8f4ec'; c.strokeStyle = INK; c.lineWidth = 3; c.beginPath(); c.ellipse(-30, 12, 32, 22, -0.2, 0, TAU); c.fill(); c.stroke();
+    c.fillStyle = '#f0a030'; c.beginPath(); c.ellipse(-28, 12, 15, 11, -0.2, 0, TAU); c.fill();
+    c.fillStyle = '#6fbf4a'; c.strokeStyle = '#2d6a2a'; c.lineWidth = 1.5;
+    for (let k = 0; k < 16; k++) { c.beginPath(); c.arc(-60 + hash(k * 2.3) * 120, -30 + hash(k * 3.1) * 40, 5, 0, TAU); c.fill(); c.stroke(); }
+    if (spicy) { c.fillStyle = '#7a1408'; for (let k = 0; k < 30; k++) c.fillRect(-150 + hash(k * 1.9) * 300, -30 + hash(k * 4.4) * 60, 4, 2); }
+    c.restore();
+    c.strokeStyle = 'rgba(255,255,255,0.85)'; c.lineWidth = 3; c.beginPath(); c.ellipse(0, 0, 182, 52, 0, Math.PI * 1.05, Math.PI * 1.4); c.stroke();
+    steam(c, 0, -40, 260, t, 1);
+  } else if (kind === 'dumpling') {
+    plateBase(c);
+    for (let k = 0; k < 5; k++) {
+      const x = -120 + k * 60, y = 6 + (k % 2) * 8;
+      c.fillStyle = '#f2e2bc'; c.strokeStyle = INK; c.lineWidth = 3;
+      c.beginPath(); c.moveTo(x - 34, y + 14); c.quadraticCurveTo(x, y - 46, x + 34, y + 14); c.quadraticCurveTo(x, y + 26, x - 34, y + 14); c.closePath(); c.fill(); c.stroke();
+      c.fillStyle = '#c87a30'; c.beginPath(); c.moveTo(x - 30, y + 14); c.quadraticCurveTo(x, y + 26, x + 30, y + 14); c.quadraticCurveTo(x, y + 6, x - 30, y + 14); c.fill();
+      c.strokeStyle = '#c9b48a'; c.lineWidth = 2; for (let p = -2; p <= 2; p++) { c.beginPath(); c.moveTo(x + p * 9, y - 16 + Math.abs(p) * 4); c.lineTo(x + p * 7, y - 6); c.stroke(); }
+    }
+    c.fillStyle = '#3a1a10'; c.strokeStyle = INK; c.lineWidth = 3; c.beginPath(); c.ellipse(150, 42, 40, 13, 0, 0, TAU); c.fill(); c.stroke();
+    steam(c, 0, -20, 200, t, 0.8);
+  } else if (kind === 'fried') {
+    plateBase(c);
+    c.fillStyle = '#8fd06a'; for (let k = 0; k < 9; k++) { c.beginPath(); c.ellipse(-150 + k * 10, -2 + hash(k) * 10, 26, 8, -0.6 + hash(k) * 0.5, 0, TAU); c.fill(); }
+    for (let k = 0; k < 5; k++) {
+      const x = -70 + k * 42;
+      c.fillStyle = '#d8962e'; c.strokeStyle = INK; c.lineWidth = 3; rrp(c, x - 18, -40 + k * 3, 36, 70, 8); c.fill(); c.stroke();
+      c.fillStyle = '#f2f0e8'; c.fillRect(x - 12, -34 + k * 3, 24, 6);
+      c.fillStyle = '#b06a1a'; for (let p = 0; p < 8; p++) c.fillRect(x - 14 + hash(k * 9 + p) * 26, -30 + k * 3 + hash(p + k) * 56, 4, 3);
+    }
+    c.fillStyle = '#fff2a0'; c.strokeStyle = INK; c.lineWidth = 3; c.beginPath(); c.moveTo(150, 0); c.arc(150, 0, 26, -0.4, 2.4); c.closePath(); c.fill(); c.stroke();
+    steam(c, 0, -40, 200, t, 0.6);
+  } else if (kind === 'rice') {
+    c.fillStyle = 'rgba(0,0,0,0.35)'; c.beginPath(); c.ellipse(0, 130, 160, 28, 0, 0, TAU); c.fill();
+    c.fillStyle = '#20182c'; c.strokeStyle = INK; c.lineWidth = 4;
+    c.beginPath(); c.moveTo(-170, 0); c.bezierCurveTo(-160, 140, 160, 140, 170, 0); c.closePath(); c.fill(); c.stroke();
+    c.fillStyle = NOREN; c.fillRect(-150, 40, 300, 10);
+    c.fillStyle = '#f6f2ea'; c.beginPath(); c.ellipse(0, 0, 170, 52, 0, 0, TAU); c.fill(); c.stroke();
+    c.save(); c.beginPath(); c.ellipse(0, 0, 160, 46, 0, 0, TAU); c.clip();
+    const top = /카레/.test(name) ? '#c8862a' : /비빔/.test(name) ? '#d8603a' : '#b8703a';
+    c.fillStyle = top; c.beginPath(); c.ellipse(30, -6, 120, 40, 0, 0, TAU); c.fill();
+    c.fillStyle = '#7a3a1a'; for (let k = 0; k < 7; k++) { c.beginPath(); c.ellipse(-30 + k * 26, -10 + (k % 2) * 12, 18, 10, 0.4, 0, TAU); c.fill(); }
+    c.restore();
+    c.fillStyle = '#f0a030'; c.strokeStyle = INK; c.lineWidth = 3; c.beginPath(); c.arc(-20, -16, 16, 0, TAU); c.fill(); c.stroke();
+    c.fillStyle = '#6fbf4a'; for (let k = 0; k < 10; k++) { c.beginPath(); c.arc(-60 + hash(k) * 140, -30 + hash(k + 2) * 30, 4, 0, TAU); c.fill(); }
+    steam(c, 0, -30, 220, t, 0.8);
+  } else if (kind === 'cup') {
+    const beer = /맥주|하이볼/.test(name), coffee = /커피|라떼|아메리카노/.test(name);
+    const liq = beer ? '#e8a830' : coffee ? '#7a4a2a' : '#f08aa0';
+    c.fillStyle = 'rgba(0,0,0,0.35)'; c.beginPath(); c.ellipse(0, 150, 110, 22, 0, 0, TAU); c.fill();
+    c.strokeStyle = INK; c.lineWidth = 4; c.fillStyle = 'rgba(200,220,255,0.25)';
+    c.beginPath(); c.moveTo(-90, -170); c.lineTo(90, -170); c.lineTo(76, 140); c.lineTo(-76, 140); c.closePath(); c.fill();
+    c.save(); c.clip(); c.fillStyle = liq; c.fillRect(-100, -110, 200, 260);
+    c.fillStyle = 'rgba(255,255,255,0.25)'; c.fillRect(-70, -110, 18, 250);
+    if (!coffee) { c.fillStyle = 'rgba(255,255,255,0.45)'; for (let k = 0; k < 14; k++) { c.beginPath(); c.arc(-60 + hash(k) * 120, 130 - fr(t * 0.4 + hash(k + 1)) * 230, 3, 0, TAU); c.fill(); } }
+    if (beer || coffee) { c.fillStyle = beer ? '#fff8e8' : '#f0dcc0'; c.beginPath(); c.moveTo(-100, -110); for (let x = -100; x <= 100; x += 25) c.quadraticCurveTo(x + 12, -150, x + 25, -112); c.lineTo(100, -90); c.lineTo(-100, -90); c.fill(); }
+    else { c.fillStyle = 'rgba(230,245,255,0.7)'; for (let k = 0; k < 3; k++) { rrp(c, -60 + k * 40, -80 + k * 30, 46, 40, 6); c.fill(); } }
+    c.restore();
+    c.beginPath(); c.moveTo(-90, -170); c.lineTo(90, -170); c.lineTo(76, 140); c.lineTo(-76, 140); c.closePath(); c.stroke();
+    if (!beer && !coffee) { c.fillStyle = '#fff07a'; c.strokeStyle = INK; c.lineWidth = 3; c.beginPath(); c.arc(84, -170, 34, 0, TAU); c.fill(); c.stroke(); }
+    if (coffee) steam(c, 0, -170, 120, t, 0.8);
+  } else {
+    plateBase(c);
+    c.fillStyle = '#6a3018'; c.strokeStyle = INK; c.lineWidth = 3; c.beginPath(); c.ellipse(-10, -4, 120, 44, -0.05, 0, TAU); c.fill(); c.stroke();
+    c.strokeStyle = '#3a160a'; c.lineWidth = 4; for (let k = -2; k <= 2; k++) { c.beginPath(); c.moveTo(-60 + k * 30, -30); c.lineTo(-40 + k * 30, 22); c.stroke(); }
+    c.fillStyle = 'rgba(255,220,180,0.4)'; c.beginPath(); c.ellipse(-40, -20, 50, 10, -0.1, 0, TAU); c.fill();
+    c.fillStyle = '#8fd06a'; for (let k = 0; k < 6; k++) { c.beginPath(); c.ellipse(120 + k * 8, -6 + hash(k) * 20, 18, 7, -0.5, 0, TAU); c.fill(); }
+    c.fillStyle = '#f08a30'; c.beginPath(); c.arc(140, 30, 14, 0, TAU); c.fill(); c.stroke();
+    steam(c, -10, -30, 200, t, 0.7);
+  }
+}
+
+/* =====================================================================
+   장면들
+   ===================================================================== */
+function sceneAlley(c, t) {
+  const z = lerp(1.0, 1.2, ss(0, 11, t)), fy = lerp(720, 690, ss(0, 11, t));
+  alley(c, t, z, fy);
+  const cap = [P.area, P.category].filter(Boolean).join('  ·  ');
+  if (cap) {
+    const a = ss(1.2, 2.0, t) * (1 - ss(5.4, 6.2, t));
+    if (a > 0) {
+      c.save(); c.globalAlpha = a; c.strokeStyle = 'rgba(240,235,255,0.6)'; c.lineWidth = 1.5;
+      c.beginPath(); c.moveTo(150, 170); c.lineTo(570, 170); c.moveTo(150, 236); c.lineTo(570, 236); c.stroke(); c.restore();
+      const fs = fitFont(c, cap, 420, 34, FB, '700');
+      animeText(c, cap, W / 2, 203, fs, FB, '#f4f0ff', a);
+    }
+  }
+  const a2 = ss(8.4, 9.0, t) * (1 - ss(10.4, 11, t));
+  if (a2 > 0) {
+    const fs = fitFont(c, P.name, 600, 82, FD, '800', 28);
+    animeText(c, P.name, W / 2, 1110 - (1 - eo((t - 8.4) / 0.6)) * 30, fs, FD, '#fff6e6', a2, '800');
+    if (P.category) animeText(c, P.category, W / 2, 1190, 30, FB, WARM, a2);
+  }
+  fullFill(c, `rgba(0,0,0,${1 - ss(0, 1.4, t)})`);
+}
+function counterBG(c, t) {
+  const g = c.createLinearGradient(0, 0, 0, 900); g.addColorStop(0, '#2a1810'); g.addColorStop(1, '#4a2c1c'); fullFill(c, g);
+  c.strokeStyle = 'rgba(0,0,0,0.25)'; c.lineWidth = 3; for (let x = 0; x < W; x += 48) { c.beginPath(); c.moveTo(x, 0); c.lineTo(x, 900); c.stroke(); }
+  const tags = P.menu.map(m => m.name).concat([P.category, P.name]).filter(Boolean).slice(0, 6);
+  tags.forEach((txt, i) => {
+    const n = Math.min(7, [...txt].length), x = 90 + i * 108, y = 120, h = 40 + n * 34;
+    c.fillStyle = '#efe4c8'; c.strokeStyle = INK; c.lineWidth = 3; c.fillRect(x - 30, y, 60, h); c.strokeRect(x - 30, y, 60, h);
+    c.fillStyle = '#2a1a10'; c.font = `800 26px ${FD}`; c.textAlign = 'center'; c.textBaseline = 'top';
+    [...txt].slice(0, 7).forEach((ch, k) => c.fillText(ch, x, y + 18 + k * 34));
+  });
+  for (const lx of [200, 520]) {
+    c.strokeStyle = INK; c.lineWidth = 2; c.beginPath(); c.moveTo(lx, 0); c.lineTo(lx, 470); c.stroke();
+    c.fillStyle = '#2a2030'; c.beginPath(); c.moveTo(lx - 50, 520); c.lineTo(lx + 50, 520); c.lineTo(lx + 22, 470); c.lineTo(lx - 22, 470); c.closePath(); c.fill(); c.stroke();
+    glow(c, lx, 530, 260, '#ffc070', 0.35); glow(c, lx, 522, 40, '#fff4d0', 0.9);
+  }
+  for (let i = 0; i < 14; i++) { const x = hash(i * 3.3) * W, y = 560 + hash(i * 1.7) * 260, r = 14 + hash(i) * 40; c.fillStyle = rgba(i % 2 ? '#ffb060' : '#ff8a5a', 0.08 + 0.05 * Math.sin(t * 2 + i)); c.beginPath(); c.arc(x, y, r, 0, TAU); c.fill(); }
+  c.fillStyle = '#6a3e22'; c.fillRect(-40, 880, W + 80, 46); c.fillStyle = '#9a6034'; c.fillRect(-40, 880, W + 80, 6);
+  c.strokeStyle = INK; c.lineWidth = 3; c.strokeRect(-40, 880, W + 80, 46);
+  c.fillStyle = '#24140c'; c.fillRect(-40, 926, W + 80, 400);
+}
+function sceneMenu(c, t) {
+  const n = P.menu.length, L = (MENU_END - T_MENU) / n, i = Math.min(n - 1, Math.floor((t - T_MENU) / L)), u = t - T_MENU - i * L, it = P.menu[i];
+  const z = 1 + 0.04 * (u / L);
+  c.save(); c.translate(W / 2, H / 2); c.scale(z, z); c.translate(-W / 2, -H / 2);
+  counterBG(c, t);
+  const enter = eob(u / 0.45), fx = W / 2 + (1 - enter) * 620;
+  if (u < 0.4) {
+    c.save(); c.strokeStyle = 'rgba(255,240,220,0.5)'; c.lineWidth = 3;
+    for (let k = 0; k < 10; k++) { const y = 640 + hash(k + i * 10) * 260, x = fx + 200 + hash(k * 2) * 200; c.beginPath(); c.moveTo(x, y); c.lineTo(x + 260, y); c.stroke(); } c.restore();
+  }
+  c.save(); c.translate(fx, 780); c.scale(1.35, 1.35); drawFood(c, it.name, t); c.restore();
+  if (u > 0.5 && u < 1.6) for (let k = 0; k < 6; k++) star4(c, W / 2 + (hash(k + i) - 0.5) * 520, 640 + hash(k * 3 + i) * 200, 10 + hash(k) * 14, '#fff6e0', Math.sin(clamp((u - 0.5) / 1.1) * Math.PI) * (0.5 + 0.5 * Math.sin(t * 15 + k)));
+  c.restore();
+  const ta = ss(0.35, 0.75, u);
+  c.save(); c.fillStyle = `rgba(10,6,12,${0.55 * ta})`; c.fillRect(0, 1000, W, 220); c.restore();
+  const fs = fitFont(c, it.name, 620, 66, FD, '800', 26);
+  animeText(c, it.name, W / 2, 1070 + (1 - ta) * 20, fs, FD, '#fff6e6', ta, '800');
+  const pr = fmtPrice(it.price);
+  if (pr) animeText(c, pr, W / 2, 1150, 40, FB, WARM, ss(0.55, 0.95, u), '800');
+  const wp = clamp(u / 0.32);
+  if (wp < 1) { c.save(); c.fillStyle = '#fff4e4'; c.beginPath(); const x0 = lerp(-300, W + 300, wp); c.moveTo(x0 - 160, -20); c.lineTo(x0 + 60, -20); c.lineTo(x0 - 160 + 60 - 400, H + 20); c.lineTo(x0 - 160 - 400 - 220, H + 20); c.closePath(); c.globalAlpha = 1 - wp * 0.4; c.fill(); c.restore(); }
+}
+function sceneRating(c, t) {
+  const u = t - MENU_END;
+  const g = c.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#120c22'); g.addColorStop(1, '#2a1830'); fullFill(c, g);
+  for (let i = 0; i < 22; i++) { const x = hash(i * 3.7) * W, y = hash(i * 1.3) * H, r = 30 + hash(i) * 70; c.fillStyle = rgba(['#ffb060', '#ff6aa0', '#6ad0ff'][i % 3], 0.07 + 0.04 * Math.sin(t + i)); c.beginPath(); c.arc(x, y, r, 0, TAU); c.fill(); }
+  rain(c, t, { n: 90, seed: 9, vx: -60, vy: 900, len: 22, col: '#c8d4ff', a: 0.18, lw: 1.2 });
+  let y0 = 470;
+  if (P.rating) {
+    const k = ss(0.3, 1.3, u), v = (P.rating * k).toFixed(1);
+    animeText(c, v, W / 2, 360, 170, FB, '#fff6e6', ss(0.1, 0.4, u), '800');
+    for (let s = 0; s < 5; s++) {
+      const sx = W / 2 + (s - 2) * 96, sy = 520, fill = clamp(P.rating - s), ap = ss(0.4 + s * 0.16, 0.6 + s * 0.16, u), sc = eob(ap);
+      c.save(); c.translate(sx, sy); c.scale(sc, sc);
+      const path = () => { c.beginPath(); for (let p = 0; p < 10; p++) { const an = -Math.PI / 2 + p * Math.PI / 5, r = p % 2 ? 17 : 40; c.lineTo(Math.cos(an) * r, Math.sin(an) * r); } c.closePath(); };
+      path(); c.fillStyle = '#3a2a40'; c.fill(); c.lineWidth = 4; c.strokeStyle = INK; c.lineJoin = 'round';
+      if (fill > 0) { c.save(); path(); c.clip(); c.fillStyle = '#ffc840'; c.fillRect(-42, -42, 84 * fill, 84); c.fillStyle = '#fff0a0'; c.fillRect(-42, -42, 84 * fill, 22); c.restore(); }
+      path(); c.stroke(); c.restore();
+      if (fill > 0.5 && ap > 0.9 && ap < 1) star4(c, sx, sy, 50, '#fff6c0', 1);
+    }
+    if (P.reviews) animeText(c, `리뷰 ${P.reviews.toLocaleString('ko-KR')}개`, W / 2, 610, 34, FB, '#e8e0f4', ss(1.2, 1.6, u), '700');
+    y0 = 700;
+  }
+  if (P.quote) {
+    const qa = ss(1.6, 2.0, u); if (qa > 0) {
+      c.font = `700 36px ${FB}`; const lines = wrap(c, P.quote, 540), lh = 52, bh = lines.length * lh + 70, by = y0 + (1 - eo(qa)) * 30;
+      c.save(); c.globalAlpha = qa; c.fillStyle = '#fbf6ee'; c.strokeStyle = INK; c.lineWidth = 5; c.lineJoin = 'round';
+      rrp(c, 60, by, 600, bh, 30); c.fill(); c.stroke();
+      c.beginPath(); c.moveTo(140, by + bh - 3); c.lineTo(120, by + bh + 40); c.lineTo(190, by + bh - 3); c.closePath(); c.fill(); c.stroke();
+      c.fillStyle = '#fbf6ee'; c.fillRect(138, by + bh - 6, 56, 6);
+      const total = lines.join('').length, shown = Math.floor(clamp((u - 2.0) / Math.max(1.2, total * 0.045)) * total);
+      c.fillStyle = '#2a1a22'; c.textAlign = 'left'; c.textBaseline = 'middle'; let used = 0;
+      lines.forEach((ln, i) => { const take = clamp(shown - used, 0, ln.length); c.fillText([...ln].slice(0, take).join(''), 90, by + 35 + lh * 0.5 + i * lh); used += ln.length; });
+      c.restore();
+      if (P.source) animeText(c, '— ' + P.source, 640, by + bh + 50, 24, FB, '#cfc4e0', qa, '700', 'right');
+    }
+  }
+}
+function sceneOutro(c, t) {
+  const u = t - T_OUT;
+  alley(c, t, lerp(1.06, 1.0, ss(T_OUT, DUR, t)), 700, 0.7);
+  const g = c.createLinearGradient(0, 900, 0, H); g.addColorStop(0, 'rgba(6,6,18,0)'); g.addColorStop(0.35, 'rgba(6,6,18,0.82)'); g.addColorStop(1, 'rgba(6,6,18,0.92)');
+  c.fillStyle = g; c.fillRect(-40, 900, W + 80, 420);
+  const fs = fitFont(c, P.name, 640, 78, FD, '800', 30);
+  animeText(c, P.name, W / 2, 1020, fs, FD, '#fff6e6', ss(0.3, 0.9, u), '800');
+  const sub = [P.category, P.area].filter(Boolean).join('  ·  ');
+  if (sub) animeText(c, sub, W / 2, 1082, 30, FB, WARM, ss(0.6, 1.1, u));
+  c.save(); c.globalAlpha = ss(0.9, 1.3, u); c.fillStyle = 'rgba(240,230,255,0.5)'; c.fillRect(W / 2 - 150, 1112, 300, 1.5); c.restore();
+  let y = 1150;
+  for (const [txt, d] of [[P.address, 1.1], [P.hours, 1.3]]) {
+    if (!txt) continue;
+    c.font = `700 26px ${FB}`; const lines = wrap(c, txt, 620).slice(0, 2);
+    for (const ln of lines) { animeText(c, ln, W / 2, y, 26, FB, '#e6e0f2', ss(d, d + 0.4, u)); y += 36; }
+  }
+  fullFill(c, `rgba(0,0,0,${ss(DUR - 0.9, DUR - 0.05, t)})`);
+}
+function scene(c, t) {
+  if (t < T_MENU) sceneAlley(c, t);
+  else if (t < MENU_END) sceneMenu(c, t);
+  else if (t < T_OUT) sceneRating(c, t);
+  else sceneOutro(c, t);
+  if (P.sample) animeText(c, '예시 데이터', W - 24, 36, 22, FB, 'rgba(255,255,255,0.75)', 0.8, '700', 'right');
+}
+function post(c, fi) {
+  c.setTransform(1, 0, 0, 1, 0, 0); c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
+  c.fillStyle = `rgba(0,0,0,${hash(fi * 0.77) * 0.035})`; c.fillRect(0, 0, W, H);
+  c.drawImage(VIG, 0, 0);
+  c.globalCompositeOperation = 'overlay'; c.globalAlpha = 0.08; c.drawImage(GRAINS[fi % 4], 0, 0, W, H);
+  c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
+  if (hash(fi * 1.91) < 0.3) { const x = hash(fi * 3.1) * W, y = hash(fi * 4.7) * H; c.fillStyle = hash(fi) > 0.5 ? 'rgba(255,255,240,0.45)' : 'rgba(10,8,8,0.5)'; c.beginPath(); c.arc(x, y, 1 + hash(fi * 5.3) * 2, 0, TAU); c.fill(); }
+}
+function frame(T) {
+  T = clamp(T, 0, DUR - 0.001);
+  const tq = Math.floor(T * 24) / 24, fi = Math.floor(T * 24), c = ctx;
+  c.setTransform(1, 0, 0, 1, 0, 0); c.globalAlpha = 1; c.globalCompositeOperation = 'source-over'; c.fillStyle = '#000'; c.fillRect(0, 0, W, H);
+  let sh = 0; if (T > T_SIGN && T < T_SIGN + 0.3) sh = 2;
+  c.setTransform(1, 0, 0, 1, (hash(fi * 1.3) - 0.5) * 1.1 + (hash(fi * 2.1) - 0.5) * sh * 2, (hash(fi * 2.7) - 0.5) * 1.1);
+  BASE = c.getTransform();
+  c.save(); scene(c, tq); c.restore();
+  post(c, fi);
+}
+
+/* =====================================================================
+   소리 — 실시간(AudioContext)과 MP4용(OfflineAudioContext) 모두 같은 함수
+   ===================================================================== */
+function buildAudio(ac, dest, t0) {
+  const R = rng(SEED + 5), sr = ac.sampleRate, at = T => t0 + T;
+  const NOISE = ac.createBuffer(1, sr * 2, sr); { const d = NOISE.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = R() * 2 - 1; }
+  const PINK = ac.createBuffer(2, sr * 3, sr);
+  for (let ch = 0; ch < 2; ch++) { const d = PINK.getChannelData(ch); let b0 = 0, b1 = 0, b2 = 0; for (let i = 0; i < d.length; i++) { const w = R() * 2 - 1; b0 = 0.997 * b0 + w * 0.029; b1 = 0.985 * b1 + w * 0.032; b2 = 0.95 * b2 + w * 0.048; d[i] = (b0 + b1 + b2 + w * 0.05) * 1.6; } }
+  const IR = ac.createBuffer(2, sr * 2.5, sr); for (let ch = 0; ch < 2; ch++) { const d = IR.getChannelData(ch); for (let i = 0; i < d.length; i++) d[i] = (R() * 2 - 1) * Math.pow(1 - i / d.length, 2.6); }
+  const comp = ac.createDynamicsCompressor(); comp.threshold.value = -16; comp.ratio.value = 3.5; comp.attack.value = 0.005; comp.release.value = 0.2;
+  const out = ac.createGain(); out.gain.setValueAtTime(0.85, at(0)); out.gain.setValueAtTime(0.85, at(DUR - 1)); out.gain.linearRampToValueAtTime(0, at(DUR));
+  out.connect(comp); comp.connect(dest);
+  const rev = ac.createConvolver(); rev.buffer = IR; const rg = ac.createGain(); rg.gain.value = 0.45; rev.connect(rg); rg.connect(out);
+  const G = v => { const g = ac.createGain(); g.gain.value = v; return g; };
+  const send = (g, a) => { if (a) { const r = G(a); g.connect(r); r.connect(rev); } };
+  const mf = m => 440 * Math.pow(2, (m - 69) / 12);
+  function tone(T, f, o = {}) {
+    const { type = 'sine', dur = 0.5, a = 0.005, vol = 0.1, f2 = null, rev: rv = 0, lp = null } = o, s = at(T), oc = ac.createOscillator(); oc.type = type; oc.frequency.value = f;
+    if (f2) oc.frequency.exponentialRampToValueAtTime(f2, s + dur);
+    const g = G(0); g.gain.setValueAtTime(0, s); g.gain.linearRampToValueAtTime(vol, s + a); g.gain.exponentialRampToValueAtTime(0.0001, s + dur);
+    let n = oc; if (lp) { const fl = ac.createBiquadFilter(); fl.type = 'lowpass'; fl.frequency.value = lp; oc.connect(fl); n = fl; }
+    n.connect(g); g.connect(out); send(g, rv); oc.start(s); oc.stop(s + dur + 0.05);
+  }
+  function nz(T, o = {}) {
+    const { dur = 0.3, vol = 0.2, type = 'bandpass', f = 1000, f2 = null, q = 1, a = 0.002, rev: rv = 0 } = o, s = at(T);
+    const src = ac.createBufferSource(); src.buffer = NOISE; src.loop = true;
+    const fl = ac.createBiquadFilter(); fl.type = type; fl.frequency.setValueAtTime(f, s); fl.Q.value = q; if (f2) fl.frequency.exponentialRampToValueAtTime(f2, s + dur);
+    const g = G(0); g.gain.setValueAtTime(0, s); g.gain.linearRampToValueAtTime(vol, s + a); g.gain.exponentialRampToValueAtTime(0.0001, s + Math.max(dur, a + 0.01));
+    src.connect(fl); fl.connect(g); g.connect(out); send(g, rv); src.start(s, R() * 1.5); src.stop(s + dur + 0.05);
+  }
+  function ep(T, f, dur, vol) {
+    const s = at(T), car = ac.createOscillator(), mod = ac.createOscillator(), mg = G(0); car.frequency.value = f; mod.frequency.value = f;
+    mg.gain.setValueAtTime(f * 2, s); mg.gain.exponentialRampToValueAtTime(f * 0.1 + 1, s + Math.min(1.2, dur + 0.2)); mod.connect(mg); mg.connect(car.frequency);
+    const g = G(0); g.gain.setValueAtTime(0, s); g.gain.linearRampToValueAtTime(vol, s + 0.006); g.gain.exponentialRampToValueAtTime(vol * 0.4, s + 0.35); g.gain.exponentialRampToValueAtTime(0.0001, s + dur + 0.6);
+    car.connect(g); g.connect(out); send(g, 0.35); car.start(s); mod.start(s); car.stop(s + dur + 0.7); mod.stop(s + dur + 0.7);
+  }
+  function pad(T, dur, notes, vol, cut, att = 0.3, rel = 0.8) {
+    const s = at(T), fl = ac.createBiquadFilter(); fl.type = 'lowpass'; fl.frequency.value = cut;
+    const g = G(0); g.gain.setValueAtTime(0, s); g.gain.linearRampToValueAtTime(vol, s + att); g.gain.setValueAtTime(vol, s + Math.max(att, dur)); g.gain.linearRampToValueAtTime(0, s + Math.max(att, dur) + rel);
+    fl.connect(g); g.connect(out); send(g, 0.35);
+    for (const m of notes) for (const d of [-9, 9]) { const o = ac.createOscillator(); o.type = 'sawtooth'; o.frequency.value = mf(m); o.detune.value = d; o.connect(fl); o.start(s); o.stop(s + Math.max(att, dur) + rel + 0.1); }
+  }
+  function pluck(T, f, vol, cut) {
+    const s = at(T), o = ac.createOscillator(); o.type = 'square'; o.frequency.value = f; const fl = ac.createBiquadFilter(); fl.type = 'lowpass'; fl.Q.value = 4;
+    fl.frequency.setValueAtTime(cut, s); fl.frequency.exponentialRampToValueAtTime(Math.max(200, cut * 0.25), s + 0.18);
+    const g = G(0); g.gain.setValueAtTime(vol, s); g.gain.exponentialRampToValueAtTime(0.0001, s + 0.22); o.connect(fl); fl.connect(g); g.connect(out); send(g, 0.25); o.start(s); o.stop(s + 0.25);
+  }
+  function bass(T, f, dur, vol) {
+    const s = at(T), o = ac.createOscillator(); o.type = 'triangle'; o.frequency.value = f; const fl = ac.createBiquadFilter(); fl.type = 'lowpass'; fl.frequency.value = 800;
+    const g = G(0); g.gain.setValueAtTime(0, s); g.gain.linearRampToValueAtTime(vol, s + 0.012); g.gain.linearRampToValueAtTime(vol * 0.7, s + dur * 0.6); g.gain.linearRampToValueAtTime(0, s + dur + 0.06);
+    o.connect(fl); fl.connect(g); g.connect(out); o.start(s); o.stop(s + dur + 0.1);
+  }
+  const kick = T => { const s = at(T), o = ac.createOscillator(); o.frequency.setValueAtTime(120, s); o.frequency.exponentialRampToValueAtTime(42, s + 0.12); const g = G(0); g.gain.setValueAtTime(0.4, s); g.gain.exponentialRampToValueAtTime(0.0001, s + 0.32); o.connect(g); g.connect(out); o.start(s); o.stop(s + 0.35); };
+  const snare = (T, v = 0.14) => nz(T, { dur: 0.16, vol: v, f: 1800, q: 0.8, rev: 0.4 });
+  const hat = (T, v = 0.035) => nz(T, { dur: 0.05, vol: v, type: 'highpass', f: 7500 });
+  const bell = (T, f, v) => { for (const [m, k, d] of [[1, 1, 1.6], [2.76, 0.45, 0.9], [5.4, 0.2, 0.5]]) tone(T, f * m, { dur: d, vol: v * k, rev: 0.6 }); };
+
+  // 빗소리
+  const rainEnv = [[0, 0], [1.5, 0.3], [T_MENU - 0.2, 0.3], [T_MENU + 0.2, 0.06], [T_OUT - 0.2, 0.06], [T_OUT + 0.3, 0.2], [DUR, 0.2]];
+  for (const [rate, pan] of [[1.03, -0.6], [0.97, 0.6]]) {
+    const src = ac.createBufferSource(); src.buffer = PINK; src.loop = true; src.playbackRate.value = rate;
+    const hp = ac.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 350; const g = G(0);
+    g.gain.setValueAtTime(rainEnv[0][1], at(0)); for (const [T, v] of rainEnv.slice(1)) g.gain.linearRampToValueAtTime(v, at(T));
+    src.connect(hp); hp.connect(g);
+    if (ac.createStereoPanner) { const p = ac.createStereoPanner(); p.pan.value = pan; g.connect(p); p.connect(out); } else g.connect(out);
+    src.start(at(0)); src.stop(at(DUR));
+  }
+  for (let T = 0.9; T < 6.6; T += 0.5) nz(T, { dur: 0.08, vol: 0.06, type: 'lowpass', f: 700 });
+  // 간판 켜짐
+  let prev = 0;
+  for (let T = T_SIGN; T < T_SIGN + 0.75; T += 1 / 16) { const st = signOn(T + 0.001) > 0.5 ? 1 : 0; if (st !== prev) { nz(T, { dur: 0.02, vol: 0.12, f: 3000, q: 2 }); prev = st; } }
+  { const o = ac.createOscillator(); o.type = 'sawtooth'; o.frequency.value = 120; const bp = ac.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 1400; bp.Q.value = 3; const g = G(0);
+    g.gain.setValueAtTime(0, at(T_SIGN)); g.gain.linearRampToValueAtTime(0.012, at(T_SIGN + 0.7)); g.gain.linearRampToValueAtTime(0.004, at(T_MENU)); g.gain.linearRampToValueAtTime(0, at(T_MENU + 0.2));
+    o.connect(bp); bp.connect(g); g.connect(out); o.start(at(T_SIGN)); o.stop(at(T_MENU + 0.3)); }
+  tone(T_SIGN + 0.5, 180, { dur: 0.6, vol: 0.12, f2: 90 });
+  // 음악: 100 BPM, IV–V–iii–vi
+  pad(4.6, 2.4, [45, 52, 59, 64], 0.016, 500, 2, 0.4);
+  const BT = 0.6, BAR = 2.4, CH = [[53, 57, 60, 64], [55, 59, 62, 64], [52, 55, 59, 62], [57, 60, 64, 67]], RT = [41, 43, 40, 45];
+  const nBars = Math.floor((DUR - 1.4 - T_SIGN) / BAR);
+  for (let b = 0; b < nBars; b++) {
+    const Tb = T_SIGN + b * BAR, k = b % 4, ch = CH[k];
+    pad(Tb, BAR, ch, b < 2 ? 0.014 : 0.018, b < 2 ? 900 : 1800);
+    for (const q of [0, 2]) bass(Tb + q * BT, mf(RT[k]), BT * 1.9, 0.13);
+    if (b >= 1) { const ar = ch.map(m => m + 12), seq = [0, 1, 2, 3, 2, 1, 2, 3]; for (let s = 0; s < 16; s++) pluck(Tb + s * BT / 4, mf(ar[seq[s % 8]]), 0.011, 1800 + b * 80); }
+    if (b >= 2 && b < nBars - 1) { for (const q of [0, 1.5, 2]) kick(Tb + q * BT); for (const q of [1, 3]) snare(Tb + q * BT); for (let s = 0; s < 8; s++) hat(Tb + s * BT / 2, s % 2 ? 0.022 : 0.035); }
+  }
+  const N = n => { const NM = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 }; return 12 * (+n.slice(-1) + 1) + NM[n[0]]; };
+  const MEL = [[0, 'E5', 1], [1, 'G5', .5], [1.5, 'A5', .5], [2, 'C6', 1.5], [3.5, 'A5', .5], [4, 'B5', 1], [5, 'A5', .5], [5.5, 'G5', .5], [6, 'D5', 2], [8, 'G5', 1.5], [9.5, 'E5', .5], [10, 'D5', 1], [11, 'B4', 1], [12, 'C5', 1], [13, 'E5', 1], [14, 'A5', 2],
+    [16, 'A5', 1], [17, 'C6', .5], [17.5, 'D6', .5], [18, 'E6', 1.5], [19.5, 'D6', .5], [20, 'D6', 1], [21, 'C6', .5], [21.5, 'B5', .5], [22, 'G5', 2], [24, 'B5', 1], [25, 'C6', .5], [25.5, 'B5', .5], [26, 'G5', 1], [27, 'E5', 1], [28, 'A5', 4]];
+  const M0 = T_SIGN + 2 * BAR;
+  for (const [b, n, d] of MEL) { const T = M0 + b * BT; if (T + d * BT < DUR - 1.6) ep(T, mf(N(n)), d * BT, 0.045); }
+  const TF = T_SIGN + nBars * BAR;
+  pad(TF, DUR - TF - 0.6, [48, 55, 59, 62, 64], 0.018, 2000, 0.05, 0.8); bass(TF, mf(36), DUR - TF - 0.5, 0.13); ep(TF, mf(88), 1.6, 0.04);
+  // 메뉴 등장
+  const n = P.menu.length, L = (MENU_END - T_MENU) / n;
+  for (let i = 0; i < n; i++) { const T = T_MENU + i * L; nz(T, { dur: 0.35, vol: 0.18, f: 400, f2: 3000, q: 1.2 }); tone(T + 0.3, 1568, { dur: 0.9, vol: 0.03, rev: 0.6 }); tone(T + 0.32, 2093, { dur: 0.9, vol: 0.025, rev: 0.6 }); }
+  // 평점
+  if (HAS_RATE) {
+    if (P.rating) { for (let T = MENU_END + 0.3; T < MENU_END + 1.3; T += 0.07) tone(T, 2400, { dur: 0.03, vol: 0.008 }); [72, 74, 76, 79, 81].forEach((m, s) => { if (P.rating - s > 0.3) tone(MENU_END + 0.5 + s * 0.16, mf(m + 12), { dur: 0.6, vol: 0.025, rev: 0.6 }); }); }
+    if (P.quote) tone(MENU_END + 1.6, 880, { dur: 0.25, vol: 0.03, f2: 1320 });
+  }
+  bell(T_OUT + 0.3, 1180, 0.05);
+}
+async function renderAudioWav() {
+  const sr = 44100, oc = new OfflineAudioContext(2, sr * DUR, sr);
+  buildAudio(oc, oc.destination, 0);
+  const buf = await oc.startRendering(), n = buf.length, L = buf.getChannelData(0), Rr = buf.getChannelData(1);
+  const ab = new ArrayBuffer(44 + n * 4), v = new DataView(ab); let p = 0;
+  const str = s => { for (const ch of s) v.setUint8(p++, ch.charCodeAt(0)); }, u32 = x => { v.setUint32(p, x, true); p += 4; }, u16 = x => { v.setUint16(p, x, true); p += 2; };
+  str('RIFF'); u32(36 + n * 4); str('WAVE'); str('fmt '); u32(16); u16(1); u16(2); u32(sr); u32(sr * 4); u16(4); u16(16); str('data'); u32(n * 4);
+  for (let i = 0; i < n; i++) { v.setInt16(p, clamp(L[i], -1, 1) * 32767, true); p += 2; v.setInt16(p, clamp(Rr[i], -1, 1) * 32767, true); p += 2; }
+  const bytes = new Uint8Array(ab); let bin = ''; for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+  return btoa(bin);
+}
+
+/* ---------- 재생 ---------- */
+let AC = null, t0 = 0, playing = false;
+const ov = document.getElementById('ov'), barI = document.querySelector('#bar i');
+function play() {
+  if (AC) AC.close();
+  AC = new (window.AudioContext || window.webkitAudioContext)();
+  t0 = AC.currentTime + 0.15; buildAudio(AC, AC.destination, t0);
+  playing = true; ov.classList.add('hide');
+}
+function loop() {
+  requestAnimationFrame(loop);
+  if (!playing) return;
+  const T = AC.currentTime - t0;
+  if (T >= DUR) { playing = false; frame(DUR - 0.001); ov.classList.remove('hide'); document.getElementById('go').textContent = '↺ 다시 보기'; return; }
+  frame(Math.max(0, T)); barI.style.width = (T / DUR * 100) + '%';
+}
+document.getElementById('go').onclick = play;
+cv.onclick = () => { if (AC && playing) AC.state === 'running' ? AC.suspend() : AC.resume(); };
+
+prerender();
+const qs = new URLSearchParams(location.search);
+if (qs.has('render')) ov.classList.add('hide');
+document.fonts.load(`800 40px ${FD}`).then(() => document.fonts.load(`700 40px ${FB}`)).catch(() => { }).then(() => {
+  frame(qs.has('still') ? parseFloat(qs.get('still')) : 9.5);
+  window.__ready = true;
+});
+window.__frame = frame; window.__cv = cv; window.__renderAudio = renderAudioWav; window.__DUR = DUR;
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
