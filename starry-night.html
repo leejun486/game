@@ -1,0 +1,552 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+</head>
+<body>
+<title>별이 빛나는 밤 산책</title>
+<style>
+  :root{
+    /* 한 화면짜리 3D 공간. 그림 위에 얇은 안내만 얹는다. 그림의 밤에 맞춘 단일 어두운 테마 */
+    --night:#081233; --ink:#f3efd8; --cobalt:#2c55c0; --moon:#f2c84a; --glass:rgba(8,18,51,.62); --line:rgba(243,239,216,.28);
+    --serif:"Nanum Myeongjo","Noto Serif KR","AppleMyungjo","Batang",serif;
+    --sans:"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",system-ui,sans-serif;
+    color-scheme:dark;
+  }
+  html,body{height:100%;margin:0;overflow:hidden;background:var(--night);color:var(--ink);font-family:var(--sans)}
+  #cv{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
+  #intro{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:max(16px,env(safe-area-inset-left,0px));
+    background:radial-gradient(ellipse at 50% 40%,rgba(8,18,51,.35),rgba(4,8,24,.9));z-index:5}
+  #intro.hide{display:none}
+  .card{max-width:30rem;text-align:center;display:flex;flex-direction:column;gap:14px;align-items:center}
+  .card h1{margin:0;font-family:var(--serif);font-weight:800;font-size:clamp(30px,6vw,46px);letter-spacing:.12em;text-wrap:balance;
+    text-shadow:0 0 22px rgba(242,200,74,.45)}
+  .card .by{font-size:14px;opacity:.75;letter-spacing:.08em}
+  .card p{margin:0;font-size:14px;line-height:1.7;opacity:.85}
+  .keys{display:grid;grid-template-columns:auto auto;gap:6px 14px;font-size:13px;opacity:.85;text-align:left}
+  .keys b{font-weight:700;color:var(--moon)}
+  button{font:inherit;color:var(--ink);background:rgba(44,85,192,.35);border:1px solid var(--line);border-radius:999px;
+    padding:10px 18px;cursor:pointer;font-size:14px}
+  button:hover{background:rgba(44,85,192,.55)}
+  button:focus-visible{outline:2px solid var(--moon);outline-offset:2px}
+  #go{font-size:17px;padding:13px 30px;background:rgba(242,200,74,.18);border-color:rgba(242,200,74,.6)}
+  #hud{position:fixed;left:0;right:0;bottom:0;display:flex;gap:8px;flex-wrap:wrap;align-items:center;z-index:3;
+    padding:12px max(16px,env(safe-area-inset-right,0px)) calc(12px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+  #hud[hidden]{display:none!important}
+  #hud button{background:var(--glass);backdrop-filter:blur(4px)}
+  #hint{font-size:13px;opacity:.8;margin-left:auto;background:var(--glass);padding:8px 12px;border-radius:10px;transition:opacity 1s}
+  #title{position:fixed;top:calc(12px + env(safe-area-inset-top,0px));left:max(16px,env(safe-area-inset-left,0px));z-index:3;
+    font-family:var(--serif);font-size:15px;letter-spacing:.1em;opacity:.8;text-shadow:0 1px 6px #000;pointer-events:none}
+  #joy{position:fixed;width:110px;height:110px;margin:-55px 0 0 -55px;border-radius:50%;border:2px solid var(--line);
+    background:rgba(8,18,51,.25);pointer-events:none;z-index:4}
+  #joy i{position:absolute;left:50%;top:50%;width:44px;height:44px;margin:-22px 0 0 -22px;border-radius:50%;background:rgba(243,239,216,.35)}
+  #err{position:fixed;inset:0;display:none;align-items:center;justify-content:center;text-align:center;padding:24px;z-index:9;background:var(--night)}
+  @media (prefers-reduced-motion: reduce){#hint{transition:none}}
+</style>
+
+<canvas id="cv"></canvas>
+<div id="title">별이 빛나는 밤 · 1889</div>
+<div id="intro"><div class="card">
+  <h1>별이 빛나는 밤</h1>
+  <div class="by">빈센트 반 고흐 · 1889 · 생레미드프로방스</div>
+  <p>그림 속 언덕에 서 있습니다. 소용돌이치는 하늘 아래로 사이프러스 나무를 지나 마을과 교회까지 걸어가 보세요.</p>
+  <div class="keys">
+    <b>W A S D / 방향키</b><span>걷기 (Shift: 달리기)</span>
+    <b>마우스</b><span>둘러보기 (화면 클릭 후)</span>
+    <b>휴대폰</b><span>왼쪽 끌기 걷기 · 오른쪽 끌기 둘러보기</span>
+  </div>
+  <button id="go">그림 속으로 들어가기 (소리 켜짐)</button>
+</div></div>
+<div id="hud" hidden>
+  <button id="view">그림 시점으로</button>
+  <button id="snd">소리 끄기</button>
+  <span id="hint">화면을 클릭하면 마우스로 둘러볼 수 있어요 · Esc로 해제</span>
+</div>
+<div id="joy" hidden><i></i></div>
+<div id="err"><p>이 기기에서 WebGL을 쓸 수 없어 3D 장면을 열지 못했습니다.<br>다른 브라우저(크롬, 사파리, 엣지)에서 열어 주세요.</p></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+'use strict';
+/* =====================================================================
+   「별이 빛나는 밤」 속을 걷는 3D 공간 — 그림, 붓질, 소리 모두 코드
+   하늘: 흐름장(소용돌이·별 고리)을 따라 놓인 타원 붓 터치를 셰이더로 그린다
+   땅·나무·집: 같은 방식의 붓 터치 + 달빛 단계 조명
+   ===================================================================== */
+const $ = id => document.getElementById(id);
+let renderer;
+try { renderer = new THREE.WebGLRenderer({ canvas: $('cv'), antialias: true }); }
+catch (e) { $('err').style.display = 'flex'; throw e; }
+const DPR = Math.min(window.devicePixelRatio || 1, 1.5);
+renderer.setPixelRatio(DPR);
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(70, 1, 0.1, 1500);
+
+/* ---------- 지형 ---------- */
+const sm = (a, b, v) => { const t = Math.min(1, Math.max(0, (v - a) / (b - a))); return t * t * (3 - 2 * t); };
+function hgt(x, z) {
+  let h = 7 * sm(-6, 30, z) + 7 * sm(30, 75, z);
+  h += 1.1 * Math.sin(x * 0.07) * Math.cos(z * 0.05);
+  h += sm(-72, -140, z) * (13 + 9 * Math.sin(x * 0.021 + 1.0) + 10 * sm(-60, 90, x));
+  h += 12 * sm(75, 140, Math.abs(x));
+  h += 1.4 * Math.sin(x * 0.13 + Math.cos(z * 0.07) * 2) * Math.cos(z * 0.11 + x * 0.03);
+  return h;
+}
+
+/* ---------- 하늘의 별과 달 (그림 구도: 정면 -Z) ---------- */
+const dirOf = (az, el) => new THREE.Vector3(Math.sin(az) * Math.cos(el), Math.sin(el), -Math.cos(az) * Math.cos(el));
+const STARS = [
+  [-0.62, 0.60, 0.055], [-0.30, 0.69, 0.040], [-0.04, 0.73, 0.034], [0.15, 0.70, 0.040], [0.40, 0.58, 0.060],
+  [-0.47, 0.38, 0.042], [-0.82, 0.31, 0.036], [-0.70, 0.16, 0.050], [-0.20, 0.17, 0.078], [0.52, 0.30, 0.034],
+  [1.6, 0.45, 0.05], [2.3, 0.7, 0.045], [2.9, 0.4, 0.06], [-2.6, 0.55, 0.05], [-1.8, 0.35, 0.045], [-1.3, 0.8, 0.04],
+];
+const MOON = [0.80, 0.52, 0.085];
+const moonDir = dirOf(MOON[0], MOON[1]);
+const moonDir2 = dirOf(MOON[0] - 0.035, MOON[1] + 0.03);
+
+const COMMON = {
+  uTime: { value: 0 },
+  uMoonL: { value: moonDir.clone().normalize() },
+  uFogCol: { value: new THREE.Color('#24387a') },
+  uFog: { value: new THREE.Vector2(60, 330) },
+};
+
+const GLSL_LIB = `
+  #define PI 3.14159265
+  float h1(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7)))*43758.5453); }
+  vec2 h2(vec2 p){ return fract(sin(vec2(dot(p,vec2(127.1,311.7)),dot(p,vec2(269.5,183.3))))*43758.5453); }
+  float vnoise(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.-2.*f);
+    return mix(mix(h1(i),h1(i+vec2(1,0)),f.x), mix(h1(i+vec2(0,1)),h1(i+vec2(1,1)),f.x), f.y); }
+`;
+
+/* ---------- 하늘 셰이더 ---------- */
+const skyMat = new THREE.ShaderMaterial({
+  side: THREE.BackSide, depthWrite: false,
+  uniforms: {
+    uTime: COMMON.uTime,
+    uStar: { value: STARS.map(s => new THREE.Vector3(s[0], s[1], s[2])) },
+    uStarDir: { value: STARS.map(s => dirOf(s[0], s[1])) },
+    uMoonP: { value: new THREE.Vector2(MOON[0], MOON[1]) },
+    uMoonDir: { value: moonDir }, uMoonDir2: { value: moonDir2 }, uMoonR: { value: MOON[2] },
+  },
+  vertexShader: `varying vec3 vDir; void main(){ vDir = position; gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.); }`,
+  fragmentShader: `
+  precision highp float;
+  varying vec3 vDir;
+  uniform float uTime; uniform vec3 uStar[16]; uniform vec3 uStarDir[16];
+  uniform vec2 uMoonP; uniform vec3 uMoonDir; uniform vec3 uMoonDir2; uniform float uMoonR;
+  ${GLSL_LIB}
+  vec2 wrapd(vec2 d){ d.x = mod(d.x+PI, 2.*PI)-PI; return d; }
+  vec2 swirl(vec2 p, vec2 c, float s, float R){
+    vec2 d = wrapd(p-c); float l = length(d)+1e-4;
+    return (vec2(-d.y,d.x)/l - d/l*0.28*sign(s)) * s * exp(-(l*l)/(R*R));
+  }
+  vec2 flow(vec2 p){
+    float t = uTime*0.04;
+    vec2 v = vec2(0.6, 0.14*sin(p.x*2.+t) + 0.1*sin(p.x*5.+p.y*6.-t*2.));
+    v += swirl(p, vec2(0.02,0.43), 1.7, 0.2);
+    v += swirl(p, vec2(0.30,0.27), -1.2, 0.13);
+    v += swirl(p, vec2(-0.55,0.24), 0.8, 0.12);
+    for(int i=0;i<16;i++){ vec3 s=uStar[i]; vec2 d=wrapd(p-s.xy); if(abs(d.y)>0.35||abs(d.x)>0.35) continue; v += swirl(p, s.xy, 1.4, s.z*2.6); }
+    v += swirl(p, uMoonP, 1.6, uMoonR*2.8);
+    return v;
+  }
+  vec4 layer(vec2 p, float nx, float seed, float elong){
+    float cell = 6.2831853/nx; vec2 q = p/cell; vec2 ip = floor(q);
+    float best = -1.; vec4 res = vec4(0.);
+    for(int j=-1;j<=1;j++){ for(int i=-1;i<=1;i++){
+      vec2 c = ip + vec2(float(i), float(j));
+      vec2 cw = vec2(mod(c.x, nx), c.y);
+      vec2 r = h2(cw + seed);
+      vec2 ctr = (c + r)*cell;
+      vec2 f = flow(ctr); float a = atan(f.y, f.x);
+      vec2 d = wrapd(p - ctr); float ca = cos(a), sa = sin(a);
+      vec2 l = vec2(d.x*ca + d.y*sa, -d.x*sa + d.y*ca);
+      float len = cell*elong*(0.75+0.5*r.y), wid = cell*0.36*(0.75+0.5*r.x);
+      l.y += (l.x*l.x)/len*0.7*(r.x-0.5);
+      float e = (l.x*l.x)/(len*len) + (l.y*l.y)/(wid*wid);
+      if(e < 1.){ float pr = h1(cw + seed*3.1); if(pr > best){ best = pr; res = vec4(h1(cw+seed*5.7), l.y/wid, e, 1.); } }
+    }}
+    return res;
+  }
+  vec3 ramp(float x){
+    vec3 c0=vec3(.03,.07,.26), c1=vec3(.09,.20,.56), c2=vec3(.20,.40,.80), c3=vec3(.55,.72,.93), c4=vec3(.93,.95,.84);
+    x = clamp(x,0.,1.)*4.;
+    if(x<1.) return mix(c0,c1,x); if(x<2.) return mix(c1,c2,x-1.); if(x<3.) return mix(c2,c3,x-2.); return mix(c3,c4,x-3.);
+  }
+  void main(){
+    vec3 dir = normalize(vDir);
+    vec2 p = vec2(atan(dir.x, -dir.z), asin(clamp(dir.y,-1.,1.)));
+    // 밝기장: 빛의 띠, 소용돌이 팔, 별·달 후광
+    float B = 0.1 + 0.14*smoothstep(0.7,0.05,p.y);
+    float elB = 0.16 + 0.09*sin(p.x*1.8+0.6);
+    B += 0.42*exp(-pow((p.y-elB)/0.06,2.)) * smoothstep(1.7,0.5,abs(p.x));
+    vec2 d0 = wrapd(p-vec2(0.02,0.43)); float r0 = length(d0), th0 = atan(d0.y,d0.x);
+    B += 0.32*smoothstep(0.26,0.04,r0)*(0.5+0.5*sin(r0*48. - th0*2. - uTime*0.12));
+    vec2 d1 = wrapd(p-vec2(0.30,0.27)); float r1 = length(d1), th1 = atan(d1.y,d1.x);
+    B += 0.3*smoothstep(0.17,0.03,r1)*(0.5+0.5*sin(r1*60. + th1*2. + uTime*0.1));
+    float Y = 0., core = 0.; vec3 coreCol = vec3(0.);
+    for(int i=0;i<16;i++){
+      float a = acos(clamp(dot(dir, uStarDir[i]),-1.,1.)), R = uStar[i].z;
+      float pulse = 1. + 0.08*sin(uTime*1.3 + float(i)*1.7);
+      B += 0.95*exp(-pow(a/(R*1.75*pulse),2.));
+      Y += exp(-pow(a/(R*1.15),2.));
+      if(a < R*0.42){ core = 1.; coreCol = mix(vec3(1.,.95,.62), vec3(.95,.74,.2), a/(R*0.42)); }
+      else if(a < R*0.62 && core < 0.5){ core = 0.6; coreCol = vec3(.98,.97,.86); }
+    }
+    float am = acos(clamp(dot(dir,uMoonDir),-1.,1.)), am2 = acos(clamp(dot(dir,uMoonDir2),-1.,1.));
+    B += 1.1*exp(-pow(am/(uMoonR*2.3),2.));
+    Y += 1.3*exp(-pow(am/(uMoonR*1.6),2.));
+    vec3 col = ramp(B*0.8 - 0.06) * 0.85;
+    vec4 s1 = layer(p, 104., 1.3, 2.7);
+    vec4 s2 = layer(p, 168., 7.1, 2.3);
+    for(int k=0;k<2;k++){
+      vec4 s = k==0 ? s1 : s2;
+      if(s.w > 0.){
+        float lev = B + (s.x-0.5)*0.42;
+        vec3 c = ramp(lev);
+        c = mix(c, vec3(.97,.86,.36)*(0.85+0.3*s.x), smoothstep(0.3,0.85,Y)*step(0.3,s.x));
+        c *= 0.86 + 0.24*(1.-abs(s.y));
+        c *= mix(1., 0.72, smoothstep(0.72,1.,s.z));
+        col = c;
+      }
+    }
+    if(core > 0.){ vec4 s = s2.w>0. ? s2 : s1; col = coreCol*(0.9+0.15*(1.-abs(s.y))) * (core>0.9 ? 1. : 0.97); }
+    if(am < uMoonR){
+      vec4 s = s2.w>0. ? s2 : s1;
+      col = am2 < uMoonR*0.84 ? vec3(.99,.95,.74) : vec3(.97,.73,.17);
+      col *= 0.9 + 0.15*(1.-abs(s.y));
+    }
+    col *= 0.93 + 0.07*vnoise(gl_FragCoord.xy*0.8);
+    gl_FragColor = vec4(col,1.);
+  }`,
+});
+const sky = new THREE.Mesh(new THREE.SphereGeometry(900, 64, 40), skyMat);
+sky.renderOrder = -1;
+scene.add(sky);
+
+/* ---------- 땅·나무·집에 쓰는 붓질 셰이더 ---------- */
+const PAINT_VS = `
+  varying vec3 vW; varying vec3 vN; varying vec2 vUv; varying float vD;
+  uniform float uTime; uniform float uSway; uniform float uTwist;
+  void main(){
+    vec3 pos = position;
+    if(uTwist != 0.){ float a = pos.y*uTwist; float c=cos(a), s=sin(a); pos.xz = mat2(c,-s,s,c)*pos.xz; }
+    if(uSway > 0.){ float k = max(pos.y,0.)*uSway; pos.x += sin(uTime*0.9 + pos.y*0.15)*k*k*0.004; pos.z += cos(uTime*0.7)*k*k*0.0025; }
+    vec4 w = modelMatrix*vec4(pos,1.);
+    vW = w.xyz; vN = normalize(mat3(modelMatrix)*normal); vUv = uv;
+    vec4 mv = viewMatrix*w; vD = length(mv.xyz);
+    gl_Position = projectionMatrix*mv;
+  }`;
+const PAINT_FS = `
+  precision highp float;
+  varying vec3 vW; varying vec3 vN; varying vec2 vUv; varying float vD;
+  uniform vec3 uA0, uA1, uA2, uB0, uB1, uB2; uniform vec2 uMixH;
+  uniform float uCell, uMode; uniform vec2 uRep;
+  uniform vec3 uMoonL, uFogCol; uniform vec2 uFog; uniform float uTime;
+  ${GLSL_LIB}
+  float angAt(vec2 c){
+    if(uMode < 0.5) return 0.35*sin(c.x*0.07 + c.y*0.11) + (vnoise(c*0.06)-0.5)*1.6;
+    if(uMode < 1.5) return 1.5708 + (vnoise(c*0.35)-0.5)*1.0 + 0.25*sin(c.y*0.4);
+    return (vnoise(c*0.25)-0.5)*0.7;
+  }
+  vec4 strokes(vec2 p, float seed){
+    vec2 ip = floor(p); float best=-1.; vec4 res=vec4(0.);
+    for(int j=-1;j<=1;j++){ for(int i=-1;i<=1;i++){
+      vec2 c = ip + vec2(float(i),float(j)); vec2 r = h2(c+seed); vec2 ctr = c + r;
+      float a = angAt(ctr); vec2 d = p-ctr; float ca=cos(a), sa=sin(a);
+      vec2 l = vec2(d.x*ca+d.y*sa, -d.x*sa+d.y*ca);
+      float len = 1.25*(0.75+0.5*r.y), wid = 0.36*(0.75+0.5*r.x);
+      l.y += l.x*l.x/len*0.6*(r.x-0.5);
+      float e = l.x*l.x/(len*len) + l.y*l.y/(wid*wid);
+      if(e<1.){ float pr=h1(c+seed*3.3); if(pr>best){ best=pr; res=vec4(h1(c+seed*5.1), l.y/wid, e, 1.); } }
+    }}
+    return res;
+  }
+  vec3 ramp3(vec3 a, vec3 b, vec3 c, float x){ x=clamp(x,0.,1.); return x<.5 ? mix(a,b,x*2.) : mix(b,c,x*2.-1.); }
+  void main(){
+    vec3 N = normalize(vN);
+    vec2 p;
+    if(uMode < 0.5){ p = abs(N.y) > 0.45 ? vW.xz : vec2(vW.x + vW.z, vW.y); p /= uCell; }
+    else p = vUv*uRep;
+    float L = 0.32 + 0.68*max(dot(N, normalize(uMoonL)), 0.);
+    L = floor(L*3.5)/3.5 + 0.08;
+    float hm = uMixH.y > uMixH.x ? smoothstep(uMixH.x, uMixH.y, vW.y) : 0.;
+    vec4 s = strokes(p, 1.7);
+    vec4 s2 = strokes(p*1.7 + 13.1, 4.2);
+    if(s2.w > 0. && s2.x > 0.55) s = s2;
+    float lev = s.w > 0. ? L*0.85 + (s.x-0.5)*0.42 : L*0.55;
+    vec3 col = mix(ramp3(uA0,uA1,uA2,lev), ramp3(uB0,uB1,uB2,lev), hm);
+    if(s.w > 0.){ col *= 0.86 + 0.24*(1.-abs(s.y)); col *= mix(1., .74, smoothstep(.72,1.,s.z)); }
+    col *= 0.94 + 0.06*vnoise(gl_FragCoord.xy*0.8);
+    col = mix(col, uFogCol, smoothstep(uFog.x, uFog.y, vD));
+    gl_FragColor = vec4(col,1.);
+  }`;
+function paint(o) {
+  const C = v => new THREE.Color(v);
+  const a = o.a, b = o.b || o.a;
+  return new THREE.ShaderMaterial({
+    vertexShader: PAINT_VS, fragmentShader: PAINT_FS, side: o.side || THREE.FrontSide,
+    uniforms: {
+      uTime: COMMON.uTime, uMoonL: COMMON.uMoonL, uFogCol: COMMON.uFogCol, uFog: COMMON.uFog,
+      uA0: { value: C(a[0]) }, uA1: { value: C(a[1]) }, uA2: { value: C(a[2]) },
+      uB0: { value: C(b[0]) }, uB1: { value: C(b[1]) }, uB2: { value: C(b[2]) },
+      uMixH: { value: new THREE.Vector2(...(o.mixH || [0, 0])) },
+      uCell: { value: o.cell || 1.2 }, uMode: { value: o.mode || 0 }, uRep: { value: new THREE.Vector2(...(o.rep || [10, 10])) },
+      uSway: { value: o.sway || 0 }, uTwist: { value: o.twist || 0 },
+    },
+  });
+}
+
+/* ---------- 지형 ---------- */
+{
+  const g = new THREE.PlaneGeometry(420, 420, 220, 220); g.rotateX(-Math.PI / 2);
+  const pa = g.attributes.position;
+  for (let i = 0; i < pa.count; i++) pa.setY(i, hgt(pa.getX(i), pa.getZ(i)));
+  g.computeVertexNormals();
+  const m = paint({ a: ['#071618', '#1b3a38', '#5a8468'], b: ['#0a163e', '#22468f', '#6f92cc'], mixH: [3, 16], cell: 1.3, mode: 0 });
+  scene.add(new THREE.Mesh(g, m));
+}
+/* 먼 산맥 (그림 오른쪽의 푸른 산) */
+{
+  const seg = 240, R = 360, pos = [], uv = [], idx = [];
+  for (let i = 0; i <= seg; i++) {
+    const th = i / seg * Math.PI * 2, x = Math.sin(th) * R, z = -Math.cos(th) * R;
+    const front = Math.exp(-Math.pow((th > Math.PI ? th - Math.PI * 2 : th) - 0.45, 2) / 0.12);
+    const top = 38 + 14 * Math.sin(th * 3 + 1) + 9 * Math.sin(th * 7.3) + 40 * front;
+    pos.push(x, -10, z, x, top, z); uv.push(i / seg, 0, i / seg, 1);
+    if (i < seg) { const k = i * 2; idx.push(k, k + 1, k + 2, k + 1, k + 3, k + 2); }
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  g.setIndex(idx); g.computeVertexNormals();
+  const m = paint({ a: ['#0a1440', '#1f3c8c', '#5f86cc'], mode: 2, rep: [420, 14], side: THREE.DoubleSide });
+  m.uniforms.uFog.value = new THREE.Vector2(9000, 9001);
+  scene.add(new THREE.Mesh(g, m));
+}
+
+/* ---------- 사이프러스 ---------- */
+const solids = []; // 충돌 원 {x,z,r}
+function cypress(x, z, H, s) {
+  const grp = new THREE.Group(), y0 = hgt(x, z) - 1;
+  const mat = paint({ a: ['#020503', '#132a1c', '#3f6a3a'], mode: 1, rep: [14, 40], sway: 1, twist: 0.035 });
+  const tongues = [[0, 0, 1, 1], [1.2, 0.6, 0.8, 0.85], [-1.1, 0.4, 0.75, 0.7], [0.4, -1.0, 0.7, 0.62], [-0.5, 1.1, 0.6, 0.5]];
+  for (const [dx, dz, hk, wk] of tongues) {
+    const h = H * hk, w = 3.4 * s * wk, pts = [];
+    for (let i = 0; i <= 24; i++) { const t = i / 24; pts.push(new THREE.Vector2(Math.max(0.05, w * Math.pow(Math.sin(Math.PI * Math.min(1, t * 1.08)), 0.7) * Math.pow(1 - t, 0.35) * (1 + 0.12 * Math.sin(t * 30))), t * h)); }
+    const m = new THREE.Mesh(new THREE.LatheGeometry(pts, 18), mat);
+    m.position.set(x + dx * s, y0, z + dz * s); grp.add(m);
+  }
+  scene.add(grp); solids.push({ x, z, r: 3.6 * s });
+}
+cypress(-15, 9, 30, 1.15);
+cypress(-20.5, 12, 17, 0.8);
+
+/* ---------- 마을 ---------- */
+const glowTex = (() => {
+  const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d');
+  const gr = g.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(255,230,140,1)'); gr.addColorStop(0.25, 'rgba(255,210,90,.55)'); gr.addColorStop(1, 'rgba(255,200,80,0)');
+  g.fillStyle = gr; g.fillRect(0, 0, 64, 64); return new THREE.CanvasTexture(c);
+})();
+const glowMat = new THREE.SpriteMaterial({ map: glowTex, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true });
+const winMat = new THREE.MeshBasicMaterial({ color: '#ffd84a' });
+const WALLS = [['#3a4a7a', '#8fa2cc', '#dfe6f0'], ['#4a4a5a', '#a49c86', '#efe4c0'], ['#2a3a6a', '#6f86c0', '#b8cce8']];
+const ROOFS = [['#0a1236', '#1f2f6a', '#4a64a8'], ['#3a1a10', '#8a4a26', '#d08a4a']];
+const wallMats = WALLS.map(a => paint({ a, mode: 2, rep: [6, 5] })), roofMats = ROOFS.map(a => paint({ a, mode: 2, rep: [8, 4] }));
+const rnd = (() => { let s = 1234567; return () => { s = (s * 16807) % 2147483647; return (s - 1) / 2147483646; }; })();
+function house(x, z, w, h, d, rot, wallI, roofI) {
+  const y = hgt(x, z) - 0.6, g = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), wallMats[wallI]); body.position.y = h / 2; g.add(body);
+  const roof = new THREE.Mesh(new THREE.CylinderGeometry(0.01, w * 0.62, d * 1.04, 3, 1), roofMats[roofI]);
+  roof.rotation.x = -Math.PI / 2; roof.scale.set(1, 1, 0.55); roof.position.y = h + w * 0.62 * 0.275; g.add(roof);
+  const nw = Math.max(1, Math.floor(w / 2.2));
+  for (let k = 0; k < nw; k++) {
+    if (rnd() < 0.35) continue;
+    const wx = -w / 2 + (k + 0.5) * w / nw, wy = h * (0.35 + rnd() * 0.25);
+    const win = new THREE.Mesh(new THREE.PlaneGeometry(0.7, 0.9), winMat); win.position.set(wx, wy, d / 2 + 0.02); g.add(win);
+    const sp = new THREE.Sprite(glowMat); sp.position.set(wx, wy, d / 2 + 0.3); sp.scale.set(3.2, 3.2, 1); g.add(sp);
+  }
+  g.position.set(x, y, z); g.rotation.y = rot; scene.add(g);
+  solids.push({ x, z, r: Math.max(w, d) * 0.62 });
+}
+const CHURCH = { x: 6, z: -42 };
+{
+  const placed = [[CHURCH.x, CHURCH.z, 9]];
+  let tries = 0;
+  while (placed.length < 46 && tries++ < 2000) {
+    const x = -48 + rnd() * 105, z = -66 + rnd() * 46;
+    if (placed.some(([px, pz, pr]) => Math.hypot(px - x, pz - z) < pr + 4.5)) continue;
+    const w = 3 + rnd() * 3.5, h = 2.8 + rnd() * 2.5, d = 3 + rnd() * 3;
+    house(x, z, w, h, d, (rnd() - 0.5) * 0.5 + (rnd() < 0.2 ? Math.PI / 2 : 0), (rnd() * 3) | 0, rnd() < 0.7 ? 0 : 1);
+    placed.push([x, z, Math.max(w, d) * 0.6]);
+  }
+  // 교회와 첨탑
+  const y = hgt(CHURCH.x, CHURCH.z) - 0.6, g = new THREE.Group();
+  const wm = paint({ a: ['#3a4a80', '#a8b8dc', '#f2f2ea'], mode: 2, rep: [6, 8] });
+  const nave = new THREE.Mesh(new THREE.BoxGeometry(6, 6, 13), wm); nave.position.y = 3; g.add(nave);
+  const roof = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 4, 13.4, 3, 1), roofMats[0]); roof.rotation.x = -Math.PI / 2; roof.scale.set(1, 1, 0.6); roof.position.y = 6 + 4 * 0.3; g.add(roof);
+  const tower = new THREE.Mesh(new THREE.BoxGeometry(3, 8, 3), wm); tower.position.set(0, 8, 5.5); g.add(tower);
+  const spire = new THREE.Mesh(new THREE.ConeGeometry(1.9, 17, 4), paint({ a: ['#1a2a6a', '#7f98d0', '#e8ecf4'], mode: 1, rep: [3, 14] }));
+  spire.position.set(0, 20.5, 5.5); spire.rotation.y = Math.PI / 4; g.add(spire);
+  for (const wy of [3.2, 5.2]) { const wn = new THREE.Mesh(new THREE.PlaneGeometry(0.8, 1.4), winMat); wn.position.set(0, wy, 6.52); g.add(wn); const sp = new THREE.Sprite(glowMat); sp.position.set(0, wy, 7); sp.scale.set(3.5, 3.5, 1); g.add(sp); }
+  g.position.set(CHURCH.x, y, CHURCH.z); scene.add(g);
+  solids.push({ x: CHURCH.x, z: CHURCH.z, r: 6.5 });
+}
+/* 둥근 덤불과 올리브 나무 */
+{
+  const geo = new THREE.SphereGeometry(1, 14, 10);
+  const mats = [paint({ a: ['#040c0c', '#16342c', '#4a7050'], cell: 0.9 }), paint({ a: ['#081440', '#1f3f8a', '#6a8ac8'], cell: 0.9 })];
+  for (let i = 0; i < 230; i++) {
+    const x = -110 + rnd() * 220, z = -95 + rnd() * 150;
+    if (Math.hypot(x, (z - 24) * 0.6) < 14 || solids.some(s => Math.hypot(s.x - x, s.z - z) < s.r + 1.5)) continue;
+    const s = 0.8 + rnd() * 2.2, m = new THREE.Mesh(geo, mats[z < -70 || Math.abs(x) > 70 ? 1 : 0]);
+    m.scale.set(s * (1 + rnd() * 0.6), s * (0.6 + rnd() * 0.4), s); m.position.set(x, hgt(x, z) + s * 0.25, z); scene.add(m);
+    if (s > 1.6) solids.push({ x, z, r: s * 0.9 });
+  }
+}
+
+/* =====================================================================
+   걷기
+   ===================================================================== */
+const VIEW = { x: 0, z: 24, yaw: 0, pitch: 0.12 };
+const me = { x: VIEW.x, z: VIEW.z, y: hgt(VIEW.x, VIEW.z) + 1.7, yaw: VIEW.yaw, pitch: VIEW.pitch, bob: 0, moving: false };
+const keys = {};
+let started = false, locked = false;
+addEventListener('keydown', e => { keys[e.code] = true; if (started && e.code.startsWith('Arrow')) e.preventDefault(); });
+addEventListener('keyup', e => { keys[e.code] = false; });
+const cvEl = $('cv');
+cvEl.addEventListener('click', () => { if (started && !locked && matchMedia('(pointer:fine)').matches && cvEl.requestPointerLock) { try { const r = cvEl.requestPointerLock(); if (r && r.catch) r.catch(() => { }); } catch (e) { } } });
+document.addEventListener('pointerlockchange', () => { locked = document.pointerLockElement === cvEl; });
+addEventListener('mousemove', e => { if (!locked) return; me.yaw += e.movementX * 0.0022; me.pitch = Math.max(-1.2, Math.min(1.3, me.pitch - e.movementY * 0.0022)); });
+// 터치: 왼쪽은 이동 조이스틱, 오른쪽은 시선
+const touch = { move: null, look: null, mx: 0, mz: 0 };
+const joy = $('joy'), joyK = joy.querySelector('i');
+cvEl.addEventListener('pointerdown', e => {
+  if (!started || e.pointerType === 'mouse') return;
+  if (e.clientX < innerWidth / 2 && !touch.move) { touch.move = { id: e.pointerId, x: e.clientX, y: e.clientY }; joy.hidden = false; joy.style.left = e.clientX + 'px'; joy.style.top = e.clientY + 'px'; }
+  else if (!touch.look) touch.look = { id: e.pointerId, x: e.clientX, y: e.clientY };
+});
+cvEl.addEventListener('pointermove', e => {
+  if (touch.move && e.pointerId === touch.move.id) {
+    let dx = e.clientX - touch.move.x, dy = e.clientY - touch.move.y; const l = Math.hypot(dx, dy), k = Math.min(1, l / 50);
+    if (l > 0) { dx /= l; dy /= l; }
+    touch.mx = dx * k; touch.mz = dy * k; joyK.style.transform = `translate(${dx * k * 33}px,${dy * k * 33}px)`;
+  } else if (touch.look && e.pointerId === touch.look.id) {
+    me.yaw += (e.clientX - touch.look.x) * 0.005; me.pitch = Math.max(-1.2, Math.min(1.3, me.pitch - (e.clientY - touch.look.y) * 0.005));
+    touch.look.x = e.clientX; touch.look.y = e.clientY;
+  }
+});
+const endTouch = e => {
+  if (touch.move && e.pointerId === touch.move.id) { touch.move = null; touch.mx = touch.mz = 0; joy.hidden = true; joyK.style.transform = ''; }
+  if (touch.look && e.pointerId === touch.look.id) touch.look = null;
+};
+cvEl.addEventListener('pointerup', endTouch); cvEl.addEventListener('pointercancel', endTouch);
+
+function step(dt) {
+  let f = 0, s = 0;
+  if (keys.KeyW || keys.ArrowUp) f += 1; if (keys.KeyS || keys.ArrowDown) f -= 1;
+  if (keys.KeyD) s += 1; if (keys.KeyA) s -= 1;
+  if (keys.ArrowLeft) me.yaw -= 1.8 * dt; if (keys.ArrowRight) me.yaw += 1.8 * dt;
+  f -= touch.mz; s += touch.mx;
+  const mag = Math.hypot(f, s); if (mag > 1) { f /= mag; s /= mag; }
+  const spd = (keys.ShiftLeft || keys.ShiftRight ? 13 : 6) * dt;
+  const sy = Math.sin(me.yaw), cy = Math.cos(me.yaw);
+  let nx = me.x + (sy * f + cy * s) * spd, nz = me.z + (-cy * f + sy * s) * spd;
+  for (const o of solids) { const dx = nx - o.x, dz = nz - o.z, d = Math.hypot(dx, dz), r = o.r + 0.6; if (d < r && d > 1e-4) { nx = o.x + dx / d * r; nz = o.z + dz / d * r; } }
+  const rr = Math.hypot(nx, nz + 20); if (rr > 150) { nx = nx / rr * 150; nz = (nz + 20) / rr * 150 - 20; }
+  me.moving = Math.hypot(nx - me.x, nz - me.z) > 0.001;
+  if (me.moving) me.bob += Math.hypot(nx - me.x, nz - me.z) * 1.1;
+  me.x = nx; me.z = nz;
+  const gy = hgt(me.x, me.z) + 1.7 + Math.sin(me.bob) * 0.06;
+  me.y += (gy - me.y) * Math.min(1, dt * 10);
+}
+
+/* =====================================================================
+   소리: 바람, 귀뚜라미, 교회 종(거리에 따라 크기와 방향), 발소리
+   ===================================================================== */
+let AC = null, master = null, soundOn = true, nextChirp = 0, nextBell = 0, nextStep = 0, bellPan = null, bellGain = null;
+function startAudio() {
+  try { AC = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return; }
+  master = AC.createGain(); master.gain.value = 0.9; master.connect(AC.destination);
+  const sr = AC.sampleRate, nb = AC.createBuffer(1, sr * 3, sr), d = nb.getChannelData(0);
+  let b = 0; for (let i = 0; i < d.length; i++) { b = 0.985 * b + (Math.random() * 2 - 1) * 0.12; d[i] = b; }
+  const src = AC.createBufferSource(); src.buffer = nb; src.loop = true;
+  const bp = AC.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 380; bp.Q.value = 0.5;
+  const wg = AC.createGain(); wg.gain.value = 0.35;
+  const lfo = AC.createOscillator(); lfo.frequency.value = 0.07; const lg = AC.createGain(); lg.gain.value = 0.18; lfo.connect(lg); lg.connect(wg.gain);
+  const lfo2 = AC.createOscillator(); lfo2.frequency.value = 0.05; const lg2 = AC.createGain(); lg2.gain.value = 160; lfo2.connect(lg2); lg2.connect(bp.frequency);
+  src.connect(bp); bp.connect(wg); wg.connect(master); src.start(); lfo.start(); lfo2.start();
+  bellGain = AC.createGain(); bellPan = AC.createStereoPanner ? AC.createStereoPanner() : null;
+  if (bellPan) { bellGain.connect(bellPan); bellPan.connect(master); } else bellGain.connect(master);
+  const t = AC.currentTime; nextChirp = t + 0.5; nextBell = t + 6; nextStep = t;
+}
+function env(g, t, a, peak, dur) { g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(peak, t + a); g.gain.exponentialRampToValueAtTime(0.0001, t + dur); }
+function audioTick() {
+  if (!AC || AC.state !== 'running') return;
+  const t = AC.currentTime;
+  while (nextChirp < t + 0.3) {
+    const f = 4100 + Math.random() * 600, pan = Math.random() * 2 - 1, n = 2 + (Math.random() * 3 | 0);
+    for (let k = 0; k < n; k++) {
+      const o = AC.createOscillator(), g = AC.createGain(); o.frequency.value = f; env(g, nextChirp + k * 0.055, 0.005, 0.012, 0.035);
+      let node = g; if (AC.createStereoPanner) { const p = AC.createStereoPanner(); p.pan.value = pan; g.connect(p); node = p; }
+      o.connect(g); node.connect(master); o.start(nextChirp + k * 0.055); o.stop(nextChirp + k * 0.055 + 0.05);
+    }
+    nextChirp += 0.25 + Math.random() * 1.1;
+  }
+  if (nextBell < t + 0.3) {
+    for (let k = 0; k < 3; k++) for (const [m, v, dd] of [[1, 1, 4], [2.0, 0.5, 2.6], [2.76, 0.35, 1.8], [5.4, 0.12, 0.8], [0.5, 0.4, 5]]) {
+      const tt = nextBell + k * 1.6, o = AC.createOscillator(), g = AC.createGain(); o.frequency.value = 330 * m; env(g, tt, 0.004, 0.2 * v, dd);
+      o.connect(g); g.connect(bellGain); o.start(tt); o.stop(tt + dd + 0.1);
+    }
+    nextBell += 40;
+  }
+  const dist = Math.hypot(me.x - CHURCH.x, me.z - CHURCH.z);
+  bellGain.gain.setTargetAtTime(1.6 / (1 + dist / 25), t, 0.2);
+  if (bellPan) { const a = Math.atan2(CHURCH.x - me.x, -(CHURCH.z - me.z)) - me.yaw; bellPan.pan.setTargetAtTime(Math.sin(a) * 0.8, t, 0.2); }
+  if (me.moving && t > nextStep) {
+    const s = AC.createBufferSource(), sr = AC.sampleRate, buf = AC.createBuffer(1, sr * 0.12 | 0, sr), dd = buf.getChannelData(0);
+    for (let i = 0; i < dd.length; i++) dd[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / dd.length, 2);
+    s.buffer = buf; const lp = AC.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 900 + Math.random() * 500;
+    const g = AC.createGain(); g.gain.value = 0.18; s.connect(lp); lp.connect(g); g.connect(master); s.start(t);
+    nextStep = t + (keys.ShiftLeft || keys.ShiftRight ? 0.3 : 0.45);
+  }
+}
+
+/* =====================================================================
+   시작과 루프
+   ===================================================================== */
+function resize() { const w = innerWidth, h = innerHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); }
+addEventListener('resize', resize); resize();
+$('go').onclick = () => {
+  started = true; $('intro').classList.add('hide'); $('hud').hidden = false;
+  if (!matchMedia('(pointer:fine)').matches) $('hint').textContent = '왼쪽을 끌면 걷고, 오른쪽을 끌면 둘러봐요';
+  setTimeout(() => { $('hint').style.opacity = '0'; }, 9000);
+  startAudio();
+};
+$('view').onclick = () => { Object.assign(me, { x: VIEW.x, z: VIEW.z, yaw: VIEW.yaw, pitch: VIEW.pitch }); me.y = hgt(me.x, me.z) + 1.7; };
+$('snd').onclick = () => { if (!AC) return; soundOn = !soundOn; soundOn ? AC.resume() : AC.suspend(); $('snd').textContent = soundOn ? '소리 끄기' : '소리 켜기'; };
+
+const clock = new THREE.Clock();
+let idle = 0;
+function render(T) {
+  COMMON.uTime.value = T;
+  camera.position.set(me.x, me.y, me.z);
+  camera.rotation.order = 'YXZ'; camera.rotation.set(me.pitch, -me.yaw, 0);
+  sky.position.copy(camera.position);
+  renderer.render(scene, camera);
+}
+function loop() {
+  if (window.__stop) return;
+  requestAnimationFrame(loop);
+  const dt = Math.min(0.05, clock.getDelta()), T = clock.elapsedTime;
+  if (started) { step(dt); audioTick(); }
+  else { idle += dt; me.yaw = Math.sin(idle * 0.12) * 0.25; }
+  render(T);
+}
+window.__pose = (x, z, yaw, pitch, T) => { Object.assign(me, { x, z, yaw, pitch }); me.y = hgt(x, z) + 1.7; render(T || 10); };
+loop();
+</script>
+
+</body>
+</html>
