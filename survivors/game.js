@@ -31,6 +31,24 @@ const SHEETS = {
   elf_px: { F: 64, foot: 5, walk: 8, hero: 1.15, diag: true, atk: { row: 16, frames: 13, ft: 0.03, hit: 9 } },
 };
 const sheetInfo = (s) => SHEETS[s] || { F: 64, foot: 3, walk: 8 };
+// hero motions on the rig sheets: [first LPC row, frames, seconds per frame, hit frame]
+const HERO_ATK = {
+  rig_hero_knight: { row: 12, frames: 6, ft: 0.055, hit: 3 },
+  rig_hero_elf: { row: 16, frames: 13, ft: 0.03, hit: 9 },
+  rig_hero_mage: { row: 4, frames: 8, ft: 0.05, hit: 4 },
+};
+// draw a rig character's sheet the first time it is needed (heroes sharper, bosses at their large size)
+function ensureRig(sheet) {
+  if (!sheet || !sheet.startsWith('rig_') || IMG[sheet] || typeof RIG === 'undefined') return;
+  const id = sheet.slice(4), hero = id.startsWith('hero_'), boss = id.startsWith('boss');
+  // bake at the screen's own scale so most draws are a straight 1:1 copy; bosses are drawn about twice as large
+  const res = clamp(Math.round(ZOOM * DPR * 4) / 4, 1, 3) * (boss ? 2.2 : 1);
+  const { canvas, info } = RIG.bake(id, Math.ceil(80 * res), res);
+  IMG[sheet] = canvas;
+  SHEETS[sheet] = Object.assign(info, hero ? { atk: HERO_ATK[sheet], hero: 1 } : {});
+  // swap in an ImageBitmap once it is ready: it draws much faster than a canvas source
+  if (window.createImageBitmap) createImageBitmap(canvas).then((bm) => { IMG[sheet] = bm; for (const k in VARIANT) if (k.startsWith(sheet + '|')) delete VARIANT[k]; }).catch(() => {});
+}
 const FOE_ATK = { row: 12, frames: 6, ft: 0.075, hit: 3 }; // LPC slash: every foe sheet swings a club or claws
 // 0 up, 1 left, 2 down, 3 right
 const dir4 = (x, y) => (Math.abs(x) > Math.abs(y) ? (x < 0 ? 1 : 3) : (y < 0 ? 0 : 2));
@@ -42,11 +60,11 @@ function diag4(x, y) {
 }
 
 const HEROES = [
-  { id: 'knight', name: '강철 기사', sheet: 'knight_px', weapon: 'sword', hp: 130, spd: 1, armor: 1, might: 0, area: 0, cd: 0,
+  { id: 'knight', name: '강철 기사', sheet: 'rig_hero_knight', weapon: 'sword', hp: 130, spd: 1, armor: 1, might: 0, area: 0, cd: 0,
     desc: '붉은 갑주의 검객. 단단한 몸으로 요괴 떼 한가운데를 가른다.', perk: '방어 +1 · 체력 130' },
-  { id: 'elf', name: '숲의 궁수', sheet: 'elf_px', weapon: 'arrow', hp: 100, spd: 1.14, armor: 0, might: 0, area: 0, cd: 0,
+  { id: 'elf', name: '숲의 궁수', sheet: 'rig_hero_elf', weapon: 'arrow', hp: 100, spd: 1.14, armor: 0, might: 0, area: 0, cd: 0,
     desc: '바람처럼 달리며 먼 곳의 요괴부터 꿰뚫는다.', perk: '이동 속도 +14%' },
-  { id: 'mage', name: '여우 도사', sheet: 'mage_px', weapon: 'foxfire', hp: 90, spd: 1, armor: 0, might: 0.05, area: 0.15, cd: 0.05,
+  { id: 'mage', name: '여우 도사', sheet: 'rig_hero_mage', weapon: 'foxfire', hp: 90, spd: 1, armor: 0, might: 0.05, area: 0.15, cd: 0.05,
     desc: '여우 탈을 쓴 도사. 여우불과 부적으로 넓게 태운다.', perk: '범위 +15% · 재사용 -5% · 공격 +5%' },
 ];
 
@@ -127,24 +145,24 @@ const META = {
 
 // foes: hp/spd/dmg at minute 0; hp scales with time. tint = rgba glaze laid over the sprite
 const FOES = {
-  imp: { name: '꼬마 도깨비', sheet: 'dokkaebi_small', hp: 7, spd: 40, dmg: 5, xp: 1, r: 11, s: 0.85 },
-  wolf: { name: '승냥이 요괴', sheet: 'wolfman', hp: 11, spd: 66, dmg: 6, xp: 1, r: 12, s: 1 },
-  gangsi: { name: '굶주린 강시', sheet: 'gangsi', hp: 26, spd: 34, dmg: 8, xp: 2, r: 12, s: 1 },
-  skel: { name: '백골 귀병', sheet: 'skeleton', hp: 34, spd: 50, dmg: 9, xp: 2, r: 12, s: 1 },
-  boar: { name: '멧돼지 요괴', sheet: 'boarman', hp: 50, spd: 56, dmg: 11, xp: 3, r: 13, s: 1.05, charge: true },
-  caster: { name: '도깨비불 꼬마', sheet: 'dokkaebi_small', tint: 'rgba(255,90,40,0.35)', hp: 16, spd: 46, dmg: 9, xp: 2, r: 11, s: 0.9, ranged: 'fire' },
-  voidcaster: { name: '어둠 술사', sheet: 'skeleton', tint: 'rgba(110,40,200,0.55)', hp: 120, spd: 50, dmg: 15, xp: 5, r: 12, s: 1.05, ranged: 'void' },
-  dok: { name: '도깨비 장수', sheet: 'dokkaebi', hp: 75, spd: 48, dmg: 12, xp: 3, r: 13, s: 1.05 },
-  liz: { name: '이무기 수졸', sheet: 'lizardman', hp: 95, spd: 58, dmg: 14, xp: 4, r: 13, s: 1.05 },
-  big: { name: '산도깨비', sheet: 'dokkaebi_big', hp: 230, spd: 40, dmg: 18, xp: 8, r: 18, s: 1.35 },
-  frostwolf: { name: '설원 승냥이', sheet: 'wolfman', tint: 'rgba(120,190,255,0.5)', hp: 70, spd: 78, dmg: 13, xp: 3, r: 12, s: 1.05, charge: true },
-  wraith: { name: '어둠에 삼켜진 원귀', sheet: 'zombie', tint: 'rgba(130,90,255,0.45)', hp: 170, spd: 44, dmg: 16, xp: 5, r: 13, s: 1.15 },
-  voidskel: { name: '그림자 귀병', sheet: 'skeleton', tint: 'rgba(70,30,140,0.6)', hp: 140, spd: 60, dmg: 16, xp: 5, r: 13, s: 1.1 },
+  imp: { name: '꼬마 도깨비', sheet: 'rig_imp', hp: 7, spd: 40, dmg: 5, xp: 1, r: 11, s: 0.85 },
+  wolf: { name: '승냥이 요괴', sheet: 'rig_wolf', hp: 11, spd: 66, dmg: 6, xp: 1, r: 12, s: 1 },
+  gangsi: { name: '굶주린 강시', sheet: 'rig_gangsi', hp: 26, spd: 34, dmg: 8, xp: 2, r: 12, s: 1 },
+  skel: { name: '백골 귀병', sheet: 'rig_skel', hp: 34, spd: 50, dmg: 9, xp: 2, r: 12, s: 1 },
+  boar: { name: '멧돼지 요괴', sheet: 'rig_boar', hp: 50, spd: 56, dmg: 11, xp: 3, r: 13, s: 1.05, charge: true },
+  caster: { name: '도깨비불 꼬마', sheet: 'rig_caster', hp: 16, spd: 46, dmg: 9, xp: 2, r: 11, s: 0.9, ranged: 'fire' },
+  voidcaster: { name: '어둠 술사', sheet: 'rig_voidcaster', soul: '170,120,255', hp: 120, spd: 50, dmg: 15, xp: 5, r: 12, s: 1.05, ranged: 'void' },
+  dok: { name: '도깨비 장수', sheet: 'rig_dok', hp: 75, spd: 48, dmg: 12, xp: 3, r: 13, s: 1.05 },
+  liz: { name: '이무기 수졸', sheet: 'rig_liz', hp: 95, spd: 58, dmg: 14, xp: 4, r: 13, s: 1.05 },
+  big: { name: '산도깨비', sheet: 'rig_big', hp: 230, spd: 40, dmg: 18, xp: 8, r: 18, s: 1.35 },
+  frostwolf: { name: '설원 승냥이', sheet: 'rig_frostwolf', hp: 70, spd: 78, dmg: 13, xp: 3, r: 12, s: 1.05, charge: true },
+  wraith: { name: '어둠에 삼켜진 원귀', sheet: 'rig_wraith', soul: '170,120,255', hp: 170, spd: 44, dmg: 16, xp: 5, r: 13, s: 1.15 },
+  voidskel: { name: '그림자 귀병', sheet: 'rig_voidskel', soul: '170,120,255', hp: 140, spd: 60, dmg: 16, xp: 5, r: 13, s: 1.1 },
   jar: { name: '옹기', prop: 'jar', hp: 1, spd: 0, dmg: 0, xp: 0, r: 13, s: 1 },
   lantern: { name: '석등', prop: 'lantern', hp: 1, spd: 0, dmg: 0, xp: 0, r: 12, s: 1 },
-  boss1: { name: '저승차사 강림', sheet: 'jeoseung', hp: 2600, spd: 56, dmg: 22, xp: 80, r: 24, s: 1.9, boss: 'dash' },
-  boss2: { name: '우두귀왕', sheet: 'minotaur', hp: 9000, spd: 50, dmg: 30, xp: 150, r: 28, s: 2.2, boss: 'stomp' },
-  boss3: { name: '어둠의 군주 어둑시니', sheet: 'vampire', tint: 'rgba(90,40,200,0.5)', hp: 30000, spd: 54, dmg: 36, xp: 0, r: 30, s: 2.5, boss: 'nova', final: true },
+  boss1: { name: '저승차사 강림', sheet: 'rig_boss1', hp: 2600, spd: 56, dmg: 22, xp: 80, r: 24, s: 1.9, boss: 'dash' },
+  boss2: { name: '우두귀왕', sheet: 'rig_boss2', hp: 9000, spd: 50, dmg: 30, xp: 150, r: 28, s: 2.2, boss: 'stomp' },
+  boss3: { name: '어둠의 군주 어둑시니', sheet: 'rig_boss3', soul: '170,120,255', hp: 30000, spd: 54, dmg: 36, xp: 0, r: 30, s: 2.5, boss: 'nova', final: true },
 };
 const WAVES = [
   [0, ['imp']], [1, ['imp', 'wolf', 'imp']], [2, ['wolf', 'gangsi', 'caster']], [3, ['gangsi', 'skel', 'caster']], [4, ['skel', 'boar', 'caster']],
@@ -814,6 +832,7 @@ function nearFoes(x, y, r) {
 
 function spawnFoe(id, x, y, opt = {}) {
   const d = FOES[id], mult = d.prop ? 0 : d.boss ? 1 : 1 + G.t / 200;
+  ensureRig(d.sheet);
   const elite = !!opt.elite;
   const e = {
     id, d, x, y, hp: d.hp * mult * (elite ? 14 : 1), maxhp: 0, spd: d.spd * (d.boss ? 1.05 : 1.05 + G.t / 2200) * (elite ? 1.1 : 1) * (opt.spdMul || 1), dmg: d.dmg * (1 + G.t / 600) * (elite ? 1.5 : 1),
@@ -1062,7 +1081,7 @@ function killFoe(e, wid) {
   burst(e.x, e.y - 14, e.boss ? 40 : 8, e.d.tint ? '#a88cff' : '#e8dcc8', e.boss ? 300 : 150);
   const kl = Math.hypot(e.kx, e.ky) || 1, fly = Math.min(260, 90 + kl * 0.6);
   G.fx.push({ k: 'corpse', x: e.x, y: e.y, sheet: e.d.sheet, s: e.s, t: 0, dur: 0.55, dir: e.dir, tint: e.d.tint, vx: (e.kx / kl) * fly, vy: (e.ky / kl) * fly * 0.6, z: 0, vz: 120 + Math.random() * 80, rot: 0, vr: (Math.random() - 0.5) * 10 });
-  if (G.fx.length < 640) G.fx.push({ k: 'soul', x: e.x, y: e.y - 20 * e.s, t: 0, dur: 0.8, col: e.d.tint ? '170,120,255' : '140,200,255' });
+  if (G.fx.length < 640) G.fx.push({ k: 'soul', x: e.x, y: e.y - 20 * e.s, t: 0, dur: 0.8, col: e.d.soul || (e.d.tint ? '170,120,255' : '140,200,255') });
   if (Math.random() < 0.6) decal('ink', e.x, e.y, 10 * e.s, 4);
   G.combo++; G.comboT = 2.2; G.comboPop = 0.15;
   if (G.combo > G.comboBest) G.comboBest = G.combo;
@@ -1697,11 +1716,23 @@ function update(dt) {
 }
 
 // ---------------------------------------------------------------- render
-function drawSprite(sheet, x, y, s, row, col, img) {
+function drawSprite(sheet, x, y, s, row, col, img, g = ctx) {
   const info = sheetInfo(sheet), F = info.F, im = img || IMG[sheet];
   if (!im) return;
-  const size = F * s;
-  ctx.drawImage(im, col * F, row * F, F, F, Math.round(x - size / 2), Math.round(y - size + info.foot * s), size, size);
+  const size = (F * s) / (info.res || 1), top = Math.round(y - size + info.foot * s);
+  let r = row, flip = false;
+  if (info.map) { // rig sheet: LPC row -> baked row; left is the right-facing row mirrored
+    const m = info.map[row] || info.map[10]; r = m[0]; flip = m[1]; col = Math.min(col, info.cols[r] - 1);
+  }
+  const k = info.res ? (s * ZOOM * DPR) / info.res : 1, scaled = Math.abs(k - 1) > 0.06; // smooth only when the art is resized
+  if (scaled) g.imageSmoothingEnabled = true;
+  let sx = col * F, sy = r * F, sw = F, sh = F, ox = 0, oy = 0;
+  const rc = info.rects && info.rects[r] && info.rects[r][col];
+  if (info.rects) { if (!rc) return; const sc = size / F; sx += rc[0]; sy += rc[1]; sw = rc[2]; sh = rc[3]; ox = rc[0] * sc; oy = rc[1] * sc; }
+  const dw = (sw * size) / F, dh = (sh * size) / F;
+  if (flip) { g.save(); g.translate(Math.round(x), 0); g.scale(-1, 1); g.drawImage(im, sx, sy, sw, sh, -size / 2 + ox, top + oy, dw, dh); g.restore(); }
+  else g.drawImage(im, sx, sy, sw, sh, Math.round(x - size / 2) + ox, top + oy, dw, dh);
+  if (scaled) g.imageSmoothingEnabled = false;
 }
 function walkFrame(sheet, t, moving) {
   const n = sheetInfo(sheet).walk;
@@ -2499,7 +2530,7 @@ const parade = [];
 function drawTitleBackdrop() {
   const t = performance.now() / 1000;
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-  ctx.imageSmoothingEnabled = false;
+  ctx.imageSmoothingEnabled = true;
   if (groundPat) { ctx.save(); ctx.translate(-(t * 20) % 256, 0); ctx.fillStyle = groundPat; ctx.fillRect(0, 0, SW + 256, SH); ctx.restore(); }
   if (!parade.length) {
     const ids = ['imp', 'wolf', 'gangsi', 'skel', 'boar', 'dok', 'liz', 'big', 'wraith'];
@@ -2508,6 +2539,7 @@ function drawTitleBackdrop() {
   }
   for (const f of parade) {
     const d = FOES[f.id], x = ((f.x + t * f.sp) % 1.2 - 0.1) * SW, y = f.y * SH;
+    ensureRig(d.sheet);
     const img = d.tint ? variant(d.sheet, d.tint) : IMG[d.sheet];
     shadow(x, y, 12 * d.s * 1.4);
     drawSprite(d.sheet, x, y, d.s * 1.4, 11, 1 + Math.floor(t * 8 + f.x * 10) % 8, img);
@@ -2540,12 +2572,10 @@ function animateHeroes() {
   if ($('select').hidden) return;
   const t = performance.now() / 1000;
   for (const c of document.querySelectorAll('#heroes canvas')) {
-    const g = c.getContext('2d'), sh = c.dataset.sheet, info = sheetInfo(sh), im = IMG[sh];
-    g.clearRect(0, 0, 96, 96); g.imageSmoothingEnabled = false;
-    if (!im) continue;
-    const F = info.F, s = F === 96 ? 1.45 : 1.5;
-    const col = 1 + Math.floor(t * 9) % info.walk, size = F * s;
-    g.drawImage(im, col * F, 10 * F, F, F, 48 - size / 2, 96 - size + info.foot * s - 4, size, size);
+    const g = c.getContext('2d'), sh = c.dataset.sheet, info = sheetInfo(sh);
+    g.clearRect(0, 0, 96, 96);
+    if (!IMG[sh]) continue;
+    drawSprite(sh, 48, 90, 1.45, 10, 1 + Math.floor(t * 9) % info.walk, null, g);
   }
 }
 function buildShop() {
@@ -2612,9 +2642,7 @@ function frame(now) {
 }
 
 async function boot() {
-  const sheets = new Set(HEROES.map((h) => h.sheet));
-  for (const f of Object.values(FOES)) if (f.sheet) sheets.add(f.sheet);
-  await Promise.all([...sheets].map((s) => loadImg(s, `${BASE}assets/sprites/${s}.png`)));
+  for (const h of HEROES) ensureRig(h.sheet); // monsters are drawn when they first show up
   const ic = new Set(['chest', 'sparkles', 'gold']);
   for (const w of Object.values(WEAPONS)) { ic.add(w.icon); ic.add(w.evoIcon); }
   for (const p of Object.values(PASSIVES)) ic.add(p.icon);
