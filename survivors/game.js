@@ -36,6 +36,8 @@ const HERO_ATK = {
   rig_hero_knight: { row: 12, frames: 6, ft: 0.055, hit: 3 },
   rig_hero_elf: { row: 16, frames: 13, ft: 0.03, hit: 9 },
   rig_hero_mage: { row: 4, frames: 8, ft: 0.05, hit: 4 },
+  rig_hero_shaman: { row: 4, frames: 8, ft: 0.05, hit: 4 },
+  rig_hero_hwarang: { row: 12, frames: 6, ft: 0.055, hit: 3 },
 };
 // draw a rig character's sheet the first time it is needed (heroes sharper, bosses at their large size)
 function ensureRig(sheet) {
@@ -66,6 +68,10 @@ const HEROES = [
     desc: '바람처럼 달리며 먼 곳의 요괴부터 꿰뚫는다.', perk: '이동 속도 +14%' },
   { id: 'mage', name: '여우 도사', sheet: 'rig_hero_mage', weapon: 'foxfire', hp: 90, spd: 1, armor: 0, might: 0.05, area: 0.15, cd: 0.05,
     desc: '여우 탈을 쓴 도사. 여우불과 부적으로 넓게 태운다.', perk: '범위 +15% · 재사용 -5% · 공격 +5%' },
+  { id: 'shaman', name: '무녀 설화', sheet: 'rig_hero_shaman', weapon: 'holy', hp: 100, spd: 1.02, armor: 0, might: 0, area: 0.1, cd: 0, regen: 0.6, price: 800,
+    desc: '방울을 흔들어 요괴가 몰린 곳에 하늘의 빛을 내린다.', perk: '범위 +10% · 초당 회복 +0.6' },
+  { id: 'hwarang', name: '화랑 도윤', sheet: 'rig_hero_hwarang', weapon: 'flysword', hp: 110, spd: 1.08, armor: 0, might: 0.05, area: 0, cd: 0, crit: 0.1, price: 1200,
+    desc: '창을 쥐고 비검을 부리는 신라의 젊은 무사.', perk: '치명타 +10% · 이동 +8% · 공격 +5%' },
 ];
 
 const WEAPONS = {
@@ -152,6 +158,9 @@ const FOES = {
   boar: { name: '멧돼지 요괴', sheet: 'rig_boar', hp: 50, spd: 56, dmg: 11, xp: 3, r: 13, s: 1.05, charge: true },
   caster: { name: '도깨비불 꼬마', sheet: 'rig_caster', hp: 16, spd: 46, dmg: 9, xp: 2, r: 11, s: 0.9, ranged: 'fire' },
   voidcaster: { name: '어둠 술사', sheet: 'rig_voidcaster', soul: '170,120,255', hp: 120, spd: 50, dmg: 15, xp: 5, r: 12, s: 1.05, ranged: 'void' },
+  snowimp: { name: '눈 도깨비', sheet: 'rig_snowimp', hp: 18, spd: 50, dmg: 8, xp: 2, r: 11, s: 0.9 },
+  dalgyal: { name: '달걀귀신', sheet: 'rig_dalgyal', hp: 55, spd: 50, dmg: 12, xp: 3, r: 12, s: 1.05, soul: '220,230,255' },
+  boss4: { name: '동장군', sheet: 'rig_boss4', hp: 11000, spd: 50, dmg: 32, xp: 150, r: 28, s: 2.2, boss: 'stomp' },
   dok: { name: '도깨비 장수', sheet: 'rig_dok', hp: 75, spd: 48, dmg: 12, xp: 3, r: 13, s: 1.05 },
   liz: { name: '이무기 수졸', sheet: 'rig_liz', hp: 95, spd: 58, dmg: 14, xp: 4, r: 13, s: 1.05 },
   big: { name: '산도깨비', sheet: 'rig_big', hp: 230, spd: 40, dmg: 18, xp: 8, r: 18, s: 1.35 },
@@ -186,6 +195,26 @@ const EVENTS = [
   { t: 900, type: 'boss', foe: 'boss3' },
 ];
 const RUN_LEN = 900;
+// three nights: ground, props, waves and the foes events swap in are per stage
+const STAGES = [
+  { id: 'field', name: '갈대 들녘', sub: '첫째 밤', desc: '도깨비와 승냥이가 갈대밭을 헤치고 몰려온다.', diff: 1, hp: 1, gold: 1,
+    ground: { base: '#1c2620', blob: ['rgba(40,58,44,0.35)', 'rgba(16,22,20,0.35)'], grass: ['rgba(78,104,74,0.55)', 'rgba(110,130,88,0.45)'], dots: ['rgba(220,120,140,0.6)', 'rgba(230,220,160,0.55)'] },
+    props: [[0, 35], [4, 20], [1, 17], [2, 16], [3, 12]], waves: WAVES, swap: {} },
+  { id: 'grave', name: '북망산 무덤골', sub: '둘째 밤', desc: '안개 낀 비석 사이로 강시와 달걀귀신이 떠돈다.', diff: 2, hp: 1.25, gold: 1.35, unlock: { stage: 'field', t: 600, text: '갈대 들녘에서 10분 버티기' },
+    ground: { base: '#1f1d26', blob: ['rgba(52,46,64,0.4)', 'rgba(14,12,18,0.4)'], grass: ['rgba(90,84,100,0.45)', 'rgba(70,90,70,0.4)'], dots: ['rgba(200,190,230,0.4)', 'rgba(150,150,170,0.4)'] },
+    props: [[1, 38], [2, 22], [0, 18], [3, 14], [4, 8]], fog: true,
+    waves: [[0, ['gangsi', 'imp']], [1, ['gangsi', 'skel']], [2, ['skel', 'dalgyal', 'caster']], [3, ['dalgyal', 'gangsi', 'skel']], [4, ['dalgyal', 'skel', 'caster']], [5, ['wraith', 'skel', 'dalgyal']],
+      [6, ['wraith', 'dalgyal', 'voidcaster']], [8, ['wraith', 'voidskel', 'dalgyal']], [10, ['wraith', 'voidskel', 'voidcaster']], [12, ['voidskel', 'wraith', 'big']], [14, ['voidskel', 'wraith', 'voidcaster', 'big']]],
+    swap: { wolf: 'dalgyal', boar: 'skel', frostwolf: 'voidskel' } },
+  { id: 'snow', name: '한빙 설원', sub: '셋째 밤', desc: '눈보라 속, 얼음 동굴에서 동장군이 깨어난다.', diff: 3, hp: 1.5, gold: 1.7, unlock: { stage: 'grave', t: 600, text: '북망산 무덤골에서 10분 버티기' },
+    ground: { base: '#b9c8d8', blob: ['rgba(235,244,252,0.5)', 'rgba(150,170,195,0.35)'], grass: ['rgba(120,140,160,0.35)', 'rgba(250,252,255,0.6)'], dots: ['rgba(255,255,255,0.8)', 'rgba(170,200,230,0.6)'] },
+    props: [[5, 30], [6, 30], [7, 22], [0, 10], [3, 8]], snow: true,
+    waves: [[0, ['snowimp']], [1, ['snowimp', 'frostwolf']], [2, ['frostwolf', 'snowimp', 'caster']], [3, ['frostwolf', 'skel', 'snowimp']], [4, ['frostwolf', 'boar', 'snowimp']], [6, ['frostwolf', 'dok', 'voidskel']],
+      [8, ['big', 'frostwolf', 'liz']], [10, ['big', 'voidskel', 'frostwolf']], [12, ['big', 'voidskel', 'voidcaster']], [14, ['big', 'voidskel', 'frostwolf', 'voidcaster']]],
+    swap: { wolf: 'frostwolf', gangsi: 'snowimp', boar: 'frostwolf', skel: 'voidskel', wraith: 'voidskel', boss2: 'boss4' } },
+];
+const stageOf = (id) => STAGES.find((st) => st.id === id) || STAGES[0];
+const GROUND_PROPS = new Set([0, 4, 5, 7]); // flat props drawn under everyone; the rest are y-sorted with the bodies
 // skills whose kills blow the body apart and can set off the next one
 const EXPLOSIVE = new Set(['meteor', 'foxfire', 'quake', 'holy', 'phoenix', 'bomb', 'lightning', 'pop']);
 // what a broken jar or lantern spills: [kind, weight, value]
@@ -194,8 +223,19 @@ const ITEM_LABEL = { goldbag: '엽전 꾸러미', bomb: '벽력탄!', freeze: '�
 
 // ---------------------------------------------------------------- save
 const SAVE_KEY = 'eclipse_survivor_v1';
-let save = { gold: 0, up: {}, best: null, sound: true, hero: 'knight' };
+let save = { gold: 0, up: {}, best: null, sound: true, hero: 'knight', stage: 'field', owned: {}, ach: {}, dex: {},
+  stats: { kills: 0, bossKills: {}, bestCombo: 0, evolves: 0, bombs: 0, props: 0, clears: {}, best: {}, endlessBest: 0 },
+  opt: { shake: true, nums: true, mvol: 0.7, svol: 0.8 } };
 try { const s = JSON.parse(localStorage.getItem(SAVE_KEY)); if (s) save = Object.assign(save, s); } catch (e) { /* storage unavailable: play without saving */ }
+function fixSave() { // older saves lack the newer sections
+  const d = { owned: {}, ach: {}, dex: {}, stage: 'field', stats: {}, opt: {} };
+  for (const k in d) if (save[k] === undefined) save[k] = d[k];
+  save.stats = Object.assign({ kills: 0, bossKills: {}, bestCombo: 0, evolves: 0, bombs: 0, props: 0, clears: {}, best: {}, endlessBest: 0 }, save.stats);
+  save.opt = Object.assign({ shake: true, nums: true, mvol: 0.7, svol: 0.8 }, save.opt);
+}
+fixSave();
+const heroOwned = (h) => !h.price || save.owned[h.id];
+function stageOpen(st) { return !st.unlock || (save.stats.best[st.unlock.stage] || 0) >= st.unlock.t || save.stats.clears[st.unlock.stage]; }
 function persist() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) { /* ignore */ } }
 const mlv = (k) => save.up[k] || 0;
 
@@ -226,10 +266,10 @@ const SND = (() => {
   const last = {};
   function init() {
     if (!ac) {
-      try { ac = new (window.AudioContext || window.webkitAudioContext)(); master = ac.createGain(); master.gain.value = 0.3; master.connect(ac.destination); } catch (e) { ac = null; }
+      try { ac = new (window.AudioContext || window.webkitAudioContext)(); master = ac.createGain(); master.gain.value = 0.3 * save.opt.svol; master.connect(ac.destination); } catch (e) { ac = null; }
     }
     if (ac && ac.state === 'suspended') ac.resume();
-    if (!music) { music = new Audio(`${BASE}assets/music/cave.mp3`); music.loop = true; music.volume = 0.22; }
+    if (!music) { music = new Audio(`${BASE}assets/music/cave.mp3`); music.loop = true; music.volume = 0.3 * save.opt.mvol; }
   }
   function tone(f, d, type, v, slide, key, gap) {
     if (!ac || !save.sound) return;
@@ -276,6 +316,7 @@ const SND = (() => {
   }
   return {
     init,
+    volume() { if (master) master.gain.value = 0.3 * save.opt.svol; if (music) music.volume = 0.3 * save.opt.mvol; },
     music(on) { if (!music) return; if (on && save.sound) music.play().catch(() => {}); else music.pause(); },
     hit() { tone(rand(160, 220), 0.06, 'square', 0.04, 0.5, 'hit', 0.04); },
     kill() { noise(0.08, 0.06, 900, 'kill', 0.05); },
@@ -342,23 +383,23 @@ resize();
 
 // ground: a hand-painted night meadow tile, plus props scattered per chunk
 let groundPat = null;
-function buildGround() {
+function buildGround(stage = STAGES[0]) {
   const S = 256, c = document.createElement('canvas'); c.width = c.height = S;
-  const g = c.getContext('2d');
-  g.fillStyle = '#1c2620'; g.fillRect(0, 0, S, S);
+  const g = c.getContext('2d'), P = stage.ground;
+  g.fillStyle = P.base; g.fillRect(0, 0, S, S);
   for (let i = 0; i < 70; i++) {
     const x = hash(i, 1, 7) * S, y = hash(i, 2, 7) * S, r = 14 + hash(i, 3, 7) * 40;
-    const col = hash(i, 4, 7) < 0.5 ? 'rgba(40,58,44,0.35)' : 'rgba(16,22,20,0.35)';
+    const col = hash(i, 4, 7) < 0.5 ? P.blob[0] : P.blob[1];
     for (const ox of [-S, 0, S]) for (const oy of [-S, 0, S]) { g.fillStyle = col; g.beginPath(); g.arc(x + ox, y + oy, r, 0, TAU); g.fill(); }
   }
   for (let i = 0; i < 160; i++) {
     const x = hash(i, 5, 9) * S, y = hash(i, 6, 9) * S, h = 2 + hash(i, 7, 9) * 3;
-    g.strokeStyle = hash(i, 8, 9) < 0.7 ? 'rgba(78,104,74,0.55)' : 'rgba(110,130,88,0.45)';
+    g.strokeStyle = hash(i, 8, 9) < 0.7 ? P.grass[0] : P.grass[1];
     g.lineWidth = 1; g.beginPath(); g.moveTo(x - 1.5, y); g.lineTo(x - 2.5, y - h); g.moveTo(x, y); g.lineTo(x, y - h - 1); g.moveTo(x + 1.5, y); g.lineTo(x + 2.5, y - h); g.stroke();
   }
   for (let i = 0; i < 16; i++) {
     const x = hash(i, 10, 3) * S, y = hash(i, 11, 3) * S;
-    g.fillStyle = hash(i, 12, 3) < 0.5 ? 'rgba(220,120,140,0.6)' : 'rgba(230,220,160,0.55)';
+    g.fillStyle = hash(i, 12, 3) < 0.5 ? P.dots[0] : P.dots[1];
     g.fillRect(x, y, 2, 2);
   }
   groundPat = ctx.createPattern(c, 'repeat');
@@ -386,16 +427,33 @@ function drawProp(kind, x, y, r) {
     ctx.fillStyle = '#6a665f'; ctx.fillRect(x - 8, y - 34, 16, 12);
     ctx.fillStyle = '#ffb35a'; ctx.fillRect(x - 3, y - 31, 6, 6);
     ctx.fillStyle = '#7a766e'; ctx.beginPath(); ctx.moveTo(x - 13, y - 34); ctx.lineTo(x + 13, y - 34); ctx.lineTo(x, y - 44); ctx.fill();
+  } else if (kind === 5) { // ice rock
+    ctx.fillStyle = 'rgba(40,60,90,0.25)'; ctx.beginPath(); ctx.ellipse(x, y + 3, 13 * r, 4 * r, 0, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#8fb4d6'; ctx.beginPath(); ctx.moveTo(x - 11 * r, y); ctx.lineTo(x - 6 * r, y - 9 * r); ctx.lineTo(x + 2 * r, y - 12 * r); ctx.lineTo(x + 10 * r, y - 4 * r); ctx.lineTo(x + 9 * r, y + 2 * r); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#d8ecfb'; ctx.beginPath(); ctx.moveTo(x - 6 * r, y - 9 * r); ctx.lineTo(x + 2 * r, y - 12 * r); ctx.lineTo(x + 1 * r, y - 4 * r); ctx.closePath(); ctx.fill();
+  } else if (kind === 6) { // snow-laden pine
+    ctx.fillStyle = 'rgba(40,60,90,0.25)'; ctx.beginPath(); ctx.ellipse(x, y + 2, 16, 5, 0, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#4a3424'; ctx.fillRect(x - 2.5, y - 10, 5, 10);
+    for (let i = 0; i < 3; i++) {
+      const w = (18 - i * 4) * r, top = y - (14 + i * 13) * r, base = top + 16 * r;
+      ctx.fillStyle = '#2f4a3e'; ctx.beginPath(); ctx.moveTo(x - w, base); ctx.lineTo(x, top); ctx.lineTo(x + w, base); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#f2f8fc'; ctx.beginPath(); ctx.moveTo(x - w * 0.55, top + 8 * r); ctx.lineTo(x, top); ctx.lineTo(x + w * 0.55, top + 8 * r); ctx.quadraticCurveTo(x, top + 5 * r, x - w * 0.55, top + 8 * r); ctx.fill();
+    }
+  } else if (kind === 7) { // snowdrift
+    ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.beginPath(); ctx.ellipse(x, y, 22 * r, 6 * r, 0, 0, TAU); ctx.fill();
+    ctx.fillStyle = 'rgba(160,185,210,0.35)'; ctx.beginPath(); ctx.ellipse(x + 4 * r, y + 2 * r, 16 * r, 3 * r, 0, 0, TAU); ctx.fill();
   } else { // reeds
     ctx.strokeStyle = '#4f6a46'; ctx.lineWidth = 1.5;
     for (let i = 0; i < 7; i++) { const dx = (i - 3) * 3; ctx.beginPath(); ctx.moveTo(x + dx, y); ctx.quadraticCurveTo(x + dx * 1.5, y - 12, x + dx * 2.2, y - 18 - (i % 3) * 4); ctx.stroke(); }
   }
 }
 function propsIn(cx, cy) {
+  const table = G ? G.stage.props : STAGES[0].props, total = table.reduce((a, t) => a + t[1], 0);
   const out = [], n = Math.floor(hash(cx, cy, 31) * 4);
   for (let i = 0; i < n; i++) {
-    const r = hash(cx, cy, 40 + i);
-    out.push({ kind: r < 0.35 ? 0 : r < 0.55 ? 4 : r < 0.72 ? 1 : r < 0.88 ? 2 : 3, x: cx * CHUNK + hash(cx, cy, 50 + i) * CHUNK, y: cy * CHUNK + hash(cx, cy, 60 + i) * CHUNK, s: 0.8 + hash(cx, cy, 70 + i) * 0.6 });
+    let r = hash(cx, cy, 40 + i) * total, kind = table[0][0];
+    for (const [k, w] of table) { r -= w; if (r <= 0) { kind = k; break; } }
+    out.push({ kind, x: cx * CHUNK + hash(cx, cy, 50 + i) * CHUNK, y: cy * CHUNK + hash(cx, cy, 60 + i) * CHUNK, s: 0.8 + hash(cx, cy, 70 + i) * 0.6 });
   }
   return out;
 }
@@ -407,8 +465,12 @@ const keys = {};
 const joy = { on: false, id: null, ox: 0, oy: 0, x: 0, y: 0 };
 
 function newRun(heroId) {
-  const hero = HEROES.find((h) => h.id === heroId) || HEROES[0];
+  let hero = HEROES.find((h) => h.id === heroId) || HEROES[0];
+  if (!heroOwned(hero)) hero = HEROES[0];
+  const stage = stageOpen(stageOf(save.stage)) ? stageOf(save.stage) : STAGES[0];
+  buildGround(stage);
   G = {
+    stage, endless: false, endlessNext: 0, endlessLoop: 0,
     hero, t: 0, kills: 0, gold: 0, lvl: 1, xp: 0, next: xpNeed(1), pendingLv: 0,
     p: { x: 0, y: 0, hp: 1, maxhp: 1, dir: 2, diag: -1, face: 1, moving: false, walkT: 0, inv: 0, hurtT: 0, ax: 1, ay: 0, act: null, queue: [], dashT: 0, dashCd: 0, ghostT: 0 },
     weapons: [], passives: {}, S: {},
@@ -433,11 +495,11 @@ function recalc(first) {
   S.speed = 138 * h.spd * (1 + 0.1 * pv('haste') + 0.05 * mlv('haste'));
   S.magnet = 56 * (1 + 0.35 * pv('magnet') + 0.15 * mlv('magnet'));
   S.maxhp = (h.hp + 20 * mlv('vigor')) * (1 + 0.2 * pv('vigor'));
-  S.regen = 0.3 * pv('vigor');
+  S.regen = 0.3 * pv('vigor') + (h.regen || 0);
   S.armor = pv('armor') + h.armor;
   S.growth = 1 + 0.08 * pv('growth') + 0.05 * mlv('growth');
   S.greed = 1 + 0.15 * mlv('greed');
-  S.crit = 0.06 + 0.05 * pv('crit');
+  S.crit = 0.06 + 0.05 * pv('crit') + (h.crit || 0);
   S.dur = 1 + 0.12 * pv('dur');
   S.vel = 1 + 0.12 * pv('velocity');
   if (!first && S.maxhp > oldMax) G.p.hp += S.maxhp - oldMax;
@@ -684,10 +746,13 @@ function fireWeapon(w) {
       break;
     }
     case 'flysword': {
-      for (let v = 0; v < st.volleys; v++) for (let i = 0; i < st.amount; i++) later(v * 0.45 + i * 0.05, () => {
-        const n = st.amount, off = (i - (n - 1) / 2) * Math.min(0.32, 2.4 / n);
-        shoot({ k: 'fly', x: G.p.x, y: G.p.y - 30, a: -Math.PI / 2, spd: 0, dmg: st.dmg, pierce: st.pierce, life: 1.6, r: 9, wid: w.id, kb: 70, wait: 0.32, slot: off, idx: i, trail: [] });
-        if (i === 0) SND.whoosh();
+      const ft = nearestFoes(p.x, p.y, 1, 500)[0], fa = ft ? Math.atan2(ft.y - p.y, ft.x - p.x) : Math.atan2(p.ay, p.ax);
+      act(w, Math.cos(fa), Math.sin(fa), () => {
+        for (let v = 0; v < st.volleys; v++) for (let i = 0; i < st.amount; i++) later(v * 0.45 + i * 0.05, () => {
+          const n = st.amount, off = (i - (n - 1) / 2) * Math.min(0.32, 2.4 / n);
+          shoot({ k: 'fly', x: G.p.x, y: G.p.y - 30, a: -Math.PI / 2, spd: 0, dmg: st.dmg, pierce: st.pierce, life: 1.6, r: 9, wid: w.id, kb: 70, wait: 0.32, slot: off, idx: i, trail: [] });
+          if (i === 0) SND.whoosh();
+        });
       });
       break;
     }
@@ -705,11 +770,14 @@ function fireWeapon(w) {
       const cands = shuffle(onScreenFoes()).slice(0, 14);
       const density = new Map(cands.map((e) => [e, nearFoes(e.x, e.y, 70).length]));
       cands.sort((a, b) => density.get(b) - density.get(a));
-      for (let i = 0; i < st.amount; i++) {
-        const e = cands[i];
-        const tx = e ? e.x : p.x + rand(-150, 150), ty = e ? e.y : p.y + rand(-110, 110);
-        later(i * 0.2, () => pillar(tx, ty, 62 * st.area, st, w, true));
-      }
+      const lead = cands[0], la = lead ? Math.atan2(lead.y - p.y, lead.x - p.x) : Math.atan2(p.ay, p.ax);
+      act(w, Math.cos(la), Math.sin(la), () => {
+        for (let i = 0; i < st.amount; i++) {
+          const e = cands[i];
+          const tx = e && !e.dead ? e.x : G.p.x + rand(-150, 150), ty = e && !e.dead ? e.y : G.p.y + rand(-110, 110);
+          later(i * 0.2, () => pillar(tx, ty, 62 * st.area, st, w, true));
+        }
+      });
       break;
     }
   }
@@ -831,7 +899,7 @@ function nearFoes(x, y, r) {
 }
 
 function spawnFoe(id, x, y, opt = {}) {
-  const d = FOES[id], mult = d.prop ? 0 : d.boss ? 1 : 1 + G.t / 200;
+  const d = FOES[id], mult = (d.prop ? 0 : d.boss ? 1 + (opt.loop || 0) * 0.6 : 1 + G.t / 200) * G.stage.hp;
   ensureRig(d.sheet);
   const elite = !!opt.elite;
   const e = {
@@ -859,14 +927,19 @@ function edgePoint(pad = 60) {
   return { x: p.x + hw, y: p.y + rand(-hh, hh) };
 }
 function wavePool() {
-  const m = Math.floor(G.t / 60);
-  let pool = WAVES[0][1];
-  for (const [min, pl] of WAVES) if (m >= min) pool = pl;
+  const m = Math.floor(G.t / 60), waves = G.stage.waves;
+  let pool = waves[0][1];
+  for (const [min, pl] of waves) if (m >= min) pool = pl;
   return pool;
 }
+const swapFoe = (id) => G.stage.swap[id] || id;
 function updateSpawns(dt) {
   const t = G.t, blood = G.blood > 0;
-  const target = Math.min(45 + t * 0.42, t >= RUN_LEN ? 140 : 330) * (blood ? 1.25 : 1);
+  const target = Math.min(45 + t * 0.42, G.endless ? 360 : t >= RUN_LEN ? 140 : 330) * (blood ? 1.25 : 1);
+  if (G.endless && t >= G.endlessNext) { // the endless night sends its lords back, stronger every round
+    G.endlessNext = t + 120; G.endlessLoop++;
+    const pt = edgePoint(40); spawnFoe(pick(['boss1', 'boss2', 'boss3'].map(swapFoe)), pt.x, pt.y, { loop: G.endlessLoop });
+  }
   const rate = (3 + t / 26) * (blood ? 1.7 : 1);
   G.spawnAcc += dt * rate;
   while (G.spawnAcc >= 1) {
@@ -907,17 +980,17 @@ function updateSpawns(dt) {
   }
   while (G.evIdx < EVENTS.length && t >= EVENTS[G.evIdx].t) {
     const ev = EVENTS[G.evIdx++], p = G.p;
-    if (ev.type === 'boss') { const pt = edgePoint(40); spawnFoe(ev.foe, pt.x, pt.y); }
+    if (ev.type === 'boss') { const pt = edgePoint(40); spawnFoe(swapFoe(ev.foe), pt.x, pt.y); }
     else if (ev.type === 'ring') {
       const R = Math.hypot(VW, VH) / 2 + 30;
-      for (let i = 0; i < ev.n; i++) { const a = (i / ev.n) * TAU; spawnFoe(ev.foe, p.x + Math.cos(a) * R, p.y + Math.sin(a) * R); }
+      for (let i = 0; i < ev.n; i++) { const a = (i / ev.n) * TAU; spawnFoe(swapFoe(ev.foe), p.x + Math.cos(a) * R, p.y + Math.sin(a) * R); }
       G.shake = Math.max(G.shake, 5);
     } else if (ev.type === 'swarm') {
       const a = G.warned[G.evIdx - 1] ?? Math.random() * TAU, R = Math.hypot(VW, VH) / 2 + 40;
       const sx = p.x + Math.cos(a) * R, sy = p.y + Math.sin(a) * R, vx = -Math.cos(a), vy = -Math.sin(a);
       for (let i = 0; i < ev.n; i++) {
         const off = (i - ev.n / 2) * 22;
-        spawnFoe(ev.foe, sx + -vy * off + rand(-20, 20), sy + vx * off + rand(-30, 30), { vx, vy, rush: 9, spdMul: 1.7 });
+        spawnFoe(swapFoe(ev.foe), sx + -vy * off + rand(-20, 20), sy + vx * off + rand(-30, 30), { vx, vy, rush: 9, spdMul: 1.7 });
       }
       G.shake = Math.max(G.shake, 6); SND.boss();
     }
@@ -1066,6 +1139,8 @@ function killFoe(e, wid) {
   e.dead = true;
   if (e.d.prop) { breakProp(e); return; }
   G.kills++;
+  save.stats.kills++; save.dex[e.id] = (save.dex[e.id] || 0) + 1;
+  if (e.boss) save.stats.bossKills[e.id] = (save.stats.bossKills[e.id] || 0) + 1;
   if (G.fx.length < 600) G.fx.push({ k: 'ring', x: e.x, y: e.y - 16 * e.s, r: 22 * e.s, t: 0, dur: 0.2, col: '255,245,225' });
   if (EXPLOSIVE.has(wid) && G.popBudget > 0) { // the body bursts and splashes its neighbours
     G.popBudget--;
@@ -1101,7 +1176,10 @@ function killFoe(e, wid) {
     if (G.boss === e) G.boss = null;
     G.shake = 16; hitstop(0.4); G.zpunch = 0.15;
     G.fx.push({ k: 'flash', t: 0, dur: 0.4, col: '255,240,210' });
-    if (e.d.final) { G.won = true; later(1.6, () => endRun(true)); showBanner('일식이 걷힌다', '어둠의 군주를 쓰러뜨렸다'); }
+    if (e.d.final && !G.endless) {
+      G.won = true; save.stats.clears[G.stage.id] = (save.stats.clears[G.stage.id] || 0) + 1; checkAch();
+      later(1.6, openVictory); showBanner('일식이 걷힌다', '어둠의 군주를 쓰러뜨렸다');
+    }
   }
 }
 function rollItem() {
@@ -1116,6 +1194,7 @@ function toss(kind, x, y, v) {
   G.gems.push(g);
 }
 function breakProp(e) {
+  save.stats.props++;
   const jar = e.d.prop === 'jar';
   burst(e.x, e.y - 14, 14, jar ? '#8a5a3a' : '#6a665f', 240, 4);
   burst(e.x, e.y - 14, 8, jar ? '#c88a5a' : '#ffb35a', 180, 3);
@@ -1142,6 +1221,48 @@ function bombBlast() { // 벽력탄: everything on screen takes a thunderclap
   SND.bomb();
 }
 function itemLabel(text, col) { G.nums.push({ x: G.p.x, y: G.p.y - 66, v: text, t: 0, label: true, col }); }
+const ACHS = [
+  ['kill100', '첫 사냥', '요괴 100마리 처치', (s) => [s.kills, 100], 50],
+  ['kill1000', '요괴 사냥꾼', '요괴 1,000마리 처치', (s) => [s.kills, 1000], 150],
+  ['kill5000', '퇴마사', '요괴 5,000마리 처치', (s) => [s.kills, 5000], 400],
+  ['kill20000', '만귀를 벤 자', '요괴 20,000마리 처치', (s) => [s.kills, 20000], 1000],
+  ['t5', '다섯 번째 종', '한 판에서 5분 버티기', (s) => [Math.max(0, ...Object.values(s.best), 0), 300], 60],
+  ['t10', '열 번째 종', '한 판에서 10분 버티기', (s) => [Math.max(0, ...Object.values(s.best), 0), 600], 150],
+  ['clear_field', '갈대 들녘 정복', '갈대 들녘에서 어둑시니 처치', (s) => [s.clears.field ? 1 : 0, 1], 300],
+  ['clear_grave', '무덤골 정복', '북망산 무덤골에서 어둑시니 처치', (s) => [s.clears.grave ? 1 : 0, 1], 500],
+  ['clear_snow', '설원 정복', '한빙 설원에서 어둑시니 처치', (s) => [s.clears.snow ? 1 : 0, 1], 800],
+  ['boss1', '저승차사 격파', '저승차사 강림 처치', (s) => [s.bossKills.boss1 || 0, 1], 100],
+  ['boss2', '우두귀왕 격파', '우두귀왕 처치', (s) => [s.bossKills.boss2 || 0, 1], 150],
+  ['boss4', '동장군 격파', '동장군 처치', (s) => [s.bossKills.boss4 || 0, 1], 250],
+  ['combo100', '백 연격', '연격 100 달성', (s) => [s.bestCombo, 100], 80],
+  ['combo300', '삼백 연격', '연격 300 달성', (s) => [s.bestCombo, 300], 250],
+  ['evo1', '첫 진화', '무기를 처음 진화시키기', (s) => [s.evolves, 1], 100],
+  ['evo10', '진화의 대가', '무기 진화 10회', (s) => [s.evolves, 10], 300],
+  ['bomb10', '벽력탄 장인', '벽력탄 10번 터뜨리기', (s) => [s.bombs, 10], 120],
+  ['props100', '옹기장이의 원수', '옹기·석등 100개 깨기', (s) => [s.props, 100], 120],
+  ['endless20', '끝없는 밤', '무한 모드에서 20분까지 버티기', (s) => [s.endlessBest, 1200], 600],
+  ['dex', '요괴 도감 완성', '모든 요괴를 한 번씩 처치', () => [dexFoes().filter((id) => save.dex[id]).length, dexFoes().length], 500],
+];
+const dexFoes = () => Object.keys(FOES).filter((id) => !FOES[id].prop);
+let toastTimer = 0;
+function toast(html) {
+  const t = $('toast'); t.innerHTML = html; t.classList.add('on');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('on'), 3200);
+}
+function checkAch() {
+  const s = save.stats;
+  if (G) { s.bestCombo = Math.max(s.bestCombo, G.comboBest); const sid = G.stage.id; s.best[sid] = Math.max(s.best[sid] || 0, Math.floor(G.t)); if (G.endless) s.endlessBest = Math.max(s.endlessBest, Math.floor(G.t)); }
+  for (const [id, name, , prog, reward] of ACHS) {
+    if (save.ach[id]) continue;
+    const [cur, goal] = prog(s);
+    if (cur >= goal) {
+      save.ach[id] = Date.now(); save.gold += reward;
+      toast(`<small>업적 달성</small>${name}<em>+${reward}냥</em>`);
+      if (SND.item) SND.item();
+    }
+  }
+  persist();
+}
 function hitstop(t) { G.hitstop = Math.max(G.hitstop, t); }
 // every 100 kills without letting the chain drop, the hero's spirit bursts outward
 function comboBurst() {
@@ -1268,7 +1389,7 @@ function collect(g) {
   } else if (g.kind === 'goldbag') {
     G.gold += g.v * G.S.greed; SND.gold(); SND.item(); itemLabel(`+${Math.round(g.v * G.S.greed)}냥`, '#ffd76a');
     burst(G.p.x, G.p.y - 20, 18, '#ffd76a', 220, 3);
-  } else if (g.kind === 'bomb') { itemLabel(ITEM_LABEL.bomb, '#ffb04a'); bombBlast(); }
+  } else if (g.kind === 'bomb') { itemLabel(ITEM_LABEL.bomb, '#ffb04a'); bombBlast(); save.stats.bombs++; }
   else if (g.kind === 'freeze') {
     itemLabel(ITEM_LABEL.freeze, '#9ee0ff'); SND.freeze();
     G.freezeT = 5; G.fx.push({ k: 'flash', t: 0, dur: 0.35, col: '170,225,255' });
@@ -1339,7 +1460,7 @@ function applyOption(o) {
   if (o.type === 'w') { const w = wget(o.id); if (w) w.lv++; else addWeapon(o.id); }
   else if (o.type === 'p') G.passives[o.id] = (G.passives[o.id] || 0) + 1;
   else if (o.type === 'evo') { // evolution: a held breath, a pillar of light, three rings
-    const w = wget(o.id), P = G.p; w.evo = true;
+    const w = wget(o.id), P = G.p; w.evo = true; save.stats.evolves++;
     showBanner(WEAPONS[o.id].evoName, '무기가 진화했다');
     hitstop(0.45); G.zpunch = 0.2; G.shake = 10;
     G.fx.push({ k: 'flash', t: 0, dur: 0.5, col: '255,215,140' });
@@ -1372,7 +1493,7 @@ function evoReady() {
   return G.weapons.filter((w) => !w.evo && w.lv >= W_MAX && (G.passives[WEAPONS[w.id].pair] || 0) > 0);
 }
 
-const screens = ['title', 'select', 'shop', 'levelup', 'pause', 'result'];
+const screens = ['title', 'select', 'shop', 'levelup', 'pause', 'result', 'ach', 'dex', 'settings', 'victory'];
 function show(id) { for (const s of screens) $(s).hidden = s !== id; $('pauseBtn').hidden = $('dashBtn').hidden = !(id === null && mode === 'play'); }
 
 function cardHTML(v) {
@@ -1485,20 +1606,33 @@ function startRun() {
   SND.init(); SND.music(true);
   newRun(save.hero);
   mode = 'play'; show(null);
-  showBanner('일식의 밤', '15분을 버텨라');
+  showBanner(G.stage.name, `${G.stage.sub} · 15분을 버텨라`);
   last = performance.now();
+}
+function openVictory() {
+  if (mode === 'result') return;
+  mode = 'levelup';
+  show('victory');
+  setTimeout(() => $('vEndless').focus(), 30);
+}
+function goEndless() {
+  G.endless = true; G.won = false; G.endlessNext = G.t + 60; G.endlessLoop = 0;
+  mode = 'play'; show(null); last = performance.now();
+  showBanner('무한의 밤', '어둠의 군주들이 더 강해져 돌아온다');
 }
 function endRun(won) {
   if (mode === 'result') return;
   mode = 'result';
-  const coins = Math.floor(G.gold + G.kills * 0.05 + (won ? 200 : 0));
+  checkAch();
+  const cleared = won || G.endless;
+  const coins = Math.floor((G.gold + G.kills * 0.05 + (cleared ? 200 : 0) + (G.endless ? (G.t - RUN_LEN) * 0.5 : 0)) * G.stage.gold);
   save.gold += coins;
   const rec = { t: Math.floor(G.t), kills: G.kills, won };
   if (!save.best || rec.t > save.best.t || (won && !save.best.won)) save.best = rec;
   persist();
-  $('rEyebrow').textContent = won ? '승리' : '결과';
-  $('rTitle').textContent = won ? '일식을 걷어냈다' : '어둠에 삼켜졌다';
-  $('rSub').textContent = won ? `${G.hero.name}이(가) 어둠의 군주 어둑시니를 쓰러뜨리고 아침을 되찾았다.` : `${G.hero.name}이(가) ${fmtTime(G.t)} 동안 버티다 쓰러졌다.`;
+  $('rEyebrow').textContent = `${G.stage.name} · ${G.endless ? '무한의 밤' : won ? '승리' : '결과'}`;
+  $('rTitle').textContent = G.endless ? '끝없는 밤의 끝' : won ? '일식을 걷어냈다' : '어둠에 삼켜졌다';
+  $('rSub').textContent = G.endless ? `${G.hero.name}이(가) 일식을 걷어낸 뒤에도 ${fmtTime(G.t)}까지 싸웠다.` : won ? `${G.hero.name}이(가) 어둠의 군주 어둑시니를 쓰러뜨리고 아침을 되찾았다.` : `${G.hero.name}이(가) ${fmtTime(G.t)} 동안 버티다 쓰러졌다.`;
   $('rStats').innerHTML = [['버틴 시간', fmtTime(G.t)], ['처치', fmt(G.kills)], ['레벨', G.lvl], ['얻은 엽전', fmt(coins)]]
     .map(([k, v]) => `<div class="stat"><span>${k}</span><b>${v}</b></div>`).join('');
   $('rDmg').innerHTML = buildTable(true);
@@ -1702,6 +1836,8 @@ function updateFx(dt) {
 function update(dt) {
   G.t += dt;
   G.popBudget = 10;
+  G.achT = (G.achT || 0) + dt;
+  if (G.achT >= 2) { G.achT = 0; checkAch(); }
   if (G.frenzy > 0) G.frenzy -= dt;
   if (G.freezeT > 0) G.freezeT -= dt;
   updatePlayer(dt);
@@ -1745,7 +1881,7 @@ function render() {
   ctx.imageSmoothingEnabled = false;
   if (!G) { ctx.fillStyle = '#0c0b10'; ctx.fillRect(0, 0, SW, SH); drawTitleBackdrop(); return; }
   const p = G.p;
-  const shx = G.shake ? rand(-G.shake, G.shake) : 0, shy = G.shake ? rand(-G.shake, G.shake) : 0;
+  const sk = save.opt.shake ? G.shake : 0, shx = sk ? rand(-sk, sk) : 0, shy = sk ? rand(-sk, sk) : 0;
   const Z = ZOOM * (1 + G.zpunch), vw = SW / Z, vh = SH / Z;
   const camX = G.cam.x - vw / 2 + shx, camY = G.cam.y - 20 - vh / 2 + shy;
   ctx.setTransform(DPR * Z, 0, 0, DPR * Z, -camX * DPR * Z, -camY * DPR * Z);
@@ -1754,7 +1890,7 @@ function render() {
   const c0x = Math.floor(camX / CHUNK) - 1, c1x = Math.floor((camX + vw) / CHUNK) + 1, c0y = Math.floor(camY / CHUNK) - 1, c1y = Math.floor((camY + vh) / CHUNK) + 1;
   const props = [];
   for (let cx = c0x; cx <= c1x; cx++) for (let cy = c0y; cy <= c1y; cy++) for (const pr of propsIn(cx, cy)) props.push(pr);
-  for (const pr of props) if (pr.kind === 0 || pr.kind === 4) drawProp(pr.kind, pr.x, pr.y, pr.s);
+  for (const pr of props) if (GROUND_PROPS.has(pr.kind)) drawProp(pr.kind, pr.x, pr.y, pr.s);
   // ground effects
   for (const d of G.decals) drawDecal(d);
   for (const z of G.zones) drawZone(z);
@@ -1783,7 +1919,7 @@ function render() {
   for (const g of G.gems) drawPickup(g);
   // y-sorted bodies
   const bodies = [];
-  for (const pr of props) if (pr.kind !== 0 && pr.kind !== 4) bodies.push({ y: pr.y, pr });
+  for (const pr of props) if (!GROUND_PROPS.has(pr.kind)) bodies.push({ y: pr.y, pr });
   for (const e of G.foes) bodies.push({ y: e.y, e });
   for (const f of G.fx) if (f.k === 'corpse' || f.k === 'ghost') bodies.push({ y: f.y - 1, c: f });
   bodies.push({ y: p.y, me: true });
@@ -1827,6 +1963,7 @@ function render() {
   // damage numbers
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   for (const n of G.nums) {
+    if (!save.opt.nums && !n.label && !n.mine && !n.heal) continue;
     const a = 1 - Math.max(0, n.t - (n.label ? 1 : 0.4)) / 0.3;
     const pop = n.t < 0.09 ? 1.8 - (n.t / 0.09) * 0.8 : 1; // numbers slam in, then settle
     if (n.label) {
@@ -1846,6 +1983,7 @@ function render() {
     ctx.restore();
   }
   ctx.globalAlpha = 1;
+  drawWeather(camX, camY, Z);
   // eclipse darkness: a light pool around the hero, deepening as the night goes on
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   const px = (p.x - camX) * Z, py = (p.y - 20 - camY) * Z;
@@ -1870,6 +2008,28 @@ function render() {
     ctx.beginPath(); ctx.arc(joy.ox, joy.oy, 50, 0, TAU); ctx.stroke();
     const jx = joy.x - joy.ox, jy = joy.y - joy.oy, l = Math.hypot(jx, jy), k = l > 50 ? 50 / l : 1;
     ctx.fillStyle = 'rgba(233,215,168,0.45)'; ctx.beginPath(); ctx.arc(joy.ox + jx * k, joy.oy + jy * k, 18, 0, TAU); ctx.fill();
+  }
+}
+// 무덤골 fog drifts across the world; 설원 snow falls in screen space
+function drawWeather(camX, camY, Z) {
+  const st = G.stage;
+  if (st.fog) {
+    for (let i = 0; i < 9; i++) {
+      const wx = hash(i, 1, 77) * 1600 + G.t * (8 + i * 2), wy = hash(i, 2, 77) * 1100;
+      const x = ((wx - camX) % 1600 + 1600) % 1600 - 300 + camX, y = ((wy - camY) % 1100 + 1100) % 1100 - 200 + camY, r = 160 + hash(i, 3, 77) * 140;
+      const gr = ctx.createRadialGradient(x, y, 0, x, y, r);
+      gr.addColorStop(0, 'rgba(190,185,215,0.16)'); gr.addColorStop(1, 'rgba(190,185,215,0)');
+      ctx.fillStyle = gr; ctx.beginPath(); ctx.ellipse(x, y, r, r * 0.45, 0, 0, TAU); ctx.fill();
+    }
+  }
+  if (st.snow) {
+    ctx.save(); ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    ctx.fillStyle = 'rgba(255,255,255,0.85)';
+    for (let i = 0; i < 90; i++) {
+      const sp = 30 + hash(i, 4, 9) * 50, x = ((hash(i, 5, 9) * SW + Math.sin(G.t + i) * 18 - camX * Z * 0.3) % SW + SW) % SW, y = ((hash(i, 6, 9) * SH + G.t * sp - camY * Z * 0.3) % SH + SH) % SH;
+      ctx.beginPath(); ctx.arc(x, y, 1 + hash(i, 7, 9) * 1.6, 0, TAU); ctx.fill();
+    }
+    ctx.restore();
   }
 }
 // red glow on the edge a charge is coming from, or all round for an encirclement
@@ -2556,18 +2716,66 @@ function refreshTitle() {
   const s = save.sound ? '소리 켜짐' : '소리 꺼짐';
   $('sndBtn').textContent = s; $('sndBtn2').textContent = s;
 }
-function buildHeroes() {
-  const box = $('heroes'); box.innerHTML = '';
-  for (const h of HEROES) {
-    const b = document.createElement('button');
-    b.className = 'hero' + (save.hero === h.id ? ' sel' : '');
-    const wd = WEAPONS[h.weapon];
-    b.innerHTML = `<canvas width="96" height="96" data-sheet="${h.sheet}"></canvas><h3>${h.name}</h3><p>${h.desc}</p><div class="wpn"><img src="${ICON(wd.icon)}" alt="">${wd.name}</div><div class="perk">${h.perk}</div>`;
-    b.onclick = () => { save.hero = h.id; persist(); buildHeroes(); };
-    b.ondblclick = () => { save.hero = h.id; startRun(); };
+function buildStages() {
+  const box = $('stages'); box.innerHTML = '';
+  for (const st of STAGES) {
+    const open = stageOpen(st), b = document.createElement('button');
+    b.className = 'stage' + (save.stage === st.id ? ' sel' : '') + (open ? '' : ' locked');
+    const best = save.stats.best[st.id], clear = save.stats.clears[st.id];
+    b.innerHTML = `<span class="st-sub">${st.sub}</span><b>${st.name}</b><span class="st-diff">${'●'.repeat(st.diff)}${'○'.repeat(3 - st.diff)} · 엽전 ×${st.gold}</span>` +
+      `<span class="st-desc">${open ? st.desc : '잠김 · ' + st.unlock.text}</span><span class="st-rec">${clear ? '정복함' : best ? '최고 ' + fmtTime(best) : '&nbsp;'}</span>`;
+    b.onclick = () => { if (!open) { toast(`<small>잠긴 밤</small>${st.unlock.text}`); return; } save.stage = st.id; persist(); buildStages(); };
     box.appendChild(b);
   }
 }
+function buildHeroes() {
+  buildStages();
+  const box = $('heroes'); box.innerHTML = '';
+  for (const h of HEROES) {
+    const b = document.createElement('button'), own = heroOwned(h);
+    b.className = 'hero' + (save.hero === h.id ? ' sel' : '') + (own ? '' : ' locked');
+    const wd = WEAPONS[h.weapon];
+    b.innerHTML = `<canvas width="96" height="96" data-sheet="${h.sheet}"></canvas><h3>${h.name}</h3><p>${h.desc}</p><div class="wpn"><img src="${ICON(wd.icon)}" alt="">${wd.name}</div>` +
+      `<div class="perk">${own ? h.perk : `잠김 · 엽전 ${h.price}냥으로 해금`}</div>`;
+    b.onclick = () => {
+      if (!own) {
+        if (save.gold < h.price) { toast(`<small>엽전이 모자란다</small>${h.name} 해금에 ${h.price}냥 필요 (보유 ${fmt(save.gold)}냥)`); return; }
+        save.gold -= h.price; save.owned[h.id] = true; SND.init(); SND.chest(); toast(`<small>새 각성자</small>${h.name}이(가) 합류했다`);
+      }
+      save.hero = h.id; persist(); buildHeroes();
+    };
+    b.ondblclick = () => { if (heroOwned(h)) { save.hero = h.id; startRun(); } };
+    box.appendChild(b);
+  }
+}
+function buildAch() {
+  const done = ACHS.filter(([id]) => save.ach[id]).length;
+  $('achCount').textContent = `${done} / ${ACHS.length}`;
+  $('achList').innerHTML = ACHS.map(([id, name, desc, prog, reward]) => {
+    const [cur, goal] = prog(save.stats), ok = !!save.ach[id], pct = Math.min(1, cur / goal);
+    return `<div class="ach${ok ? ' ok' : ''}"><div><b>${name}</b><span>${desc}</span><div class="bar"><i style="width:${(pct * 100).toFixed(0)}%"></i></div></div><em>${ok ? '달성' : `${fmt(Math.min(cur, goal))} / ${fmt(goal)}`}<br>${reward}냥</em></div>`;
+  }).join('');
+}
+function buildDex() {
+  const ids = dexFoes(), seen = ids.filter((id) => save.dex[id]).length;
+  $('dexCount').textContent = `${seen} / ${ids.length}`;
+  const box = $('dexList'); box.innerHTML = '';
+  for (const id of ids) {
+    const d = FOES[id], n = save.dex[id] || 0, card = document.createElement('div');
+    card.className = 'dexcard' + (n ? '' : ' unknown') + (d.boss ? ' boss' : '');
+    card.innerHTML = `<canvas width="88" height="88"></canvas><b>${n ? d.name : '???'}</b><span>${n ? `처치 ${fmt(n)}` : '아직 만나지 못했다'}</span>`;
+    box.appendChild(card);
+    const g = card.querySelector('canvas').getContext('2d');
+    ensureRig(d.sheet);
+    const sc = d.boss ? 1.05 : 1.3;
+    drawSprite(d.sheet, 44, 84, sc, 10, 0, n ? null : variant(d.sheet, 'rgba(10,8,14,1)'), g);
+  }
+}
+function buildSettings() {
+  $('optShake').checked = save.opt.shake; $('optNums').checked = save.opt.nums;
+  $('optMusic').value = Math.round(save.opt.mvol * 100); $('optSfx').value = Math.round(save.opt.svol * 100);
+}
+let settingsBack = 'title';
 function animateHeroes() {
   if ($('select').hidden) return;
   const t = performance.now() / 1000;
@@ -2594,6 +2802,17 @@ function spentOnMeta() { let s = 0; for (const [id, m] of Object.entries(META)) 
 
 $('goSelect').onclick = () => { SND.init(); buildHeroes(); show('select'); setTimeout(() => $('startRun').focus(), 30); };
 $('goShop').onclick = () => { buildShop(); show('shop'); };
+$('goAch').onclick = () => { buildAch(); show('ach'); };
+$('goDex').onclick = () => { show('dex'); setTimeout(buildDex, 10); };
+$('goSettings').onclick = () => { settingsBack = 'title'; buildSettings(); show('settings'); };
+$('pauseSettings').onclick = () => { settingsBack = 'pause'; buildSettings(); show('settings'); };
+$('settingsBack').onclick = () => { if (settingsBack === 'pause') { show('pause'); } else { refreshTitle(); show('title'); } };
+$('optShake').onchange = (e) => { save.opt.shake = e.target.checked; persist(); };
+$('optNums').onchange = (e) => { save.opt.nums = e.target.checked; persist(); };
+$('optMusic').oninput = (e) => { save.opt.mvol = e.target.value / 100; SND.volume(); persist(); };
+$('optSfx').oninput = (e) => { save.opt.svol = e.target.value / 100; SND.volume(); persist(); };
+$('vEndless').onclick = goEndless;
+$('vEnd').onclick = () => endRun(true);
 $('startRun').onclick = startRun;
 $('refund').onclick = () => { save.gold += spentOnMeta(); save.up = {}; persist(); buildShop(); };
 for (const b of document.querySelectorAll('[data-back]')) b.onclick = () => { refreshTitle(); show('title'); };
@@ -2609,7 +2828,7 @@ $('dashBtn').addEventListener('pointerdown', (e) => { e.preventDefault(); if (mo
 // ---------------------------------------------------------------- input
 window.addEventListener('keydown', (e) => {
   keys[e.code] = true;
-  if (e.code === 'Escape' || e.code === 'KeyP') { if (mode === 'play') pauseGame(); else if (mode === 'pause') $('resume').click(); }
+  if (e.code === 'Escape' || e.code === 'KeyP') { if (mode === 'play') pauseGame(); else if (mode === 'pause' && $('settings').hidden) $('resume').click(); }
   if (mode === 'levelup' && /^Digit[1-6]$/.test(e.code)) { const b = $('luCards').querySelectorAll('button.card')[+e.code.slice(5) - 1]; if (b) b.click(); }
   if (mode === 'levelup' && e.code === 'KeyR' && G && G.hand && $('luTitle').textContent !== '상자 속 비급 하나를 고른다') rerollHand();
   if (mode === 'play' && e.code.startsWith('Arrow')) e.preventDefault();
@@ -2643,11 +2862,11 @@ function frame(now) {
 
 async function boot() {
   for (const h of HEROES) ensureRig(h.sheet); // monsters are drawn when they first show up
+  buildGround(stageOf(save.stage));
   const ic = new Set(['chest', 'sparkles', 'gold']);
   for (const w of Object.values(WEAPONS)) { ic.add(w.icon); ic.add(w.evoIcon); }
   for (const p of Object.values(PASSIVES)) ic.add(p.icon);
   ic.forEach(icon);
-  buildGround();
   $('loading').hidden = true;
   mode = 'title'; refreshTitle(); show('title');
   requestAnimationFrame(frame);

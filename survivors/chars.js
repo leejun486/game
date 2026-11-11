@@ -100,6 +100,14 @@ function weapon(g, kind, d, glow) {
       for (let i = -2; i <= 2; i++) { const a = i * 0.24; g.beginPath(); g.moveTo(2, 0); g.lineTo(Math.cos(a) * 15, Math.sin(a) * 15); g.stroke(); }
       break;
     }
+    case 'bells': { // 무녀 방울: a cluster of brass bells with five-colour ribbons
+      bone(g, -6, 0, 12, 0, 1.6, '#8a5a30', '#c08a50');
+      for (const [bx, by] of [[14, -2.6], [16.5, 0.4], [13.6, 2.8], [17, -3.2], [15.2, 3.6]]) { circ(g, bx, by, 1.9); ink(g, rad(g, bx, by, 1.9, '#ffd36b'), 0.6); }
+      const cols = ['#c8243a', '#2a6ad0', '#f2d36b', '#2f9a5a', '#f4f0e8'];
+      cols.forEach((c, i) => { g.strokeStyle = c; g.lineWidth = 1.1; g.lineCap = 'round'; g.beginPath(); g.moveTo(-5, 0); g.quadraticCurveTo(-9 - i, 3 + i * 1.6, -11 - i * 0.6 + Math.sin((d.t || 0) * 6 + i) * 1.2, 8 + i * 2); g.stroke(); });
+      if (glow) { const gr = g.createRadialGradient(15, 0, 0, 15, 0, 10); gr.addColorStop(0, 'rgba(255,250,220,0.9)'); gr.addColorStop(0.4, `rgba(${glow},0.6)`); gr.addColorStop(1, `rgba(${glow},0)`); g.fillStyle = gr; circ(g, 15, 0, 10); g.fill(); }
+      break;
+    }
     case 'claw': {
       g.strokeStyle = '#f0e8d8'; g.lineWidth = 1; g.lineCap = 'round';
       for (const o of [-1.6, 0, 1.6]) { g.beginPath(); g.moveTo(0, o); g.quadraticCurveTo(4, o - 0.4, 6, o + 1.4); g.stroke(); }
@@ -153,6 +161,11 @@ function head(g, x, y, d, view, P) {
   }
   if (d.head === 'wolf' || d.head === 'boar' || d.head === 'bull' || d.head === 'snake') { beastHead(g, x, y, r, d, view); return; }
   if (d.head === 'skull') { skull(g, x, y, r, d, view); return; }
+  if (d.head === 'egg') { // 달걀귀신: a smooth, faceless egg of a head
+    ell(g, x, y - r * 0.15, r * 0.92, r * 1.18); ink(g, rad(g, x, y - r * 0.2, r * 1.1, d.skin));
+    g.fillStyle = 'rgba(255,255,255,0.75)'; ell(g, x - r * 0.35, y - r * 0.6, r * 0.18, r * 0.3, -0.4); g.fill();
+    return;
+  }
   // face
   circ(g, x, y, r); ink(g, rad(g, x, y, r, skin));
   if (view === 'side') { ell(g, x + r * 0.95, y + r * 0.15, r * 0.14, r * 0.2); g.fillStyle = shade(skin, -0.12); g.fill(); }
@@ -478,7 +491,7 @@ function pose(d, kind, f, n, view) {
   return P;
 }
 // how each weapon is carried while walking: canvas angle, 0 = forward, -PI/2 = straight up
-const REST = { sword: 1.15, staff: -1.35, bow: 0, club: -0.85, spiked: -0.85, big: -1.0, spear: -1.42, trident: -1.42, axe: -1.1, fan: 0.55 };
+const REST = { bells: -1.2, sword: 1.15, staff: -1.35, bow: 0, club: -0.85, spiked: -0.85, big: -1.0, spear: -1.42, trident: -1.42, axe: -1.1, fan: 0.55 };
 function hopArms(d, P) { if (P.weapon && REST[P.weapon] !== undefined) P.restAbs = REST[P.weapon]; if (d.body === 'hop') { P.arms = [Math.PI / 2 - 0.05, Math.PI / 2]; P.elbow = [0, 0]; } if (d.body === 'ghost') { P.arms = [0.25, 0.3]; P.elbow = [0.1, 0.1]; } return P; }
 
 // draws one frame centred on (0,0) = feet
@@ -523,6 +536,14 @@ const DEFS = {
   liz: { head: 'snake', skin: '#4d9a5a', belly: '#e0dca0', eyeGlow: '#ffe14a', torso: 'fur', torsoCol: '#44884f', plates: '#8a6a3a', pants: '#3a2a1a', legCol: '#3f7f4a', armCol: '#44884f', hand: '#3f7f4a', weapon: 'trident', grip: -0.15, tails: 1, tailCol: '#44884f', tailLen: 13 },
   big: { size: 1.1, skin: '#8a2d2d', hair: '#20101a', horns: 2, hornSize: 1.3, eyeGlow: '#ffcf3a', fangs: true, torso: 'bare_big', torsoCol: '#8a2d2d', legCol: '#7a2626', torsoW: 18, torsoH: 15, armW: 5.4, legW: 6, weapon: 'big', grip: -0.55, headR: 10 },
   wraith: { body: 'ghost', skin: '#d4dbe8', hair: '#0d0a12', hairStyle: 'ghost', torso: 'ghost', torsoCol: '#ece9f2', armCol: '#e2dfea', hand: '#c4ccdc', weapon: null, aura: '150,110,255' },
+  hero_shaman: { skin: '#f6d9c4', hair: '#141018', hairStyle: 'long', band: '#c8243a', torso: 'robe', torsoCol: '#f4f0e8', trim: '#c8243a', sash: '#c8243a', armCol: '#efeae0', legCol: '#c8243a', boot: '#f6f0ea',
+    weapon: 'bells', grip: -0.2, glowCol: '255,220,140' },
+  hero_hwarang: { skin: '#f3cfae', hair: '#1a1418', hairStyle: 'ponytail', band: '#d9a640', torso: 'tunic', torsoCol: '#2f5fa8', trim: '#d9a640', armCol: '#2a56a0', legCol: '#e8e2d4', boot: '#3a2618',
+    cape: '#8a1a24', weapon: 'spear', grip: -0.2 },
+  snowimp: { size: 0.82, skin: '#c4e2f6', hair: '#f2faff', horns: 1, hornCol: '#7fb8e0', eyeGlow: '#4ad0ff', fangs: true, torso: 'bare', torsoCol: '#c4e2f6', legCol: '#a8d0ec', weapon: 'club', grip: -0.5 },
+  dalgyal: { body: 'ghost', head: 'egg', skin: '#f6f4ef', torso: 'ghost', torsoCol: '#e6e8f0', armCol: '#dcdfe8', hand: '#f6f4ef', weapon: null },
+  boss4: { bossAura: true, size: 1.1, skin: '#9cc8e8', hair: '#f4fbff', horns: 2, hornCol: '#e8f6ff', hornSize: 1.25, eyeGlow: '#bff6ff', fangs: true, torso: 'bulky', torsoCol: '#5a7aa0', plates: '#c8e0f0', pants: '#3a4a6a',
+    legCol: '#8ab8dc', armCol: '#9cc8e8', hand: '#9cc8e8', torsoW: 18, armW: 5.4, legW: 6, weapon: 'big', grip: -0.55, cape: '#e8f4ff', aura: '170,230,255' },
   boss1: { bossAura: true, skin: '#ece6e2', hair: '#120e16', eyes: '#3a0c10', hat: 'gat', torso: 'longrobe', torsoCol: '#17141c', sash: '#9a1a24', armCol: '#1c1822', hand: '#ece6e2', legCol: '#111', boot: '#0a0a0c', weapon: 'fan', grip: -0.2, aura: '200,30,50' },
   boss2: { bossAura: true, body: 'beast', head: 'bull', ring: true, skin: '#4a3028', belly: '#8a6a58', eyeGlow: '#ff4a2a', mane: true, size: 1.05, torso: 'bulky', torsoCol: '#3e2a24', plates: '#b38a30', pants: '#5a1a14', legCol: '#3a2620', armCol: '#4a3028', hand: '#3a2620', torsoW: 18, armW: 5.4, legW: 6, weapon: 'axe', grip: -0.45, aura: '255,90,40' },
   boss3: { bossAura: true, body: 'ghost', skin: '#120a20', hair: '#05030a', hat: 'crown', eyeGlow: '#d070ff', torso: 'ghost', torsoCol: '#1e1236', armCol: '#24163e', hand: '#0e0818', claws: true, cape: '#2e0e4a', weapon: null, offhand: 'fire', fireKind: 'void', aura: '150,60,255', headR: 10 },
@@ -535,7 +556,7 @@ const FRAMES = { walk: 9, slash: 6, cast: 7, thrust: 8, shoot: 13, hurt: 6 };
 function rowsFor(id) {
   const k = ['walk', 'slash'];
   if (id === 'hero_elf') k.push('shoot');
-  if (id === 'hero_mage') k.push('thrust');
+  if (id === 'hero_mage' || id === 'hero_shaman') k.push('thrust');
   if (id === 'caster' || id === 'voidcaster' || id === 'boss3') k.push('cast');
   return k;
 }

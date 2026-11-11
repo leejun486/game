@@ -148,6 +148,47 @@ h2 { font-size: clamp(22px, 4vw, 30px); }
 }
 #dashBtn:active { transform: scale(0.94); }
 @media (hover: hover) and (pointer: fine) { #dashBtn { display: none; } }
+#toast {
+  position: fixed; left: 50%; top: calc(76px + env(safe-area-inset-top, 0px)); transform: translate(-50%, -10px); z-index: 8; pointer-events: none;
+  background: rgba(16, 12, 20, 0.94); border: 1px solid var(--gold-dark); border-radius: 3px; padding: 10px 18px; text-align: center;
+  font-family: var(--f-display); color: var(--gold); font-size: 16px; opacity: 0; transition: opacity 0.3s, transform 0.3s; max-width: calc(100% - 32px);
+}
+#toast.on { opacity: 1; transform: translate(-50%, 0); }
+#toast small { display: block; font-family: var(--f-ui); font-size: 11px; letter-spacing: 0.25em; color: var(--gold-2); }
+#toast em { font-style: normal; color: var(--corona); margin-left: 8px; }
+.stages { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+@media (max-width: 620px) { .stages { grid-template-columns: 1fr; } }
+.stage { display: flex; flex-direction: column; gap: 3px; text-align: left; border: 1px solid var(--line); background: rgba(0, 0, 0, 0.25); border-radius: 3px; padding: 10px 12px; }
+.stage b { font-family: var(--f-display); font-size: 17px; color: var(--gold); }
+.stage .st-sub { font-size: 11px; letter-spacing: 0.2em; color: var(--gold-2); }
+.stage .st-diff { font-size: 12px; color: var(--blood); }
+.stage .st-desc { font-size: 12px; color: var(--muted); line-height: 1.45; }
+.stage .st-rec { font-size: 12px; color: var(--jade); }
+.stage.sel { border-color: var(--corona); background: rgba(255, 207, 122, 0.08); box-shadow: inset 0 0 0 1px rgba(255, 207, 122, 0.4); }
+.stage.locked, .hero.locked { opacity: 0.55; }
+.hero.locked canvas { filter: brightness(0.25); }
+.achlist { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+@media (max-width: 620px) { .achlist { grid-template-columns: 1fr; } }
+.ach { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: center; border: 1px solid var(--line); border-radius: 3px; padding: 9px 12px; background: rgba(0, 0, 0, 0.2); }
+.ach b { font-family: var(--f-display); color: var(--hanji); font-size: 15px; display: block; }
+.ach span { font-size: 12px; color: var(--muted); }
+.ach em { font-style: normal; font-size: 12px; color: var(--gold-2); text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ach .bar { height: 3px; background: rgba(239, 230, 207, 0.12); margin-top: 6px; }
+.ach .bar i { display: block; height: 100%; background: var(--gold-2); }
+.ach.ok { border-color: rgba(255, 207, 122, 0.5); background: rgba(255, 207, 122, 0.07); }
+.ach.ok b { color: var(--corona); }
+.dexlist { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 8px; }
+.dexcard { display: flex; flex-direction: column; align-items: center; gap: 2px; border: 1px solid var(--line); border-radius: 3px; padding: 8px 6px; background: rgba(0, 0, 0, 0.22); text-align: center; }
+.dexcard canvas { width: 88px; height: 88px; }
+.dexcard b { font-family: var(--f-display); font-size: 14px; color: var(--hanji); }
+.dexcard span { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.dexcard.boss { border-color: rgba(195, 39, 43, 0.6); }
+.dexcard.unknown b { color: var(--muted); }
+.opts { display: grid; gap: 14px; }
+.opt { display: flex; justify-content: space-between; align-items: center; gap: 16px; border-bottom: 1px solid var(--line); padding-bottom: 12px; }
+.opt label { font-size: 15px; }
+.opt input[type="range"] { width: min(220px, 50vw); accent-color: #c9a45c; }
+.opt input[type="checkbox"] { width: 20px; height: 20px; accent-color: #c9a45c; }
 #banner {
   position: fixed; left: 0; right: 0; top: 30%; text-align: center; z-index: 3; pointer-events: none;
   font-family: var(--f-display); font-weight: 700; font-size: clamp(26px, 6vw, 46px); color: var(--corona);
@@ -161,6 +202,7 @@ h2 { font-size: clamp(22px, 4vw, 30px); }
 
 <canvas id="cv"></canvas>
 <div id="banner"></div>
+<div id="toast" role="status"></div>
 <button id="pauseBtn" hidden aria-label="일시 정지">❚❚</button>
 <button id="dashBtn" hidden>회피</button>
 <div id="loading">불러오는 중</div>
@@ -173,6 +215,11 @@ h2 { font-size: clamp(22px, 4vw, 30px); }
     <div class="row" style="justify-content:center">
       <button class="btn primary" id="goSelect">출정</button>
       <button class="btn" id="goShop">영구 강화</button>
+      <button class="btn" id="goAch">업적</button>
+      <button class="btn" id="goDex">요괴 도감</button>
+    </div>
+    <div class="row" style="justify-content:center">
+      <button class="btn ghost" id="goSettings">설정</button>
       <button class="btn ghost" id="sndBtn">소리 켜짐</button>
     </div>
     <div class="purse"><span>보유 엽전 <b id="tGold">0</b></span><span>최고 기록 <b id="tBest">—</b></span></div>
@@ -182,6 +229,8 @@ h2 { font-size: clamp(22px, 4vw, 30px); }
 
 <section class="screen" id="select" hidden>
   <div class="sheet">
+    <div><div class="eyebrow">밤 선택</div><h2>어느 밤으로 갈까</h2></div>
+    <div class="stages" id="stages"></div>
     <div><div class="eyebrow">각성자 선택</div><h2>누구와 밤을 넘길까</h2></div>
     <div class="heroes" id="heroes"></div>
     <div class="row" style="justify-content:space-between">
@@ -220,6 +269,7 @@ h2 { font-size: clamp(22px, 4vw, 30px); }
     <div class="row">
       <button class="btn primary" id="resume">계속</button>
       <button class="btn" id="sndBtn2">소리 켜짐</button>
+      <button class="btn" id="pauseSettings">설정</button>
       <button class="btn ghost" id="giveUp">포기하고 나가기</button>
     </div>
   </div>
@@ -235,6 +285,52 @@ h2 { font-size: clamp(22px, 4vw, 30px); }
       <button class="btn primary" id="again">다시 출정</button>
       <button class="btn" id="toTitle">처음으로</button>
     </div>
+  </div>
+</section>
+
+<section class="screen" id="victory" hidden>
+  <div class="sheet">
+    <div><div class="eyebrow">어둑시니 처치</div><h2>일식이 걷혔다</h2></div>
+    <p class="sub">아침을 맞이하고 결과를 볼 수도 있고, 남은 어둠 속으로 계속 싸워 들어갈 수도 있다. 무한의 밤에서는 2분마다 어둠의 군주들이 더 강해져 돌아오고, 버틴 시간만큼 엽전을 더 받는다.</p>
+    <div class="row">
+      <button class="btn primary" id="vEndless">무한의 밤으로</button>
+      <button class="btn" id="vEnd">아침을 맞이한다</button>
+    </div>
+  </div>
+</section>
+
+<section class="screen" id="ach" hidden>
+  <div class="sheet">
+    <div class="row" style="justify-content:space-between;align-items:end">
+      <div><div class="eyebrow">업적</div><h2>쌓아 온 밤들</h2></div>
+      <div class="purse">달성 <b id="achCount">0</b></div>
+    </div>
+    <div class="achlist" id="achList"></div>
+    <div class="row"><button class="btn" data-back>돌아가기</button></div>
+  </div>
+</section>
+
+<section class="screen" id="dex" hidden>
+  <div class="sheet">
+    <div class="row" style="justify-content:space-between;align-items:end">
+      <div><div class="eyebrow">요괴 도감</div><h2>밤에 만난 것들</h2></div>
+      <div class="purse">만난 요괴 <b id="dexCount">0</b></div>
+    </div>
+    <div class="dexlist" id="dexList"></div>
+    <div class="row"><button class="btn" data-back>돌아가기</button></div>
+  </div>
+</section>
+
+<section class="screen" id="settings" hidden>
+  <div class="sheet">
+    <div><div class="eyebrow">설정</div><h2>밤을 맞을 채비</h2></div>
+    <div class="opts">
+      <div class="opt"><label for="optShake">화면 흔들림</label><input type="checkbox" id="optShake"></div>
+      <div class="opt"><label for="optNums">피해 숫자 표시</label><input type="checkbox" id="optNums"></div>
+      <div class="opt"><label for="optMusic">배경음악 크기</label><input type="range" id="optMusic" min="0" max="100"></div>
+      <div class="opt"><label for="optSfx">효과음 크기</label><input type="range" id="optSfx" min="0" max="100"></div>
+    </div>
+    <div class="row"><button class="btn" id="settingsBack">돌아가기</button></div>
   </div>
 </section>
 
