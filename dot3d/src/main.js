@@ -1846,8 +1846,9 @@ class Game {
   }
 
   // 처음 하는 사람 배려: 첫 회차의 궁궐·죽림에서는 적이 조금 덜 아프게 때림
+  //  궁궐(첫 싸움)은 더 많이: 피하지 않는 검객이 첫 밤 싸움에서 두 판에 한 번꼴로 쓰러졌음 (자동 완주 봇)
   earlyEase(e) {
-    if (this.round === 0 && !this.tower?.active && (this.mapId === 'palace' || this.mapId === 'bamboo')) e.dmg = Math.max(1, Math.round(e.dmg * 0.8));
+    if (this.round === 0 && !this.tower?.active && (this.mapId === 'palace' || this.mapId === 'bamboo')) e.dmg = Math.max(1, Math.round(e.dmg * (this.mapId === 'palace' ? 0.68 : 0.8)));
   }
 
   spawnEnemy(type, opt = {}) {
