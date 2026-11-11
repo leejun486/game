@@ -41,8 +41,9 @@ module.exports = {
     Object.assign(r2, await g.eval(() => {
       const G = window.game, p = G.player;
       G.target = null; p.yaw = Math.PI / 2; p.hp = Math.round(p.maxHp * 0.5);
+      const dbg = { t: +G.time.toFixed(2), state: G.state, paused: !!G.paused, cd: p.skillCd, dash: p.dashT, spawning: G.enemies.filter((e) => e.spawning).length, n: G.enemies.length };
       G.onKey('skill');
-      return { hp0: p.hp };
+      return { hp0: p.hp, dbg: { ...dbg, yaw: +p.yaw.toFixed(2), atk: p.attack?.kind ?? null } };
     }));
     await g.step(1.2);
     const r3 = await g.eval(() => {

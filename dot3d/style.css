@@ -898,6 +898,14 @@ body.touch #coach.tut.show #coach-skip { pointer-events: auto; }
   body.touch #menu-btn { top: 104px; }
   body.touch #boss { top: 8px; width: max(200px, calc(100vw - 460px)); }
   body.touch #toast { top: 60px; max-width: max(200px, calc(100vw - 460px)); }
+  /* 가운데 위에 보스 체력 · 알림 · 지역 이름이 한꺼번에 떠도 겹치지 않게 차례로 쌓고, 업적은 아래 가운데(캐릭터를 가리지 않는 빈 자리)로 */
+  body.touch #ach-pop { top: auto; bottom: 10px; min-width: 0; padding: 4px 14px 5px; max-width: max(200px, calc(100vw - 460px)); }
+  body.touch #app:has(#coach.show) #ach-pop { bottom: 96px; }
+  body.touch #ach-pop small { display: none; }
+  body.touch #ach-pop b { display: inline; font-size: 13px; margin: 0 6px 0 0; }
+  body.touch #ach-pop span { font-size: 10px; }
+  body.touch #ach-pop .ach-beads { display: inline; margin-left: 6px; }
+  body.touch #banner { top: 30%; }
   body.touch #combo { top: 140px; right: 12px; }
   body.touch #savemark { top: 140px; right: 110px; bottom: auto; }
 }

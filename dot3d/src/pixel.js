@@ -328,6 +328,21 @@ export class PixelRenderer {
     this.colorTarget = null;
     this.normalTarget = null;
 
+    // 가려진 캐릭터 실루엣: game이 프레임마다 채움 [{ root, color }] (renderGhosts)
+    this.ghosts = [];
+    const st = { stencilWrite: true, stencilRef: 1, stencilZPass: THREE.ReplaceStencilOp, depthWrite: false, side: THREE.DoubleSide, fog: false };
+    this.ghostMark = new THREE.MeshBasicMaterial({ ...st, colorWrite: false, stencilFunc: THREE.AlwaysStencilFunc, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -4 });
+    this.ghostMats = new Map();
+    this.ghostMat = (color) => {
+      let m = this.ghostMats.get(color);
+      if (!m) {
+        this.ghostMats.set(color, (m = new THREE.MeshBasicMaterial({ ...st, color, transparent: true, opacity: 0.5, depthFunc: THREE.GreaterDepth, stencilFunc: THREE.NotEqualStencilFunc })));
+        // 0.4칸 넘게 가려졌을 때만 (땅에 살짝 박힌 칼끝·발은 비치지 않게): 카메라 쪽으로 당겨서 깊이를 견줌
+        m.onBeforeCompile = (sh) => { sh.vertexShader = sh.vertexShader.replace('#include <project_vertex>', '#include <project_vertex>\n  mvPosition.z += 0.4; gl_Position = projectionMatrix * mvPosition;'); };
+      }
+      return m;
+    };
+
     this.normalFront = new THREE.MeshNormalMaterial();
     this.normalDouble = new THREE.MeshNormalMaterial({ side: THREE.DoubleSide });
 
@@ -418,7 +433,7 @@ export class PixelRenderer {
     const opts = { minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter, type: THREE.HalfFloatType };
     this.colorTarget?.dispose();
     this.normalTarget?.dispose();
-    this.colorTarget = new THREE.WebGLRenderTarget(RW, RH, opts);
+    this.colorTarget = new THREE.WebGLRenderTarget(RW, RH, { ...opts, stencilBuffer: true }); // 스텐실: 가려진 캐릭터 실루엣 (renderGhosts)
     this.normalTarget = new THREE.WebGLRenderTarget(RW, RH, { minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter });
     this.normalTarget.depthTexture = new THREE.DepthTexture(RW, RH);
     this.normalTarget.depthTexture.type = THREE.UnsignedIntType;
@@ -454,7 +469,7 @@ export class PixelRenderer {
     Object.assign(this.canvas.style, { width: cw + 'px', height: ch + 'px', transform: 'none' });
     const lin = { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, type: THREE.HalfFloatType };
     for (const t of ['colorTarget', 'normalTarget', 'blurA', 'blurB']) this[t]?.dispose();
-    this.colorTarget = new THREE.WebGLRenderTarget(RW, RH, { ...lin, samples: { high: 4, mid: 2, low: 0 }[Q] });
+    this.colorTarget = new THREE.WebGLRenderTarget(RW, RH, { ...lin, samples: { high: 4, mid: 2, low: 0 }[Q], stencilBuffer: true });
     if (this.hdMat) this.hdMat.uniforms.aoOn.value = Q === 'low' ? 0 : 1;
     this.normalTarget = new THREE.WebGLRenderTarget(RW, RH, { minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter });
     this.normalTarget.depthTexture = new THREE.DepthTexture(RW, RH);
@@ -567,6 +582,7 @@ export class PixelRenderer {
     r.shadowMap.needsUpdate = true;
     r.setRenderTarget(this.colorTarget);
     r.render(scene, cam);
+    if (this.ghosts.length) this.renderGhosts(cam);
 
     if (this.hd) { this.composeHD(cam); return; }
     // 3) 합성
@@ -581,6 +597,31 @@ export class PixelRenderer {
     r.render(this.compScene, this.compCam);
   }
 }
+
+// 지붕·나무에 가려진 캐릭터를 옅은 실루엣으로 비춰 보임 (컬러 패스 바로 뒤, 같은 깊이 버퍼에)
+//  1) 캐릭터가 실제로 보이는 화소를 스텐실에 표시 (색은 안 씀)
+//  2) 무언가의 뒤에 있는(깊이가 더 먼) 캐릭터 화소 중 표시 안 된 곳만 한 번씩 칠함
+PixelRenderer.prototype.renderGhosts = function (cam) {
+  const r = this.renderer, auto = r.autoClear;
+  r.autoClear = false;
+  const lists = [];
+  for (const G of this.ghosts) {
+    const L = [];
+    G.root.traverseVisible((o) => { if (o.isMesh && !o.userData.noOutline && o.material && !o.material.transparent && !Array.isArray(o.material)) L.push(o, o.material); });
+    lists.push(L);
+  }
+  const draw = (mat) => {
+    this.ghosts.forEach((G, k) => {
+      const L = lists[k], m = mat || this.ghostMat(G.color);
+      for (let i = 0; i < L.length; i += 2) L[i].material = m;
+      r.render(G.root, cam);
+      for (let i = 0; i < L.length; i += 2) L[i].material = L[i + 1];
+    });
+  };
+  draw(this.ghostMark);
+  draw(null);
+  r.autoClear = auto;
+};
 
 PixelRenderer.prototype.composeHD = function (cam) {
   const r = this.renderer;

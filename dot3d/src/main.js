@@ -2570,7 +2570,9 @@ class Game {
 
   loop(now) {
     requestAnimationFrame(this.loop);
-    let dt = Math.min(0.05, (now - this.last) / 1000);
+    // 첫 프레임의 now는 그 프레임이 시작된 때라, 무거운 로딩 뒤에는 this.last(로딩이 끝난 때)보다 몇 초 앞설 수 있음
+    //  → 음수 dt로 게임 시간이 거꾸로 가고 기술 대기시간이 몇 초씩 붙던 문제 (느린 기기에서 시작 직후)
+    let dt = Math.min(0.05, Math.max(0, (now - this.last) / 1000));
     this.last = now;
     this.pollPad();
     this.audio.update();
@@ -2585,8 +2587,9 @@ class Game {
       this.passT = 0;
       for (const M of checkPass(this)) this.ui.toast(`수련 패스 과제 완료: ${M.text(M.n)} (+${M.pts})`, 2.6);
     }
-    this.autoQuality((now - this.last0) / 1000 || 0);
-    this.dev.tick((now - this.last0) / 1000 || 0);
+    const rdt = Math.max(0, (now - this.last0) / 1000 || 0);
+    this.autoQuality(rdt);
+    this.dev.tick(rdt);
     this.last0 = now;
 
     // 히트스톱: 월드 시간 멈춤
@@ -2645,7 +2648,22 @@ class Game {
     this.updateDarkness();
     this.updateLights(dt);
     this.ui.update(dt);
+    this.collectGhosts();
     this.pixel.render(this.scene);
+  }
+
+  // 지붕·나무에 가려져도 보이게 할 캐릭터: 나(하늘빛), 가까이서 덤비는 적과 보스(붉은빛, 여덟까지)
+  collectGhosts() {
+    const L = this.pixel.ghosts, p = this.player;
+    L.length = 0;
+    if (this.state !== 'play' || this.cut || document.body.classList.contains('shot')) return;
+    if (p.rig?.root.visible) L.push({ root: p.rig.root, color: '#bfeaff' });
+    if (this.pixel.quality === 'low') return;
+    for (const e of this.enemies) {
+      if (L.length >= 9) break;
+      if (e.dead || e.spawning || !e.rig || !e.root.visible || (e.field && !e.aggro && !e.isBoss)) continue;
+      if (Math.hypot(e.pos.x - p.pos.x, e.pos.z - p.pos.z) < 16) L.push({ root: e.root, color: '#ff6a5a' });
+    }
   }
 }
 
