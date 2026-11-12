@@ -29,7 +29,9 @@ const SHEETS = {
   knight_px: { F: 96, foot: 8, walk: 6, hero: 1.25, diag: true, atk: { row: 12, frames: 6, ft: 0.055, hit: 3 } },
   // Gemini-drawn sheets (tools/build_gem_sheet.py): large painted cells shown scaled down and smoothed;
   // they only have a right-facing attack (mirrored for left), so attacks turn sideways
-  gem_knight: { F: 160, foot: 6, walk: 4, wfps: 7, hero: 0.44, smooth: true, sideAtk: true, atk: { row: 12, frames: 4, ft: 0.075, hit: 1 } },
+  gem_knight: { F: 192, foot: 6, walk: 4, wfps: 7, hero: 0.44, smooth: true, sideAtk: true, atk: { row: 12, frames: 4, ft: 0.075, hit: 1 } },
+  // foes: base shrinks the painted cell to game size (pre-scaled once on load); no hurt or cast rows of their own
+  gem_imp: { F: 192, foot: 6, walk: 4, base: 0.32, sideAtk: true, noHurt: true, noCast: true, atk: { row: 12, frames: 4, ft: 0.09, hit: 1 } },
   mage_white: { F: 64, foot: 3, walk: 8, hero: 1.05, atk: { row: 0, frames: 7, ft: 0.06, hit: 5 } }, // 무녀: arms raised in a spellcast
   knight_dark: { F: 64, foot: 3, walk: 8, hero: 1.05, atk: { row: 12, frames: 6, ft: 0.055, hit: 3 } }, // 화랑: a sword slash
   mage_px: { F: 96, foot: 8, walk: 8, hero: 1.05, diag: true, atk: { row: 4, frames: 8, ft: 0.05, hit: 4 } },
@@ -136,14 +138,14 @@ const META = {
 
 // foes: hp/spd/dmg at minute 0; hp scales with time. tint = rgba glaze laid over the sprite
 const FOES = {
-  imp: { name: '꼬마 도깨비', sheet: 'dokkaebi_small', hp: 7, spd: 40, dmg: 5, xp: 1, r: 11, s: 0.85 },
+  imp: { name: '꼬마 도깨비', sheet: 'gem_imp', hp: 7, spd: 40, dmg: 5, xp: 1, r: 11, s: 0.85 },
   wolf: { name: '승냥이 요괴', sheet: 'wolfman', hp: 11, spd: 66, dmg: 6, xp: 1, r: 12, s: 1 },
   gangsi: { name: '굶주린 강시', sheet: 'gangsi', hp: 26, spd: 34, dmg: 8, xp: 2, r: 12, s: 1 },
   skel: { name: '백골 귀병', sheet: 'skeleton', hp: 34, spd: 50, dmg: 9, xp: 2, r: 12, s: 1 },
   boar: { name: '멧돼지 요괴', sheet: 'boarman', hp: 50, spd: 56, dmg: 11, xp: 3, r: 13, s: 1.05, charge: true },
-  caster: { name: '도깨비불 꼬마', sheet: 'dokkaebi_small', tint: 'rgba(255,90,40,0.35)', hp: 16, spd: 46, dmg: 9, xp: 2, r: 11, s: 0.9, ranged: 'fire' },
+  caster: { name: '도깨비불 꼬마', sheet: 'gem_imp', tint: 'rgba(255,150,40,0.38)', hp: 16, spd: 46, dmg: 9, xp: 2, r: 11, s: 0.9, ranged: 'fire' },
   voidcaster: { name: '어둠 술사', sheet: 'skeleton', tint: 'rgba(110,40,200,0.55)', soul: '170,120,255', hp: 120, spd: 50, dmg: 15, xp: 5, r: 12, s: 1.05, ranged: 'void' },
-  snowimp: { name: '눈 도깨비', sheet: 'dokkaebi_small', tint: 'rgba(150,215,255,0.55)', hp: 18, spd: 50, dmg: 8, xp: 2, r: 11, s: 0.9 },
+  snowimp: { name: '눈 도깨비', sheet: 'gem_imp', tint: 'rgba(150,215,255,0.5)', hp: 18, spd: 50, dmg: 8, xp: 2, r: 11, s: 0.9 },
   dalgyal: { name: '달걀귀신', sheet: 'zombie', tint: 'rgba(245,245,252,0.72)', hp: 55, spd: 50, dmg: 12, xp: 3, r: 12, s: 1.05, soul: '220,230,255' },
   boss4: { name: '동장군', sheet: 'dokkaebi_big', tint: 'rgba(150,210,255,0.5)', hp: 11000, spd: 50, dmg: 32, xp: 150, r: 28, s: 2.2, boss: 'stomp' },
   dok: { name: '도깨비 장수', sheet: 'dokkaebi', hp: 75, spd: 48, dmg: 12, xp: 3, r: 13, s: 1.05 },
@@ -226,6 +228,22 @@ const mlv = (k) => save.up[k] || 0;
 
 // ---------------------------------------------------------------- assets
 const IMG = {};
+// shrink a large painted sheet once to the size it is drawn at, so crowds blit 1:1 instead of resampling every frame
+function prescale(sheet) {
+  const info = SHEETS[sheet], im = IMG[sheet];
+  if (!info || !info.base || !im || info.prescaled) return;
+  const k = clamp(info.base * ZOOM * DPR, 0.1, 1), F2 = Math.max(8, Math.round(info.F * k)), k2 = F2 / info.F;
+  const cols = Math.round(im.width / info.F), rows = Math.round(im.height / info.F);
+  let src = im, w = im.width, h = im.height;
+  while (w * 0.5 > cols * F2) { // halve step by step for a clean result
+    const c = document.createElement('canvas'); c.width = Math.round(w / 2); c.height = Math.round(h / 2);
+    const g = c.getContext('2d'); g.imageSmoothingQuality = 'high'; g.drawImage(src, 0, 0, c.width, c.height);
+    src = c; w = c.width; h = c.height;
+  }
+  const c = document.createElement('canvas'); c.width = cols * F2; c.height = rows * F2;
+  const g = c.getContext('2d'); g.imageSmoothingQuality = 'high'; g.drawImage(src, 0, 0, c.width, c.height);
+  IMG[sheet] = c; info.base /= k2; info.foot *= k2; info.F = F2; info.prescaled = true;
+}
 function loadImg(key, src) {
   return new Promise((res) => { const im = new Image(); im.onload = () => { IMG[key] = im; res(); }; im.onerror = () => res(); im.src = src; });
 }
@@ -1037,17 +1055,18 @@ function updateFoes(dt) {
       else if (dist < 240) { mx = 0; my = 0; e.dir = dir4(dx, dy); }
     } else if (e.chg) { /* charging: no club */ } else if (e.atk) {
       e.atk.t += dt;
-      const f = Math.floor(e.atk.t / FOE_ATK.ft);
-      if (!e.atk.hit && f >= FOE_ATK.hit) {
+      const A = sheetInfo(e.d.sheet).atk || FOE_ATK, f = Math.floor(e.atk.t / A.ft);
+      if (!e.atk.hit && f >= A.hit) {
         e.atk.hit = true;
         G.fx.push({ k: 'claw', x: e.x + Math.cos(e.atk.a) * e.r * 1.2, y: e.y - 18 * e.s + Math.sin(e.atk.a) * e.r * 0.6, a: e.atk.a, s: e.s, t: 0, dur: 0.16 });
         if (dist < reach + 16) hurtPlayer(e.dmg);
         SND.club();
       }
-      if (f >= FOE_ATK.frames) e.atk = null;
+      if (f >= A.frames) e.atk = null;
       mx = 0; my = 0;
     } else if (e.rush <= 0 && dist < reach && e.atkCd <= 0 && (!e.boss || !e.state)) {
       e.atk = { t: 0, hit: false, a: Math.atan2(dy, dx) };
+      if (sheetInfo(e.d.sheet).sideAtk) e.side = dx < 0 ? 1 : 3;
       e.atkCd = e.boss ? 1.3 : rand(0.9, 1.3);
       e.dir = dir4(dx, dy);
       mx = 0; my = 0;
@@ -1840,9 +1859,9 @@ function update(dt) {
 function drawSprite(sheet, x, y, s, row, col, img, g = ctx) {
   const info = sheetInfo(sheet), F = info.F, im = img || IMG[sheet];
   if (!im) return;
-  const size = F * s;
+  const b = info.base || 1, size = F * s * b;
   if (info.smooth) g.imageSmoothingEnabled = true;
-  g.drawImage(im, col * F, row * F, F, F, Math.round(x - size / 2), Math.round(y - size + info.foot * s), size, size);
+  g.drawImage(im, col * F, row * F, F, F, Math.round(x - size / 2), Math.round(y - size + info.foot * s * b), size, size);
   if (info.smooth) g.imageSmoothingEnabled = false;
 }
 function walkFrame(sheet, t, moving) {
@@ -1911,7 +1930,8 @@ function render() {
       ctx.globalAlpha = 1 - k * k;
       ctx.save(); ctx.translate(c.x, c.y - c.z); ctx.rotate(c.rot);
       const img = c.t < 0.07 ? variant(c.sheet, 'rgba(255,255,255,1)') : variant(c.sheet, c.tint ? 'rgba(40,10,60,0.55)' : 'rgba(20,10,30,0.5)');
-      drawSprite(c.sheet, 0, 0, c.s, 20, Math.min(5, Math.floor(k * 6)), img);
+      if (sheetInfo(c.sheet).noHurt) drawSprite(c.sheet, 0, 0, c.s, 10, 0, img); // no fall frames: the standing pose tumbles
+      else drawSprite(c.sheet, 0, 0, c.s, 20, Math.min(5, Math.floor(k * 6)), img);
       ctx.restore(); ctx.globalAlpha = 1;
     } else drawPlayer();
   }
@@ -2104,10 +2124,12 @@ function drawFoe(e) {
   if (e.d.tint) img = variant(sh, e.d.tint) || img;
   if (e.elite) img = variant(sh, 'rgba(255,200,80,0.35)') || img;
   if (e.frozen > 0) img = variant(sh, 'rgba(170,220,255,0.6)') || img;
-  let col = e.frozen > 0 || !e.moving ? 0 : 1 + (Math.floor(e.walkT) % 8), row = 8 + e.dir;
-  if (e.atk && !(e.frozen > 0)) { row = FOE_ATK.row + e.dir; col = Math.min(FOE_ATK.frames - 1, Math.floor(e.atk.t / FOE_ATK.ft)); }
+  const si = sheetInfo(sh), wn = si.walk || 8, A = si.atk || FOE_ATK;
+  let col = e.frozen > 0 || !e.moving ? 0 : 1 + (Math.floor((e.walkT * wn) / 8) % wn), row = 8 + e.dir;
+  if (e.atk && !(e.frozen > 0)) { row = A.row + (si.sideAtk ? e.side || 3 : e.dir); col = Math.min(A.frames - 1, Math.floor(e.atk.t / A.ft)); }
   if (e.cast && !(e.frozen > 0)) {
-    row = CAST.row + e.dir; col = Math.min(CAST.frames - 1, Math.floor(e.cast.t / CAST.ft));
+    if (si.noCast) { row = A.row + (e.dir === 1 ? 1 : 3); col = Math.min(A.frames - 1, Math.floor((e.cast.t / (CAST.ft * CAST.frames)) * A.frames)); } // borrow the swing
+    else { row = CAST.row + e.dir; col = Math.min(CAST.frames - 1, Math.floor(e.cast.t / CAST.ft)); }
     const glow = Math.min(1, e.cast.t / (CAST.ft * CAST.hit));
     ctx.globalCompositeOperation = 'lighter';
     ctx.fillStyle = e.d.ranged === 'void' ? `rgba(150,80,255,${0.5 * glow})` : `rgba(255,120,40,${0.5 * glow})`;
@@ -2837,6 +2859,7 @@ async function boot() {
   const sheets = new Set(HEROES.map((h) => h.sheet));
   for (const f of Object.values(FOES)) if (f.sheet) sheets.add(f.sheet);
   await Promise.all([...sheets].map((sh) => loadImg(sh, `${BASE}assets/sprites/${sh}.png`)));
+  for (const sh of sheets) prescale(sh);
   buildGround(stageOf(save.stage));
   const ic = new Set(['chest', 'sparkles', 'gold']);
   for (const w of Object.values(WEAPONS)) { ic.add(w.icon); ic.add(w.evoIcon); }

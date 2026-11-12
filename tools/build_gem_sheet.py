@@ -11,7 +11,7 @@ import sys
 import numpy as np
 from PIL import Image
 
-CELL = 160          # output cell size
+CELL = 192          # output cell size (room for a swung weapon)
 BODY = 148          # tallest frame is scaled to this many pixels
 FOOT = 6            # pixels from the cell bottom to the feet
 
