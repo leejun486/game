@@ -27,6 +27,9 @@ const ICON = (n) => `${BASE}assets/icons/${n}.svg`;
 // hero sheets also carry diagonal rows 21-40 (row 21 + floor(row/4)*4 + diag)
 const SHEETS = {
   knight_px: { F: 96, foot: 8, walk: 6, hero: 1.25, diag: true, atk: { row: 12, frames: 6, ft: 0.055, hit: 3 } },
+  // Gemini-drawn sheets (tools/build_gem_sheet.py): large painted cells shown scaled down and smoothed;
+  // they only have a right-facing attack (mirrored for left), so attacks turn sideways
+  gem_knight: { F: 160, foot: 6, walk: 4, wfps: 7, hero: 0.44, smooth: true, sideAtk: true, atk: { row: 12, frames: 4, ft: 0.075, hit: 1 } },
   mage_white: { F: 64, foot: 3, walk: 8, hero: 1.05, atk: { row: 0, frames: 7, ft: 0.06, hit: 5 } }, // 무녀: arms raised in a spellcast
   knight_dark: { F: 64, foot: 3, walk: 8, hero: 1.05, atk: { row: 12, frames: 6, ft: 0.055, hit: 3 } }, // 화랑: a sword slash
   mage_px: { F: 96, foot: 8, walk: 8, hero: 1.05, diag: true, atk: { row: 4, frames: 8, ft: 0.05, hit: 4 } },
@@ -44,7 +47,7 @@ function diag4(x, y) {
 }
 
 const HEROES = [
-  { id: 'knight', name: '강철 기사', sheet: 'knight_px', weapon: 'sword', hp: 130, spd: 1, armor: 1, might: 0, area: 0, cd: 0,
+  { id: 'knight', name: '강철 기사', sheet: 'gem_knight', weapon: 'sword', hp: 130, spd: 1, armor: 1, might: 0, area: 0, cd: 0,
     desc: '붉은 갑주의 검객. 단단한 몸으로 요괴 떼 한가운데를 가른다.', perk: '방어 +1 · 체력 130' },
   { id: 'elf', name: '숲의 궁수', sheet: 'elf_px', weapon: 'arrow', hp: 100, spd: 1.14, armor: 0, might: 0, area: 0, cd: 0,
     desc: '바람처럼 달리며 먼 곳의 요괴부터 꿰뚫는다.', perk: '이동 속도 +14%' },
@@ -537,6 +540,7 @@ function updateAct(dt) {
     const q = p.queue.shift();
     p.act = { t: 0, fired: false, ax: q.ax, ay: q.ay, onHit: q.onHit };
     p.dir = dir4(q.ax, q.ay); p.diag = diag4(q.ax, q.ay);
+    if (sheetInfo(G.hero.sheet).sideAtk) { p.dir = q.ax < 0 ? 1 : 3; p.diag = -1; }
     if (Math.abs(q.ax) > 0.2) p.face = q.ax < 0 ? -1 : 1;
   }
   const a = p.act;
@@ -1837,11 +1841,13 @@ function drawSprite(sheet, x, y, s, row, col, img, g = ctx) {
   const info = sheetInfo(sheet), F = info.F, im = img || IMG[sheet];
   if (!im) return;
   const size = F * s;
+  if (info.smooth) g.imageSmoothingEnabled = true;
   g.drawImage(im, col * F, row * F, F, F, Math.round(x - size / 2), Math.round(y - size + info.foot * s), size, size);
+  if (info.smooth) g.imageSmoothingEnabled = false;
 }
 function walkFrame(sheet, t, moving) {
-  const n = sheetInfo(sheet).walk;
-  return moving ? 1 + (Math.floor(t * 11) % n) : 0;
+  const info = sheetInfo(sheet), n = info.walk;
+  return moving ? 1 + (Math.floor(t * (info.wfps || 11)) % n) : 0;
 }
 function shadow(x, y, w) { ctx.fillStyle = 'rgba(0,0,0,0.32)'; ctx.beginPath(); ctx.ellipse(x, y, w, w * 0.38, 0, 0, TAU); ctx.fill(); }
 
@@ -2750,7 +2756,7 @@ function animateHeroes() {
     const g = c.getContext('2d'), sh = c.dataset.sheet, info = sheetInfo(sh);
     g.clearRect(0, 0, 96, 96); g.imageSmoothingEnabled = false;
     if (!IMG[sh]) continue;
-    drawSprite(sh, 48, 92, info.F === 96 ? 1.45 : 1.5, 10, 1 + Math.floor(t * 9) % info.walk, null, g);
+    drawSprite(sh, 48, 92, info.smooth ? info.hero * 1.45 : info.F === 96 ? 1.45 : 1.5, 10, 1 + Math.floor(t * (info.wfps || 9)) % info.walk, null, g);
   }
 }
 function buildShop() {
